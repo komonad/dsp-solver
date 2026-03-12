@@ -10,6 +10,20 @@ interface RecipeProliferatorConfig {
   mode: 'none' | 'speed' | 'productivity';
 }
 
+// 保存的状态接口
+interface SavedState {
+  demands: Array<{ itemId: string; rate: number }>;
+  treatAsRaw: string[];
+  existingSupplies: Array<{ itemId: string; rate: number }>;
+  globalProliferator: {
+    level: 0 | 1 | 2 | 3;
+    mode: 'none' | 'speed' | 'productivity';
+  };
+  selectedRecipes: Array<[string, string]>; // [itemId, recipeId][]
+  recipeProliferators: Array<[string, RecipeProliferatorConfig]>;
+  recipeChoices: Array<[string, string]>; // [outputItemId, selectedRecipeId][] 用户在结果中选择的配方
+}
+
 // 应用状态
 interface AppState {
   gameData: GameData | null;
@@ -20,10 +34,13 @@ interface AppState {
     level: 0 | 1 | 2 | 3;
     mode: 'none' | 'speed' | 'productivity';
   };
-  selectedRecipes: Map<string, string>; // itemId -> recipeId
+  selectedRecipes: Map<string, string>; // itemId -> recipeId (全局配方选择)
   recipeProliferators: Map<string, RecipeProliferatorConfig>; // recipeId -> config
+  recipeChoices: Map<string, string>; // outputItemId -> selectedRecipeId (用户在结果中的切换选择)
   lastResult: MultiDemandResult | null;
 }
+
+const STORAGE_KEY = 'dsp-calculator-state';
 
 const state: AppState = {
   gameData: null,
@@ -33,6 +50,7 @@ const state: AppState = {
   globalProliferator: { level: 0, mode: 'none' },
   selectedRecipes: new Map(),
   recipeProliferators: new Map(),
+  recipeChoices: new Map(),
   lastResult: null,
 };
 
@@ -44,6 +62,74 @@ let demandsList: HTMLDivElement;
 let solveBtn: HTMLButtonElement;
 let resultsDiv: HTMLDivElement;
 let configDiv: HTMLDivElement;
+let clearStateBtn: HTMLButtonElement;
+
+// 保存状态到 localStorage
+function saveState() {
+  const saved: SavedState = {
+    demands: state.demands,
+    treatAsRaw: Array.from(state.treatAsRaw),
+    existingSupplies: state.existingSupplies,
+    globalProliferator: state.globalProliferator,
+    selectedRecipes: Array.from(state.selectedRecipes.entries()),
+    recipeProliferators: Array.from(state.recipeProliferators.entries()),
+    recipeChoices: Array.from(state.recipeChoices.entries()),
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+}
+
+// 从 localStorage 加载状态
+function loadState() {
+  try {
+    const savedJson = localStorage.getItem(STORAGE_KEY);
+    if (!savedJson) return false;
+    
+    const saved: SavedState = JSON.parse(savedJson);
+    
+    state.demands = saved.demands || [];
+    state.treatAsRaw = new Set(saved.treatAsRaw || []);
+    state.existingSupplies = saved.existingSupplies || [];
+    state.globalProliferator = saved.globalProliferator || { level: 0, mode: 'none' };
+    state.selectedRecipes = new Map(saved.selectedRecipes || []);
+    state.recipeProliferators = new Map(saved.recipeProliferators || []);
+    state.recipeChoices = new Map(saved.recipeChoices || []);
+    
+    // 更新 UI
+    if (state.globalProliferator) {
+      const levelSelect = document.getElementById('proliferator-level') as HTMLSelectElement;
+      const modeSelect = document.getElementById('proliferator-mode') as HTMLSelectElement;
+      if (levelSelect) levelSelect.value = String(state.globalProliferator.level);
+      if (modeSelect) modeSelect.value = state.globalProliferator.mode;
+    }
+    
+    renderDemands();
+    return true;
+  } catch (e) {
+    console.error('加载状态失败:', e);
+    return false;
+  }
+}
+
+// 清除状态
+function clearState() {
+  localStorage.removeItem(STORAGE_KEY);
+  state.demands = [];
+  state.treatAsRaw.clear();
+  state.existingSupplies = [];
+  state.globalProliferator = { level: 0, mode: 'none' };
+  state.selectedRecipes.clear();
+  state.recipeProliferators.clear();
+  state.recipeChoices.clear();
+  
+  // 重置 UI
+  const levelSelect = document.getElementById('proliferator-level') as HTMLSelectElement;
+  const modeSelect = document.getElementById('proliferator-mode') as HTMLSelectElement;
+  if (levelSelect) levelSelect.value = '0';
+  if (modeSelect) modeSelect.value = 'none';
+  
+  renderDemands();
+  autoSolve();
+}
 
 // 初始化
 async function init() {
@@ -53,7 +139,6 @@ async function init() {
     console.log('游戏数据加载成功:', state.gameData.items.length, 'items');
   } catch (e) {
     console.error('加载游戏数据失败:', e);
-    // 使用测试数据
     state.gameData = createTestData();
   }
 
@@ -65,6 +150,7 @@ async function init() {
   solveBtn = document.getElementById('solve-btn') as HTMLButtonElement;
   resultsDiv = document.getElementById('results') as HTMLDivElement;
   configDiv = document.getElementById('config-panel') as HTMLDivElement;
+  clearStateBtn = document.getElementById('clear-state') as HTMLButtonElement;
 
   // 填充物品选择器
   populateItemSelect();
@@ -72,13 +158,39 @@ async function init() {
   // 绑定事件
   addDemandBtn.addEventListener('click', addDemand);
   solveBtn.addEventListener('click', solve);
+  if (clearStateBtn) clearStateBtn.addEventListener('click', clearState);
   
   // 监听增产剂配置变化
   document.getElementById('proliferator-level')?.addEventListener('change', updateProliferator);
   document.getElementById('proliferator-mode')?.addEventListener('change', updateProliferator);
 
-  // 初始求解
-  autoSolve();
+  // 加载保存的状态
+  const hasSavedState = loadState();
+  
+  // 显示状态恢复提示
+  if (hasSavedState) {
+    showStateNotice();
+  }
+  
+  // 初始求解（如果有保存的需求）
+  if (hasSavedState && state.demands.length > 0) {
+    autoSolve();
+  } else {
+    resultsDiv.innerHTML = '<div class="empty">添加需求以查看结果</div>';
+  }
+}
+
+function showStateNotice() {
+  const notice = document.getElementById('state-notice');
+  if (notice && state.demands.length > 0) {
+    notice.innerHTML = `
+      <span>✓ 已恢复上次保存的配置（${state.demands.length}个需求）</span>
+    `;
+    notice.style.display = 'block';
+    setTimeout(() => {
+      notice.style.display = 'none';
+    }, 5000);
+  }
 }
 
 function populateItemSelect() {
@@ -98,23 +210,26 @@ function populateItemSelect() {
   const typeNames: Record<number, string> = {
     1: '原材料',
     2: '中间产物',
-    3: '高级产物',
-    4: '建筑',
-    5: '物流',
+    3: '成品',
+    4: '矩阵',
+    5: '建筑',
   };
   
   for (const [type, items] of itemsByType) {
-    const optgroup = document.createElement('optgroup');
-    optgroup.label = typeNames[type] || `类型${type}`;
+    const group = document.createElement('optgroup');
+    group.label = typeNames[type] || `类型${type}`;
     
-    for (const item of items.sort((a, b) => a.name.localeCompare(b.name))) {
+    // 按名称排序
+    items.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+    
+    for (const item of items) {
       const option = document.createElement('option');
       option.value = item.id;
       option.textContent = item.name;
-      optgroup.appendChild(option);
+      group.appendChild(option);
     }
     
-    itemSelect.appendChild(optgroup);
+    itemSelect.appendChild(group);
   }
 }
 
@@ -123,7 +238,7 @@ function addDemand() {
   const rate = parseFloat(rateInput.value);
   
   if (!itemId || !rate || rate <= 0) {
-    alert('请选择产物并输入有效的速率');
+    alert('请选择产物并输入有效的产量');
     return;
   }
   
@@ -136,35 +251,42 @@ function addDemand() {
   }
   
   renderDemands();
+  itemSelect.value = '';
+  
+  saveState();
   autoSolve();
 }
 
 function removeDemand(itemId: string) {
   state.demands = state.demands.filter(d => d.itemId !== itemId);
   renderDemands();
+  saveState();
   autoSolve();
 }
 
 function renderDemands() {
-  demandsList.innerHTML = '';
-  
   if (state.demands.length === 0) {
-    demandsList.innerHTML = '<div class="empty">暂无需求，请添加</div>';
+    demandsList.innerHTML = '<div class="empty-demand">暂无需求</div>';
     return;
   }
   
-  for (const demand of state.demands) {
-    const item = state.gameData?.itemMap.get(demand.itemId);
-    const div = document.createElement('div');
-    div.className = 'demand-item';
-    div.innerHTML = `
-      <span class="item-name">${item?.name || demand.itemId}</span>
-      <span class="rate">${demand.rate}/min</span>
-      <button class="remove-btn" data-item="${demand.itemId}">×</button>
+  demandsList.innerHTML = state.demands.map(d => {
+    const item = state.gameData?.itemMap.get(d.itemId);
+    return `
+      <div class="demand-tag">
+        <span>${item?.name || d.itemId}: ${d.rate}/min</span>
+        <span class="remove" data-item="${d.itemId}">×</span>
+      </div>
     `;
-    div.querySelector('.remove-btn')?.addEventListener('click', () => removeDemand(demand.itemId));
-    demandsList.appendChild(div);
-  }
+  }).join('');
+  
+  // 绑定删除事件
+  demandsList.querySelectorAll('.remove').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const itemId = (e.target as HTMLElement).dataset.item!;
+      removeDemand(itemId);
+    });
+  });
 }
 
 function updateProliferator() {
@@ -172,10 +294,11 @@ function updateProliferator() {
   const modeSelect = document.getElementById('proliferator-mode') as HTMLSelectElement;
   
   state.globalProliferator = {
-    level: parseInt(levelSelect.value) as 0 | 1 | 2 | 3,
-    mode: modeSelect.value as 'none' | 'speed' | 'productivity',
+    level: parseInt(levelSelect.value) as 0|1|2|3,
+    mode: modeSelect.value as 'none'|'speed'|'productivity',
   };
   
+  saveState();
   autoSolve();
 }
 
@@ -185,6 +308,7 @@ function toggleRawMaterial(itemId: string) {
   } else {
     state.treatAsRaw.add(itemId);
   }
+  saveState();
   autoSolve();
 }
 
@@ -194,6 +318,7 @@ function selectRecipe(itemId: string, recipeId: string | null) {
   } else {
     state.selectedRecipes.delete(itemId);
   }
+  saveState();
   autoSolve();
 }
 
@@ -203,6 +328,18 @@ function updateRecipeProliferator(recipeId: string, level: 0 | 1 | 2 | 3, mode: 
   } else {
     state.recipeProliferators.set(recipeId, { recipeId, level, mode });
   }
+  saveState();
+  autoSolve();
+}
+
+// 切换结果中显示的配方（用于同一个产出物有多个配方的情况）
+function switchRecipeChoice(outputItemId: string, newRecipeId: string) {
+  if (!newRecipeId) {
+    state.recipeChoices.delete(outputItemId);
+  } else {
+    state.recipeChoices.set(outputItemId, newRecipeId);
+  }
+  saveState();
   autoSolve();
 }
 
@@ -218,6 +355,12 @@ function autoSolve() {
 function solve() {
   if (!state.gameData || state.demands.length === 0) return;
   
+  // 合并全局配方选择和用户的结果中配方选择
+  const mergedSelectedRecipes = new Map(state.selectedRecipes);
+  for (const [itemId, recipeId] of state.recipeChoices) {
+    mergedSelectedRecipes.set(itemId, recipeId);
+  }
+  
   const options: MultiDemandOptions = {
     globalProliferator: state.globalProliferator.level > 0 ? {
       level: state.globalProliferator.level,
@@ -226,7 +369,7 @@ function solve() {
     } : undefined,
     treatAsRaw: Array.from(state.treatAsRaw),
     existingSupplies: state.existingSupplies,
-    selectedRecipes: state.selectedRecipes,
+    selectedRecipes: mergedSelectedRecipes,
   };
   
   const result = solveMultiDemand(state.demands, state.gameData, options);
@@ -246,8 +389,6 @@ function getRecipeProliferator(recipeId: string): { level: 0|1|2|3; mode: 'none'
 }
 
 // 计算配方执行速率和建筑信息
-// solver 返回的 buildingCountFromSolver 是"等效建筑数"（假设建筑速度为 1）
-// 实际建筑数 = 等效建筑数 / 实际建筑速度
 function calculateRecipeInfo(
   recipe: Recipe, 
   equivalentBuildingCount: number, 
@@ -255,26 +396,19 @@ function calculateRecipeInfo(
 ): { equivalentBuildingCount: number; actualBuildingCount: number; building: Building | undefined; speed: number; actualExecutionsPerMinute: number } {
   if (!state.gameData) return { equivalentBuildingCount: 0, actualBuildingCount: 0, building: undefined, speed: 1, actualExecutionsPerMinute: 0 };
   
-  // 获取第一个可用建筑
   const buildingId = recipe.factoryIds[0];
   const building = state.gameData.buildings.find(b => b.originalId === buildingId || b.id === String(buildingId));
   
   if (!building) return { equivalentBuildingCount: 0, actualBuildingCount: 0, building: undefined, speed: 1, actualExecutionsPerMinute: 0 };
   
-  // 计算增产剂效果（加速模式）
   let speedMultiplier = 1;
   if (proliferator.level > 0 && proliferator.mode === 'speed') {
     const params = DEFAULT_PROLIFERATOR_PARAMS[proliferator.level as 0|1|2|3];
     speedMultiplier = 1 + params.speedBonus;
   }
   
-  // 单个建筑每分钟执行次数（使用实际建筑速度）
   const executionsPerBuildingPerMinute = (60 / recipe.time) * building.speed * speedMultiplier;
-  
-  // 实际建筑数量 = 等效建筑数 / 实际建筑速度
   const actualBuildingCount = equivalentBuildingCount / building.speed;
-  
-  // 实际的每分钟执行次数（与 solver 的约束一致）
   const actualExecutionsPerMinute = equivalentBuildingCount * (60 / recipe.time) * speedMultiplier;
   
   return { 
@@ -286,12 +420,20 @@ function calculateRecipeInfo(
   };
 }
 
+// 获取产出该物品的所有可用配方（排除无中生有）
+function getAlternativeRecipes(itemId: string): Recipe[] {
+  if (!state.gameData) return [];
+  return state.gameData.recipes.filter(r => 
+    r.outputs.some(o => o.itemId === itemId) &&
+    !(r.inputs.length === 0 && r.name.startsWith('[无中生有]'))
+  );
+}
+
 function renderResults(result: MultiDemandResult) {
   if (!state.gameData) return;
   
   let html: string = '<div class="results-container">';
   
-  // 可行性
   html += `<div class="feasibility ${result.feasible ? 'ok' : 'fail'}">`;
   html += result.feasible ? '✓ 可行方案' : '✗ ' + (result.message || '不可行');
   html += '</div>';
@@ -324,11 +466,15 @@ function renderResults(result: MultiDemandResult) {
       const recipe = state.gameData.recipeMap.get(recipeId);
       if (!recipe) continue;
       
+      // 获取该配方的主要产出物
+      const mainOutput = recipe.outputs[0];
+      const alternativeRecipes = getAlternativeRecipes(mainOutput.itemId);
+      const hasAlternatives = alternativeRecipes.length > 1;
+      
       const prolif = getRecipeProliferator(recipeId);
       const { actualBuildingCount, building, speed, actualExecutionsPerMinute } = calculateRecipeInfo(recipe, buildingCountFromSolver, prolif);
-      const buildingCountCeil = Math.ceil(actualBuildingCount * 100) / 100; // 保留2位小数
+      const buildingCountCeil = Math.ceil(actualBuildingCount * 100) / 100;
       
-      // 获取增产剂效果
       let prodMultiplier = 1;
       if (prolif.level > 0 && prolif.mode === 'productivity') {
         const params = DEFAULT_PROLIFERATOR_PARAMS[prolif.level];
@@ -337,9 +483,24 @@ function renderResults(result: MultiDemandResult) {
       
       html += `<div class="recipe-card" data-recipe="${recipeId}">`;
       
-      // 配方头部
+      // 配方头部（带配方切换）
       html += `<div class="recipe-header">`;
+      html += `<div class="recipe-title">`;
       html += `<span class="recipe-name">${recipe.name}</span>`;
+      
+      // 如果有其他配方可选，显示切换下拉框
+      if (hasAlternatives) {
+        html += `<div class="recipe-switch">`;
+        html += `<select class="recipe-switch-select" data-output-item="${mainOutput.itemId}" title="切换配方">`;
+        for (const altRecipe of alternativeRecipes) {
+          const selected = altRecipe.id === recipeId ? 'selected' : '';
+          html += `<option value="${altRecipe.id}" ${selected}>${altRecipe.name}</option>`;
+        }
+        html += `</select>`;
+        html += `</div>`;
+      }
+      
+      html += `</div>`; // end recipe-title
       html += `<span class="building-count">${buildingCountCeil.toFixed(2)} 个 ${building?.name || '未知建筑'}</span>`;
       html += `</div>`;
       
@@ -368,7 +529,6 @@ function renderResults(result: MultiDemandResult) {
       for (const output of recipe.outputs) {
         const item = state.gameData.itemMap.get(output.itemId);
         let rate = output.count * actualExecutionsPerMinute;
-        // 增产效果
         if (prolif.mode === 'productivity') {
           rate *= prodMultiplier;
         }
@@ -437,33 +597,25 @@ function renderResults(result: MultiDemandResult) {
     html += '</div></div>';
   }
   
-  // 现有供给贡献
-  if (result.existingSupplyContribution && result.existingSupplyContribution.size > 0) {
-    html += '<div class="section">';
-    html += '<h3>现有供给贡献</h3>';
-    html += '<div class="supply-results">';
-    for (const [itemId, rate] of result.existingSupplyContribution) {
-      if (!itemId.startsWith('__') && rate > 0.001) {
-        const item = state.gameData.itemMap.get(itemId);
-        html += `
-          <div class="result-row">
-            <span class="item-name">${item?.name || itemId}</span>
-            <span class="rate">+${rate.toFixed(2)}/min</span>
-          </div>
-        `;
-      }
-    }
-    html += '</div></div>';
-  }
-  
   html += '</div>';
   resultsDiv.innerHTML = html;
   
-  // 绑定增产剂控制事件
   bindProliferatorEvents();
+  bindRecipeSwitchEvents();
 }
 
-// 渲染增产剂控制
+// 绑定配方切换事件
+function bindRecipeSwitchEvents() {
+  document.querySelectorAll('.recipe-switch-select').forEach((sel: Element) => {
+    sel.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLSelectElement;
+      const outputItemId = target.dataset.outputItem!;
+      const newRecipeId = target.value;
+      switchRecipeChoice(outputItemId, newRecipeId);
+    });
+  });
+}
+
 function renderProliferatorControl(recipeId: string, current: { level: number; mode: string }): string {
   const useGlobal = !state.recipeProliferators.has(recipeId);
   
@@ -477,7 +629,6 @@ function renderProliferatorControl(recipeId: string, current: { level: number; m
   
   html += `<div class="prolif-custom ${useGlobal ? 'disabled' : ''}" data-recipe="${recipeId}">`;
   
-  // 等级选择
   html += '<div class="prolif-level">';
   html += '<label>等级:</label>';
   html += `<select class="prolif-level-select" data-recipe="${recipeId}" ${useGlobal ? 'disabled' : ''}>`;
@@ -488,7 +639,6 @@ function renderProliferatorControl(recipeId: string, current: { level: number; m
   html += '</select>';
   html += '</div>';
   
-  // 模式选择
   html += '<div class="prolif-mode">';
   html += '<label>模式:</label>';
   html += `<select class="prolif-mode-select" data-recipe="${recipeId}" ${useGlobal ? 'disabled' : ''}>`;
@@ -502,9 +652,7 @@ function renderProliferatorControl(recipeId: string, current: { level: number; m
   return html;
 }
 
-// 绑定增产剂事件
 function bindProliferatorEvents() {
-  // 全局/自定义切换
   document.querySelectorAll('.prolif-global-check').forEach((cb: Element) => {
     cb.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLInputElement;
@@ -521,9 +669,9 @@ function bindProliferatorEvents() {
       
       if (useGlobal) {
         state.recipeProliferators.delete(recipeId);
+        saveState();
         autoSolve();
       } else {
-        // 使用当前选择器的值
         updateRecipeProliferator(
           recipeId,
           parseInt(levelSelect?.value || '0') as 0|1|2|3,
@@ -533,7 +681,6 @@ function bindProliferatorEvents() {
     });
   });
   
-  // 等级变化
   document.querySelectorAll('.prolif-level-select').forEach((sel: Element) => {
     sel.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLSelectElement;
@@ -545,7 +692,6 @@ function bindProliferatorEvents() {
     });
   });
   
-  // 模式变化
   document.querySelectorAll('.prolif-mode-select').forEach((sel: Element) => {
     sel.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLSelectElement;
@@ -561,7 +707,6 @@ function bindProliferatorEvents() {
 function renderConfigPanel(result: MultiDemandResult) {
   if (!state.gameData) return;
   
-  // 收集所有涉及的物品（除了需求的物品）
   const involvedItems: Set<string> = new Set();
   for (const [recipeId] of result.recipes) {
     const recipe = state.gameData.recipeMap.get(recipeId);
@@ -571,7 +716,6 @@ function renderConfigPanel(result: MultiDemandResult) {
     }
   }
   
-  // 也包括需求物品
   for (const demand of state.demands) {
     involvedItems.add(demand.itemId);
   }
@@ -607,7 +751,6 @@ function renderConfigPanel(result: MultiDemandResult) {
       html += `<select data-item="${itemId}" class="recipe-selector">`;
       html += `<option value="">自动选择</option>`;
       for (const recipe of recipes) {
-        // 过滤无中生有配方
         if (recipe.inputs.length === 0 && recipe.name.startsWith('[无中生有]')) continue;
         
         const selected = state.selectedRecipes.get(itemId) === recipe.id ? 'selected' : '';
@@ -622,7 +765,6 @@ function renderConfigPanel(result: MultiDemandResult) {
   html += '</div></div>';
   configDiv.innerHTML = html;
   
-  // 绑定事件
   configDiv.querySelectorAll('.raw-checkbox').forEach((cb: Element) => {
     cb.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLInputElement;
@@ -641,7 +783,6 @@ function renderConfigPanel(result: MultiDemandResult) {
   });
 }
 
-// 创建测试数据（当无法加载真实数据时）
 function createTestData(): GameData {
   const items: Item[] = [
     { id: 'A', name: 'A（原矿）', originalId: 1, type: 1, iconName: 'a', isRaw: true },
@@ -685,5 +826,4 @@ function createTestData(): GameData {
   };
 }
 
-// 启动应用
 document.addEventListener('DOMContentLoaded', init);
