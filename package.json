@@ -1,0 +1,38 @@
+{
+  "name": "dsp-mod-calculator",
+  "version": "1.0.0",
+  "description": "戴森球计划模组量化计算器 - 支持多产物配方配平、参数化增产、建筑翻倍效果",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src --ext .ts",
+    "build:web": "webpack && copy data\\Vanilla.json dist-web\\",
+    "serve:web": "cd dist-web && python -m http.server 8081"
+  },
+  "keywords": [
+    "dyson-sphere-program",
+    "calculator",
+    "mod",
+    "recipe",
+    "optimization"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.0.0",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "javascript-lp-solver": "^0.4.24",
+    "yalps": "^0.6.4"
+  }
+}
