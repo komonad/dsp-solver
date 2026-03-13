@@ -518,102 +518,140 @@ function renderResults(result: MultiDemandResult) {
   }
   html += '</div></div>';
   
-  // 配方执行 - 详细展示
+  // 配方执行 - 按产出物分组展示
   if (result.recipes.size > 0) {
     html += '<div class="section">';
     html += '<h3>生产配方</h3>';
     html += '<div class="recipe-results detailed">';
     
+    // 按主要产出物分组配方
+    const recipesByOutput = new Map<string, Array<{recipe: Recipe, count: number}>>();
+    
     for (const [recipeId, buildingCountFromSolver] of result.recipes) {
       const recipe = state.gameData.recipeMap.get(recipeId);
       if (!recipe) continue;
       
-      // 获取该配方的主要产出物
-      const mainOutput = recipe.outputs[0];
-      const alternativeRecipes = getAlternativeRecipes(mainOutput.itemId);
+      // 使用第一个产出物作为主产出
+      const mainOutputId = recipe.outputs[0].itemId;
+      if (!recipesByOutput.has(mainOutputId)) {
+        recipesByOutput.set(mainOutputId, []);
+      }
+      recipesByOutput.get(mainOutputId)!.push({recipe, count: buildingCountFromSolver});
+    }
+    
+    // 为每个产出物组创建卡片
+    for (const [outputItemId, recipeList] of recipesByOutput) {
+      const outputItem = state.gameData.itemMap.get(outputItemId);
+      const alternativeRecipes = getAlternativeRecipes(outputItemId);
       const hasAlternatives = alternativeRecipes.length > 1;
       
-      const prolif = getRecipeProliferator(recipeId);
-      const { actualBuildingCount, building, speed, actualExecutionsPerMinute } = calculateRecipeInfo(recipe, buildingCountFromSolver, prolif);
-      const buildingCountCeil = Math.ceil(actualBuildingCount * 100) / 100;
+      // 计算该产出的总建筑数
+      const totalBuildings = recipeList.reduce((sum, {recipe, count}) => {
+        const { actualBuildingCount } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipe.id));
+        return sum + actualBuildingCount;
+      }, 0);
       
-      let prodMultiplier = 1;
-      if (prolif.level > 0 && prolif.mode === 'productivity') {
-        const params = DEFAULT_PROLIFERATOR_PARAMS[prolif.level];
-        prodMultiplier = 1 + params.productivityBonus;
-      }
+      html += `<div class="recipe-card" data-output="${outputItemId}">`;
       
-      html += `<div class="recipe-card" data-recipe="${recipeId}">`;
-      
-      // 配方头部（带配方切换）
+      // 卡片头部：产出物名称 + 总建筑数 + 配方切换（如果有多个可选配方）
       html += `<div class="recipe-header">`;
       html += `<div class="recipe-title">`;
-      html += `<span class="recipe-name">${recipe.name}</span>`;
+      html += `<span class="recipe-product">${outputItem?.name || outputItemId}</span>`;
       
       // 如果有其他配方可选，显示切换下拉框
       if (hasAlternatives) {
         html += `<div class="recipe-switch">`;
-        html += `<select class="recipe-switch-select" data-output-item="${mainOutput.itemId}" title="切换配方">`;
+        html += `<select class="recipe-switch-select" data-output-item="${outputItemId}" title="选择配方策略">`;
+        html += `<option value="">混合使用 (${recipeList.length}种配方)</option>`;
         for (const altRecipe of alternativeRecipes) {
-          const selected = altRecipe.id === recipeId ? 'selected' : '';
-          html += `<option value="${altRecipe.id}" ${selected}>${altRecipe.name}</option>`;
+          // 检查这个替代配方当前是否被使用
+          const isUsed = recipeList.some(r => r.recipe.id === altRecipe.id);
+          const isExclusive = isUsed && recipeList.length === 1;
+          const label = isExclusive ? '✓ ' : '';
+          html += `<option value="${altRecipe.id}" ${isExclusive ? 'selected' : ''}>${label}${altRecipe.name}</option>`;
         }
         html += `</select>`;
         html += `</div>`;
       }
       
       html += `</div>`; // end recipe-title
-      html += `<span class="building-count">${buildingCountCeil.toFixed(2)} 个 ${building?.name || '未知建筑'}</span>`;
+      
+      // 总建筑数
+      const buildingName = recipeList[0]?.recipe ? 
+        state.gameData.buildings.find(b => b.originalId === recipeList[0].recipe.factoryIds[0])?.name : 
+        '建筑';
+      html += `<span class="building-count">${Math.ceil(totalBuildings * 100) / 100} 个 ${buildingName}</span>`;
       html += `</div>`;
       
-      // 配方详情
-      html += `<div class="recipe-details">`;
-      
-      // 输入
-      html += `<div class="recipe-io">`;
-      html += `<div class="io-label">输入:</div>`;
-      html += `<div class="io-items">`;
-      for (const input of recipe.inputs) {
-        const item = state.gameData.itemMap.get(input.itemId);
-        const rate = input.count * actualExecutionsPerMinute;
-        html += `<span class="io-item">
-          <span class="io-count">${rate.toFixed(2)}</span>
-          <span class="io-name">${item?.name || input.itemId}</span>
-          <span class="io-per">(${input.count}×${actualExecutionsPerMinute.toFixed(2)}/min)</span>
-        </span>`;
-      }
-      html += `</div></div>`;
-      
-      // 输出
-      html += `<div class="recipe-io">`;
-      html += `<div class="io-label">输出:</div>`;
-      html += `<div class="io-items">`;
-      for (const output of recipe.outputs) {
-        const item = state.gameData.itemMap.get(output.itemId);
-        let rate = output.count * actualExecutionsPerMinute;
-        if (prolif.mode === 'productivity') {
-          rate *= prodMultiplier;
+      // 为组内每个配方创建详情
+      for (const {recipe, count} of recipeList) {
+        const prolif = getRecipeProliferator(recipe.id);
+        const { actualBuildingCount, speed, actualExecutionsPerMinute } = calculateRecipeInfo(recipe, count, prolif);
+        
+        let prodMultiplier = 1;
+        if (prolif.level > 0 && prolif.mode === 'productivity') {
+          const params = DEFAULT_PROLIFERATOR_PARAMS[prolif.level];
+          prodMultiplier = 1 + params.productivityBonus;
         }
-        html += `<span class="io-item ${prolif?.mode === 'productivity' ? 'productivity-boost' : ''}">
-          <span class="io-count">${rate.toFixed(2)}</span>
-          <span class="io-name">${item?.name || output.itemId}</span>
-          <span class="io-per">(${output.count}×${actualExecutionsPerMinute.toFixed(2)}/min)</span>
-          ${prolif.mode === 'productivity' ? `<span class="boost-badge">+${((prodMultiplier - 1) * 100).toFixed(0)}%</span>` : ''}
-        </span>`;
+        
+        html += `<div class="recipe-subcard" data-recipe="${recipe.id}">`;
+        
+        // 子配方标题
+        html += `<div class="subrecipe-header">`;
+        html += `<span class="subrecipe-name">${recipe.name}</span>`;
+        html += `<span class="subrecipe-count">${Math.ceil(actualBuildingCount * 100) / 100} 个</span>`;
+        html += `</div>`;
+        
+        // 配方详情
+        html += `<div class="recipe-details">`;
+        
+        // 输入
+        html += `<div class="recipe-io">`;
+        html += `<div class="io-label">输入:</div>`;
+        html += `<div class="io-items">`;
+        for (const input of recipe.inputs) {
+          const item = state.gameData.itemMap.get(input.itemId);
+          const rate = input.count * actualExecutionsPerMinute;
+          html += `<span class="io-item">
+            <span class="io-count">${rate.toFixed(2)}</span>
+            <span class="io-name">${item?.name || input.itemId}</span>
+            <span class="io-per">(${input.count}×${actualExecutionsPerMinute.toFixed(2)}/min)</span>
+          </span>`;
+        }
+        html += `</div></div>`;
+        
+        // 输出
+        html += `<div class="recipe-io">`;
+        html += `<div class="io-label">输出:</div>`;
+        html += `<div class="io-items">`;
+        for (const output of recipe.outputs) {
+          const item = state.gameData.itemMap.get(output.itemId);
+          let rate = output.count * actualExecutionsPerMinute;
+          if (prolif.mode === 'productivity') {
+            rate *= prodMultiplier;
+          }
+          html += `<span class="io-item ${prolif?.mode === 'productivity' ? 'productivity-boost' : ''}">
+            <span class="io-count">${rate.toFixed(2)}</span>
+            <span class="io-name">${item?.name || output.itemId}</span>
+            <span class="io-per">(${output.count}×${actualExecutionsPerMinute.toFixed(2)}/min)</span>
+            ${prolif.mode === 'productivity' ? `<span class="boost-badge">+${((prodMultiplier - 1) * 100).toFixed(0)}%</span>` : ''}
+          </span>`;
+        }
+        html += `</div></div>`;
+        
+        // 速度信息
+        html += `<div class="recipe-speed">`;
+        html += `<span>周期: ${recipe.time}s</span>`;
+        html += `<span>单建筑: ${speed.toFixed(2)}/min</span>`;
+        html += `</div>`;
+        
+        // 增产剂配置
+        html += renderProliferatorControl(recipe.id, prolif);
+        
+        html += `</div></div>`; // end recipe-details, recipe-subcard
       }
-      html += `</div></div>`;
       
-      // 速度信息
-      html += `<div class="recipe-speed">`;
-      html += `<span>配方周期: ${recipe.time}s</span>`;
-      html += `<span>单建筑速度: ${speed.toFixed(2)}/min</span>`;
-      html += `<span>总执行次数: ${actualExecutionsPerMinute.toFixed(2)}/min</span>`;
-      html += `</div>`;
-      
-      // 增产剂配置
-      html += renderProliferatorControl(recipeId, prolif);
-      
-      html += `</div></div>`; // end recipe-details, recipe-card
+      html += `</div>`; // end recipe-card
     }
     
     html += '</div></div>';
@@ -673,7 +711,17 @@ function bindRecipeSwitchEvents() {
       const target = e.target as HTMLSelectElement;
       const outputItemId = target.dataset.outputItem!;
       const newRecipeId = target.value;
-      switchRecipeChoice(outputItemId, newRecipeId);
+      
+      if (newRecipeId === '') {
+        // 选择"混合使用" - 清除该物品的配方限制，让 solver 自动决定
+        state.selectedRecipes.delete(outputItemId);
+        state.recipeChoices.delete(outputItemId);
+      } else {
+        // 选择特定配方
+        switchRecipeChoice(outputItemId, newRecipeId);
+      }
+      saveState();
+      autoSolve();
     });
   });
 }
