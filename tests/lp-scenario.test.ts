@@ -10,67 +10,37 @@
  * 目标：生产 E
  */
 
-import type { GameData, Recipe, Item, Building } from '../src/types';
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const solver = require('javascript-lp-solver');
-
-// 创建测试数据
-function createTestGameData(): GameData {
-  const items: Item[] = [
-    { id: 'A', name: 'A', originalId: 1, type: 1, iconName: 'a', isRaw: true },
-    { id: 'B', name: 'B', originalId: 2, type: 2, iconName: 'b' },
-    { id: 'C', name: 'C', originalId: 3, type: 2, iconName: 'c' },
-    { id: 'D', name: 'D', originalId: 4, type: 1, iconName: 'd', isRaw: true },
-    { id: 'E', name: 'E', originalId: 5, type: 3, iconName: 'e' },
-  ];
-
-  const recipes: Recipe[] = [
-    { id: 'r1', name: 'A->B+2C', originalId: 1, inputs: [{ itemId: 'A', count: 1 }], outputs: [{ itemId: 'B', count: 1 }, { itemId: 'C', count: 2 }], time: 1, factoryIds: [1], isMultiProduct: true, proliferatorLevel: 0, iconName: 'r1', type: 1 },
-    { id: 'r2', name: 'A+D->2B+C', originalId: 2, inputs: [{ itemId: 'A', count: 1 }, { itemId: 'D', count: 1 }], outputs: [{ itemId: 'B', count: 2 }, { itemId: 'C', count: 1 }], time: 1, factoryIds: [1], isMultiProduct: true, proliferatorLevel: 0, iconName: 'r2', type: 1 },
-    { id: 'r3', name: '3B+2C->E', originalId: 3, inputs: [{ itemId: 'B', count: 3 }, { itemId: 'C', count: 2 }], outputs: [{ itemId: 'E', count: 1 }], time: 1, factoryIds: [1], isMultiProduct: false, proliferatorLevel: 0, iconName: 'r3', type: 1 },
-  ];
-
-  const buildings: Building[] = [{ id: '1', originalId: 1, name: '测试建筑', category: 'assembler', speed: 1, workPower: 1, idlePower: 0.1, hasProliferatorSlot: false }];
-
-  const itemMap = new Map(items.map(i => [i.id, i]));
-  const recipeMap = new Map(recipes.map(r => [r.id, r]));
-  const itemToRecipes = new Map<string, Recipe[]>();
-  for (const recipe of recipes) {
-    for (const output of recipe.outputs) {
-      if (!itemToRecipes.has(output.itemId)) itemToRecipes.set(output.itemId, []);
-      itemToRecipes.get(output.itemId)!.push(recipe);
-    }
-  }
-
-  return { version: 'test', items, recipes, buildings, proliferators: [], rawItemIds: ['A', 'D'], itemMap, recipeMap, itemToRecipes };
-}
+import { solve } from 'yalps';
+import type { Model } from 'yalps';
 
 describe('LP Scenario: Two Multi-Product Recipes Balancing', () => {
   test('solver finds optimal solution for E=1', () => {
-    const model = {
-      optimize: { r1: 1, r2: 1, r3: 1 },
-      opType: 'min',
-      constraints: { B_balance: { min: 0 }, C_balance: { min: 0 }, E_demand: { min: 1 } },
+    const model: Model = {
+      direction: 'minimize',
+      objective: 'total',
+      constraints: {
+        B_balance: { min: 0 },
+        C_balance: { min: 0 },
+        E_demand: { min: 1 },
+      },
       variables: {
-        r1: { B_balance: 1, C_balance: 2, E_demand: 0 },
-        r2: { B_balance: 2, C_balance: 1, E_demand: 0 },
-        r3: { B_balance: -3, C_balance: -2, E_demand: 1 },
+        r1: { total: 1, B_balance: 1, C_balance: 2, E_demand: 0 },
+        r2: { total: 1, B_balance: 2, C_balance: 1, E_demand: 0 },
+        r3: { total: 1, B_balance: -3, C_balance: -2, E_demand: 1 },
       },
     };
 
-    const result = solver.Solve(model);
+    const result = solve(model);
     console.log('\n=== LP Result for E=1 ===');
     console.log('Result:', JSON.stringify(result, null, 2));
 
-    // 从 vertices 提取解
-    expect(result.vertices).toBeDefined();
-    expect(result.vertices.length).toBeGreaterThan(0);
+    expect(result.status).toBe('optimal');
 
-    const vertex = result.vertices[0];
-    const r1 = vertex.r1 || 0;
-    const r2 = vertex.r2 || 0;
-    const r3 = vertex.r3 || 0;
+    // 提取解
+    const vars = new Map(result.variables);
+    const r1 = vars.get('r1') || 0;
+    const r2 = vars.get('r2') || 0;
+    const r3 = vars.get('r3') || 0;
 
     console.log('\nExtracted:');
     console.log(`r1: ${r1}, r2: ${r2}, r3: ${r3}`);
@@ -95,24 +65,28 @@ describe('LP Scenario: Two Multi-Product Recipes Balancing', () => {
   });
 
   test('solver finds optimal solution for E=3', () => {
-    const model = {
-      optimize: { r1: 1, r2: 1, r3: 1 },
-      opType: 'min',
-      constraints: { B_balance: { min: 0 }, C_balance: { min: 0 }, E_demand: { min: 3 } },
+    const model: Model = {
+      direction: 'minimize',
+      objective: 'total',
+      constraints: {
+        B_balance: { min: 0 },
+        C_balance: { min: 0 },
+        E_demand: { min: 3 },
+      },
       variables: {
-        r1: { B_balance: 1, C_balance: 2, E_demand: 0 },
-        r2: { B_balance: 2, C_balance: 1, E_demand: 0 },
-        r3: { B_balance: -3, C_balance: -2, E_demand: 1 },
+        r1: { total: 1, B_balance: 1, C_balance: 2, E_demand: 0 },
+        r2: { total: 1, B_balance: 2, C_balance: 1, E_demand: 0 },
+        r3: { total: 1, B_balance: -3, C_balance: -2, E_demand: 1 },
       },
     };
 
-    const result = solver.Solve(model);
+    const result = solve(model);
     console.log('\n=== LP Result for E=3 ===');
 
-    const vertex = result.vertices[0];
-    const r1 = vertex.r1 || 0;
-    const r2 = vertex.r2 || 0;
-    const r3 = vertex.r3 || 0;
+    const vars = new Map(result.variables);
+    const r1 = vars.get('r1') || 0;
+    const r2 = vars.get('r2') || 0;
+    const r3 = vars.get('r3') || 0;
 
     console.log(`r1: ${r1}, r2: ${r2}, r3: ${r3}`);
 
@@ -158,40 +132,50 @@ describe('LP Scenario: Two Multi-Product Recipes Balancing', () => {
     console.log('\n=== Strategy Comparison ===');
 
     // 策略1: 最小建筑数（默认）
-    const model1 = {
-      optimize: { r1: 1, r2: 1, r3: 1 },
-      opType: 'min',
-      constraints: { B_balance: { min: 0 }, C_balance: { min: 0 }, E_demand: { min: 3 } },
+    const model1: Model = {
+      direction: 'minimize',
+      objective: 'total',
+      constraints: {
+        B_balance: { min: 0 },
+        C_balance: { min: 0 },
+        E_demand: { min: 3 },
+      },
       variables: {
-        r1: { B_balance: 1, C_balance: 2, E_demand: 0 },
-        r2: { B_balance: 2, C_balance: 1, E_demand: 0 },
-        r3: { B_balance: -3, C_balance: -2, E_demand: 1 },
+        r1: { total: 1, B_balance: 1, C_balance: 2, E_demand: 0 },
+        r2: { total: 1, B_balance: 2, C_balance: 1, E_demand: 0 },
+        r3: { total: 1, B_balance: -3, C_balance: -2, E_demand: 1 },
       },
     };
 
     // 策略2: 惩罚 r1（因为产生更多C需要处理）
-    const model2 = {
-      optimize: { r1: 2, r2: 1, r3: 1 }, // r1 惩罚系数为2
-      opType: 'min',
+    const model2: Model = {
+      direction: 'minimize',
+      objective: 'total',
       constraints: model1.constraints,
-      variables: model1.variables,
+      variables: {
+        r1: { total: 2, B_balance: 1, C_balance: 2, E_demand: 0 }, // r1 惩罚系数为2
+        r2: { total: 1, B_balance: 2, C_balance: 1, E_demand: 0 },
+        r3: { total: 1, B_balance: -3, C_balance: -2, E_demand: 1 },
+      },
     };
 
-    const result1 = solver.Solve(model1);
-    const result2 = solver.Solve(model2);
+    const result1 = solve(model1);
+    const result2 = solve(model2);
+
+    const v1 = new Map(result1.variables);
+    const v2 = new Map(result2.variables);
 
     console.log('\nMin-buildings:');
-    const v1 = result1.vertices[0];
-    console.log(`  r1=${v1.r1 || 0}, r2=${v1.r2 || 0}, r3=${v1.r3 || 0}`);
-    console.log(`  Total: ${(v1.r1 || 0) + (v1.r2 || 0) + (v1.r3 || 0)}`);
+    const r1_1 = v1.get('r1') || 0, r1_2 = v1.get('r2') || 0, r1_3 = v1.get('r3') || 0;
+    console.log(`  r1=${r1_1}, r2=${r1_2}, r3=${r1_3}`);
+    console.log(`  Total: ${r1_1 + r1_2 + r1_3}`);
 
     console.log('\nPenalize r1 (coef=2):');
-    const v2 = result2.vertices?.[0] || { r1: 0, r2: 0, r3: 0 };
-    const r2_1 = v2.r1 || 0, r2_2 = v2.r2 || 0, r2_3 = v2.r3 || 0;
+    const r2_1 = v2.get('r1') || 0, r2_2 = v2.get('r2') || 0, r2_3 = v2.get('r3') || 0;
     console.log(`  r1=${r2_1}, r2=${r2_2}, r3=${r2_3}`);
     console.log(`  Total: ${r2_1 + r2_2 + r2_3}`);
 
     // 两种策略应该都得到可行解
-    expect(v1.r3 || 0).toBeGreaterThanOrEqual(3);
+    expect(r1_3).toBeGreaterThanOrEqual(3);
   });
 });
