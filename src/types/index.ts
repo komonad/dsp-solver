@@ -154,6 +154,8 @@ export interface Building {
     /** 适用产物类型 */
     applicableItems?: string[];
   };
+  /** 建筑内置产出加成（例如某些模组建筑自带增产效果） */
+  intrinsicProductivity?: number;
 }
 
 /** 建筑类型 */

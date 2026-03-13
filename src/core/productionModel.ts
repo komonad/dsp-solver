@@ -290,7 +290,8 @@ export function calculateNetFlow(
 export function calculateItemBalance(
   recipe: Recipe,
   itemId: string,
-  proliferator?: { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity'; sprayCount?: number }
+  proliferator?: { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity'; sprayCount?: number },
+  building?: Building
 ): number {
   // 参数验证
   if (!recipe) {
@@ -312,12 +313,17 @@ export function calculateItemBalance(
   }
 
   // 增产模式加成（增加产出，不增加消耗）
-  const prodMultiplier = proliferator?.mode === 'productivity' ? 
+  let prodMultiplier = proliferator?.mode === 'productivity' ? 
     (1 + [0, 0.125, 0.2, 0.25][proliferator.level || 0]) : 1;
+  
+  // 建筑内置产出加成（例如某些模组建筑自带增产效果）
+  if (building?.intrinsicProductivity && building.intrinsicProductivity > 0) {
+    prodMultiplier *= (1 + building.intrinsicProductivity);
+  }
 
   let balance = 0;
 
-  // 产出（每分钟）- 只考虑增产加成，不考虑加速（加速只影响建筑数量）
+  // 产出（每分钟）- 考虑增产加成和建筑内置加成，不考虑加速（加速只影响建筑数量）
   for (const output of recipe.outputs) {
     if (output.itemId === itemId) {
       if (output.count < 0) {

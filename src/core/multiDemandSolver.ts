@@ -30,6 +30,12 @@ export interface MultiDemandOptions {
    * recipeId -> { level, mode }
    */
   recipeProliferators?: Map<string, { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity' }>;
+  /**
+   * 配方特定的建筑选择
+   * recipeId -> buildingId，表示该配方使用指定的建筑生产
+   * 如果不指定，使用配方 factoryIds 中的第一个建筑
+   */
+  recipeBuildings?: Map<string, string>;
 }
 
 export interface MultiDemandResult {
@@ -181,11 +187,18 @@ export function solveMultiDemand(
     const varName = `r${recipe.id}`;
     const coeffs: Record<string, number> = {};
     
+    // 获取该配方使用的建筑
+    const buildingId = options.recipeBuildings?.get(recipe.id);
+    const building = buildingId 
+      ? gameData.buildings.find(b => b.id === buildingId)
+      : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
+    
     for (const itemId of items) {
       // 使用配方特定的增产剂配置，如果没有则使用全局配置
       const specificProlif = options.recipeProliferators?.get(recipe.id);
       const prolif = specificProlif ?? options.globalProliferator;
-      const balance = calculateItemBalance(recipe, itemId, prolif);
+      // 传入建筑以考虑内置产出加成
+      const balance = calculateItemBalance(recipe, itemId, prolif, building);
       if (Math.abs(balance) > 1e-12) {
         coeffs[itemId] = balance;
       }
@@ -270,7 +283,12 @@ export function solveMultiDemand(
         // 使用配方特定的增产剂配置，如果没有则使用全局配置
         const specificProlif = options.recipeProliferators?.get(recipe.id);
         const prolif = specificProlif ?? options.globalProliferator;
-        const coeff = calculateItemBalance(recipe, itemId, prolif);
+        // 获取该配方使用的建筑
+        const buildingId = options.recipeBuildings?.get(recipe.id);
+        const building = buildingId 
+          ? gameData.buildings.find(b => b.id === buildingId)
+          : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
+        const coeff = calculateItemBalance(recipe, itemId, prolif, building);
         balance += coeff * count;
       }
     }
