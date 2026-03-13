@@ -23,7 +23,8 @@
       ],
       "time": 1,
       "factoryIds": [2304],
-      "proliferatorLevel": 0
+      "proliferatorLevel": 0,
+      "isMultiProduct": true
     },
     {
       "id": "r2", 
@@ -40,12 +41,13 @@
       ],
       "time": 1,
       "factoryIds": [2304],
-      "proliferatorLevel": 0
+      "proliferatorLevel": 0,
+      "isMultiProduct": false
     }
   ],
   "buildings": [
     {
-      "id": "refinery",
+      "id": "2304",
       "originalId": 2304,
       "name": "原油精炼厂",
       "category": "refinery",
