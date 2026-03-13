@@ -185,6 +185,62 @@ describe('炼油配置测试', () => {
     expect(result.feasible).toBe(true);
   });
 
+  test('180/min 轻油求解 - 无副产物模式', () => {
+    const gameData = createRefineryData();
+
+    console.log('\n=== 方案3: 无副产物模式（强制平衡） ===\n');
+
+    const result = solveMultiDemand(
+      [{ itemId: 'light-oil', rate: 180 }],
+      gameData,
+      { 
+        treatAsRaw: ['oil', 'hydrogen'],
+        noByproducts: true // 强制无副产物
+      }
+    );
+
+    console.log('可行:', result.feasible);
+    expect(result.feasible).toBe(true);
+
+    console.log('\n配方执行:');
+    for (const [recipeId, count] of result.recipes) {
+      const recipe = gameData.recipeMap.get(recipeId);
+      if (recipe) {
+        console.log(`  ${recipe.name}: ${count.toFixed(4)} 次/min = ${count.toFixed(2)} 个精炼厂`);
+      }
+    }
+
+    console.log('\n原材料:');
+    for (const [itemId, rate] of result.rawMaterials) {
+      const item = gameData.itemMap.get(itemId);
+      console.log(`  ${item?.name}: ${rate.toFixed(2)}/min`);
+    }
+
+    // 验证所有中间产物平衡为0
+    console.log('\n中间产物结余（应该全为0）:');
+    for (const [itemId, balance] of result.intermediateBalance) {
+      const item = gameData.itemMap.get(itemId);
+      console.log(`  ${item?.name}: ${balance.toFixed(4)}/min`);
+      // 允许小的数值误差
+      expect(Math.abs(balance)).toBeLessThan(0.01);
+    }
+
+    // 验证
+    const r1 = result.recipes.get('r1') || 0;
+    const r2 = result.recipes.get('r2') || 0;
+    
+    // 轻油产出 = (2*r1 + 1*r2) × 60
+    const lightOilPerSec = 2 * r1 + 1 * r2;
+    const lightOilPerMin = lightOilPerSec * 60;
+    console.log(`\n验证: 轻油产出 = (2×${r1.toFixed(4)} + 1×${r2.toFixed(4)}) × 60 = ${lightOilPerMin.toFixed(2)}/min`);
+    expect(lightOilPerMin).toBeGreaterThanOrEqual(180 - 0.01);
+
+    // 验证重油平衡
+    const heavyOilNet = (r1 - r2) * 60; // 产出 - 消耗
+    console.log(`重油净产出: ${heavyOilNet.toFixed(4)}/min (应为 0)`);
+    expect(Math.abs(heavyOilNet)).toBeLessThan(0.01);
+  });
+
   test('手动计算验证', () => {
     console.log('\n=== 手动计算最优方案 ===\n');
     

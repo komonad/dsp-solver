@@ -20,6 +20,11 @@ export interface MultiDemandOptions {
    * itemId -> recipeId，表示该物品强制使用指定的配方生产
    */
   selectedRecipes?: Map<string, string>;
+  /**
+   * 无副产物模式
+   * 如果为 true，所有中间产物必须完全平衡（产出 = 消耗），不允许有结余
+   */
+  noByproducts?: boolean;
 }
 
 export interface MultiDemandResult {
@@ -186,6 +191,7 @@ export function solveMultiDemand(
 
   // 构建约束（使用调整后的需求）
   const constraints: Record<string, { min?: number; max?: number }> = {};
+  const noByproducts = options.noByproducts || false;
   
   for (const itemId of items) {
     const demand = adjustedDemandMap.get(itemId);
@@ -193,8 +199,14 @@ export function solveMultiDemand(
       // 需求物品：必须满足剩余需求
       constraints[itemId] = { min: demand };
     } else if (!rawItemSet.has(itemId)) {
-      // 非需求且非原矿的物品（中间产物）：不能从外部输入，必须自己生产
-      constraints[itemId] = { min: 0 };
+      // 非需求且非原矿的物品（中间产物）
+      if (noByproducts) {
+        // 无副产物模式：必须完全平衡（产出 = 消耗）
+        constraints[itemId] = { min: 0, max: 0 };
+      } else {
+        // 正常模式：不能从外部输入，允许结余
+        constraints[itemId] = { min: 0 };
+      }
     }
     // 原矿不做约束（允许从外部输入）
   }

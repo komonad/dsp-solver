@@ -19,6 +19,7 @@ interface SavedState {
     level: 0 | 1 | 2 | 3;
     mode: 'none' | 'speed' | 'productivity';
   };
+  noByproducts: boolean;
   selectedRecipes: Array<[string, string]>; // [itemId, recipeId][]
   recipeProliferators: Array<[string, RecipeProliferatorConfig]>;
   recipeChoices: Array<[string, string]>; // [outputItemId, selectedRecipeId][] 用户在结果中选择的配方
@@ -34,6 +35,7 @@ interface AppState {
     level: 0 | 1 | 2 | 3;
     mode: 'none' | 'speed' | 'productivity';
   };
+  noByproducts: boolean;
   selectedRecipes: Map<string, string>; // itemId -> recipeId (全局配方选择)
   recipeProliferators: Map<string, RecipeProliferatorConfig>; // recipeId -> config
   recipeChoices: Map<string, string>; // outputItemId -> selectedRecipeId (用户在结果中的切换选择)
@@ -56,6 +58,7 @@ const state: AppState = {
   treatAsRaw: new Set(),
   existingSupplies: [],
   globalProliferator: { level: 0, mode: 'none' },
+  noByproducts: false,
   selectedRecipes: new Map(),
   recipeProliferators: new Map(),
   recipeChoices: new Map(),
@@ -79,6 +82,7 @@ function saveState() {
     treatAsRaw: Array.from(state.treatAsRaw),
     existingSupplies: state.existingSupplies,
     globalProliferator: state.globalProliferator,
+    noByproducts: state.noByproducts,
     selectedRecipes: Array.from(state.selectedRecipes.entries()),
     recipeProliferators: Array.from(state.recipeProliferators.entries()),
     recipeChoices: Array.from(state.recipeChoices.entries()),
@@ -98,6 +102,7 @@ function loadState() {
     state.treatAsRaw = new Set(saved.treatAsRaw || []);
     state.existingSupplies = saved.existingSupplies || [];
     state.globalProliferator = saved.globalProliferator || { level: 0, mode: 'none' };
+    state.noByproducts = saved.noByproducts || false;
     state.selectedRecipes = new Map(saved.selectedRecipes || []);
     state.recipeProliferators = new Map(saved.recipeProliferators || []);
     state.recipeChoices = new Map(saved.recipeChoices || []);
@@ -109,6 +114,10 @@ function loadState() {
       if (levelSelect) levelSelect.value = String(state.globalProliferator.level);
       if (modeSelect) modeSelect.value = state.globalProliferator.mode;
     }
+    
+    // 恢复无副产物选项
+    const noByproductsCheck = document.getElementById('no-byproducts') as HTMLInputElement;
+    if (noByproductsCheck) noByproductsCheck.checked = state.noByproducts;
     
     renderDemands();
     return true;
@@ -125,6 +134,7 @@ function clearState() {
   state.treatAsRaw.clear();
   state.existingSupplies = [];
   state.globalProliferator = { level: 0, mode: 'none' };
+  state.noByproducts = false;
   state.selectedRecipes.clear();
   state.recipeProliferators.clear();
   state.recipeChoices.clear();
@@ -132,8 +142,10 @@ function clearState() {
   // 重置 UI
   const levelSelect = document.getElementById('proliferator-level') as HTMLSelectElement;
   const modeSelect = document.getElementById('proliferator-mode') as HTMLSelectElement;
+  const noByproductsCheck = document.getElementById('no-byproducts') as HTMLInputElement;
   if (levelSelect) levelSelect.value = '0';
   if (modeSelect) modeSelect.value = 'none';
+  if (noByproductsCheck) noByproductsCheck.checked = false;
   
   renderDemands();
   autoSolve();
@@ -204,6 +216,7 @@ async function init() {
   // 监听增产剂配置变化
   document.getElementById('proliferator-level')?.addEventListener('change', updateProliferator);
   document.getElementById('proliferator-mode')?.addEventListener('change', updateProliferator);
+  document.getElementById('no-byproducts')?.addEventListener('change', updateNoByproducts);
 
   // 加载保存的状态
   const hasSavedState = loadState();
@@ -343,6 +356,13 @@ function updateProliferator() {
   autoSolve();
 }
 
+function updateNoByproducts() {
+  const checkbox = document.getElementById('no-byproducts') as HTMLInputElement;
+  state.noByproducts = checkbox.checked;
+  saveState();
+  autoSolve();
+}
+
 function toggleRawMaterial(itemId: string) {
   if (state.treatAsRaw.has(itemId)) {
     state.treatAsRaw.delete(itemId);
@@ -411,6 +431,7 @@ function solve() {
     treatAsRaw: Array.from(state.treatAsRaw),
     existingSupplies: state.existingSupplies,
     selectedRecipes: mergedSelectedRecipes,
+    noByproducts: state.noByproducts,
   };
   
   const result = solveMultiDemand(state.demands, state.gameData, options);
