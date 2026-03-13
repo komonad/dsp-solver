@@ -162,17 +162,31 @@ async function switchConfig(configKey: string) {
     state.gameData = await loadGameDataFromURL(config.file);
     console.log(`[${config.name}] 数据加载成功:`, state.gameData.items.length, 'items');
     
-    // 清空之前的选择
+    // 清空之前的选择（需求和配置都清空，因为不同配置的物品不兼容）
+    state.demands = [];
+    state.treatAsRaw.clear();
     state.selectedRecipes.clear();
     state.recipeChoices.clear();
+    state.recipeProliferators.clear();
+    state.lastResult = null;
     
     // 更新UI
+    renderDemands();
     populateItemSelect();
-    autoSolve();
+    
+    // 清空结果区域
+    if (resultsDiv) {
+      resultsDiv.innerHTML = '<div class="empty">添加需求以查看结果</div>';
+    }
+    if (configDiv) {
+      configDiv.innerHTML = '';
+    }
     
     // 更新选择器
     const configSelect = document.getElementById('config-select') as HTMLSelectElement;
     if (configSelect) configSelect.value = configKey;
+    
+    console.log(`已切换到 [${config.name}]，请重新添加需求`);
   } catch (e) {
     console.error(`加载 [${config.name}] 失败:`, e);
     alert(`加载配置失败: ${config.name}`);
