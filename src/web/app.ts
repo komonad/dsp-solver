@@ -153,12 +153,17 @@ function clearState() {
 
 // 切换数据配置
 async function switchConfig(configKey: string) {
-  if (!DATA_CONFIGS[configKey as keyof typeof DATA_CONFIGS]) return;
+  console.log('switchConfig called:', configKey);
+  if (!DATA_CONFIGS[configKey as keyof typeof DATA_CONFIGS]) {
+    console.error('Unknown config:', configKey);
+    return;
+  }
   
   currentConfig = configKey;
   const config = DATA_CONFIGS[configKey as keyof typeof DATA_CONFIGS];
   
   try {
+    console.log('Loading:', config.file);
     state.gameData = await loadGameDataFromURL(config.file);
     console.log(`[${config.name}] 数据加载成功:`, state.gameData.items.length, 'items');
     
@@ -172,7 +177,9 @@ async function switchConfig(configKey: string) {
     
     // 更新UI
     renderDemands();
+    console.log('Calling populateItemSelect...');
     populateItemSelect();
+    console.log('populateItemSelect done');
     
     // 清空结果区域
     if (resultsDiv) {
@@ -256,8 +263,17 @@ function showStateNotice() {
 }
 
 function populateItemSelect() {
-  if (!state.gameData) return;
+  console.log('populateItemSelect called, gameData:', state.gameData ? 'yes' : 'no');
+  if (!state.gameData) {
+    console.warn('No gameData, skipping populateItemSelect');
+    return;
+  }
+  if (!itemSelect) {
+    console.error('itemSelect is null!');
+    return;
+  }
   
+  console.log('Populating with', state.gameData.items.length, 'items');
   itemSelect.innerHTML = '<option value="">选择产物...</option>';
   
   // 按类型分组
