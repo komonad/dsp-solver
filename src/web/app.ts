@@ -1043,15 +1043,20 @@ function bindProliferatorEvents() {
       if (modeSelect) modeSelect.disabled = useGlobal;
       
       if (useGlobal) {
+        // 切换到全局：删除特定配置
         state.recipeProliferators.delete(recipeId);
         saveState();
         autoSolve();
       } else {
-        updateRecipeProliferator(
-          recipeId,
-          parseInt(levelSelect?.value || '0') as 0|1|2|3,
-          (modeSelect?.value || 'none') as 'none'|'speed'|'productivity'
-        );
+        // 切换到自定义：默认使用 Mk.I + 加速（避免立即删除）
+        const level = Math.max(1, parseInt(levelSelect?.value || '1')) as 1|2|3;
+        const mode = (modeSelect?.value === 'none' ? 'speed' : modeSelect?.value) as 'speed'|'productivity';
+        
+        // 更新UI显示
+        if (levelSelect) levelSelect.value = String(level);
+        if (modeSelect) modeSelect.value = mode;
+        
+        updateRecipeProliferator(recipeId, level, mode);
       }
     });
   });
