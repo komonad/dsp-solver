@@ -9,7 +9,7 @@
     "dev": "tsc --watch",
     "test": "jest",
     "lint": "eslint src --ext .ts",
-    "build:web": "webpack && copy data\\Vanilla.json dist-web\\",
+    "build:web": "webpack && copy data\\*.json dist-web\\",
     "serve:web": "cd dist-web && python -m http.server 8081"
   },
   "keywords": [
