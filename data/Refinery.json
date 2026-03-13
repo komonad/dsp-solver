@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "items": [
+    {"id": "oil", "name": "原油", "originalId": 1007, "type": 1, "iconName": "oil", "isRaw": true},
+    {"id": "hydrogen", "name": "氢气", "originalId": 1120, "type": 2, "iconName": "hydrogen"},
+    {"id": "light-oil", "name": "轻油", "originalId": 1117, "type": 2, "iconName": "light-oil"},
+    {"id": "heavy-oil", "name": "重油", "originalId": 1116, "type": 2, "iconName": "heavy-oil"}
+  ],
+  "recipes": [
+    {
+      "id": "r1",
+      "name": "原油裂解",
+      "originalId": 1,
+      "type": 1,
+      "iconName": "refining",
+      "inputs": [
+        {"itemId": "oil", "count": 1},
+        {"itemId": "hydrogen", "count": 1}
+      ],
+      "outputs": [
+        {"itemId": "light-oil", "count": 2},
+        {"itemId": "heavy-oil", "count": 1}
+      ],
+      "time": 1,
+      "factoryIds": [2304],
+      "proliferatorLevel": 0
+    },
+    {
+      "id": "r2", 
+      "name": "重油精炼",
+      "originalId": 2,
+      "type": 1,
+      "iconName": "refining",
+      "inputs": [
+        {"itemId": "heavy-oil", "count": 1},
+        {"itemId": "hydrogen", "count": 2}
+      ],
+      "outputs": [
+        {"itemId": "light-oil", "count": 1}
+      ],
+      "time": 1,
+      "factoryIds": [2304],
+      "proliferatorLevel": 0
+    }
+  ],
+  "buildings": [
+    {
+      "id": "refinery",
+      "originalId": 2304,
+      "name": "原油精炼厂",
+      "category": "refinery",
+      "speed": 1.0,
+      "workPower": 1.0,
+      "idlePower": 0.1,
+      "hasProliferatorSlot": false
+    }
+  ],
+  "proliferators": [],
+  "rawItemIds": ["oil"]
+}

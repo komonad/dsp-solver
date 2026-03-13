@@ -42,6 +42,14 @@ interface AppState {
 
 const STORAGE_KEY = 'dsp-calculator-state';
 
+// 可用数据配置
+const DATA_CONFIGS = {
+  'vanilla': { name: '原版 (Vanilla)', file: './Vanilla.json' },
+  'refinery': { name: '炼油测试 (Refinery)', file: './Refinery.json' },
+};
+
+let currentConfig: string = 'vanilla';
+
 const state: AppState = {
   gameData: null,
   demands: [],
@@ -131,17 +139,36 @@ function clearState() {
   autoSolve();
 }
 
+// 切换数据配置
+async function switchConfig(configKey: string) {
+  if (!DATA_CONFIGS[configKey as keyof typeof DATA_CONFIGS]) return;
+  
+  currentConfig = configKey;
+  const config = DATA_CONFIGS[configKey as keyof typeof DATA_CONFIGS];
+  
+  try {
+    state.gameData = await loadGameDataFromURL(config.file);
+    console.log(`[${config.name}] 数据加载成功:`, state.gameData.items.length, 'items');
+    
+    // 清空之前的选择
+    state.selectedRecipes.clear();
+    state.recipeChoices.clear();
+    
+    // 更新UI
+    populateItemSelect();
+    autoSolve();
+    
+    // 更新选择器
+    const configSelect = document.getElementById('config-select') as HTMLSelectElement;
+    if (configSelect) configSelect.value = configKey;
+  } catch (e) {
+    console.error(`加载 [${config.name}] 失败:`, e);
+    alert(`加载配置失败: ${config.name}`);
+  }
+}
+
 // 初始化
 async function init() {
-  // 加载游戏数据
-  try {
-    state.gameData = await loadGameDataFromURL('./Vanilla.json');
-    console.log('游戏数据加载成功:', state.gameData.items.length, 'items');
-  } catch (e) {
-    console.error('加载游戏数据失败:', e);
-    state.gameData = createTestData();
-  }
-
   // 获取DOM元素
   itemSelect = document.getElementById('item-select') as HTMLSelectElement;
   rateInput = document.getElementById('rate-input') as HTMLInputElement;
@@ -152,8 +179,22 @@ async function init() {
   configDiv = document.getElementById('config-panel') as HTMLDivElement;
   clearStateBtn = document.getElementById('clear-state') as HTMLButtonElement;
 
-  // 填充物品选择器
-  populateItemSelect();
+  // 填充配置选择器
+  const configSelect = document.getElementById('config-select') as HTMLSelectElement;
+  if (configSelect) {
+    for (const [key, config] of Object.entries(DATA_CONFIGS)) {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = config.name;
+      configSelect.appendChild(option);
+    }
+    configSelect.addEventListener('change', (e) => {
+      switchConfig((e.target as HTMLSelectElement).value);
+    });
+  }
+
+  // 加载默认配置
+  await switchConfig('vanilla');
 
   // 绑定事件
   addDemandBtn.addEventListener('click', addDemand);
