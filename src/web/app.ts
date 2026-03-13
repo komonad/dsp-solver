@@ -759,9 +759,54 @@ function renderSummaryPanel(result: MultiDemandResult) {
   const inputsDiv = document.getElementById('summary-inputs');
   const outputsDiv = document.getElementById('summary-outputs');
   const buildingsDiv = document.getElementById('summary-buildings');
+  const rawSettingsDiv = document.getElementById('summary-raw-settings');
   const jumpDiv = document.getElementById('summary-jump');
   
   if (!inputsDiv || !outputsDiv || !buildingsDiv || !jumpDiv) return;
+  
+  // 0. 原矿设置：显示所有用户标记的原矿
+  if (rawSettingsDiv) {
+    let rawSettingsHtml = '';
+    if (state.treatAsRaw.size > 0) {
+      rawSettingsHtml += '<div class="raw-settings-list">';
+      for (const itemId of state.treatAsRaw) {
+        const item = state.gameData.itemMap.get(itemId);
+        rawSettingsHtml += `
+          <div class="raw-setting-item">
+            <span class="raw-setting-name">${item?.name || itemId}</span>
+            <button class="raw-setting-remove" data-item="${itemId}" title="取消原矿标记">×</button>
+          </div>
+        `;
+      }
+      rawSettingsHtml += '</div>';
+      rawSettingsHtml += '<button class="raw-settings-clear" id="clear-all-raw">清除所有原矿标记</button>';
+    } else {
+      rawSettingsHtml = '<div class="raw-settings-empty">暂无自定义原矿</div>';
+    }
+    rawSettingsDiv.innerHTML = rawSettingsHtml;
+    
+    // 绑定单个移除事件
+    rawSettingsDiv.querySelectorAll('.raw-setting-remove').forEach((btn: Element) => {
+      btn.addEventListener('click', (e: Event) => {
+        const itemId = (e.currentTarget as HTMLElement).dataset.item!;
+        state.treatAsRaw.delete(itemId);
+        saveState();
+        autoSolve();
+      });
+    });
+    
+    // 绑定清除全部事件
+    const clearAllBtn = rawSettingsDiv.querySelector('#clear-all-raw');
+    if (clearAllBtn) {
+      clearAllBtn.addEventListener('click', () => {
+        if (confirm('确定要清除所有原矿标记吗？')) {
+          state.treatAsRaw.clear();
+          saveState();
+          autoSolve();
+        }
+      });
+    }
+  }
   
   // 1. 输入：原材料（带原矿取消复选框）
   let inputsHtml = '';
