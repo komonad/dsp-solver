@@ -18,36 +18,6 @@
 - **模组支持**：支持建筑对特定产物的翻倍效果
 - **灵活配置**：可针对建筑、配方、产物类型配置翻倍
 
-## 核心算法：线性规划
-
-对于多产物配方，计算器使用线性规划求解最优生产方案：
-
-```
-变量: x_i = 配方i的执行次数（每分钟）
-
-目标: 最小化总建筑数量（或其他目标）
-      min Σ(time_i × x_i)
-
-约束: 
-      1. 目标产物净产出 >= 需求
-         Σ(output_ij × x_i) >= demand_j
-      
-      2. 非原矿物品净产出 >= 0（不能有缺口）
-         Σ(output_ik × x_i) >= 0
-      
-      3. 所有变量非负
-         x_i >= 0
-```
-
-### 示例：原油精炼配平
-
-原油精炼配方：2原油 → 1精炼油 + 2氢气
-
-如果需要只生产精炼油，LP求解器会自动：
-1. 添加消耗氢气的配方（如液氢燃料棒）
-2. 计算最优配方比例，使氢气刚好被完全消耗
-3. 确保精炼油产出满足需求
-
 ## 安装
 
 ```bash
@@ -70,7 +40,6 @@ const result = calculate({
   defaultProliferator: {
     level: 3,
     mode: 'speed',
-    sprayCount: 12,
   },
 }, gameData);
 
@@ -78,22 +47,46 @@ console.log('建筑需求:', result.totalBuildings);
 console.log('原矿需求:', result.rawRequirements);
 ```
 
-## 多产物配方配平
+## 文档
 
-### 使用LP求解器
+- [📖 API 参考](docs/api.md) - 完整的 API 文档
+- [🌐 Web 界面](docs/web.md) - 可视化界面使用指南
+- [📊 数据格式](docs/data-format.md) - 游戏数据格式说明
+- [🧮 线性规划算法](docs/lp-algorithm.md) - 求解原理详解
+
+## Web 界面
+
+提供基于浏览器的可视化界面，支持：
+
+- 📋 多需求管理（同时计算多个产物）
+- ⚡ 增产剂配置（全局覆盖 + 单配方自定义）
+- 🏭 建筑选择（全局类别覆盖 + 单配方选择）
+- 📊 实时结果显示（配方卡片、物料平衡、电力估算）
+
+**使用方式：**
+
+```bash
+# 构建 Web 版本
+npm run build:web
+
+# 打开 dist-web/index.html
+```
+
+详细功能说明见 [Web 界面文档](docs/web.md)。
+
+## 示例：多产物配方配平
+
+原油精炼配方：`2原油 → 1精炼油 + 2氢气`
 
 ```typescript
-import { solveBalancing, buildMultiProductLPModel } from 'dsp-mod-calculator';
+import { solveBalancing } from 'dsp-mod-calculator';
 
-// 直接求解配平方案
+// 求解 60 精炼油/分钟 的最优配平方案
 const recipeCounts = solveBalancing(
-  '1120',    // 精炼油
+  '1120',    // 精炼油物品ID
   60,        // 60/分钟
   gameData,
-  {
-    objective: 'min-buildings',  // 最小化建筑数量
-    allowExternalInput: true,     // 允许原矿外部输入
-  }
+  { objective: 'min-buildings' }
 );
 
 console.log(recipeCounts);
@@ -103,46 +96,9 @@ console.log(recipeCounts);
 // }
 ```
 
-### 验证方案可行性
-
-```typescript
-import { validateSolution } from 'dsp-mod-calculator';
-
-const validation = validateSolution(recipeCounts, gameData);
-console.log(validation.valid);   // true/false
-console.log(validation.reasons); // 如果不可行，显示原因
-```
-
-## 自定义增产参数
-
-支持自定义增产剂参数，适配模组：
-
-```typescript
-import { setCustomProliferatorParams } from 'dsp-mod-calculator';
-
-// 设置自定义增产参数
-setCustomProliferatorParams({
-  0: { speedBonus: 0, productivityBonus: 0, powerBonus: 0, sprayCount: 0 },
-  1: { speedBonus: 0.2, productivityBonus: 0.2, powerBonus: 0.3, sprayCount: 15 },
-  2: { speedBonus: 0.3, productivityBonus: 0.3, powerBonus: 0.5, sprayCount: 15 },
-  3: { speedBonus: 0.5, productivityBonus: 0.5, powerBonus: 0.7, sprayCount: 15 },
-});
-```
-
-## 建筑翻倍效果
-
-支持模组中的建筑翻倍特性：
-
-```typescript
-import { enableDoublingForBuilding } from 'dsp-mod-calculator';
-
-// 位面熔炉对铁块和磁铁产生2倍产出
-enableDoublingForBuilding('2315', 2, ['1101', '1102']);
-```
-
 ## 数据结构
 
-兼容 [github.com/DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc) 的数据格式：
+兼容 [github.com/DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc) 的数据格式。
 
 ```json
 {
@@ -152,53 +108,20 @@ enableDoublingForBuilding('2315', 2, ['1101', '1102']);
   "recipes": [
     {
       "ID": 1,
-      "Type": 1,
-      "Factories": [2302, 2315, 2319],
       "Name": "铁块",
       "Items": [1001],
       "ItemCounts": [1],
       "Results": [1101],
       "ResultCounts": [1],
       "TimeSpend": 60,
-      "Proliferator": 3,
-      "IconName": "iron-plate"
+      "Factories": [2302, 2315, 2319],
+      "Proliferator": 3
     }
   ]
 }
 ```
 
-## API 参考
-
-### 核心计算
-
-- `calculate(config, gameData)` - 执行完整计算（使用LP求解）
-- `quickCalculate(itemId, rate, gameData)` - 快速计算单个物品
-- `calculateUpstream(itemId, rate, gameData)` - 递归计算上游需求
-
-### 线性规划求解
-
-- `buildMultiProductLPModel(itemId, rate, gameData, options)` - 构建LP模型
-- `solveLP(model)` - 求解LP模型
-- `solveBalancing(itemId, rate, gameData, options)` - 求解配平方案
-- `validateSolution(recipeCounts, gameData)` - 验证方案可行性
-
-### 多产物配方
-
-- `findMultiProductRecipes(gameData)` - 查找所有多产物配方
-- `findSingleProductScheme(itemId, rate, gameData)` - 寻找单一产物方案
-- `optimizeBalancing(demands, gameData)` - 优化配平方案
-- `analyzeScheme(scheme, gameData)` - 分析配平方案
-
-### 增产剂
-
-- `calculateProliferatorEffect(config, baseOutput)` - 计算增产效果
-- `setCustomProliferatorParams(params)` - 设置自定义参数
-- `resetProliferatorParams()` - 重置为默认参数
-
-### 翻倍效果
-
-- `enableDoublingForBuilding(buildingId, multiplier, items?)` - 启用翻倍
-- `setBuildingDoublingConfig(buildingId, config)` - 设置详细配置
+详细说明见 [数据格式文档](docs/data-format.md)。
 
 ## 开发
 
@@ -209,8 +132,11 @@ npm install
 # 构建
 npm run build
 
-# 测试
+# 运行测试
 npm test
+
+# 构建 Web 版本
+npm run build:web
 ```
 
 ## License
