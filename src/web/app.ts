@@ -536,7 +536,8 @@ function renderResults(result: MultiDemandResult) {
     html += `
       <div class="result-row ${status}">
         <span class="item-name">${item?.name || itemId}</span>
-        <span class="rate">${rate.toFixed(2)}/${required}/min</span>
+        <span class="rate">${rate.toFixed(2)}/min ${rate >= required - 0.01 ? '✓' : ''}</span>
+        <span class="rate-required">(需求: ${required}/min)</span>
       </div>
     `;
   }
