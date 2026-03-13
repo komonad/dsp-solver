@@ -408,11 +408,16 @@ function selectRecipe(itemId: string, recipeId: string | null) {
 }
 
 function updateRecipeProliferator(recipeId: string, level: 0 | 1 | 2 | 3, mode: 'none' | 'speed' | 'productivity') {
-  if (level === 0 || mode === 'none') {
-    state.recipeProliferators.delete(recipeId);
-  } else {
-    state.recipeProliferators.set(recipeId, { recipeId, level, mode });
-  }
+  // 保存配置，即使是 level=0/mode=none 也保存（表示显式不使用增产剂）
+  // 只有勾选"使用全局"时才会删除配置
+  state.recipeProliferators.set(recipeId, { recipeId, level, mode });
+  saveState();
+  autoSolve();
+}
+
+// 删除配方特定配置（恢复使用全局）
+function deleteRecipeProliferator(recipeId: string) {
+  state.recipeProliferators.delete(recipeId);
   saveState();
   autoSolve();
 }
@@ -469,8 +474,10 @@ function solve() {
 function getRecipeProliferator(recipeId: string): { level: 0|1|2|3; mode: 'none'|'speed'|'productivity' } {
   const specific = state.recipeProliferators.get(recipeId);
   if (specific) {
+    // 有特定配置，使用特定配置（即使是 0/none 也是显式设置的）
     return { level: specific.level, mode: specific.mode };
   }
+  // 没有特定配置，使用全局
   return state.globalProliferator;
 }
 
@@ -1044,18 +1051,11 @@ function bindProliferatorEvents() {
       
       if (useGlobal) {
         // 切换到全局：删除特定配置
-        state.recipeProliferators.delete(recipeId);
-        saveState();
-        autoSolve();
+        deleteRecipeProliferator(recipeId);
       } else {
-        // 切换到自定义：默认使用 Mk.I + 加速（避免立即删除）
-        const level = Math.max(1, parseInt(levelSelect?.value || '1')) as 1|2|3;
-        const mode = (modeSelect?.value === 'none' ? 'speed' : modeSelect?.value) as 'speed'|'productivity';
-        
-        // 更新UI显示
-        if (levelSelect) levelSelect.value = String(level);
-        if (modeSelect) modeSelect.value = mode;
-        
+        // 切换到自定义：保存当前选中的值（包括 0/none）
+        const level = parseInt(levelSelect?.value || '0') as 0|1|2|3;
+        const mode = (modeSelect?.value || 'none') as 'none'|'speed'|'productivity';
         updateRecipeProliferator(recipeId, level, mode);
       }
     });
