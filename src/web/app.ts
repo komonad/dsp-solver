@@ -747,6 +747,142 @@ function renderResults(result: MultiDemandResult) {
   bindProliferatorEvents();
   bindRecipeSwitchEvents();
   bindRawToggleEvents();
+  
+  // 渲染右侧总结栏
+  renderSummaryPanel(result);
+}
+
+// 渲染右侧总结栏
+function renderSummaryPanel(result: MultiDemandResult) {
+  if (!state.gameData) return;
+  
+  const inputsDiv = document.getElementById('summary-inputs');
+  const outputsDiv = document.getElementById('summary-outputs');
+  const buildingsDiv = document.getElementById('summary-buildings');
+  const jumpDiv = document.getElementById('summary-jump');
+  
+  if (!inputsDiv || !outputsDiv || !buildingsDiv || !jumpDiv) return;
+  
+  // 1. 输入：原材料
+  let inputsHtml = '';
+  if (result.rawMaterials.size > 0) {
+    for (const [itemId, rate] of result.rawMaterials) {
+      if (rate > 0.001) {
+        const item = state.gameData.itemMap.get(itemId);
+        const isRaw = state.treatAsRaw.has(itemId);
+        inputsHtml += `
+          <div class="summary-item ${isRaw ? 'raw' : ''}">
+            <span class="name">${item?.name || itemId}</span>
+            <span class="rate">${rate.toFixed(2)}</span>
+          </div>
+        `;
+      }
+    }
+  }
+  inputsDiv.innerHTML = inputsHtml || '<div class="summary-item"><span class="name">无</span></div>';
+  
+  // 2. 输出：需求满足
+  let outputsHtml = '';
+  for (const [itemId, rate] of result.satisfiedDemands) {
+    const item = state.gameData.itemMap.get(itemId);
+    outputsHtml += `
+      <div class="summary-item">
+        <span class="name">${item?.name || itemId}</span>
+        <span class="rate">${rate.toFixed(2)}</span>
+      </div>
+    `;
+  }
+  outputsDiv.innerHTML = outputsHtml || '<div class="summary-item"><span class="name">无</span></div>';
+  
+  // 3. 建筑统计
+  const buildingCounts = new Map<string, { count: number; name: string }>();
+  for (const [recipeId, count] of result.recipes) {
+    const recipe = state.gameData.recipeMap.get(recipeId);
+    if (!recipe) continue;
+    
+    const buildingId = recipe.factoryIds[0];
+    const building = state.gameData.buildings.find(b => b.originalId === buildingId);
+    if (building) {
+      const { actualBuildingCount } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipeId));
+      const existing = buildingCounts.get(building.name);
+      if (existing) {
+        existing.count += actualBuildingCount;
+      } else {
+        buildingCounts.set(building.name, { count: actualBuildingCount, name: building.name });
+      }
+    }
+  }
+  
+  let buildingsHtml = '';
+  for (const [name, data] of buildingCounts) {
+    buildingsHtml += `
+      <div class="summary-item">
+        <span class="name">${name}</span>
+        <span class="rate">${Math.ceil(data.count * 100) / 100}</span>
+      </div>
+    `;
+  }
+  buildingsDiv.innerHTML = buildingsHtml || '<div class="summary-item"><span class="name">无</span></div>';
+  
+  // 4. 快速跳转表
+  let jumpHtml = '';
+  
+  // 按产物分组，计算总产速
+  const productRates = new Map<string, number>();
+  
+  // 从需求开始
+  for (const [itemId, rate] of result.satisfiedDemands) {
+    productRates.set(itemId, rate);
+  }
+  
+  // 从配方输出添加
+  for (const [recipeId, count] of result.recipes) {
+    const recipe = state.gameData.recipeMap.get(recipeId);
+    if (!recipe) continue;
+    
+    const prolif = getRecipeProliferator(recipeId);
+    const { actualExecutionsPerMinute } = calculateRecipeInfo(recipe, count, prolif);
+    
+    for (const output of recipe.outputs) {
+      let rate = output.count * actualExecutionsPerMinute;
+      if (prolif.mode === 'productivity') {
+        const params = DEFAULT_PROLIFERATOR_PARAMS[prolif.level];
+        rate *= (1 + params.productivityBonus);
+      }
+      
+      const existing = productRates.get(output.itemId) || 0;
+      productRates.set(output.itemId, existing + rate);
+    }
+  }
+  
+  // 排序并生成跳转链接
+  const sortedProducts = Array.from(productRates.entries())
+    .sort((a, b) => b[1] - a[1]); // 按产速降序
+  
+  for (const [itemId, rate] of sortedProducts) {
+    const item = state.gameData.itemMap.get(itemId);
+    jumpHtml += `
+      <a href="#" class="jump-item" data-item="${itemId}">
+        <span class="product-name">${item?.name || itemId}</span>
+        <span class="product-rate">${rate.toFixed(1)}</span>
+      </a>
+    `;
+  }
+  jumpDiv.innerHTML = jumpHtml || '<div class="summary-item"><span class="name">无</span></div>';
+  
+  // 绑定跳转事件
+  jumpDiv.querySelectorAll('.jump-item').forEach((el: Element) => {
+    el.addEventListener('click', (e: Event) => {
+      e.preventDefault();
+      const itemId = (e.currentTarget as HTMLElement).dataset.item!;
+      const card = document.querySelector(`.recipe-card[data-output="${itemId}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.classList.add('highlight');
+        setTimeout(() => card.classList.remove('highlight'), 2000);
+      }
+    });
+  });
 }
 
 // 绑定配方切换事件
