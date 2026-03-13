@@ -191,15 +191,9 @@ async function init() {
   configDiv = document.getElementById('config-panel') as HTMLDivElement;
   clearStateBtn = document.getElementById('clear-state') as HTMLButtonElement;
 
-  // 填充配置选择器
+  // 绑定配置选择器事件
   const configSelect = document.getElementById('config-select') as HTMLSelectElement;
   if (configSelect) {
-    for (const [key, config] of Object.entries(DATA_CONFIGS)) {
-      const option = document.createElement('option');
-      option.value = key;
-      option.textContent = config.name;
-      configSelect.appendChild(option);
-    }
     configSelect.addEventListener('change', (e) => {
       switchConfig((e.target as HTMLSelectElement).value);
     });
