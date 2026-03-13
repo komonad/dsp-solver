@@ -461,6 +461,7 @@ function solve() {
     existingSupplies: state.existingSupplies,
     selectedRecipes: mergedSelectedRecipes,
     noByproducts: state.noByproducts,
+    recipeProliferators: state.recipeProliferators,
   };
   
   const result = solveMultiDemand(state.demands, state.gameData, options);

@@ -25,6 +25,11 @@ export interface MultiDemandOptions {
    * 如果为 true，所有中间产物必须完全平衡（产出 = 消耗），不允许有结余
    */
   noByproducts?: boolean;
+  /**
+   * 配方特定的增产剂配置
+   * recipeId -> { level, mode }
+   */
+  recipeProliferators?: Map<string, { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity' }>;
 }
 
 export interface MultiDemandResult {
@@ -177,7 +182,10 @@ export function solveMultiDemand(
     const coeffs: Record<string, number> = {};
     
     for (const itemId of items) {
-      const balance = calculateItemBalance(recipe, itemId, options.globalProliferator);
+      // 使用配方特定的增产剂配置，如果没有则使用全局配置
+      const specificProlif = options.recipeProliferators?.get(recipe.id);
+      const prolif = specificProlif ?? options.globalProliferator;
+      const balance = calculateItemBalance(recipe, itemId, prolif);
       if (Math.abs(balance) > 1e-12) {
         coeffs[itemId] = balance;
       }
@@ -259,7 +267,10 @@ export function solveMultiDemand(
       const varName = `r${recipe.id}`;
       const count = varMap.get(varName) || 0;
       if (count > 0.001) {
-        const coeff = calculateItemBalance(recipe, itemId, options.globalProliferator);
+        // 使用配方特定的增产剂配置，如果没有则使用全局配置
+        const specificProlif = options.recipeProliferators?.get(recipe.id);
+        const prolif = specificProlif ?? options.globalProliferator;
+        const coeff = calculateItemBalance(recipe, itemId, prolif);
         balance += coeff * count;
       }
     }
