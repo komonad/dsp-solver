@@ -575,15 +575,24 @@ function renderResults(result: MultiDemandResult) {
         return sum + actualBuildingCount;
       }, 0);
       
-      html += `<div class="recipe-card" data-output="${outputItemId}">`;
+      // 检查是否标记为原矿
+      const isRaw = state.treatAsRaw.has(outputItemId);
       
-      // 卡片头部：产出物名称 + 总建筑数 + 配方切换（如果有多个可选配方）
+      html += `<div class="recipe-card ${isRaw ? 'is-raw' : ''}" data-output="${outputItemId}">`;
+      
+      // 卡片头部：产出物名称 + 总建筑数 + 原矿标记 + 配方切换
       html += `<div class="recipe-header">`;
       html += `<div class="recipe-title">`;
       html += `<span class="recipe-product">${outputItem?.name || outputItemId}</span>`;
       
+      // 标记为原矿复选框
+      html += `<label class="raw-toggle-inline">`;
+      html += `<input type="checkbox" class="raw-checkbox-inline" data-item="${outputItemId}" ${isRaw ? 'checked' : ''}>`;
+      html += `<span>原矿</span>`;
+      html += `</label>`;
+      
       // 如果有其他配方可选，显示切换下拉框
-      if (hasAlternatives) {
+      if (hasAlternatives && !isRaw) {
         html += `<div class="recipe-switch">`;
         html += `<select class="recipe-switch-select" data-output-item="${outputItemId}" title="选择配方策略">`;
         html += `<option value="">混合使用 (${recipeList.length}种配方)</option>`;
@@ -600,12 +609,23 @@ function renderResults(result: MultiDemandResult) {
       
       html += `</div>`; // end recipe-title
       
-      // 总建筑数
+      // 总建筑数（如果标记为原矿则显示为0）
       const buildingName = recipeList[0]?.recipe ? 
         state.gameData.buildings.find(b => b.originalId === recipeList[0].recipe.factoryIds[0])?.name : 
         '建筑';
-      html += `<span class="building-count">${Math.ceil(totalBuildings * 100) / 100} 个 ${buildingName}</span>`;
+      if (isRaw) {
+        html += `<span class="building-count raw">外部输入</span>`;
+      } else {
+        html += `<span class="building-count">${Math.ceil(totalBuildings * 100) / 100} 个 ${buildingName}</span>`;
+      }
       html += `</div>`;
+      
+      // 如果标记为原矿，只显示简要信息，不显示子配方
+      if (isRaw) {
+        html += `<div class="raw-notice">该物品作为外部原矿输入</div>`;
+        html += `</div>`; // end recipe-card
+        continue;
+      }
       
       // 为组内每个配方创建详情
       for (const {recipe, count} of recipeList) {
@@ -726,6 +746,7 @@ function renderResults(result: MultiDemandResult) {
   
   bindProliferatorEvents();
   bindRecipeSwitchEvents();
+  bindRawToggleEvents();
 }
 
 // 绑定配方切换事件
@@ -743,6 +764,25 @@ function bindRecipeSwitchEvents() {
       } else {
         // 选择特定配方
         switchRecipeChoice(outputItemId, newRecipeId);
+      }
+      saveState();
+      autoSolve();
+    });
+  });
+}
+
+// 绑定原矿标记事件
+function bindRawToggleEvents() {
+  document.querySelectorAll('.raw-checkbox-inline').forEach((cb: Element) => {
+    cb.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const itemId = target.dataset.item!;
+      const isRaw = target.checked;
+      
+      if (isRaw) {
+        state.treatAsRaw.add(itemId);
+      } else {
+        state.treatAsRaw.delete(itemId);
       }
       saveState();
       autoSolve();
@@ -841,63 +881,9 @@ function bindProliferatorEvents() {
 function renderConfigPanel(result: MultiDemandResult) {
   if (!state.gameData) return;
   
-  const involvedItems: Set<string> = new Set();
-  for (const [recipeId] of result.recipes) {
-    const recipe = state.gameData.recipeMap.get(recipeId);
-    if (recipe) {
-      for (const input of recipe.inputs) involvedItems.add(input.itemId);
-      for (const output of recipe.outputs) involvedItems.add(output.itemId);
-    }
-  }
-  
-  for (const demand of state.demands) {
-    involvedItems.add(demand.itemId);
-  }
-  
-  let html: string = '<div class="config-container">';
-  html += '<h3>配置中间产物</h3>';
-  html += '<div class="config-list">';
-  
-  for (const itemId of involvedItems) {
-    const item = state.gameData.itemMap.get(itemId);
-    if (!item || item.isRaw) continue;
-    
-    const isRaw = state.treatAsRaw.has(itemId);
-    const recipes = state.gameData.recipes.filter(r => 
-      r.outputs.some(o => o.itemId === itemId)
-    );
-    
-    html += `
-      <div class="config-item">
-        <div class="config-header">
-          <label class="raw-toggle">
-            <input type="checkbox" ${isRaw ? 'checked' : ''} 
-                   data-item="${itemId}" class="raw-checkbox">
-            <span>标记为原矿</span>
-          </label>
-          <span class="item-name">${item.name}</span>
-        </div>
-    `;
-    
-    if (recipes.length > 1) {
-      html += '<div class="recipe-select">';
-      html += `<label>选择配方:</label>`;
-      html += `<select data-item="${itemId}" class="recipe-selector">`;
-      html += `<option value="">自动选择</option>`;
-      for (const recipe of recipes) {
-        if (recipe.inputs.length === 0 && recipe.name.startsWith('[无中生有]')) continue;
-        
-        const selected = state.selectedRecipes.get(itemId) === recipe.id ? 'selected' : '';
-        html += `<option value="${recipe.id}" ${selected}>${recipe.name}</option>`;
-      }
-      html += '</select></div>';
-    }
-    
-    html += '</div>';
-  }
-  
-  html += '</div></div>';
-  configDiv.innerHTML = html;
+  // 配置面板已简化，原矿标记现在直接在配方卡片中
+  // 这里可以保留用于显示其他全局配置信息
+  configDiv.innerHTML = '';
   
   configDiv.querySelectorAll('.raw-checkbox').forEach((cb: Element) => {
     cb.addEventListener('change', (e: Event) => {
