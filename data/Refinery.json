@@ -1,48 +1,37 @@
 {
   "version": "1.0",
   "items": [
-    {"id": "oil", "name": "原油", "originalId": 1007, "type": 1, "iconName": "oil", "isRaw": true},
-    {"id": "hydrogen", "name": "氢气", "originalId": 1120, "type": 2, "iconName": "hydrogen"},
-    {"id": "light-oil", "name": "轻油", "originalId": 1117, "type": 2, "iconName": "light-oil"},
-    {"id": "heavy-oil", "name": "重油", "originalId": 1116, "type": 2, "iconName": "heavy-oil"}
+    {"ID": 1007, "Name": "原油", "Type": 1, "GridIndex": 0, "IconName": "oil"},
+    {"ID": 1120, "Name": "氢气", "Type": 2, "GridIndex": 0, "IconName": "hydrogen"},
+    {"ID": 1117, "Name": "轻油", "Type": 2, "GridIndex": 0, "IconName": "light-oil"},
+    {"ID": 1116, "Name": "重油", "Type": 2, "GridIndex": 0, "IconName": "heavy-oil"}
   ],
   "recipes": [
     {
-      "id": "r1",
-      "name": "原油裂解",
-      "originalId": 1,
-      "type": 1,
-      "iconName": "refining",
-      "inputs": [
-        {"itemId": "oil", "count": 1},
-        {"itemId": "hydrogen", "count": 1}
-      ],
-      "outputs": [
-        {"itemId": "light-oil", "count": 2},
-        {"itemId": "heavy-oil", "count": 1}
-      ],
-      "time": 1,
-      "factoryIds": [2304],
-      "proliferatorLevel": 0,
-      "isMultiProduct": true
+      "ID": 1,
+      "Name": "原油裂解",
+      "Type": 1,
+      "Factories": [2304],
+      "Items": [1007, 1120],
+      "ItemCounts": [1, 1],
+      "Results": [1117, 1116],
+      "ResultCounts": [2, 1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "refining"
     },
     {
-      "id": "r2", 
-      "name": "重油精炼",
-      "originalId": 2,
-      "type": 1,
-      "iconName": "refining",
-      "inputs": [
-        {"itemId": "heavy-oil", "count": 1},
-        {"itemId": "hydrogen", "count": 2}
-      ],
-      "outputs": [
-        {"itemId": "light-oil", "count": 1}
-      ],
-      "time": 1,
-      "factoryIds": [2304],
-      "proliferatorLevel": 0,
-      "isMultiProduct": false
+      "ID": 2,
+      "Name": "重油精炼",
+      "Type": 1,
+      "Factories": [2304],
+      "Items": [1116, 1120],
+      "ItemCounts": [1, 2],
+      "Results": [1117],
+      "ResultCounts": [1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "refining"
     }
   ],
   "buildings": [
@@ -57,6 +46,5 @@
       "hasProliferatorSlot": false
     }
   ],
-  "proliferators": [],
-  "rawItemIds": ["oil"]
+  "rawItemIds": ["1007", "1120"]
 }
