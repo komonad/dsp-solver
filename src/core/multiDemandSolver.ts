@@ -366,11 +366,21 @@ export function solveMultiDemand(
       const specificProlif = options.recipeProliferators?.get(recipeId);
       const prolif = specificProlif ?? options.globalProliferator;
       
+      // 获取该配方使用的建筑（考虑内置产出加成）
+      const buildingId = options.recipeBuildings?.get(recipeId);
+      const building = buildingId 
+        ? gameData.buildings.find(b => b.id === buildingId)
+        : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
+      const intrinsicBonus = building?.intrinsicProductivity || 0;
+      
       for (const output of recipe.outputs) {
         let rate = output.count * count * (60 / recipe.time);
         if (prolif?.mode === 'productivity') {
           const prodBonus = [0, 0.125, 0.2, 0.25][prolif.level || 0];
           rate *= (1 + prodBonus);
+        }
+        if (intrinsicBonus > 0) {
+          rate *= (1 + intrinsicBonus);
         }
         totalProduction.set(output.itemId, (totalProduction.get(output.itemId) || 0) + rate);
       }
