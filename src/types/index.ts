@@ -20,34 +20,59 @@ export interface ProliferatorConfig {
   sprayCount: number;
 }
 
-/** 原始物品数据（来自dsp-calc格式） */
+/** 原始物品数据（来自dsp-calc格式或自定义格式） */
 export interface RawItem {
-  ID: number;
-  Type: number;
-  Name: string;
-  GridIndex: number;
-  IconName: string;
+  ID?: number;
+  Type?: number;
+  Name?: string;
+  GridIndex?: number;
+  IconName?: string;
+  id?: number;
+  type?: number;
+  name?: string;
+  iconName?: string;
+  isRaw?: boolean;
 }
 
-/** 原始配方数据（来自dsp-calc格式） */
+/** 原始配方数据（来自dsp-calc格式或自定义格式） */
 export interface RawRecipe {
-  ID: number;
-  Type: number;
-  Factories: number[];
-  Name: string;
-  Items: number[];
-  ItemCounts: number[];
-  Results: number[];
-  ResultCounts: number[];
-  TimeSpend: number;
-  Proliferator: number;
-  IconName: string;
+  // dsp-calc 格式（大写）
+  ID?: number;
+  Type?: number;
+  Factories?: number[];
+  Name?: string;
+  Items?: number[];
+  ItemCounts?: number[];
+  Results?: number[];
+  ResultCounts?: number[];
+  TimeSpend?: number;
+  Proliferator?: number;
+  // 自定义格式（小写）
+  id?: number;
+  type?: number;
+  factoryIds?: number[];
+  name?: string;
+  items?: number[];
+  itemCounts?: number[];
+  results?: number[];
+  resultCounts?: number[];
+  time?: number;
+  proliferatorLevel?: number;
+  iconName?: string;
+  IconName?: string;
+  inputs?: { itemId: string; count: number }[];
+  outputs?: { itemId: string; count: number }[];
+  isMultiProduct?: boolean;
 }
 
 /** 原始游戏数据（来自dsp-calc格式） */
 export interface RawGameData {
   items: RawItem[];
   recipes: RawRecipe[];
+  // 可选的自定义建筑数组
+  buildings?: any[];
+  // 可选的原矿ID列表
+  rawItemIds?: string[];
 }
 
 /** 物品 */

@@ -51,61 +51,99 @@ const RAW_ITEM_TYPES = new Set([1]);
  * @returns 解析后的游戏数据
  */
 export function loadGameData(rawData: RawGameData): GameData {
-  // 转换物品
+  // 转换物品 - 支持大小写两种格式
   const items: Item[] = rawData.items.map(raw => ({
-    id: raw.ID.toString(),
-    name: raw.Name,
-    originalId: raw.ID,
-    type: raw.Type,
-    iconName: raw.IconName,
-    isRaw: RAW_ITEM_TYPES.has(raw.Type),
+    id: (raw.ID ?? raw.id ?? 0).toString(),
+    name: raw.Name ?? raw.name ?? '未知物品',
+    originalId: raw.ID ?? raw.id ?? 0,
+    type: raw.Type ?? raw.type ?? 0,
+    iconName: raw.IconName ?? raw.iconName ?? '',
+    isRaw: RAW_ITEM_TYPES.has(raw.Type ?? raw.type ?? 0),
   }));
 
-  // 转换配方
+  // 转换配方 - 支持大小写两种格式
   const recipes: Recipe[] = rawData.recipes.map(raw => {
-    const inputs: RecipeItem[] = raw.Items.map((id, index) => ({
-      itemId: id.toString(),
-      count: raw.ItemCounts[index] || 0,
-    }));
+    // 如果已经有 inputs/outputs 数组（自定义格式），直接使用
+    let inputs: RecipeItem[];
+    let outputs: RecipeItem[];
+    
+    if (raw.inputs && raw.outputs) {
+      // 自定义格式（Refinery.json）
+      inputs = raw.inputs;
+      outputs = raw.outputs;
+    } else {
+      // dsp-calc 格式（Vanilla.json）
+      const items = raw.Items ?? raw.items ?? [];
+      const itemCounts = raw.ItemCounts ?? raw.itemCounts ?? [];
+      const results = raw.Results ?? raw.results ?? [];
+      const resultCounts = raw.ResultCounts ?? raw.resultCounts ?? [];
+      
+      inputs = items.map((id: any, index: number) => ({
+        itemId: id.toString(),
+        count: itemCounts[index] || 0,
+      }));
 
-    const outputs: RecipeItem[] = raw.Results.map((id, index) => ({
-      itemId: id.toString(),
-      count: raw.ResultCounts[index] || 0,
-    }));
+      outputs = results.map((id: any, index: number) => ({
+        itemId: id.toString(),
+        count: resultCounts[index] || 0,
+      }));
+    }
+    
+    const factories = raw.Factories ?? raw.factoryIds ?? [];
 
     return {
-      id: raw.ID.toString(),
-      name: raw.Name,
-      originalId: raw.ID,
+      id: (raw.ID ?? raw.id ?? 0).toString(),
+      name: raw.Name ?? raw.name ?? '未知配方',
+      originalId: raw.ID ?? raw.id ?? 0,
       inputs,
       outputs,
-      time: raw.TimeSpend / 60, // 转换为每分钟的基准时间
-      factoryIds: raw.Factories,
-      isMultiProduct: raw.Results.length > 1,
-      proliferatorLevel: raw.Proliferator,
-      iconName: raw.IconName,
-      type: raw.Type,
+      time: (raw.TimeSpend ?? raw.time ?? 60) / 60, // 转换为每分钟的基准时间
+      factoryIds: factories,
+      isMultiProduct: raw.isMultiProduct ?? (outputs.length > 1),
+      proliferatorLevel: raw.Proliferator ?? raw.proliferatorLevel ?? 0,
+      iconName: raw.IconName ?? raw.iconName ?? '',
+      type: raw.Type ?? raw.type ?? 0,
     };
   });
 
-  // 转换建筑
+  // 转换建筑 - 支持自定义格式的 buildings 数组
   const buildings: Building[] = [];
-  for (const [id, config] of Object.entries(VANILLA_BUILDINGS)) {
-    const buildingId = parseInt(id);
-    // 检查此建筑是否被任何配方使用
-    const isUsed = recipes.some(r => r.factoryIds.includes(buildingId));
-    if (isUsed) {
+  
+  // 如果有自定义 buildings 数组（Refinery.json），直接使用
+  if ((rawData as any).buildings) {
+    for (const raw of (rawData as any).buildings) {
+      const buildingId = raw.id ?? raw.originalId ?? 0;
       buildings.push({
         id: buildingId.toString(),
-        originalId: buildingId,
-        name: config.name || `建筑${buildingId}`,
-        category: config.category || 'other',
-        speed: config.speed || 1,
-        workPower: config.workPower || 0,
-        idlePower: config.idlePower || 0,
-        hasProliferatorSlot: config.hasProliferatorSlot || false,
-        supportsDoubling: false, // 原版默认不支持
+        originalId: raw.originalId ?? parseInt(raw.id) ?? 0,
+        name: raw.name ?? '未知建筑',
+        category: raw.category || 'other',
+        speed: raw.speed ?? 1,
+        workPower: raw.workPower ?? 0,
+        idlePower: raw.idlePower ?? 0,
+        hasProliferatorSlot: raw.hasProliferatorSlot ?? false,
+        supportsDoubling: raw.supportsDoubling ?? false,
       } as Building);
+    }
+  } else {
+    // 使用原版建筑定义（Vanilla.json）
+    for (const [id, config] of Object.entries(VANILLA_BUILDINGS)) {
+      const buildingId = parseInt(id);
+      // 检查此建筑是否被任何配方使用
+      const isUsed = recipes.some(r => r.factoryIds.includes(buildingId));
+      if (isUsed) {
+        buildings.push({
+          id: buildingId.toString(),
+          originalId: buildingId,
+          name: config.name || `建筑${buildingId}`,
+          category: config.category || 'other',
+          speed: config.speed || 1,
+          workPower: config.workPower || 0,
+          idlePower: config.idlePower || 0,
+          hasProliferatorSlot: config.hasProliferatorSlot || false,
+          supportsDoubling: false, // 原版默认不支持
+        } as Building);
+      }
     }
   }
 
@@ -124,11 +162,11 @@ export function loadGameData(rawData: RawGameData): GameData {
     }
   }
 
-  // 获取原矿ID列表
-  const rawItemIds = items.filter(i => i.isRaw).map(i => i.id);
+  // 获取原矿ID列表 - 优先使用自定义格式中的 rawItemIds
+  const rawItemIds = (rawData as any).rawItemIds ?? items.filter(i => i.isRaw).map(i => i.id);
 
   return {
-    version: '0.10.x',
+    version: (rawData as any).version ?? '0.10.x',
     items,
     recipes,
     buildings,
