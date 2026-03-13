@@ -763,16 +763,21 @@ function renderSummaryPanel(result: MultiDemandResult) {
   
   if (!inputsDiv || !outputsDiv || !buildingsDiv || !jumpDiv) return;
   
-  // 1. 输入：原材料
+  // 1. 输入：原材料（带原矿取消复选框）
   let inputsHtml = '';
   if (result.rawMaterials.size > 0) {
     for (const [itemId, rate] of result.rawMaterials) {
       if (rate > 0.001) {
         const item = state.gameData.itemMap.get(itemId);
         const isRaw = state.treatAsRaw.has(itemId);
+        // 只有用户标记的原矿才显示复选框
+        const showCheckbox = isRaw;
         inputsHtml += `
           <div class="summary-item ${isRaw ? 'raw' : ''}">
-            <span class="name">${item?.name || itemId}</span>
+            <label class="summary-raw-toggle">
+              ${showCheckbox ? `<input type="checkbox" class="summary-raw-check" data-item="${itemId}" checked>` : '<input type="checkbox" disabled>'}
+              <span class="name">${item?.name || itemId}</span>
+            </label>
             <span class="rate">${rate.toFixed(2)}</span>
           </div>
         `;
@@ -780,6 +785,20 @@ function renderSummaryPanel(result: MultiDemandResult) {
     }
   }
   inputsDiv.innerHTML = inputsHtml || '<div class="summary-item"><span class="name">无</span></div>';
+  
+  // 绑定右侧原矿取消事件
+  inputsDiv.querySelectorAll('.summary-raw-check').forEach((cb: Element) => {
+    cb.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      const itemId = target.dataset.item!;
+      if (!target.checked) {
+        // 取消原矿标记
+        state.treatAsRaw.delete(itemId);
+        saveState();
+        autoSolve();
+      }
+    });
+  });
   
   // 2. 输出：需求满足
   let outputsHtml = '';
