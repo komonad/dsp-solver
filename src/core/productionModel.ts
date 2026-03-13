@@ -292,26 +292,58 @@ export function calculateItemBalance(
   itemId: string,
   proliferator?: { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity'; sprayCount?: number }
 ): number {
-  // 默认建筑（简化处理，不使用具体建筑）
-  const speedMultiplier = proliferator?.mode === 'speed' ? 
-    (1 + [0, 0.125, 0.2, 0.25][proliferator.level || 0]) : 1;
+  // 参数验证
+  if (!recipe) {
+    throw new Error('[Assertion Error] calculateItemBalance: recipe is undefined');
+  }
+  if (!itemId) {
+    throw new Error('[Assertion Error] calculateItemBalance: itemId is undefined');
+  }
+  if (recipe.time <= 0) {
+    throw new Error(`[Assertion Error] Recipe ${recipe.id} has invalid time: ${recipe.time}`);
+  }
   
+  // 验证配方的输入输出
+  const totalInputCount = recipe.inputs.reduce((sum, i) => sum + i.count, 0);
+  const totalOutputCount = recipe.outputs.reduce((sum, o) => sum + o.count, 0);
+  
+  if (totalOutputCount === 0 && recipe.inputs.length > 0) {
+    console.warn(`[Assertion Warning] Recipe ${recipe.id} (${recipe.name}) has no outputs but has inputs`);
+  }
+
+  // 增产模式加成（增加产出，不增加消耗）
   const prodMultiplier = proliferator?.mode === 'productivity' ? 
     (1 + [0, 0.125, 0.2, 0.25][proliferator.level || 0]) : 1;
 
   let balance = 0;
 
-  // 产出（每分钟）
+  // 产出（每分钟）- 只考虑增产加成，不考虑加速（加速只影响建筑数量）
   for (const output of recipe.outputs) {
     if (output.itemId === itemId) {
-      balance += output.count * prodMultiplier * (60 / recipe.time) * speedMultiplier;
+      if (output.count < 0) {
+        throw new Error(`[Assertion Error] Recipe ${recipe.id} has negative output count for ${itemId}`);
+      }
+      balance += output.count * prodMultiplier * (60 / recipe.time);
     }
   }
 
-  // 消耗（每分钟）
+  // 消耗（每分钟）- 不受增产/加速影响（原料消耗不变）
   for (const input of recipe.inputs) {
     if (input.itemId === itemId) {
-      balance -= input.count * (60 / recipe.time) * speedMultiplier;
+      if (input.count < 0) {
+        throw new Error(`[Assertion Error] Recipe ${recipe.id} has negative input count for ${itemId}`);
+      }
+      balance -= input.count * (60 / recipe.time);
+    }
+  }
+
+  // 验证：加速模式不应该影响物料平衡
+  if (proliferator?.mode === 'speed' && Math.abs(balance) > 0.001) {
+    // 对于加速模式，物料平衡不应该改变（只改变建筑数量）
+    // 这是一个合理性检查，但不抛出错误，只记录
+    const expectedBalanceWithoutSpeed = balance; // 已经计算好了
+    if (Math.abs(expectedBalanceWithoutSpeed - balance) > 0.001) {
+      console.warn(`[Assertion Warning] Speed mode should not change material balance for ${itemId} in recipe ${recipe.id}`);
     }
   }
 

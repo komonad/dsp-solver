@@ -26,9 +26,9 @@ export interface ProliferatorParams {
  */
 export const DEFAULT_PROLIFERATOR_PARAMS: Record<ProliferatorLevel, ProliferatorParams> = {
   0: { speedBonus: 0, productivityBonus: 0, powerBonus: 0, sprayCount: 0 },
-  1: { speedBonus: 0.125, productivityBonus: 0.125, powerBonus: 0.3, sprayCount: 12 },
-  2: { speedBonus: 0.20, productivityBonus: 0.20, powerBonus: 0.5, sprayCount: 12 },
-  3: { speedBonus: 0.25, productivityBonus: 0.25, powerBonus: 0.7, sprayCount: 12 },
+  1: { speedBonus: 0.25, productivityBonus: 0.125, powerBonus: 0.3, sprayCount: 12 },
+  2: { speedBonus: 0.50, productivityBonus: 0.20, powerBonus: 0.5, sprayCount: 12 },
+  3: { speedBonus: 1.00, productivityBonus: 0.25, powerBonus: 0.7, sprayCount: 12 },
 };
 
 /**

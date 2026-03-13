@@ -30,7 +30,7 @@ describe('Proliferator Calculation', () => {
     const config: ProliferatorConfig = { level: 3, mode: 'speed', sprayCount: 12 };
     const effect = calculateProliferatorEffect(config, 1, true);
     
-    expect(effect.speedMultiplier).toBe(1.25);
+    expect(effect.speedMultiplier).toBe(2.0);
     expect(effect.productivityMultiplier).toBe(1);
     expect(effect.powerMultiplier).toBe(1.7);
   });
@@ -73,8 +73,8 @@ describe('Proliferator Calculation', () => {
     // 需要60/分钟的产出，单个建筑基础产出60/分钟
     const count = calculateBuildingCount(60, 60, effect, 1);
     
-    // 1.25倍速度，所以需要 60 / (60 * 1.25) = 0.8 个建筑
-    expect(count).toBeCloseTo(0.8, 2);
+    // 2.0倍速度，所以需要 60 / (60 * 2.0) = 0.5 个建筑
+    expect(count).toBeCloseTo(0.5, 2);
   });
 
   test('building count with doubling', () => {

@@ -24,7 +24,8 @@ const VANILLA_BUILDINGS: Record<number, any> = {
   2308: { name: '原油精炼厂', nameCN: '原油精炼厂', category: 'refinery', speed: 1, workPower: 0.96, idlePower: 0.032, hasProliferatorSlot: true },
   
   // 化工厂
-  2317: { name: '化工厂', nameCN: '化工厂', category: 'chemical', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
+  2309: { name: '化工厂', nameCN: '化工厂', category: 'chemical', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
+  2317: { name: '量子化工厂', nameCN: '量子化工厂', category: 'chemical', speed: 2, workPower: 2.16, idlePower: 0.072, hasProliferatorSlot: true },
   
   // 对撞机
   2310: { name: '微型粒子对撞机', nameCN: '微型粒子对撞机', category: 'particle', speed: 1, workPower: 12, idlePower: 0.4, hasProliferatorSlot: true },
@@ -174,7 +175,7 @@ export function loadGameData(rawData: RawGameData): GameData {
       { level: 0, name: '无', speedBonus: 0, productivityBonus: 0, sprayCount: 0 },
       { level: 1, name: '增产剂 Mk.I', speedBonus: 0.125, productivityBonus: 0.125, sprayCount: 12 },
       { level: 2, name: '增产剂 Mk.II', speedBonus: 0.20, productivityBonus: 0.20, sprayCount: 12 },
-      { level: 3, name: '增产剂 Mk.III', speedBonus: 0.25, productivityBonus: 0.25, sprayCount: 12 },
+      { level: 3, name: '增产剂 Mk.III', speedBonus: 1.0, productivityBonus: 1.0, sprayCount: 12 },
     ],
     rawItemIds,
     itemMap,

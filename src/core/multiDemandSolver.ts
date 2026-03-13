@@ -334,6 +334,74 @@ export function solveMultiDemand(
       message += `${itemId}需求未满足: ${actual.toFixed(2)} < ${demandRate}; `;
     }
   }
+  
+  // 8. 断言验证：检查物料平衡的守恒性
+  if (feasible) {
+    // 重新计算所有配方的总产出/消耗，验证平衡
+    const totalProduction = new Map<string, number>();
+    const totalConsumption = new Map<string, number>();
+    
+    for (const [recipeId, count] of recipeCounts) {
+      const recipe = gameData.recipeMap.get(recipeId);
+      if (!recipe) continue;
+      
+      const specificProlif = options.recipeProliferators?.get(recipeId);
+      const prolif = specificProlif ?? options.globalProliferator;
+      
+      for (const output of recipe.outputs) {
+        let rate = output.count * count * (60 / recipe.time);
+        if (prolif?.mode === 'productivity') {
+          const prodBonus = [0, 0.125, 0.2, 0.25][prolif.level || 0];
+          rate *= (1 + prodBonus);
+        }
+        totalProduction.set(output.itemId, (totalProduction.get(output.itemId) || 0) + rate);
+      }
+      
+      for (const input of recipe.inputs) {
+        const rate = input.count * count * (60 / recipe.time);
+        totalConsumption.set(input.itemId, (totalConsumption.get(input.itemId) || 0) + rate);
+      }
+    }
+    
+    // 验证每个需求的净产出 >= 需求
+    for (const [itemId, demandRate] of originalDemandMap) {
+      const production = totalProduction.get(itemId) || 0;
+      const consumption = totalConsumption.get(itemId) || 0;
+      const netProduction = production - consumption;
+      
+      // 检查原矿消耗是否合理
+      const rawConsumption = rawMaterials.get(itemId) || 0;
+      const totalAvailable = netProduction + rawConsumption;
+      
+      if (Math.abs(totalAvailable - demandRate) > 0.1 && !rawItemSet.has(itemId)) {
+        console.warn(`[Assertion Warning] ${itemId} 产出/消耗不匹配:`, {
+          需求: demandRate,
+          净产出: netProduction,
+          原矿输入: rawConsumption,
+          可用总量: totalAvailable,
+          差额: totalAvailable - demandRate
+        });
+      }
+    }
+    
+    // 验证中间产物的平衡（非原矿、非需求的物品）
+    for (const [itemId, balance] of intermediateBalance) {
+      if (originalDemandMap.has(itemId) || rawItemSet.has(itemId)) continue;
+      
+      const production = totalProduction.get(itemId) || 0;
+      const consumption = totalConsumption.get(itemId) || 0;
+      const calculatedBalance = production - consumption;
+      
+      if (Math.abs(balance - calculatedBalance) > 0.01) {
+        console.warn(`[Assertion Warning] ${itemId} 中间产物结余计算不一致:`, {
+          记录结余: balance,
+          计算结余: calculatedBalance,
+          产出: production,
+          消耗: consumption
+        });
+      }
+    }
+  }
 
   // 8. 处理被标记为原矿的需求物品（它们没有进入求解，需要在这里标记为满足）
   for (const demand of demands) {

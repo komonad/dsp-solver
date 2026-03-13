@@ -19,10 +19,12 @@ interface SavedState {
     level: 0 | 1 | 2 | 3;
     mode: 'none' | 'speed' | 'productivity';
   };
+  globalBuildings: Array<[string, number | null]>; // [category, buildingId][] 按类别的全局建筑选择
   noByproducts: boolean;
   selectedRecipes: Array<[string, string]>; // [itemId, recipeId][]
   recipeProliferators: Array<[string, RecipeProliferatorConfig]>;
   recipeChoices: Array<[string, string]>; // [outputItemId, selectedRecipeId][] 用户在结果中选择的配方
+  selectedBuildings: Array<[string, number]>; // [recipeId, buildingId][] 用户为特定配方选择的建筑
 }
 
 // 应用状态
@@ -35,10 +37,12 @@ interface AppState {
     level: 0 | 1 | 2 | 3;
     mode: 'none' | 'speed' | 'productivity';
   };
+  globalBuildings: Map<string, number | null>; // 按类别的全局建筑选择 category -> buildingId, null表示使用默认
   noByproducts: boolean;
   selectedRecipes: Map<string, string>; // itemId -> recipeId (全局配方选择)
   recipeProliferators: Map<string, RecipeProliferatorConfig>; // recipeId -> config
   recipeChoices: Map<string, string>; // outputItemId -> selectedRecipeId (用户在结果中的切换选择)
+  selectedBuildings: Map<string, number>; // recipeId -> buildingOriginalId (用户为特定配方选择的建筑，最高优先级)
   lastResult: MultiDemandResult | null;
 }
 
@@ -58,10 +62,12 @@ const state: AppState = {
   treatAsRaw: new Set(),
   existingSupplies: [],
   globalProliferator: { level: 0, mode: 'none' },
+  globalBuildings: new Map(), // 按类别存储全局建筑选择
   noByproducts: false,
   selectedRecipes: new Map(),
   recipeProliferators: new Map(),
   recipeChoices: new Map(),
+  selectedBuildings: new Map(),
   lastResult: null,
 };
 
@@ -82,10 +88,12 @@ function saveState() {
     treatAsRaw: Array.from(state.treatAsRaw),
     existingSupplies: state.existingSupplies,
     globalProliferator: state.globalProliferator,
+    globalBuildings: Array.from(state.globalBuildings.entries()),
     noByproducts: state.noByproducts,
     selectedRecipes: Array.from(state.selectedRecipes.entries()),
     recipeProliferators: Array.from(state.recipeProliferators.entries()),
     recipeChoices: Array.from(state.recipeChoices.entries()),
+    selectedBuildings: Array.from(state.selectedBuildings.entries()),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 }
@@ -102,10 +110,12 @@ function loadState() {
     state.treatAsRaw = new Set(saved.treatAsRaw || []);
     state.existingSupplies = saved.existingSupplies || [];
     state.globalProliferator = saved.globalProliferator || { level: 0, mode: 'none' };
+    state.globalBuildings = new Map(saved.globalBuildings || []);
     state.noByproducts = saved.noByproducts || false;
     state.selectedRecipes = new Map(saved.selectedRecipes || []);
     state.recipeProliferators = new Map(saved.recipeProliferators || []);
     state.recipeChoices = new Map(saved.recipeChoices || []);
+    state.selectedBuildings = new Map(saved.selectedBuildings || []);
     
     // 更新 UI
     if (state.globalProliferator) {
@@ -114,6 +124,14 @@ function loadState() {
       if (levelSelect) levelSelect.value = String(state.globalProliferator.level);
       if (modeSelect) modeSelect.value = state.globalProliferator.mode;
     }
+    
+    // 恢复全局建筑选择（按类别）
+    document.querySelectorAll('.global-building-select').forEach((select: Element) => {
+      const target = select as HTMLSelectElement;
+      const category = target.dataset.category!;
+      const buildingId = state.globalBuildings.get(category);
+      target.value = buildingId ? String(buildingId) : '';
+    });
     
     // 恢复无副产物选项
     const noByproductsCheck = document.getElementById('no-byproducts') as HTMLInputElement;
@@ -232,6 +250,16 @@ async function init() {
   document.getElementById('proliferator-level')?.addEventListener('change', updateProliferator);
   document.getElementById('proliferator-mode')?.addEventListener('change', updateProliferator);
   document.getElementById('no-byproducts')?.addEventListener('change', updateNoByproducts);
+  
+  // 监听全局建筑选择变化（按类别）
+  document.querySelectorAll('.global-building-select').forEach((select: Element) => {
+    select.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLSelectElement;
+      const category = target.dataset.category!;
+      const value = target.value;
+      updateGlobalBuildingByCategory(category, value ? parseInt(value) : null);
+    });
+  });
 
   // 加载保存的状态
   const hasSavedState = loadState();
@@ -380,6 +408,31 @@ function updateProliferator() {
   autoSolve();
 }
 
+// 按类别更新的全局建筑选择（覆盖性行为 - 会覆盖所有该类别配方的选择）
+function updateGlobalBuildingByCategory(category: string, buildingId: number | null) {
+  if (buildingId === null) {
+    // 选择"- 不覆盖 -"：删除该类别的全局设置
+    state.globalBuildings.delete(category);
+  } else {
+    // 选择特定建筑：设置为该类别全局默认值，并清除该类别所有特定配方选择
+    state.globalBuildings.set(category, buildingId);
+    
+    // 清除该类别所有配方的特定选择（让全局设置生效）
+    if (state.gameData) {
+      for (const recipe of state.gameData.recipes) {
+        const defaultBuilding = state.gameData.buildings.find(b => 
+          b.originalId === recipe.factoryIds[0] || b.id === String(recipe.factoryIds[0])
+        );
+        if (defaultBuilding?.category === category) {
+          state.selectedBuildings.delete(recipe.id);
+        }
+      }
+    }
+  }
+  saveState();
+  autoSolve();
+}
+
 function updateNoByproducts() {
   const checkbox = document.getElementById('no-byproducts') as HTMLInputElement;
   state.noByproducts = checkbox.checked;
@@ -418,6 +471,15 @@ function updateRecipeProliferator(recipeId: string, level: 0 | 1 | 2 | 3, mode: 
 // 删除配方特定配置（恢复使用全局）
 function deleteRecipeProliferator(recipeId: string) {
   state.recipeProliferators.delete(recipeId);
+  saveState();
+  autoSolve();
+}
+
+// 更新配方选择的建筑
+function updateRecipeBuilding(recipeId: string, buildingId: number) {
+  state.selectedBuildings.set(recipeId, buildingId);
+  saveState();
+  autoSolve();
   saveState();
   autoSolve();
 }
@@ -471,29 +533,84 @@ function solve() {
   renderConfigPanel(result);
 }
 
+// 判断配方是否支持增产
+function canUseProliferator(recipe: Recipe, building?: Building): boolean {
+  // 配方必须支持增产（proliferatorLevel > 0）
+  if (recipe.proliferatorLevel <= 0) return false;
+  // 如果指定了建筑，建筑必须有增产剂槽位
+  if (building && !building.hasProliferatorSlot) return false;
+  return true;
+}
+
 // 获取配方使用的增产剂配置
-function getRecipeProliferator(recipeId: string): { level: 0|1|2|3; mode: 'none'|'speed'|'productivity' } {
+// 逻辑：全局设置作为覆盖行为，但仅在配方支持增产时生效
+function getRecipeProliferator(
+  recipeId: string, 
+  recipe?: Recipe, 
+  building?: Building
+): { level: 0|1|2|3; mode: 'none'|'speed'|'productivity' } {
+  // 如果提供了配方信息且配方支持增产
+  const supportsProlif = recipe ? canUseProliferator(recipe, building) : true;
+  
+  // 全局设置作为覆盖行为：如果全局设置了增产且配方支持，则使用全局
+  if (state.globalProliferator.level > 0 && supportsProlif) {
+    return { 
+      level: state.globalProliferator.level, 
+      mode: state.globalProliferator.mode 
+    };
+  }
+  
+  // 全局未设置或配方不支持增产，检查是否有特定配置
   const specific = state.recipeProliferators.get(recipeId);
   if (specific) {
-    // 有特定配置，使用特定配置（即使是 0/none 也是显式设置的）
     return { level: specific.level, mode: specific.mode };
   }
-  // 没有特定配置，使用全局
-  return state.globalProliferator;
+  
+  // 默认无增产
+  return { level: 0, mode: 'none' };
 }
 
 // 计算配方执行速率和建筑信息
 function calculateRecipeInfo(
   recipe: Recipe, 
   equivalentBuildingCount: number, 
-  proliferator: { level: number; mode: string; sprayCount?: number }
-): { equivalentBuildingCount: number; actualBuildingCount: number; building: Building | undefined; speed: number; actualExecutionsPerMinute: number } {
-  if (!state.gameData) return { equivalentBuildingCount: 0, actualBuildingCount: 0, building: undefined, speed: 1, actualExecutionsPerMinute: 0 };
+  proliferator: { level: number; mode: string; sprayCount?: number },
+  selectedBuilding?: Building
+): { 
+  equivalentBuildingCount: number; 
+  actualBuildingCount: number; 
+  displayedBuildingCount: number;  // 向上取整后的建筑数
+  building: Building | undefined; 
+  speed: number; 
+  actualExecutionsPerMinute: number;
+  totalPower: number;  // 总功率（MW）
+} {
+  if (!state.gameData) return { 
+    equivalentBuildingCount: 0, 
+    actualBuildingCount: 0, 
+    displayedBuildingCount: 0,
+    building: undefined, 
+    speed: 1, 
+    actualExecutionsPerMinute: 0,
+    totalPower: 0
+  };
   
-  const buildingId = recipe.factoryIds[0];
-  const building = state.gameData.buildings.find(b => b.originalId === buildingId || b.id === String(buildingId));
+  // 优先使用用户选择的建筑，否则使用默认建筑
+  let building = selectedBuilding;
+  if (!building) {
+    const buildingId = recipe.factoryIds[0];
+    building = state.gameData.buildings.find(b => b.originalId === buildingId || b.id === String(buildingId));
+  }
   
-  if (!building) return { equivalentBuildingCount: 0, actualBuildingCount: 0, building: undefined, speed: 1, actualExecutionsPerMinute: 0 };
+  if (!building) return { 
+    equivalentBuildingCount: 0, 
+    actualBuildingCount: 0, 
+    displayedBuildingCount: 0,
+    building: undefined, 
+    speed: 1, 
+    actualExecutionsPerMinute: 0,
+    totalPower: 0
+  };
   
   let speedMultiplier = 1;
   if (proliferator.level > 0 && proliferator.mode === 'speed') {
@@ -502,15 +619,28 @@ function calculateRecipeInfo(
   }
   
   const executionsPerBuildingPerMinute = (60 / recipe.time) * building.speed * speedMultiplier;
-  const actualBuildingCount = equivalentBuildingCount / building.speed;
-  const actualExecutionsPerMinute = equivalentBuildingCount * (60 / recipe.time) * speedMultiplier;
+  // 实际建筑数 = 等效建筑数 / 建筑速度（加速模式会在下方进一步减少）
+  let actualBuildingCount = equivalentBuildingCount / building.speed;
+  // 加速模式下，建筑工作更快，所以需要的建筑数更少
+  if (speedMultiplier > 1) {
+    actualBuildingCount = actualBuildingCount / speedMultiplier;
+  }
+  // 向上取整后的建筑数（用于显示和功率计算）
+  const displayedBuildingCount = Math.ceil(actualBuildingCount);
+  // 注意：等效执行次数不包含速度倍数，因为加速模式只减少建筑数，不改变总产出
+  const actualExecutionsPerMinute = equivalentBuildingCount * (60 / recipe.time);
+  
+  // 计算总功率（MW）= 建筑数 × 工作功率
+  const totalPower = displayedBuildingCount * (building.workPower || 0);
   
   return { 
     equivalentBuildingCount, 
     actualBuildingCount, 
+    displayedBuildingCount,
     building, 
     speed: executionsPerBuildingPerMinute, 
-    actualExecutionsPerMinute 
+    actualExecutionsPerMinute,
+    totalPower
   };
 }
 
@@ -520,6 +650,15 @@ function getAlternativeRecipes(itemId: string): Recipe[] {
   return state.gameData.recipes.filter(r => 
     r.outputs.some(o => o.itemId === itemId) &&
     !(r.inputs.length === 0 && r.name.startsWith('[无中生有]'))
+  );
+}
+
+// 获取配方可用的所有建筑
+function getAvailableBuildingsForRecipe(recipe: Recipe): Building[] {
+  if (!state.gameData) return [];
+  return state.gameData.buildings.filter(b => 
+    recipe.factoryIds.includes(b.originalId) || 
+    recipe.factoryIds.includes(parseInt(b.id))
   );
 }
 
@@ -578,11 +717,17 @@ function renderResults(result: MultiDemandResult) {
       const alternativeRecipes = getAlternativeRecipes(outputItemId);
       const hasAlternatives = alternativeRecipes.length > 1;
       
-      // 计算该产出的总建筑数
-      const totalBuildings = recipeList.reduce((sum, {recipe, count}) => {
-        const { actualBuildingCount } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipe.id));
-        return sum + actualBuildingCount;
-      }, 0);
+      // 计算该产出的总建筑数（向上取整）和总功率
+      let totalDisplayedBuildings = 0;
+      let totalPower = 0;
+      for (const {recipe, count} of recipeList) {
+        const selectedBuildingId = state.selectedBuildings.get(recipe.id);
+        const selectedBuilding = selectedBuildingId ? 
+          state.gameData.buildings.find(b => b.originalId === selectedBuildingId) : undefined;
+        const { displayedBuildingCount, totalPower: power } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipe.id, recipe, selectedBuilding), selectedBuilding);
+        totalDisplayedBuildings += displayedBuildingCount;
+        totalPower += power;
+      }
       
       // 检查是否标记为原矿
       const isRaw = state.treatAsRaw.has(outputItemId);
@@ -618,14 +763,53 @@ function renderResults(result: MultiDemandResult) {
       
       html += `</div>`; // end recipe-title
       
-      // 总建筑数（如果标记为原矿则显示为0）
-      const buildingName = recipeList[0]?.recipe ? 
-        state.gameData.buildings.find(b => b.originalId === recipeList[0].recipe.factoryIds[0])?.name : 
-        '建筑';
+      // 总建筑数和功率（如果标记为原矿则显示为0）
+      // 收集该产出物使用的所有建筑类型
+      const buildingTypes = new Map<string, { count: number; name: string }>();
+      for (const { recipe, count } of recipeList) {
+        // 获取该配方使用的建筑（优先级：全局类别选择 > 特定配方选择 > 默认）
+        const defaultBuilding = state.gameData.buildings.find(b => 
+          b.originalId === recipe.factoryIds[0] || b.id === String(recipe.factoryIds[0])
+        );
+        const category = defaultBuilding?.category;
+        
+        // 优先级：全局类别选择 > 特定配方选择 > 默认
+        const globalBuildingId = category ? state.globalBuildings.get(category) : undefined;
+        const specificBuildingId = state.selectedBuildings.get(recipe.id);
+        const selectedBuildingId = globalBuildingId ?? specificBuildingId;
+        
+        const selectedBuilding = selectedBuildingId ? 
+          state.gameData.buildings.find(b => b.originalId === selectedBuildingId) : undefined;
+        const building = selectedBuilding || defaultBuilding;
+        
+        if (building) {
+          const existing = buildingTypes.get(building.name);
+          const { displayedBuildingCount } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipe.id, recipe, selectedBuilding), selectedBuilding);
+          if (existing) {
+            existing.count += displayedBuildingCount;
+          } else {
+            buildingTypes.set(building.name, { count: displayedBuildingCount, name: building.name });
+          }
+        }
+      }
+      
+      // 构建建筑显示字符串
+      let buildingDisplay = '';
+      if (buildingTypes.size === 1) {
+        const [name, data] = Array.from(buildingTypes)[0];
+        buildingDisplay = `${data.count} 个 ${name}`;
+      } else if (buildingTypes.size > 1) {
+        const parts = Array.from(buildingTypes).map(([name, data]) => `${data.count} 个 ${name}`);
+        buildingDisplay = parts.join(' + ');
+      } else {
+        buildingDisplay = `${totalDisplayedBuildings} 个 建筑`;
+      }
+      
       if (isRaw) {
         html += `<span class="building-count raw">外部输入</span>`;
       } else {
-        html += `<span class="building-count">${Math.ceil(totalBuildings * 100) / 100} 个 ${buildingName}</span>`;
+        html += `<span class="building-count">${buildingDisplay}</span>`;
+        html += `<span class="building-power">${totalPower.toFixed(2)} MW</span>`;
       }
       html += `</div>`;
       
@@ -638,8 +822,22 @@ function renderResults(result: MultiDemandResult) {
       
       // 为组内每个配方创建详情
       for (const {recipe, count} of recipeList) {
-        const prolif = getRecipeProliferator(recipe.id);
-        const { actualBuildingCount, speed, actualExecutionsPerMinute } = calculateRecipeInfo(recipe, count, prolif);
+        // 获取该配方使用的建筑（优先级：全局类别选择 > 特定配方选择 > 默认）
+        const defaultBuilding = state.gameData.buildings.find(b => 
+          b.originalId === recipe.factoryIds[0] || b.id === String(recipe.factoryIds[0])
+        );
+        const category = defaultBuilding?.category;
+        
+        const globalBuildingId = category ? state.globalBuildings.get(category) : undefined;
+        const specificBuildingId = state.selectedBuildings.get(recipe.id);
+        const finalBuildingId = globalBuildingId ?? specificBuildingId;
+        
+        const selectedBuilding = finalBuildingId ? 
+          state.gameData.buildings.find(b => b.originalId === finalBuildingId) : undefined;
+        
+        const prolif = getRecipeProliferator(recipe.id, recipe, selectedBuilding);
+        
+        const { displayedBuildingCount, actualBuildingCount, speed, actualExecutionsPerMinute, totalPower: subPower, building: subBuilding } = calculateRecipeInfo(recipe, count, prolif, selectedBuilding);
         
         let prodMultiplier = 1;
         if (prolif.level > 0 && prolif.mode === 'productivity') {
@@ -649,10 +847,11 @@ function renderResults(result: MultiDemandResult) {
         
         html += `<div class="recipe-subcard" data-recipe="${recipe.id}">`;
         
-        // 子配方标题
+        // 子配方标题 - 显示实际建筑数（小数）和使用率
+        const usageRate = (actualBuildingCount / displayedBuildingCount * 100).toFixed(1);
         html += `<div class="subrecipe-header">`;
         html += `<span class="subrecipe-name">${recipe.name}</span>`;
-        html += `<span class="subrecipe-count">${Math.ceil(actualBuildingCount * 100) / 100} 个</span>`;
+        html += `<span class="subrecipe-count">${actualBuildingCount.toFixed(2)} 个 ${subBuilding?.name || ''} (${usageRate}% 使用率, ${subPower.toFixed(2)} MW)</span>`;
         html += `</div>`;
         
         // 配方详情
@@ -692,14 +891,43 @@ function renderResults(result: MultiDemandResult) {
         }
         html += `</div></div>`;
         
-        // 速度信息
+        // 速度信息和建筑选择
         html += `<div class="recipe-speed">`;
         html += `<span>周期: ${recipe.time}s</span>`;
         html += `<span>单建筑: ${speed.toFixed(2)}/min</span>`;
+        
+        // 建筑选择下拉框
+        const availableBuildings = getAvailableBuildingsForRecipe(recipe);
+        if (availableBuildings.length > 1) {
+          // 确定当前使用的建筑（优先级：全局类别选择 > 特定配方选择 > 默认）
+          const defaultBuilding = availableBuildings[0];
+          const category = defaultBuilding?.category;
+          
+          const globalBuildingId = category ? state.globalBuildings.get(category) : undefined;
+          const specificBuildingId = state.selectedBuildings?.get(recipe.id);
+          const currentBuildingId = globalBuildingId ?? specificBuildingId ?? recipe.factoryIds[0];
+          
+          // 检查是否被全局类别覆盖
+          const isGlobalOverride = globalBuildingId !== undefined;
+          const disabled = isGlobalOverride ? 'disabled' : '';
+          const title = isGlobalOverride ? `${category}类全局建筑已指定: ${availableBuildings.find(b => b.originalId === globalBuildingId)?.name || ''}` : '';
+          
+          html += `<select class="building-select" data-recipe-id="${recipe.id}" ${disabled} title="${title}">`;
+          for (const b of availableBuildings) {
+            const selected = b.originalId === currentBuildingId || parseInt(b.id) === currentBuildingId ? 'selected' : '';
+            html += `<option value="${b.originalId}" ${selected}>${b.name} (速度×${b.speed})</option>`;
+          }
+          html += `</select>`;
+          
+          // 如果全局类别覆盖，显示提示
+          if (isGlobalOverride) {
+            html += `<span class="global-override-hint" title="${title}">🌐</span>`;
+          }
+        }
         html += `</div>`;
         
         // 增产剂配置
-        html += renderProliferatorControl(recipe.id, prolif);
+        html += renderProliferatorControl(recipe.id, prolif, recipe);
         
         html += `</div></div>`; // end recipe-details, recipe-subcard
       }
@@ -755,6 +983,7 @@ function renderResults(result: MultiDemandResult) {
   
   bindProliferatorEvents();
   bindRecipeSwitchEvents();
+  bindBuildingSelectEvents();
   bindRawToggleEvents();
   
   // 渲染右侧总结栏
@@ -867,21 +1096,37 @@ function renderSummaryPanel(result: MultiDemandResult) {
   }
   outputsDiv.innerHTML = outputsHtml || '<div class="summary-item"><span class="name">无</span></div>';
   
-  // 3. 建筑统计
+  // 3. 建筑统计（使用向上取整后的数量）和功率统计
   const buildingCounts = new Map<string, { count: number; name: string }>();
+  let totalPower = 0;
+  
   for (const [recipeId, count] of result.recipes) {
     const recipe = state.gameData.recipeMap.get(recipeId);
     if (!recipe) continue;
     
-    const buildingId = recipe.factoryIds[0];
-    const building = state.gameData.buildings.find(b => b.originalId === buildingId);
+    // 获取该配方使用的建筑（优先级：全局类别选择 > 特定配方选择 > 默认）
+    const defaultBuilding = state.gameData.buildings.find(b => 
+      b.originalId === recipe.factoryIds[0] || b.id === String(recipe.factoryIds[0])
+    );
+    const category = defaultBuilding?.category;
+    
+    const globalBuildingId = category ? state.globalBuildings.get(category) : undefined;
+    const specificBuildingId = state.selectedBuildings.get(recipeId);
+    const finalBuildingId = globalBuildingId ?? specificBuildingId;
+    
+    const selectedBuilding = finalBuildingId ? 
+      state.gameData.buildings.find(b => b.originalId === finalBuildingId) : undefined;
+    
+    const { displayedBuildingCount, totalPower: power, building } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipeId, recipe, selectedBuilding), selectedBuilding);
+    
+    totalPower += power;
+    
     if (building) {
-      const { actualBuildingCount } = calculateRecipeInfo(recipe, count, getRecipeProliferator(recipeId));
       const existing = buildingCounts.get(building.name);
       if (existing) {
-        existing.count += actualBuildingCount;
+        existing.count += displayedBuildingCount;
       } else {
-        buildingCounts.set(building.name, { count: actualBuildingCount, name: building.name });
+        buildingCounts.set(building.name, { count: displayedBuildingCount, name: building.name });
       }
     }
   }
@@ -891,10 +1136,17 @@ function renderSummaryPanel(result: MultiDemandResult) {
     buildingsHtml += `
       <div class="summary-item">
         <span class="name">${name}</span>
-        <span class="rate">${Math.ceil(data.count * 100) / 100}</span>
+        <span class="rate">${data.count}</span>
       </div>
     `;
   }
+  // 添加总功率
+  buildingsHtml += `
+    <div class="summary-item total-power">
+      <span class="name">总功率</span>
+      <span class="rate">${totalPower.toFixed(2)} MW</span>
+    </div>
+  `;
   buildingsDiv.innerHTML = buildingsHtml || '<div class="summary-item"><span class="name">无</span></div>';
   
   // 4. 快速跳转表
@@ -913,7 +1165,7 @@ function renderSummaryPanel(result: MultiDemandResult) {
     const recipe = state.gameData.recipeMap.get(recipeId);
     if (!recipe) continue;
     
-    const prolif = getRecipeProliferator(recipeId);
+    const prolif = getRecipeProliferator(recipeId, recipe);
     const { actualExecutionsPerMinute } = calculateRecipeInfo(recipe, count, prolif);
     
     for (const output of recipe.outputs) {
@@ -980,6 +1232,19 @@ function bindRecipeSwitchEvents() {
   });
 }
 
+// 绑定建筑选择事件
+function bindBuildingSelectEvents() {
+  document.querySelectorAll('.building-select').forEach((sel: Element) => {
+    sel.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLSelectElement;
+      const recipeId = target.dataset.recipeId!;
+      const buildingId = parseInt(target.value);
+      
+      updateRecipeBuilding(recipeId, buildingId);
+    });
+  });
+}
+
 // 绑定原矿标记事件
 function bindRawToggleEvents() {
   document.querySelectorAll('.raw-checkbox-inline').forEach((cb: Element) => {
@@ -999,22 +1264,42 @@ function bindRawToggleEvents() {
   });
 }
 
-function renderProliferatorControl(recipeId: string, current: { level: number; mode: string }): string {
-  const useGlobal = !state.recipeProliferators.has(recipeId);
+function renderProliferatorControl(
+  recipeId: string, 
+  current: { level: number; mode: string },
+  recipe?: Recipe
+): string {
+  // 判断当前是否被全局覆盖
+  const isGlobalOverridden = state.globalProliferator.level > 0 && 
+    (recipe ? canUseProliferator(recipe) : true);
+  
+  // 判断是否使用了特定设置（仅在全局未覆盖时有意义）
+  const hasSpecific = state.recipeProliferators.has(recipeId);
   
   let html = '<div class="proliferator-control">';
+  
+  // 如果被全局覆盖，显示提示
+  if (isGlobalOverridden) {
+    html += '<div class="prolif-global-notice">';
+    html += `<span>🌐 全局覆盖: ${state.globalProliferator.mode === 'speed' ? '加速' : '增产'} Mk.${state.globalProliferator.level}</span>`;
+    html += '</div>';
+    html += '</div>';
+    return html;
+  }
+  
+  // 未被全局覆盖，显示自定义选项
   html += '<div class="prolif-header">';
-  html += '<label class="prolif-use-global">';
-  html += `<input type="checkbox" class="prolif-global-check" data-recipe="${recipeId}" ${useGlobal ? 'checked' : ''}>`;
-  html += '<span>使用全局增产剂设置</span>';
+  html += '<label class="prolif-use-custom">';
+  html += `<input type="checkbox" class="prolif-custom-check" data-recipe="${recipeId}" ${hasSpecific ? 'checked' : ''}>`;
+  html += '<span>自定义增产剂</span>';
   html += '</label>';
   html += '</div>';
   
-  html += `<div class="prolif-custom ${useGlobal ? 'disabled' : ''}" data-recipe="${recipeId}">`;
+  html += `<div class="prolif-custom ${hasSpecific ? '' : 'disabled'}" data-recipe="${recipeId}">`;
   
   html += '<div class="prolif-level">';
   html += '<label>等级:</label>';
-  html += `<select class="prolif-level-select" data-recipe="${recipeId}" ${useGlobal ? 'disabled' : ''}>`;
+  html += `<select class="prolif-level-select" data-recipe="${recipeId}" ${hasSpecific ? '' : 'disabled'}>`;
   html += `<option value="0" ${current.level === 0 ? 'selected' : ''}>无</option>`;
   html += `<option value="1" ${current.level === 1 ? 'selected' : ''}>Mk.I</option>`;
   html += `<option value="2" ${current.level === 2 ? 'selected' : ''}>Mk.II</option>`;
@@ -1024,7 +1309,7 @@ function renderProliferatorControl(recipeId: string, current: { level: number; m
   
   html += '<div class="prolif-mode">';
   html += '<label>模式:</label>';
-  html += `<select class="prolif-mode-select" data-recipe="${recipeId}" ${useGlobal ? 'disabled' : ''}>`;
+  html += `<select class="prolif-mode-select" data-recipe="${recipeId}" ${hasSpecific ? '' : 'disabled'}>`;
   html += `<option value="none" ${current.mode === 'none' ? 'selected' : ''}>无</option>`;
   html += `<option value="speed" ${current.mode === 'speed' ? 'selected' : ''}>加速</option>`;
   html += `<option value="productivity" ${current.mode === 'productivity' ? 'selected' : ''}>增产</option>`;
@@ -1036,28 +1321,29 @@ function renderProliferatorControl(recipeId: string, current: { level: number; m
 }
 
 function bindProliferatorEvents() {
-  document.querySelectorAll('.prolif-global-check').forEach((cb: Element) => {
+  // 自定义增产剂复选框事件
+  document.querySelectorAll('.prolif-custom-check').forEach((cb: Element) => {
     cb.addEventListener('change', (e: Event) => {
       const target = e.target as HTMLInputElement;
       const recipeId = target.dataset.recipe!;
-      const useGlobal = target.checked;
+      const useCustom = target.checked;
       
       const customDiv = document.querySelector(`.prolif-custom[data-recipe="${recipeId}"]`);
       const levelSelect = document.querySelector(`.prolif-level-select[data-recipe="${recipeId}"]`) as HTMLSelectElement;
       const modeSelect = document.querySelector(`.prolif-mode-select[data-recipe="${recipeId}"]`) as HTMLSelectElement;
       
-      if (customDiv) customDiv.classList.toggle('disabled', useGlobal);
-      if (levelSelect) levelSelect.disabled = useGlobal;
-      if (modeSelect) modeSelect.disabled = useGlobal;
+      if (customDiv) customDiv.classList.toggle('disabled', !useCustom);
+      if (levelSelect) levelSelect.disabled = !useCustom;
+      if (modeSelect) modeSelect.disabled = !useCustom;
       
-      if (useGlobal) {
-        // 切换到全局：删除特定配置
-        deleteRecipeProliferator(recipeId);
-      } else {
-        // 切换到自定义：保存当前选中的值（包括 0/none）
-        const level = parseInt(levelSelect?.value || '0') as 0|1|2|3;
-        const mode = (modeSelect?.value || 'none') as 'none'|'speed'|'productivity';
+      if (useCustom) {
+        // 启用自定义：保存当前选中的值
+        const level = parseInt(levelSelect?.value || '1') as 0|1|2|3;
+        const mode = (modeSelect?.value || 'speed') as 'none'|'speed'|'productivity';
         updateRecipeProliferator(recipeId, level, mode);
+      } else {
+        // 禁用自定义：删除特定配置（使用默认无增产）
+        deleteRecipeProliferator(recipeId);
       }
     });
   });
