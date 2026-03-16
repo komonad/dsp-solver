@@ -83,3 +83,6 @@ export type {
 
 // 版本号
 export const VERSION = '1.0.0';
+
+export { solveFromRequest, solveRequestToOptions } from './core/solveRequest';
+export type { SolveRequest, SerializedProliferatorSetting } from './core/solveRequest';

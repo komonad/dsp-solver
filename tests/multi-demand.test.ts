@@ -340,3 +340,32 @@ describe('Multi-Demand Solver (自定义求解器)', () => {
     expect(result.rawMaterials.has('D')).toBe(true);
   });
 });
+
+describe('Unified objective options', () => {
+  const gameData = createTestData();
+
+  test('same API can optimize buildings vs raw inputs', () => {
+    const minBuildings = solveMultiDemand(
+      [{ itemId: 'E', rate: 60 }],
+      gameData,
+      { objective: 'min-buildings' }
+    );
+
+    const minWaste = solveMultiDemand(
+      [{ itemId: 'E', rate: 60 }],
+      gameData,
+      { objective: 'min-waste' }
+    );
+
+    expect(minBuildings.feasible).toBe(true);
+    expect(minWaste.feasible).toBe(true);
+
+    const minBuildingsR1 = minBuildings.recipes.get('r1') || 0;
+    const minBuildingsR2 = minBuildings.recipes.get('r2') || 0;
+    const minWasteR1 = minWaste.recipes.get('r1') || 0;
+    const minWasteR2 = minWaste.recipes.get('r2') || 0;
+
+    expect(minWasteR1).toBeGreaterThan(minBuildingsR1);
+    expect(minWasteR2).toBeLessThan(minBuildingsR2);
+  });
+});

@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './src/web/app.ts',
+  entry: './src/web/app.tsx',
   module: {
     rules: [
       {
@@ -23,5 +23,7 @@ module.exports = {
     path: path.resolve(__dirname, 'dist-web'),
   },
   mode: 'development',
+  cache: false,
   devtool: 'source-map',
 };
+

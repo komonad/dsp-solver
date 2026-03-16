@@ -73,6 +73,8 @@ export interface RawGameData {
   buildings?: any[];
   // 可选的原矿ID列表
   rawItemIds?: string[];
+  // 可选的默认原矿ID列表（始终视为原矿输入）
+  defaultRawItemIds?: string[];
 }
 
 /** 物品 */
@@ -316,6 +318,8 @@ export interface GameData {
   }[];
   /** 原矿ID列表 */
   rawItemIds: string[];
+  /** 默认原矿ID列表 */
+  defaultRawItemIds: string[];
   /** 物品ID到物品的映射 */
   itemMap: Map<string, Item>;
   /** 配方ID到配方的映射 */

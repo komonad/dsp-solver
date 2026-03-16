@@ -97,6 +97,10 @@ export function calculateProductionParams(context: ProductionContext): Productio
 
   // 2. 产出系数
   let outputMultiplier = 1;
+  // 建筑内置产出加成
+  if (building.intrinsicProductivity && building.intrinsicProductivity > 0) {
+    outputMultiplier *= (1 + building.intrinsicProductivity);
+  }
   // 建筑翻倍
   if (building.supportsDoubling && building.doublingConfig) {
     outputMultiplier *= building.doublingConfig.multiplier;

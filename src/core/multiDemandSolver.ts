@@ -3,6 +3,7 @@ import { calculateItemBalance } from './productionModel';
 import { solve, greaterEq } from 'yalps';
 
 export interface MultiDemandOptions {
+  objective?: 'min-buildings' | 'min-power' | 'min-waste';
   globalProliferator?: { level: 0 | 1 | 2 | 3; mode: 'none' | 'speed' | 'productivity'; sprayCount?: number };
   /** 
    * 额外指定为原矿的物品ID列表
@@ -41,7 +42,8 @@ export interface MultiDemandOptions {
 export interface MultiDemandResult {
   feasible: boolean;
   message?: string;
-  recipes: Map<string, number>;      // recipeId -> count per minute
+  recipes: Map<string, number>;      // recipeId -> solver variable units
+  recipeRatesPerMinute?: Map<string, number>; // recipeId -> actual executions per minute
   satisfiedDemands: Map<string, number>; // itemId -> actual rate
   intermediateBalance: Map<string, number>; // itemId -> surplus/deficit
   rawMaterials: Map<string, number>; // itemId -> consumption rate
@@ -64,6 +66,7 @@ export function solveMultiDemand(
   // 合并用户指定的原矿与游戏数据中的原矿
   const rawItemSet = new Set<string>([
     ...gameData.rawItemIds,
+    ...(gameData.defaultRawItemIds || []),
     ...(options.treatAsRaw || [])
   ]);
 
@@ -120,12 +123,15 @@ export function solveMultiDemand(
   // 1. 收集所有相关配方（从剩余需求向上游收集）
   const demandItemIds = adjustedDemands.map(d => d.itemId);
   const selectedRecipes = options.selectedRecipes || new Map<string, string>();
+  
   const recipes = collectUpstreamRecipes(
     demandItemIds,
     gameData,
     rawItemSet,
     selectedRecipes
   );
+  
+
 
   // 如果没有剩余需求（所有需求都被供给或标记为原矿）
   if (adjustedDemands.length === 0) {
@@ -181,16 +187,21 @@ export function solveMultiDemand(
   const items = Array.from(allItems);
   const adjustedDemandMap = new Map(adjustedDemands.map(d => [d.itemId, d.rate]));
   
+
+  
   // 构建变量（配方）
   const variables: Record<string, Record<string, number>> = {};
+  const objective = options.objective || 'min-buildings';
   for (const recipe of recipes) {
     const varName = `r${recipe.id}`;
     const coeffs: Record<string, number> = {};
     
     // 获取该配方使用的建筑
     const buildingId = options.recipeBuildings?.get(recipe.id);
-    const building = buildingId 
-      ? gameData.buildings.find(b => b.id === buildingId)
+    const buildingIdStr = buildingId ? String(buildingId) : undefined;
+    
+    const building = buildingIdStr
+      ? gameData.buildings.find(b => b.id === buildingIdStr)
       : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
     
     for (const itemId of items) {
@@ -204,10 +215,24 @@ export function solveMultiDemand(
       }
     }
     
-    // 添加小的目标系数（最小化总配方执行次数）
-    coeffs._obj = 0.001;
+    let objectiveCost = 1;
+
+    if (objective === 'min-power') {
+      objectiveCost = building?.workPower || 1;
+    } else if (objective === 'min-waste') {
+      let rawInputCost = 0;
+      for (const input of recipe.inputs) {
+        if (rawItemSet.has(input.itemId)) {
+          rawInputCost += input.count * (60 / recipe.time);
+        }
+      }
+      objectiveCost = rawInputCost > 0 ? rawInputCost : 0.001;
+    }
+
+    coeffs._obj = objectiveCost;
     
     variables[varName] = coeffs;
+
   }
 
   // 构建约束（使用调整后的需求）
@@ -239,11 +264,12 @@ export function solveMultiDemand(
     constraints,
     variables,
   };
-
+  
   const solution = solve(model);
 
   // 5. 解析结果
   const recipeCounts = new Map<string, number>();
+  const recipeRatesPerMinute = new Map<string, number>();
   const satisfiedDemands = new Map<string, number>();
   const intermediateBalance = new Map<string, number>();
   const rawMaterials = new Map<string, number>();
@@ -253,6 +279,7 @@ export function solveMultiDemand(
       feasible: false,
       message: `求解失败: ${solution.status}`,
       recipes: recipeCounts,
+      recipeRatesPerMinute,
       satisfiedDemands,
       intermediateBalance,
       rawMaterials
@@ -265,6 +292,10 @@ export function solveMultiDemand(
     if (varName.startsWith('r') && value > 0.001) {
       const recipeId = varName.slice(1);
       recipeCounts.set(recipeId, value);
+      const recipe = gameData.recipeMap.get(recipeId);
+      if (recipe) {
+        recipeRatesPerMinute.set(recipeId, value * (60 / recipe.time));
+      }
     }
   }
 
@@ -285,8 +316,9 @@ export function solveMultiDemand(
         const prolif = specificProlif ?? options.globalProliferator;
         // 获取该配方使用的建筑
         const buildingId = options.recipeBuildings?.get(recipe.id);
-        const building = buildingId 
-          ? gameData.buildings.find(b => b.id === buildingId)
+        const buildingIdStr = buildingId ? String(buildingId) : undefined;
+        const building = buildingIdStr
+          ? gameData.buildings.find(b => b.id === buildingIdStr)
           : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
         const coeff = calculateItemBalance(recipe, itemId, prolif, building);
         balance += coeff * count;
@@ -368,8 +400,9 @@ export function solveMultiDemand(
       
       // 获取该配方使用的建筑（考虑内置产出加成）
       const buildingId = options.recipeBuildings?.get(recipeId);
-      const building = buildingId 
-        ? gameData.buildings.find(b => b.id === buildingId)
+      const buildingIdStr = buildingId ? String(buildingId) : undefined;
+      const building = buildingIdStr
+        ? gameData.buildings.find(b => b.id === buildingIdStr)
         : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
       const intrinsicBonus = building?.intrinsicProductivity || 0;
       
@@ -448,6 +481,7 @@ export function solveMultiDemand(
     feasible,
     message: message || undefined,
     recipes: recipeCounts,
+    recipeRatesPerMinute,
     satisfiedDemands: finalSatisfiedDemands,
     intermediateBalance,
     rawMaterials,
@@ -460,7 +494,7 @@ export function solveMultiDemand(
  * @param stopAtItems 遇到这些物品停止向上游收集（视为原矿）
  * @param selectedRecipes 强制指定的配方选择
  */
-function collectUpstreamRecipes(
+export function collectUpstreamRecipes(
   targetItemIds: string[], 
   gameData: GameData,
   stopAtItems?: Set<string>,
