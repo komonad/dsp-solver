@@ -26,6 +26,7 @@ function App() {
   const [treatAsRaw, setTreatAsRaw] = useState<string[]>([]);
   const [manualRecipeBuildings, setManualRecipeBuildings] = useState<Record<string, string>>({});
   const [selectedRecipes, setSelectedRecipes] = useState<Record<string, string>>({});
+  const [pendingWarning, setPendingWarning] = useState<string>('');
   const [result, setResult] = useState<MultiDemandResult | null>(null);
   const [error, setError] = useState<string>('');
   const [resolvedRecipeBuildings, setResolvedRecipeBuildings] = useState<Map<string, string>>(new Map());
@@ -161,6 +162,39 @@ function App() {
     setTreatAsRaw(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
   }
 
+  function tryApplyConfig(next: { selectedRecipes?: Record<string, string>; manualRecipeBuildings?: Record<string, string>; treatAsRaw?: string[] }) {
+    if (!gameData || demands.length === 0) return;
+
+    const candidateRecipes = next.selectedRecipes ?? selectedRecipes;
+    const candidateBuildings = next.manualRecipeBuildings ?? manualRecipeBuildings;
+    const candidateRaw = next.treatAsRaw ?? treatAsRaw;
+
+    const autoBuildings = buildLayeredRecipeBuildings(gameData, demands.map(d => d.itemId));
+    const mergedBuildings = new Map(autoBuildings);
+    for (const [recipeId, buildingId] of Object.entries(candidateBuildings)) {
+      mergedBuildings.set(recipeId, buildingId);
+    }
+
+    const solveResult = solveMultiDemand(demands, gameData, {
+      treatAsRaw: candidateRaw,
+      existingSupplies: [],
+      selectedRecipes: new Map(Object.entries(candidateRecipes)),
+      noByproducts: false,
+      recipeProliferators: new Map(),
+      recipeBuildings: mergedBuildings,
+    });
+
+    if (!solveResult.feasible) {
+      setPendingWarning(solveResult.message || '修改后的配置无解，未应用。');
+      return;
+    }
+
+    setPendingWarning('');
+    if (next.selectedRecipes) setSelectedRecipes(candidateRecipes);
+    if (next.manualRecipeBuildings) setManualRecipeBuildings(candidateBuildings);
+    if (next.treatAsRaw) setTreatAsRaw(candidateRaw);
+  }
+
   function clearStoredState() {
     localStorage.removeItem(STORAGE_KEY);
     setConfigKey('test');
@@ -207,6 +241,7 @@ function App() {
       </div>
 
       {error && <div style={{ color: '#ff6b6b', marginBottom: 16 }}>求解失败: {error}</div>}
+      {pendingWarning && <div style={{ color: '#ffd166', marginBottom: 16 }}>{pendingWarning}</div>}
 
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
         <div style={{ border: '1px solid #444', borderRadius: 8, padding: 12 }}>
@@ -214,7 +249,7 @@ function App() {
           {resultModel?.rawMaterials.map(raw => (
             <label key={raw.itemId} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span>{raw.itemName}: {raw.rate.toFixed(2)}/min</span>
-              <input type="checkbox" checked={treatAsRaw.includes(raw.itemId)} onChange={() => toggleRaw(raw.itemId)} />
+              <input type="checkbox" checked={treatAsRaw.includes(raw.itemId)} onChange={() => tryApplyConfig({ treatAsRaw: treatAsRaw.includes(raw.itemId) ? treatAsRaw.filter(id => id !== raw.itemId) : [...treatAsRaw, raw.itemId] })} />
             </label>
           ))}
         </div>
@@ -234,7 +269,7 @@ function App() {
                 {recipeChoices.length > 1 && productItemId && (
                   <select
                     value={selectedRecipes[productItemId] || row.recipeId}
-                    onChange={e => setSelectedRecipes(prev => ({ ...prev, [productItemId]: e.target.value }))}
+                    onChange={e => tryApplyConfig({ selectedRecipes: { ...selectedRecipes, [productItemId]: e.target.value } })}
                   >
                     {recipeChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
                   </select>
@@ -242,7 +277,7 @@ function App() {
                 {availableBuildings.length > 0 && (
                   <select
                     value={manualRecipeBuildings[row.recipeId] || row.buildingId}
-                    onChange={e => setManualRecipeBuildings(prev => ({ ...prev, [row.recipeId]: e.target.value }))}
+                    onChange={e => tryApplyConfig({ manualRecipeBuildings: { ...manualRecipeBuildings, [row.recipeId]: e.target.value } })}
                   >
                     {availableBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </select>
