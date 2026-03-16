@@ -69,7 +69,13 @@ function App() {
   }, [configKey]);
 
   useEffect(() => {
-    if (!gameData || demands.length === 0) return;
+    if (!gameData) return;
+    if (demands.length === 0) {
+      setResolvedRecipeBuildings(new Map());
+      setResult(null);
+      setError('');
+      return;
+    }
 
     const autoBuildings = buildLayeredRecipeBuildings(gameData, demands.map(d => d.itemId));
     const mergedBuildings = new Map(autoBuildings);
@@ -108,6 +114,24 @@ function App() {
     if (!gameData || !result) return null;
     return buildResultModel(result, gameData, resolvedRecipeBuildings);
   }, [gameData, result, resolvedRecipeBuildings]);
+
+  const editableRecipeRows = useMemo(() => {
+    if (!gameData) return [] as Array<{ recipeId: string; recipeName: string; buildingId: string }>;
+
+    const fromResult = resultModel?.recipes.map(row => ({
+      recipeId: row.recipeId,
+      recipeName: row.recipeName,
+      buildingId: row.buildingId,
+    })) || [];
+
+    if (fromResult.length > 0) return fromResult;
+
+    return Array.from(resolvedRecipeBuildings.entries()).map(([recipeId, buildingId]) => ({
+      recipeId,
+      recipeName: gameData.recipeMap.get(recipeId)?.name || recipeId,
+      buildingId,
+    }));
+  }, [gameData, resultModel, resolvedRecipeBuildings]);
 
   const producerOptions = useMemo(() => {
     if (!gameData) return new Map<string, Recipe[]>();
@@ -182,7 +206,7 @@ function App() {
 
         <div style={{ border: '1px solid #444', borderRadius: 8, padding: 12 }}>
           <h2>手动建筑 / 配方</h2>
-          {resultModel?.recipes.map(row => {
+          {editableRecipeRows.map(row => {
             const recipe = gameData?.recipeMap.get(row.recipeId);
             const availableBuildings = recipe
               ? gameData?.buildings.filter(b => recipe.factoryIds.includes(b.originalId)) || []
