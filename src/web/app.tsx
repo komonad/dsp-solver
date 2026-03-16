@@ -26,9 +26,9 @@ function App() {
   const [treatAsRaw, setTreatAsRaw] = useState<string[]>([]);
   const [manualRecipeBuildings, setManualRecipeBuildings] = useState<Record<string, string>>({});
   const [selectedRecipes, setSelectedRecipes] = useState<Record<string, string>>({});
-  const [pendingWarning, setPendingWarning] = useState<string>('');
+  const [pendingWarning, setPendingWarning] = useState('');
   const [result, setResult] = useState<MultiDemandResult | null>(null);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState('');
   const [resolvedRecipeBuildings, setResolvedRecipeBuildings] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -86,18 +86,14 @@ function App() {
 
     setResolvedRecipeBuildings(mergedBuildings);
 
-    const solveResult = solveMultiDemand(
-      demands,
-      gameData,
-      {
-        treatAsRaw,
-        existingSupplies: [],
-        selectedRecipes: new Map(Object.entries(selectedRecipes)),
-        noByproducts: false,
-        recipeProliferators: new Map(),
-        recipeBuildings: mergedBuildings,
-      }
-    );
+    const solveResult = solveMultiDemand(demands, gameData, {
+      treatAsRaw,
+      existingSupplies: [],
+      selectedRecipes: new Map(Object.entries(selectedRecipes)),
+      noByproducts: false,
+      recipeProliferators: new Map(),
+      recipeBuildings: mergedBuildings,
+    });
 
     setResult(solveResult);
     setError(solveResult.feasible ? '' : (solveResult.message || '求解失败'));
@@ -119,19 +115,24 @@ function App() {
   const editableRecipeRows = useMemo(() => {
     if (!gameData) return [] as Array<{ recipeId: string; recipeName: string; buildingId: string }>;
 
-    const fromResult = resultModel?.recipes.map(row => ({
-      recipeId: row.recipeId,
-      recipeName: row.recipeName,
-      buildingId: row.buildingId,
-    })) || [];
+    const seen = new Set<string>();
+    const rows: Array<{ recipeId: string; recipeName: string; buildingId: string }> = [];
 
-    if (fromResult.length > 0) return fromResult;
+    for (const row of resultModel?.recipes || []) {
+      seen.add(row.recipeId);
+      rows.push({ recipeId: row.recipeId, recipeName: row.recipeName, buildingId: row.buildingId });
+    }
 
-    return Array.from(resolvedRecipeBuildings.entries()).map(([recipeId, buildingId]) => ({
-      recipeId,
-      recipeName: gameData.recipeMap.get(recipeId)?.name || recipeId,
-      buildingId,
-    }));
+    for (const [recipeId, buildingId] of resolvedRecipeBuildings.entries()) {
+      if (seen.has(recipeId)) continue;
+      rows.push({
+        recipeId,
+        recipeName: gameData.recipeMap.get(recipeId)?.name || recipeId,
+        buildingId,
+      });
+    }
+
+    return rows;
   }, [gameData, resultModel, resolvedRecipeBuildings]);
 
   const producerOptions = useMemo(() => {
@@ -158,11 +159,11 @@ function App() {
     setDemands(prev => prev.filter(d => d.itemId !== itemId));
   }
 
-  function toggleRaw(itemId: string) {
-    setTreatAsRaw(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
-  }
-
-  function tryApplyConfig(next: { selectedRecipes?: Record<string, string>; manualRecipeBuildings?: Record<string, string>; treatAsRaw?: string[] }) {
+  function tryApplyConfig(next: {
+    selectedRecipes?: Record<string, string>;
+    manualRecipeBuildings?: Record<string, string>;
+    treatAsRaw?: string[];
+  }) {
     if (!gameData || demands.length === 0) return;
 
     const candidateRecipes = next.selectedRecipes ?? selectedRecipes;
@@ -207,6 +208,7 @@ function App() {
     setResolvedRecipeBuildings(new Map());
     setResult(null);
     setError('');
+    setPendingWarning('');
   }
 
   return (
@@ -243,68 +245,86 @@ function App() {
       {error && <div style={{ color: '#ff6b6b', marginBottom: 16 }}>求解失败: {error}</div>}
       {pendingWarning && <div style={{ color: '#ffd166', marginBottom: 16 }}>{pendingWarning}</div>}
 
-      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}>
+      <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr' }}>
         <div style={{ border: '1px solid #444', borderRadius: 8, padding: 12 }}>
           <h2>原料 / 原矿切换</h2>
           {resultModel?.rawMaterials.map(raw => (
             <label key={raw.itemId} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span>{raw.itemName}: {raw.rate.toFixed(2)}/min</span>
-              <input type="checkbox" checked={treatAsRaw.includes(raw.itemId)} onChange={() => tryApplyConfig({ treatAsRaw: treatAsRaw.includes(raw.itemId) ? treatAsRaw.filter(id => id !== raw.itemId) : [...treatAsRaw, raw.itemId] })} />
+              <input
+                type="checkbox"
+                checked={treatAsRaw.includes(raw.itemId)}
+                onChange={() => tryApplyConfig({
+                  treatAsRaw: treatAsRaw.includes(raw.itemId)
+                    ? treatAsRaw.filter(id => id !== raw.itemId)
+                    : [...treatAsRaw, raw.itemId],
+                })}
+              />
             </label>
           ))}
-        </div>
-
-        <div style={{ border: '1px solid #444', borderRadius: 8, padding: 12 }}>
-          <h2>手动建筑 / 配方</h2>
-          {editableRecipeRows.map(row => {
-            const recipe = gameData?.recipeMap.get(row.recipeId);
-            const availableBuildings = recipe
-              ? gameData?.buildings.filter(b => recipe.factoryIds.includes(b.originalId)) || []
-              : [];
-            const productItemId = recipe?.outputs[0]?.itemId;
-            const recipeChoices = productItemId ? (producerOptions.get(productItemId) || []) : [];
-            return (
-              <div key={row.recipeId} style={{ marginBottom: 12, borderTop: '1px solid #333', paddingTop: 8 }}>
-                <div>{row.recipeName}</div>
-                {recipeChoices.length > 1 && productItemId && (
-                  <select
-                    value={selectedRecipes[productItemId] || row.recipeId}
-                    onChange={e => tryApplyConfig({ selectedRecipes: { ...selectedRecipes, [productItemId]: e.target.value } })}
-                  >
-                    {recipeChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
-                  </select>
-                )}
-                {availableBuildings.length > 0 && (
-                  <select
-                    value={manualRecipeBuildings[row.recipeId] || row.buildingId}
-                    onChange={e => tryApplyConfig({ manualRecipeBuildings: { ...manualRecipeBuildings, [row.recipeId]: e.target.value } })}
-                  >
-                    {availableBuildings.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </select>
-                )}
-              </div>
-            );
-          })}
         </div>
       </div>
 
       {result?.feasible && (
         <div style={{ marginTop: 20 }}>
           <h2>配方结果</h2>
-          {resultModel?.recipes.map(row => (
-            <div key={row.recipeId} style={{ border: '1px solid #444', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <strong>{row.recipeName}</strong>
-                <span>{row.buildingCount.toFixed(2)} 个 {row.buildingName}</span>
+          {editableRecipeRows.map(row => {
+            const recipe = gameData?.recipeMap.get(row.recipeId);
+            const resultRow = resultModel?.recipes.find(item => item.recipeId === row.recipeId);
+            const availableBuildings = recipe
+              ? gameData?.buildings.filter(b => recipe.factoryIds.includes(b.originalId)) || []
+              : [];
+            const productItemId = recipe?.outputs[0]?.itemId;
+            const recipeChoices = productItemId ? (producerOptions.get(productItemId) || []) : [];
+
+            return (
+              <div key={row.recipeId} style={{ border: '1px solid #444', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <strong>{resultRow?.recipeName || row.recipeName}</strong>
+                  <span>{resultRow ? `${resultRow.buildingCount.toFixed(2)} 个 ${resultRow.buildingName}` : '未生效'}</span>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 8 }}>
+                  {recipeChoices.length > 1 && productItemId && (
+                    <label>
+                      <span style={{ marginRight: 6 }}>配方</span>
+                      <select
+                        value={selectedRecipes[productItemId] || row.recipeId}
+                        onChange={e => tryApplyConfig({ selectedRecipes: { ...selectedRecipes, [productItemId]: e.target.value } })}
+                      >
+                        {recipeChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+
+                  {availableBuildings.length > 0 && (
+                    <label>
+                      <span style={{ marginRight: 6 }}>建筑</span>
+                      <select
+                        value={manualRecipeBuildings[row.recipeId] || row.buildingId}
+                        onChange={e => tryApplyConfig({ manualRecipeBuildings: { ...manualRecipeBuildings, [row.recipeId]: e.target.value } })}
+                      >
+                        {availableBuildings.map(building => <option key={building.id} value={building.id}>{building.name}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </div>
+
+                {resultRow ? (
+                  <>
+                    <div style={{ color: '#9ad', marginTop: 8 }}>执行次数: {resultRow.executionsPerMinute.toFixed(2)}/min</div>
+                    <div style={{ color: '#9ad' }}>单建筑执行: {resultRow.perBuildingExecutionsPerMinute.toFixed(2)}/min</div>
+                    <div style={{ marginTop: 8 }}>
+                      <div>输入: {resultRow.inputs.map(item => `${item.itemName} ${item.rate.toFixed(2)}/min`).join(' | ')}</div>
+                      <div>输出: {resultRow.outputs.map(item => `${item.itemName} ${item.rate.toFixed(2)}/min`).join(' | ')}</div>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ color: '#ffd166', marginTop: 8 }}>当前解中未使用该配方，但仍可在此修改。</div>
+                )}
               </div>
-              <div style={{ color: '#9ad' }}>执行次数: {row.executionsPerMinute.toFixed(2)}/min</div>
-              <div style={{ color: '#9ad' }}>单建筑执行: {row.perBuildingExecutionsPerMinute.toFixed(2)}/min</div>
-              <div style={{ marginTop: 8 }}>
-                <div>输入: {row.inputs.map(x => `${x.itemName} ${x.rate.toFixed(2)}/min`).join(' | ')}</div>
-                <div>输出: {row.outputs.map(x => `${x.itemName} ${x.rate.toFixed(2)}/min`).join(' | ')}</div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           <h2>原料</h2>
           {resultModel?.rawMaterials.map(raw => (
