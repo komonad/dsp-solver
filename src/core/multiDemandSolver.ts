@@ -286,7 +286,7 @@ export function solveMultiDemand(
     };
   }
 
-  // 提取配方执行次数 (solution.variables 是 [string, number][] 数组)
+  // 提取建筑数量，并换算成每分钟执行次数
   const varMap = new Map<string, number>(solution.variables);
   for (const [varName, value] of varMap) {
     if (varName.startsWith('r') && value > 0.001) {
@@ -294,7 +294,13 @@ export function solveMultiDemand(
       recipeCounts.set(recipeId, value);
       const recipe = gameData.recipeMap.get(recipeId);
       if (recipe) {
-        recipeRatesPerMinute.set(recipeId, value * (60 / recipe.time));
+        const buildingId = options.recipeBuildings?.get(recipe.id);
+        const buildingIdStr = buildingId ? String(buildingId) : undefined;
+        const building = buildingIdStr
+          ? gameData.buildings.find(b => b.id === buildingIdStr)
+          : gameData.buildings.find(b => recipe.factoryIds.includes(b.originalId));
+        const perBuildingExecutionsPerMinute = building ? building.speed * (60 / recipe.time) : (60 / recipe.time);
+        recipeRatesPerMinute.set(recipeId, value * perBuildingExecutionsPerMinute);
       }
     }
   }

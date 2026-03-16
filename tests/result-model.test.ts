@@ -21,5 +21,6 @@ test('result model stays internally consistent for fullerene-silver', async () =
 
   const fullereneSilver = model.recipes.find(row => row.recipeId === '90003');
   expect(fullereneSilver?.executionsPerMinute).toBeCloseTo(40, 6);
-  expect(fullereneSilver?.buildingCount).toBeCloseTo(40, 6);
+  expect(fullereneSilver?.buildingCount).toBeCloseTo(2 / 3, 6);
+  expect(fullereneSilver?.outputs[0].rate).toBeCloseTo(80, 6);
 });

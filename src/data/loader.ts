@@ -21,27 +21,27 @@ const VANILLA_BUILDINGS: Record<number, any> = {
   2318: { name: '重组式制造台', nameCN: '重组式制造台', category: 'assembler', speed: 2, workPower: 2.16, idlePower: 0.072, hasProliferatorSlot: true },
   
   // 绮剧偧鍘?
-  2308: { name: 'Refinery', nameCN: 'Refinery', category: 'refinery', speed: 1, workPower: 0.96, idlePower: 0.032, hasProliferatorSlot: true },
+  2308: { name: '原油精炼厂', nameCN: '原油精炼厂', category: 'refinery', speed: 1, workPower: 0.96, idlePower: 0.032, hasProliferatorSlot: true },
   
   // 鍖栧伐鍘?
-  2309: { name: 'Chemical Plant', nameCN: 'Chemical Plant', category: 'chemical', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
-  2313: { name: 'Cryogenic Chemical Plant', nameCN: 'Cryogenic Chemical Plant', category: 'chemical', speed: 1, workPower: 0.9, idlePower: 0.03, hasProliferatorSlot: true, intrinsicProductivity: 0.25 },
-  2314: { name: 'Quantum Chemical Plant', nameCN: 'Quantum Chemical Plant', category: 'chemical', speed: 1, workPower: 1.44, idlePower: 0.048, hasProliferatorSlot: true, intrinsicProductivity: 1.0 },
+  2309: { name: '化工厂', nameCN: '化工厂', category: 'chemical', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
+  2313: { name: '低温化工厂', nameCN: '低温化工厂', category: 'chemical', speed: 1, workPower: 0.9, idlePower: 0.03, hasProliferatorSlot: true, intrinsicProductivity: 0.25 },
+  2314: { name: '量子化工厂', nameCN: '量子化工厂', category: 'chemical', speed: 1, workPower: 1.44, idlePower: 0.048, hasProliferatorSlot: true, intrinsicProductivity: 1.0 },
   
   // 瀵规挒鏈?
-  2310: { name: 'Miniature Particle Collider', nameCN: 'Miniature Particle Collider', category: 'particle', speed: 1, workPower: 12, idlePower: 0.4, hasProliferatorSlot: true },
+  2310: { name: '微型粒子对撞机', nameCN: '微型粒子对撞机', category: 'particle', speed: 1, workPower: 12, idlePower: 0.4, hasProliferatorSlot: true },
   
   // 鐮旂┒绔?
-  2901: { name: 'Matrix Lab', nameCN: 'Matrix Lab', category: 'lab', speed: 1, workPower: 0.48, idlePower: 0.016, hasProliferatorSlot: true },
+  2901: { name: '矩阵研究站', nameCN: '矩阵研究站', category: 'lab', speed: 1, workPower: 0.48, idlePower: 0.016, hasProliferatorSlot: true },
   2902: { name: '自演化研究站', nameCN: '自演化研究站', category: 'lab', speed: 3, workPower: 1.44, idlePower: 0.048, hasProliferatorSlot: true },
   
   // 鍏朵粬
-  2307: { name: 'Oil Extractor', nameCN: 'Oil Extractor', category: 'extractor', speed: 1, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
+  2307: { name: '采油机', nameCN: '采油机', category: 'extractor', speed: 1, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
   2306: { name: '水泵', nameCN: '水泵', category: 'pump', speed: 1, workPower: 0.03, idlePower: 0.001, hasProliferatorSlot: false },
-  2311: { name: 'Fractionator', nameCN: 'Fractionator', category: 'fractionator', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
-  2312: { name: 'Orbital Collector', nameCN: 'Orbital Collector', category: 'orbital', speed: 1, workPower: 0, idlePower: 0, hasProliferatorSlot: false },
-  2301: { name: 'Mining Machine', nameCN: 'Mining Machine', category: 'mining', speed: 0.5, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
-  2316: { name: 'Large Mining Machine', nameCN: 'Large Mining Machine', category: 'mining', speed: 2, workPower: 2.94, idlePower: 0.098, hasProliferatorSlot: false },
+  2311: { name: '分馏塔', nameCN: '分馏塔', category: 'fractionator', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
+  2312: { name: '轨道采集器', nameCN: '轨道采集器', category: 'orbital', speed: 1, workPower: 0, idlePower: 0, hasProliferatorSlot: false },
+  2301: { name: '采矿机', nameCN: '采矿机', category: 'mining', speed: 0.5, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
+  2316: { name: '大型采矿机', nameCN: '大型采矿机', category: 'mining', speed: 2, workPower: 2.94, idlePower: 0.098, hasProliferatorSlot: false },
 };
 
 // 鍘熺熆绫诲瀷ID鍒楄〃锛圱ype 1锛?
