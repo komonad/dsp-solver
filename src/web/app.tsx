@@ -161,6 +161,20 @@ function App() {
     setTreatAsRaw(prev => prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]);
   }
 
+  function clearStoredState() {
+    localStorage.removeItem(STORAGE_KEY);
+    setConfigKey('test');
+    setDemands([{ itemId: '11005', rate: 60 }]);
+    setDraftItemId('11005');
+    setDraftRate(60);
+    setTreatAsRaw([]);
+    setManualRecipeBuildings({});
+    setSelectedRecipes({});
+    setResolvedRecipeBuildings(new Map());
+    setResult(null);
+    setError('');
+  }
+
   return (
     <div style={{ maxWidth: 1280, margin: '0 auto', color: '#eee', fontFamily: 'sans-serif', padding: 20 }}>
       <h1>DSP 配方求解器</h1>
@@ -177,6 +191,7 @@ function App() {
             </select>
             <input type="number" value={draftRate} onChange={e => setDraftRate(Number(e.target.value) || 0)} />
             <button onClick={addDemand}>添加需求</button>
+            <button onClick={clearStoredState}>清除缓存</button>
           </div>
         </div>
 
