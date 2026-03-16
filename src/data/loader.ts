@@ -10,15 +10,15 @@ import type {
 // 鍘熺増寤虹瓚瀹氫箟锛圛D鏉ヨ嚜娓告垙锛?
 const VANILLA_BUILDINGS: Record<number, any> = {
   // 鐔旂倝
-  2302: { name: '鐢靛姬鐔旂倝', nameCN: '鐢靛姬鐔旂倝', category: 'smelter', speed: 1, workPower: 0.36, idlePower: 0.012, hasProliferatorSlot: true },
-  2315: { name: '浣嶉潰鐔旂倝', nameCN: '浣嶉潰鐔旂倝', category: 'smelter', speed: 2, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
-  2319: { name: '璐熺喌鐔旂倝', nameCN: '璐熺喌鐔旂倝', category: 'smelter', speed: 3, workPower: 1.08, idlePower: 0.036, hasProliferatorSlot: true },
+  2302: { name: '电弧熔炉', nameCN: '电弧熔炉', category: 'smelter', speed: 1, workPower: 0.36, idlePower: 0.012, hasProliferatorSlot: true },
+  2315: { name: '位面熔炉', nameCN: '位面熔炉', category: 'smelter', speed: 2, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
+  2319: { name: '负熵熔炉', nameCN: '负熵熔炉', category: 'smelter', speed: 3, workPower: 1.08, idlePower: 0.036, hasProliferatorSlot: true },
   
   // 鍒堕€犲彴
-  2303: { name: '鍒堕€犲彴 Mk.I', nameCN: '鍒堕€犲彴 Mk.I', category: 'assembler', speed: 0.75, workPower: 0.27, idlePower: 0.009, hasProliferatorSlot: true },
-  2304: { name: '鍒堕€犲彴 Mk.II', nameCN: '鍒堕€犲彴 Mk.II', category: 'assembler', speed: 1, workPower: 0.54, idlePower: 0.018, hasProliferatorSlot: true },
-  2305: { name: '鍒堕€犲彴 Mk.III', nameCN: '鍒堕€犲彴 Mk.III', category: 'assembler', speed: 1.5, workPower: 1.08, idlePower: 0.036, hasProliferatorSlot: true },
-  2318: { name: '閲嶇粍寮忓埗閫犲彴', nameCN: '閲嶇粍寮忓埗閫犲彴', category: 'assembler', speed: 2, workPower: 2.16, idlePower: 0.072, hasProliferatorSlot: true },
+  2303: { name: '制造台 Mk.I', nameCN: '制造台 Mk.I', category: 'assembler', speed: 0.75, workPower: 0.27, idlePower: 0.009, hasProliferatorSlot: true },
+  2304: { name: '制造台 Mk.II', nameCN: '制造台 Mk.II', category: 'assembler', speed: 1, workPower: 0.54, idlePower: 0.018, hasProliferatorSlot: true },
+  2305: { name: '制造台 Mk.III', nameCN: '制造台 Mk.III', category: 'assembler', speed: 1.5, workPower: 1.08, idlePower: 0.036, hasProliferatorSlot: true },
+  2318: { name: '重组式制造台', nameCN: '重组式制造台', category: 'assembler', speed: 2, workPower: 2.16, idlePower: 0.072, hasProliferatorSlot: true },
   
   // 绮剧偧鍘?
   2308: { name: 'Refinery', nameCN: 'Refinery', category: 'refinery', speed: 1, workPower: 0.96, idlePower: 0.032, hasProliferatorSlot: true },
@@ -33,11 +33,11 @@ const VANILLA_BUILDINGS: Record<number, any> = {
   
   // 鐮旂┒绔?
   2901: { name: 'Matrix Lab', nameCN: 'Matrix Lab', category: 'lab', speed: 1, workPower: 0.48, idlePower: 0.016, hasProliferatorSlot: true },
-  2902: { name: '鑷紨鍖栫爺绌剁珯', nameCN: '鑷紨鍖栫爺绌剁珯', category: 'lab', speed: 3, workPower: 1.44, idlePower: 0.048, hasProliferatorSlot: true },
+  2902: { name: '自演化研究站', nameCN: '自演化研究站', category: 'lab', speed: 3, workPower: 1.44, idlePower: 0.048, hasProliferatorSlot: true },
   
   // 鍏朵粬
   2307: { name: 'Oil Extractor', nameCN: 'Oil Extractor', category: 'extractor', speed: 1, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
-  2306: { name: '姘存车', nameCN: '姘存车', category: 'pump', speed: 1, workPower: 0.03, idlePower: 0.001, hasProliferatorSlot: false },
+  2306: { name: '水泵', nameCN: '水泵', category: 'pump', speed: 1, workPower: 0.03, idlePower: 0.001, hasProliferatorSlot: false },
   2311: { name: 'Fractionator', nameCN: 'Fractionator', category: 'fractionator', speed: 1, workPower: 0.72, idlePower: 0.024, hasProliferatorSlot: true },
   2312: { name: 'Orbital Collector', nameCN: 'Orbital Collector', category: 'orbital', speed: 1, workPower: 0, idlePower: 0, hasProliferatorSlot: false },
   2301: { name: 'Mining Machine', nameCN: 'Mining Machine', category: 'mining', speed: 0.5, workPower: 0.42, idlePower: 0.014, hasProliferatorSlot: false },
