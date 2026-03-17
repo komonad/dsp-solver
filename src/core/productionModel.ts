@@ -243,8 +243,13 @@ export function calculateProductionRequirements(
 /**
  * 计算配方执行次数对应的净流量
  * 
+ * 这个函数与 calculateItemBalance 保持一致，用于展示层计算
+ * 它不应该包含建筑 speed 的影响，但应该包含产出倍率（如 intrinsicProductivity），因为：
+ * 1. LP 模型求解时使用的是 "基础速率"（不考虑建筑 speed，但考虑 intrinsicProductivity）
+ * 2. 最终产出 = 基础速率 * building.speed
+ * 
  * @param recipe 配方
- * @param executionsPerMinute 每分钟执行次数
+ * @param executionsPerMinute 每分钟执行次数（LP 模型的变量单位，即基础执行次数）
  * @param context 生产上下文
  * @returns 各物品的净流量（正=产出，负=消耗）
  */
@@ -253,22 +258,28 @@ export function calculateNetFlow(
   executionsPerMinute: number,
   context: ProductionContext
 ): Map<string, number> {
-  const params = calculateProductionParams(context);
   const net = new Map<string, number>();
+  
+  // 计算产出倍率（与 calculateItemBalance 保持一致）
+  let prodMultiplier = 1;
+  if (context.building?.intrinsicProductivity && context.building.intrinsicProductivity > 0) {
+    prodMultiplier *= (1 + context.building.intrinsicProductivity);
+  }
 
-  // 产出
+  // 产出：与 calculateItemBalance 保持一致
   for (const output of recipe.outputs) {
-    const rate = executionsPerMinute * output.count * params.outputMultiplier;
+    const rate = executionsPerMinute * output.count * (60 / recipe.time) * prodMultiplier;
     net.set(output.itemId, (net.get(output.itemId) || 0) + rate);
   }
 
-  // 原料消耗
+  // 原料消耗：与 calculateItemBalance 保持一致
   for (const input of recipe.inputs) {
-    const rate = executionsPerMinute * input.count;
+    const rate = executionsPerMinute * input.count * (60 / recipe.time);
     net.set(input.itemId, (net.get(input.itemId) || 0) - rate);
   }
 
   // 电力消耗（作为特殊物品）
+  const params = calculateProductionParams(context);
   const powerPerCycle = context.building.workPower * params.powerMultiplier;
   const powerPerMinute = powerPerCycle * executionsPerMinute;
   net.set('__POWER__', (net.get('__POWER__') || 0) - powerPerMinute);

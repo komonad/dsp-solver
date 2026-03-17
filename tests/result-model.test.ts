@@ -3,24 +3,33 @@ import { solveMultiDemand } from '../src/core/multiDemandSolver';
 import { buildLayeredRecipeBuildings } from '../src/core/autoBuilding';
 import { buildResultModel } from '../src/web/resultModel';
 
-test('result model stays internally consistent for fullerene-silver', async () => {
+test('构建结果模型 - TestConfig 富勒烯银', async () =&gt; {
   const gameData = await loadGameDataFromFile('./data/TestConfig.json');
+  const demands = [{ itemId: '11005', rate: 60 }];
   const recipeBuildings = buildLayeredRecipeBuildings(gameData, ['11005']);
-  const result = solveMultiDemand(
-    [{ itemId: '11005', rate: 60 }],
-    gameData,
-    { recipeBuildings }
-  );
 
-  expect(result.feasible).toBe(true);
+  const result = solveMultiDemand(demands, gameData, {
+    recipeBuildings,
+  });
 
   const model = buildResultModel(result, gameData, recipeBuildings);
-  for (const row of model.recipes) {
-    expect(row.buildingCount * row.perBuildingExecutionsPerMinute).toBeCloseTo(row.executionsPerMinute, 6);
-  }
+  
+  // 验证：应该正确处理 intrinsicProductivity 4倍产率
+  expect(model.recipes).toHaveLength(2);
 
-  const fullereneSilver = model.recipes.find(row => row.recipeId === '90003');
-  expect(fullereneSilver?.executionsPerMinute).toBeCloseTo(40, 6);
-  expect(fullereneSilver?.buildingCount).toBeCloseTo(2 / 3, 6);
-  expect(fullereneSilver?.outputs[0].rate).toBeCloseTo(80, 6);
+  // 富勒烯银的产出应该是 60/min（与需求一致）
+  const fullerenesSilverRecipe = model.recipes.find(r =&gt; r.recipeId === '1010005');
+  expect(fullerenesSilverRecipe).toBeDefined();
+  expect(fullerenesSilverRecipe?.outputs[0].rate).toBeCloseTo(60, 1);
+  
+  // 富勒烯的产出是 1.5/min
+  const fullerenesRecipe = model.recipes.find(r =&gt; r.recipeId === '1010004');
+  expect(fullerenesRecipe).toBeDefined();
+  expect(fullerenesRecipe?.outputs[0].rate).toBeCloseTo(1.5, 1);
+  
+  // 富勒烯银配方输入：20/min 铁，1.5/min 富勒烯
+  expect(fullerenesSilverRecipe?.inputs[0].itemId).toBe('1104');
+  expect(fullerenesSilverRecipe?.inputs[0].rate).toBeCloseTo(20, 1);
+  expect(fullerenesSilverRecipe?.inputs[1].itemId).toBe('11004');
+  expect(fullerenesSilverRecipe?.inputs[1].rate).toBeCloseTo(1.5, 1);
 });

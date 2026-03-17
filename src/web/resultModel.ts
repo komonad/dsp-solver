@@ -26,17 +26,22 @@ export function buildResultModel(
 ): ResultModel {
   const recipes: ResultRecipeModel[] = [];
 
-  const recipeRates = result.recipeRatesPerMinute || result.recipes;
-  for (const [recipeId, executionsPerMinute] of recipeRates.entries()) {
+  // 使用 recipes（LP 求解器的变量单位）而不是 recipeRatesPerMinute
+  const recipeCounts = result.recipes;
+  for (const [recipeId, count] of recipeCounts.entries()) {
     const recipe = gameData.recipeMap.get(recipeId);
     if (!recipe) continue;
     const buildingId = recipeBuildings.get(recipeId) || String(recipe.factoryIds[0]);
     const building = gameData.buildings.find(b => b.id === buildingId || String(b.originalId) === buildingId);
     if (!building) continue;
 
-    const netFlow = calculateNetFlow(recipe, executionsPerMinute, { recipe, building });
+    const netFlow = calculateNetFlow(recipe, count, { recipe, building });
     const perBuildingExecutionsPerMinute = building.speed * (60 / recipe.time);
-    const buildingCount = perBuildingExecutionsPerMinute > 0 ? executionsPerMinute / perBuildingExecutionsPerMinute : 0;
+    
+    // 修正：LP 模型的变量 count 本身就是建筑数量！
+    const buildingCount = count;
+    // 实际执行次数 = 建筑数量 * 单建筑每分钟执行次数
+    const executionsPerMinute = buildingCount * perBuildingExecutionsPerMinute;
 
     recipes.push({
       recipeId,
