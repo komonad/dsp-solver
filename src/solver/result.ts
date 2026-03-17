@@ -70,6 +70,8 @@ export interface CompiledOption {
   buildingId: string;
   proliferatorLevel: number;
   proliferatorMode: ProliferatorMode;
+  proliferatorItemId?: string;
+  powerMultiplier: number;
   singleBuildingRunsPerMin: number;
   buildingCostPerRunPerMin: number;
   powerCostMWPerRunPerMin: number;

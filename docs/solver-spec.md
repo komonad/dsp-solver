@@ -89,7 +89,7 @@ roundedUpBuildingCount(option) = ceil(exactBuildingCount(option));
 
 ```ts
 activePowerMW(option) =
-  exactBuildingCount(option) *
+  roundedUpBuildingCount(option) *
   building.workPowerMW *
   proliferatorPowerMultiplier;
 
@@ -98,6 +98,12 @@ roundedPlacementPowerMW(option) =
   building.workPowerMW *
   proliferatorPowerMultiplier;
 ```
+
+Current implementation expectation:
+
+- user-facing power is based on rounded-up building count
+- idle power is ignored for now
+- until we intentionally separate them again, `activePowerMW` and `roundedPlacementPowerMW` may be reported with the same rounded working-power value
 
 ## Proliferator modeling
 
@@ -112,6 +118,11 @@ For a recipe variant with proliferator enabled:
 `itemId` on a proliferator level is optional metadata. It is only required when we want solver-visible proliferator consumption to refer to a concrete catalog item.
 
 That keeps proliferator behavior in solver-visible IO, instead of hiding it in the web layer.
+
+Current implementation note:
+
+- proliferator variants are compiled into the LP option set
+- proliferator consumption is currently treated as an external input, not yet expanded into its own upstream production chain
 
 ## Resolved catalog model
 
