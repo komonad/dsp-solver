@@ -4,11 +4,11 @@ import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
 import { solveCatalogRequest } from '../solver/solve';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
-
-type EditableTarget = {
-  itemId: string;
-  ratePerMin: number;
-};
+import {
+  buildWorkbenchRequest,
+  parseAdvancedSolveOverrides,
+  type EditableTarget,
+} from './requestBuilder';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -84,22 +84,6 @@ function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
   );
 }
 
-function buildRequest(
-  targets: EditableTarget[],
-  objective: SolveObjective,
-  balancePolicy: BalancePolicy,
-  rawInputItemIds: string[]
-): SolveRequest {
-  return {
-    targets: targets
-      .filter(target => target.itemId && Number.isFinite(target.ratePerMin) && target.ratePerMin >= 0)
-      .map(target => ({ itemId: target.itemId, ratePerMin: target.ratePerMin })),
-    objective,
-    balancePolicy,
-    rawInputItemIds,
-  };
-}
-
 export default function App() {
   const initialPreset = DATASET_PRESETS[0];
   const [presetId, setPresetId] = useState(initialPreset.id);
@@ -115,6 +99,11 @@ export default function App() {
   const [balancePolicy, setBalancePolicy] = useState<BalancePolicy>('force_balance');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
   const [rawDraftItemId, setRawDraftItemId] = useState('');
+  const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
+  const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
+  const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
+  const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
+  const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [lastRequest, setLastRequest] = useState<SolveRequest | undefined>();
   const [result, setResult] = useState<SolveResult | null>(null);
   const [solveError, setSolveError] = useState('');
@@ -139,6 +128,11 @@ export default function App() {
       setTargets(nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : []);
       setRawInputItemIds([]);
       setRawDraftItemId(nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ?? '');
+      setDisabledRecipeIds([]);
+      setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
+      setDisabledBuildingIds([]);
+      setDisabledBuildingDraftId(nextCatalog.buildings[0]?.buildingId ?? '');
+      setAdvancedOverridesText('');
       setLastRequest(undefined);
       setResult(null);
       setSolveError('');
@@ -167,6 +161,69 @@ export default function App() {
   const rawOptions = useMemo(
     () => itemOptions.filter(item => !rawInputItemIds.includes(item.itemId)),
     [itemOptions, rawInputItemIds]
+  );
+
+  const recipeOptions = useMemo(
+    () => catalog?.recipes.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
+    [catalog]
+  );
+
+  const buildingOptions = useMemo(
+    () => catalog?.buildings.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
+    [catalog]
+  );
+
+  const disableRecipeOptions = useMemo(
+    () => recipeOptions.filter(recipe => !disabledRecipeIds.includes(recipe.recipeId)),
+    [recipeOptions, disabledRecipeIds]
+  );
+
+  const disableBuildingOptions = useMemo(
+    () => buildingOptions.filter(building => !disabledBuildingIds.includes(building.buildingId)),
+    [buildingOptions, disabledBuildingIds]
+  );
+
+  useEffect(() => {
+    if (!rawDraftItemId && rawOptions.length > 0) {
+      setRawDraftItemId(rawOptions[0].itemId);
+      return;
+    }
+    if (rawDraftItemId && rawOptions.length > 0 && !rawOptions.some(item => item.itemId === rawDraftItemId)) {
+      setRawDraftItemId(rawOptions[0].itemId);
+    }
+  }, [rawDraftItemId, rawOptions]);
+
+  useEffect(() => {
+    if (!disabledRecipeDraftId && disableRecipeOptions.length > 0) {
+      setDisabledRecipeDraftId(disableRecipeOptions[0].recipeId);
+      return;
+    }
+    if (
+      disabledRecipeDraftId &&
+      disableRecipeOptions.length > 0 &&
+      !disableRecipeOptions.some(recipe => recipe.recipeId === disabledRecipeDraftId)
+    ) {
+      setDisabledRecipeDraftId(disableRecipeOptions[0].recipeId);
+    }
+  }, [disabledRecipeDraftId, disableRecipeOptions]);
+
+  useEffect(() => {
+    if (!disabledBuildingDraftId && disableBuildingOptions.length > 0) {
+      setDisabledBuildingDraftId(disableBuildingOptions[0].buildingId);
+      return;
+    }
+    if (
+      disabledBuildingDraftId &&
+      disableBuildingOptions.length > 0 &&
+      !disableBuildingOptions.some(building => building.buildingId === disabledBuildingDraftId)
+    ) {
+      setDisabledBuildingDraftId(disableBuildingOptions[0].buildingId);
+    }
+  }, [disabledBuildingDraftId, disableBuildingOptions]);
+
+  const parsedOverrides = useMemo(
+    () => parseAdvancedSolveOverrides(advancedOverridesText),
+    [advancedOverridesText]
   );
 
   const model = useMemo(
@@ -233,11 +290,48 @@ export default function App() {
     setRawInputItemIds(current => current.filter(entry => entry !== itemId));
   }
 
+  function addDisabledRecipe() {
+    if (!disabledRecipeDraftId || disabledRecipeIds.includes(disabledRecipeDraftId)) {
+      return;
+    }
+    setDisabledRecipeIds(current => [...current, disabledRecipeDraftId]);
+  }
+
+  function removeDisabledRecipe(recipeId: string) {
+    setDisabledRecipeIds(current => current.filter(entry => entry !== recipeId));
+  }
+
+  function addDisabledBuilding() {
+    if (!disabledBuildingDraftId || disabledBuildingIds.includes(disabledBuildingDraftId)) {
+      return;
+    }
+    setDisabledBuildingIds(current => [...current, disabledBuildingDraftId]);
+  }
+
+  function removeDisabledBuilding(buildingId: string) {
+    setDisabledBuildingIds(current => current.filter(entry => entry !== buildingId));
+  }
+
   function solve() {
     if (!catalog) {
       return;
     }
-    const request = buildRequest(targets, objective, balancePolicy, rawInputItemIds);
+    if (parsedOverrides.error) {
+      setResult(null);
+      setSolveError(parsedOverrides.error);
+      return;
+    }
+    const request = buildWorkbenchRequest({
+      targets,
+      objective,
+      balancePolicy,
+      rawInputItemIds,
+      advancedOverrides: {
+        ...parsedOverrides.value,
+        disabledRecipeIds,
+        disabledBuildingIds,
+      },
+    });
     setLastRequest(request);
     if (request.targets.length === 0) {
       setResult(null);
@@ -440,11 +534,129 @@ export default function App() {
                             cursor: 'pointer',
                           }}
                         >
-                          {(catalog?.itemMap.get(itemId)?.name ?? itemId) + ' ×'}
+                          {(catalog?.itemMap.get(itemId)?.name ?? itemId) + ' x'}
                         </button>
                       ))
                     )}
                   </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>DISABLED RECIPES</div>
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                    <select
+                      value={disabledRecipeDraftId}
+                      onChange={event => setDisabledRecipeDraftId(event.target.value)}
+                      style={inputStyle}
+                      disabled={!catalog || disableRecipeOptions.length === 0}
+                    >
+                      {disableRecipeOptions.map(recipe => (
+                        <option key={recipe.recipeId} value={recipe.recipeId}>
+                          {recipe.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button type="button" onClick={addDisabledRecipe} style={subtleButtonStyle} disabled={!disabledRecipeDraftId}>
+                      Disable
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {disabledRecipeIds.length === 0 ? (
+                      <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>No disabled recipes.</span>
+                    ) : (
+                      disabledRecipeIds.map(recipeId => (
+                        <button
+                          key={recipeId}
+                          type="button"
+                          onClick={() => removeDisabledRecipe(recipeId)}
+                          style={{
+                            borderRadius: 999,
+                            border: '1px solid rgba(24, 51, 89, 0.16)',
+                            background: 'rgba(24, 51, 89, 0.06)',
+                            color: '#183359',
+                            padding: '6px 12px',
+                            fontSize: 13,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ' x'}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>DISABLED BUILDINGS</div>
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                    <select
+                      value={disabledBuildingDraftId}
+                      onChange={event => setDisabledBuildingDraftId(event.target.value)}
+                      style={inputStyle}
+                      disabled={!catalog || disableBuildingOptions.length === 0}
+                    >
+                      {disableBuildingOptions.map(building => (
+                        <option key={building.buildingId} value={building.buildingId}>
+                          {building.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button type="button" onClick={addDisabledBuilding} style={subtleButtonStyle} disabled={!disabledBuildingDraftId}>
+                      Disable
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {disabledBuildingIds.length === 0 ? (
+                      <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>No disabled buildings.</span>
+                    ) : (
+                      disabledBuildingIds.map(buildingId => (
+                        <button
+                          key={buildingId}
+                          type="button"
+                          onClick={() => removeDisabledBuilding(buildingId)}
+                          style={{
+                            borderRadius: 999,
+                            border: '1px solid rgba(24, 51, 89, 0.16)',
+                            background: 'rgba(24, 51, 89, 0.06)',
+                            color: '#183359',
+                            padding: '6px 12px',
+                            fontSize: 13,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ' x'}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                    ADVANCED OVERRIDES JSON
+                  </div>
+                  <textarea
+                    value={advancedOverridesText}
+                    onChange={event => setAdvancedOverridesText(event.target.value)}
+                    placeholder={'{\n  "preferredBuildingByRecipe": { "1": "5002" },\n  "forcedProliferatorModeByRecipe": { "2": "speed" }\n}'}
+                    style={{
+                      ...inputStyle,
+                      minHeight: 140,
+                      resize: 'vertical',
+                      fontFamily: '"IBM Plex Mono", monospace',
+                    }}
+                  />
+                  {parsedOverrides.error ? (
+                    <div style={{ color: '#8e2020', fontSize: 13 }}>{parsedOverrides.error}</div>
+                  ) : (
+                    <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>
+                      Use this for advanced request fields such as preferred or forced building, recipe, and proliferator settings.
+                    </div>
+                  )}
                 </div>
 
                 <button type="button" onClick={solve} style={buttonStyle} disabled={!catalog}>
@@ -535,6 +747,20 @@ export default function App() {
                             : model.requestSummary.rawInputs.map(item => <div key={item.itemId}>{item.itemName}</div>)}
                         </div>
                       </div>
+                      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>DISABLED RECIPES</div>
+                          <div style={{ marginTop: 6 }}>{model.requestSummary.disabledRecipes.length}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>DISABLED BUILDINGS</div>
+                          <div style={{ marginTop: 6 }}>{model.requestSummary.disabledBuildings.length}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>ADVANCED JSON</div>
+                          <div style={{ marginTop: 6 }}>{model.requestSummary.hasAdvancedOverrides ? 'Yes' : 'No'}</div>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>Load a dataset to start building a request.</div>
@@ -611,7 +837,7 @@ export default function App() {
                               <div>
                                 <div style={{ fontSize: 18, fontWeight: 700 }}>{plan.recipeName}</div>
                                 <div style={{ marginTop: 4, fontSize: 14, color: 'rgba(24, 51, 89, 0.72)' }}>
-                                  {plan.buildingName} • {plan.proliferatorLabel}
+                                  {plan.buildingName} | {plan.proliferatorLabel}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right' }}>

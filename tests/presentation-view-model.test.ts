@@ -93,6 +93,9 @@ test('presentation model carries frontend-visible names and totals from a solved
     balancePolicy: 'force_balance',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
     rawInputs: [],
+    disabledRecipes: [],
+    disabledBuildings: [],
+    hasAdvancedOverrides: false,
   });
   expect(model.status).toBe('optimal');
   expect(model.targets).toEqual([

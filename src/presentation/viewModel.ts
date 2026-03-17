@@ -29,6 +29,9 @@ export interface PresentationRequestSummary {
   balancePolicy: SolveRequest['balancePolicy'];
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
+  disabledRecipes: PresentationNamedItem[];
+  disabledBuildings: PresentationNamedItem[];
+  hasAdvancedOverrides: boolean;
 }
 
 export interface PresentationSolvedTarget {
@@ -114,8 +117,12 @@ function getBuildingName(catalog: ResolvedCatalogModel, buildingId: string): str
   return catalog.buildingMap.get(buildingId)?.name ?? buildingId;
 }
 
-function sortNamedItems(items: PresentationNamedItem[]): PresentationNamedItem[] {
+function sortByName<T extends { itemName: string }>(items: T[]): T[] {
   return items.slice().sort((left, right) => left.itemName.localeCompare(right.itemName));
+}
+
+function sortNamedItems(items: PresentationNamedItem[]): PresentationNamedItem[] {
+  return sortByName(items);
 }
 
 function mapItemRates(
@@ -163,6 +170,27 @@ export function buildPresentationModel(
             itemName: getItemName(catalog, itemId),
           }))
         ),
+        disabledRecipes: sortByName(
+          (request.disabledRecipeIds ?? []).map(recipeId => ({
+            itemId: recipeId,
+            itemName: getRecipeName(catalog, recipeId),
+          }))
+        ),
+        disabledBuildings: sortByName(
+          (request.disabledBuildingIds ?? []).map(buildingId => ({
+            itemId: buildingId,
+            itemName: getBuildingName(catalog, buildingId),
+          }))
+        ),
+        hasAdvancedOverrides:
+          Object.keys(request.forcedRecipeByItem ?? {}).length > 0 ||
+          Object.keys(request.preferredRecipeByItem ?? {}).length > 0 ||
+          Object.keys(request.forcedBuildingByRecipe ?? {}).length > 0 ||
+          Object.keys(request.preferredBuildingByRecipe ?? {}).length > 0 ||
+          Object.keys(request.forcedProliferatorLevelByRecipe ?? {}).length > 0 ||
+          Object.keys(request.preferredProliferatorLevelByRecipe ?? {}).length > 0 ||
+          Object.keys(request.forcedProliferatorModeByRecipe ?? {}).length > 0 ||
+          Object.keys(request.preferredProliferatorModeByRecipe ?? {}).length > 0,
       }
     : undefined;
 
