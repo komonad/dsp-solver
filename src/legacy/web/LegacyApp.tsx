@@ -7,8 +7,8 @@ import { buildResultModel } from './resultModel';
 
 const DATA_CONFIGS = {
   vanilla: { name: '原版 (Vanilla)', file: './Vanilla.json' },
-  test: { name: '测试配置 (Test)', file: './TestConfig.json' },
-  refinery: { name: '炼油测试 (Refinery)', file: './Refinery.json' },
+  test: { name: '测试配置 (Test)', file: './legacy/TestConfig.json' },
+  refinery: { name: '炼油测试 (Refinery)', file: './legacy/Refinery.json' },
 } as const;
 
 type ConfigKey = keyof typeof DATA_CONFIGS;

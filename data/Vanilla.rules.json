@@ -1,0 +1,44 @@
+{
+  "proliferatorLevels": [
+    { "Level": 0, "SpeedMultiplier": 1, "ProductivityMultiplier": 1, "PowerMultiplier": 1 },
+    { "Level": 1, "ItemID": 1141, "SprayCount": 12, "SpeedMultiplier": 1.125, "ProductivityMultiplier": 1.125, "PowerMultiplier": 1.3 },
+    { "Level": 2, "ItemID": 1142, "SprayCount": 12, "SpeedMultiplier": 1.2, "ProductivityMultiplier": 1.2, "PowerMultiplier": 1.5 },
+    { "Level": 3, "ItemID": 1143, "SprayCount": 12, "SpeedMultiplier": 1.25, "ProductivityMultiplier": 1.25, "PowerMultiplier": 1.7 }
+  ],
+  "buildingRules": [
+    { "ID": 0, "Category": "synthetic", "Tags": ["synthetic-factory", "ikarus"] },
+    { "ID": 1, "Category": "synthetic", "Tags": ["synthetic-factory", "planetary-base"] },
+    { "ID": 2105, "Category": "orbital", "Tags": ["orbital-collector"] },
+    { "ID": 2207, "Category": "energy-storage", "Tags": ["charge"] },
+    { "ID": 2208, "Category": "ray-receiver", "Tags": ["special-modifier"] },
+    { "ID": 2209, "Category": "energy-exchanger", "Tags": ["charge"] },
+    { "ID": 2301, "Category": "mining" },
+    { "ID": 2302, "Category": "smelter" },
+    { "ID": 2303, "Category": "assembler" },
+    { "ID": 2304, "Category": "assembler" },
+    { "ID": 2305, "Category": "assembler" },
+    { "ID": 2306, "Category": "pump" },
+    { "ID": 2307, "Category": "extractor" },
+    { "ID": 2308, "Category": "refinery" },
+    { "ID": 2309, "Category": "chemical" },
+    { "ID": 2310, "Category": "particle" },
+    { "ID": 2314, "Category": "fractionator" },
+    { "ID": 2315, "Category": "smelter" },
+    { "ID": 2316, "Category": "mining" },
+    { "ID": 2317, "Category": "chemical", "Tags": ["quantum-chemical-plant"] },
+    { "ID": 2318, "Category": "assembler" },
+    { "ID": 2319, "Category": "smelter" },
+    { "ID": 2901, "Category": "lab" },
+    { "ID": 2902, "Category": "lab" }
+  ],
+  "recipeModifierRules": [
+    { "Code": 0, "Kind": "none", "SupportedModes": ["none"], "MaxLevel": 0 },
+    { "Code": 1, "Kind": "proliferator", "SupportedModes": ["none", "speed"], "MaxLevel": 3, "Tags": ["speed-only"] },
+    { "Code": 3, "Kind": "proliferator", "SupportedModes": ["none", "speed", "productivity"], "MaxLevel": 3, "Tags": ["full-proliferator"] },
+    { "Code": 4, "Kind": "special", "SupportedModes": ["none"], "MaxLevel": 0, "Tags": ["ray-receiver-lens"] }
+  ],
+  "rawItemTypeIds": [1],
+  "syntheticRecipeTypeIds": [-1],
+  "syntheticRecipeNamePrefixes": ["[无中生有]", "[充电]", "[射线接收带透镜]"],
+  "syntheticFactoryIds": [0, 1]
+}

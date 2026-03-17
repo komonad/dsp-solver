@@ -16,17 +16,18 @@
 - 不在 Web 层重新计算配方速率、建筑数量、功耗、增产倍率
 - 不把“建筑数量”作为求解变量
 - 不把“配方周期”作为对外求解语义
+- 不把 `legacy` 代码作为新架构的一部分
 
 ## 2. 分层约束
 
 系统分为四层：
 
-1. `Catalog Spec`
-   定义静态数据：物品、配方、建筑、增产剂等级。
-2. `Solve Request Spec`
-   定义一次求解允许传入的目标、约束、禁用项和偏好项。
-3. `Solve Result Spec`
-   定义求解器的标准输出。Web 端必须仅消费这一层。
+1. `Raw Catalog File`
+   采用 `Vanilla.json` 兼容格式保存 `items` 和 `recipes`。
+2. `Catalog Rule Set`
+   通过配套规则文件补充建筑、配方 modifier、增产剂等级等缺失语义。
+3. `Solve Request / Solve Result`
+   定义求解器输入、输出和约束语义。
 4. `Presentation / Web`
    只做展示重排、排序、筛选、格式化，不做新的业务计算。
 
@@ -35,6 +36,7 @@
 - 所有页面展示数值必须能从 `SolveResult` 直接获得，或由 presentation 纯函数做无损重排后获得。
 - presentation 层不得引入新的业务倍率、经验公式或硬编码常数。
 - Web 前端不得单独定义“某建筑产率”“某增产等级倍率”“某配方额外产出”。
+- `src/legacy` 仅作为参考材料存在，不应作为新架构的默认导出面或默认运行入口。
 
 ## 3. 统一语义与单位
 
@@ -111,7 +113,7 @@ effectiveInputAmountPerRun =
 说明：
 
 - 建筑内置增产和增产模式只影响产物，不影响原料消耗。
-- 若某个 MOD 有额外规则，需要在 `Catalog Spec` 中显式建模，不允许写死在前端。
+- 若某个 MOD 有额外规则，需要通过配套规则文件或框架通用规则建模，不允许写死在前端。
 
 ### 4.3 物品净流量
 
@@ -154,59 +156,73 @@ roundedPlacementPowerMW(option) =
 - `activePowerMW` 用于连续解语义和优化目标。
 - `roundedPlacementPowerMW` 用于终端用户查看按建筑取整后的落地估算。
 
-## 5. 领域对象定义
+## 5. 内部解析后的领域对象
 
-### 5.1 Item
+本节定义的是 solver 内部使用的 resolved model，不是磁盘上的原始 JSON 格式。
+
+### 5.1 Resolved Item
 
 ```ts
-type ItemSpec = {
+type ResolvedItemSpec = {
   itemId: string;
   name: string;
   kind: 'raw' | 'intermediate' | 'product' | 'utility';
   icon?: string;
   tags?: string[];
+  source: VanillaItemRecord;
 };
 ```
 
-定义：
+说明：
 
-- `raw` 仅表示该物品可以被视为原矿或外部输入候选。
-- 是否真的按原矿输入，由 `SolveRequest` 决定，不由 `ItemSpec` 单独决定。
+- `kind` 是项目内部解析后的语义，不要求原始 `Vanilla.json` 直接提供。
+- 是否真的按原矿输入，由 `SolveRequest` 决定，不由 `ResolvedItemSpec` 单独决定。
 
-### 5.2 Recipe
+### 5.2 Resolved Recipe
 
 ```ts
-type RecipeSpec = {
+type ResolvedRecipeSpec = {
   recipeId: string;
   name: string;
   cycleTimeSec: number;
   inputs: Array<{ itemId: string; amount: number }>;
   outputs: Array<{ itemId: string; amount: number }>;
   allowedBuildingIds: string[];
+  modifierCode: number;
+  modifierKind: 'none' | 'proliferator' | 'special';
   supportsProliferatorModes: Array<'none' | 'speed' | 'productivity'>;
   maxProliferatorLevel: number;
+  isSynthetic: boolean;
   tags?: string[];
+  source: VanillaRecipeRecord;
 };
 ```
 
-定义：
+说明：
 
 - 多产物配方严格定义为 `outputs.length > 1`。
-- `cycleTimeSec` 是原始配方属性，不直接作为求解变量。
+- `cycleTimeSec` 从 `TimeSpend` 解析得出，但不直接作为求解变量。
+- `allowedBuildingIds` 是该配方可用的具体建筑 ID 列表，这个列表本身就是权威约束，不应再退化成“按建筑类别自动放开”。
+- 原始 `Proliferator` 字段先保留为 `modifierCode`，再通过运行时规则解析出 `modifierKind` 与允许的喷涂模式。
+- 当前样本中的 `modifierCode = 4` 被视为特殊 modifier，而不是喷涂等级 4。
 
-### 5.3 Building
+### 5.3 Resolved Building
 
 ```ts
-type BuildingSpec = {
+type ResolvedBuildingSpec = {
   buildingId: string;
   name: string;
   category: string;
   speedMultiplier: number;
   workPowerMW: number;
   idlePowerMW?: number;
-  supportsProliferator: boolean;
   intrinsicProductivityBonus: number;
   tags?: string[];
+  source: {
+    item: VanillaItemRecord;
+    item: VanillaItemRecord;
+    rule: CatalogBuildingRuleSpec;
+  };
 };
 ```
 
@@ -215,15 +231,19 @@ type BuildingSpec = {
 - `speedMultiplier` 只影响执行速率。
 - `intrinsicProductivityBonus` 只影响产物数量。
 - `workPowerMW` 是该建筑满负荷工作时的基准功耗。
+- `category` 只用于展示、分组和偏好归类，不决定某个配方是否能使用该建筑；可用性始终由配方自己的 `allowedBuildingIds` 决定。
 
-### 5.4 Proliferator Level
+### 5.4 Resolved Proliferator Level
 
 ```ts
-type ProliferatorLevelSpec = {
+type ResolvedProliferatorLevelSpec = {
   level: number;
+  itemId?: string;
+  sprayCount?: number;
   speedMultiplier: number;
   productivityMultiplier: number;
   powerMultiplier: number;
+  source: ProliferatorLevelConfigSpec;
 };
 ```
 
@@ -232,35 +252,67 @@ type ProliferatorLevelSpec = {
 - `mode = none` 时，速度、增产、功耗倍率均按 `1` 处理。
 - `mode = speed` 时，只应用 `speedMultiplier` 与 `powerMultiplier`。
 - `mode = productivity` 时，只应用 `productivityMultiplier` 与 `powerMultiplier`。
-- 增产剂倍率全部来自 `Catalog Spec`，不允许由前端硬编码。
+- `sprayCount` 用于把“输入物品总速度”换算成对应等级增产剂的额外消耗速度。
+- `itemId` 用于标识该等级增产剂自身对应的物品。
+- 增产剂倍率全部来自 `Catalog Rule Set`，不允许由前端硬编码。
 
 备注：
 
-- 本草案第一阶段仅把增产剂建模为“配方参数”，暂不把喷涂剂本身建模为物料输入。
-- 若后续需要把喷涂剂消耗纳入物料平衡，应在 `Catalog Spec` 中显式扩展，而不是在展示层追加特殊逻辑。
+- 增产剂消耗应作为配方变种带来的额外输入进入物料平衡，而不是留给前端或展示层补算。
 
-## 6. Catalog Spec
+## 6. Raw Catalog File 与 Catalog Rule Set
+
+### 6.1 Raw Catalog File
+
+原始 catalog 文件采用 `Vanilla.json` 兼容格式：
 
 ```ts
-type CatalogSpec = {
-  version: string;
-  items: ItemSpec[];
-  recipes: RecipeSpec[];
-  buildings: BuildingSpec[];
-  proliferatorLevels: ProliferatorLevelSpec[];
-  defaults?: {
-    rawInputItemIds?: string[];
-    disabledRecipeIds?: string[];
-    disabledBuildingIds?: string[];
-  };
+type VanillaDatasetSpec = {
+  items: VanillaItemRecord[];
+  recipes: VanillaRecipeRecord[];
+};
+```
+
+详细字段说明见 [docs/data-format.md](D:/dsp-dev/dspcalc/docs/data-format.md)。
+
+### 6.2 Catalog Rule Set
+
+补充规则集定义如下：
+
+```ts
+type CatalogRuleSetSpec = {
+  proliferatorLevels: ProliferatorLevelConfigSpec[];
+  buildingRules: CatalogBuildingRuleSpec[];
+  recipeModifierRules: RecipeModifierRuleSpec[];
+  rawItemTypeIds?: number[];
+  syntheticRecipeTypeIds?: number[];
+  syntheticRecipeNamePrefixes?: string[];
+  syntheticFactoryIds?: number[];
 };
 ```
 
 说明：
 
-- `data/Vanilla.json` 可作为 legacy 数据源。
-- 项目需要提供一个 adapter，把现有 `Vanilla.json` 转换为 `CatalogSpec`。
-- solver 只依赖 `CatalogSpec`，不直接依赖 legacy JSON 格式。
+- `proliferatorLevels` 负责定义标准喷涂等级本身的倍率
+- `buildingRules` 负责提供建筑类别、空转功耗、内置增产等和具体数据集耦合的附加语义
+- `recipeModifierRules` 负责定义 `recipe.Proliferator` code 的业务语义
+- `rawItemTypeIds`、`syntheticRecipeTypeIds`、`syntheticRecipeNamePrefixes`、`syntheticFactoryIds` 负责提供与数据集耦合的分类规则
+
+### 6.3 Resolved Catalog Model
+
+solver 不直接依赖原始 `VanillaDatasetSpec`，而依赖解析后的内部模型：
+
+```ts
+type ResolvedCatalogModel = {
+  version: string;
+  dataset: VanillaDatasetSpec;
+  rules: CatalogRuleSetSpec;
+  items: ResolvedItemSpec[];
+  recipes: ResolvedRecipeSpec[];
+  buildings: ResolvedBuildingSpec[];
+  proliferatorLevels: ResolvedProliferatorLevelSpec[];
+};
+```
 
 ## 7. Solve Request Spec
 
@@ -455,15 +507,17 @@ type SolveResult = {
 
 必须覆盖以下测试层次：
 
-1. `Catalog Spec` 校验
-   校验 ID 唯一性、引用完整性、倍率合法性。
-2. `Solve Request` 校验
+1. `VanillaDatasetSpec` 校验
+   校验 ID 唯一性、字段完整性、数组长度一致性。
+2. `CatalogRuleSetSpec` 校验
+   校验等级、建筑规则、modifier 规则及分类规则的合法性。
+3. `Solve Request` 校验
    校验冲突约束、非法 ID、负速率、空目标。
-3. 求解器功能测试
+4. 求解器功能测试
    覆盖单产物、多产物、闭环、强制配平、允许冗余、禁用项、偏好项。
-4. 结果一致性测试
+5. 结果一致性测试
    验证 `recipePlans`、`buildingSummary`、`powerSummary`、`itemBalance` 的内部守恒。
-5. Web / presentation 一致性测试
+6. Web / presentation 一致性测试
    验证浏览器展示结果与 `SolveResult` 严格一致。
 
 强约束：
@@ -476,13 +530,15 @@ type SolveResult = {
 建议按以下顺序推进：
 
 1. 冻结术语、单位和公式
-2. 定义 `CatalogSpec`
-3. 定义 `SolveRequest`
-4. 定义 `SolveResult`
-5. 编写 legacy adapter，把 `Vanilla.json` 转换为 `CatalogSpec`
-6. 实现新的 solver core
-7. 实现 presentation 纯函数
-8. 最后接入 Web 界面
+2. 冻结 `VanillaDatasetSpec`
+3. 冻结 `CatalogRuleSetSpec`
+4. 定义 `ResolvedCatalogModel`
+5. 定义 `SolveRequest`
+6. 定义 `SolveResult`
+7. 实现解析与校验层
+8. 实现新的 solver core
+9. 实现 presentation 纯函数
+10. 最后接入 Web 界面
 
 ## 13. 当前已确认结论
 
@@ -493,4 +549,5 @@ type SolveResult = {
 - 建筑数量不作为求解过程中的核心概念
 - 建筑数量由“方案执行速率 / 单建筑执行速率”派生得到
 - Web 前端不能包含任何自作主张的输入输出逻辑
-
+- 原始 catalog 文件优先沿用 `Vanilla.json` 兼容格式
+- `legacy` 代码只保留为参考，不作为新架构的一部分

@@ -1,145 +1,48 @@
-# DSP Mod Calculator - 戴森球计划模组量化计算器
+# dspcalc
 
-专为戴森球计划模组设计的量化计算器，使用**线性规划（Linear Programming）**求解多产物配方配平问题，支持参数化增产效果和建筑翻倍特性。
+当前仓库处于重构阶段。
 
-## 主要特性
+现阶段保留并维护的是一条新的 `catalog -> resolve -> solver spec -> presentation` 链路，目标是为《戴森球计划》及其 MOD 提供一个基于线性规划的多产物、多配方配平求解器。
 
-### 🔀 多产物配方配平（LP求解）
-- **线性规划求解**：使用单纯形法自动计算最优配方比例
-- **避免堵塞**：通过LP求解器找到消耗所有副产物的最优方案
-- **灵活策略**：支持最小浪费、最小建筑数、最小功耗等优化目标
+## 当前状态
 
-### ⚡ 参数化增产效果
-- **自定义参数**：支持修改增产剂的速度/产出/功耗加成
-- **模组兼容**：适配各种模组的增产系统
-- **动态计算**：实时计算最优增产策略
+- 原始数据格式以 [data/Vanilla.json](D:/dsp-dev/dspcalc/data/Vanilla.json) 兼容结构为基准
+- 新的 catalog 入口位于 [src/catalog](D:/dsp-dev/dspcalc/src/catalog)
+- Web 目前只是重构占位入口，不代表最终产品能力
+- [src/legacy](D:/dsp-dev/dspcalc/src/legacy) 仅保留作历史参考，不再作为当前架构的测试目标
 
-### 🏭 建筑翻倍效果
-- **模组支持**：支持建筑对特定产物的翻倍效果
-- **灵活配置**：可针对建筑、配方、产物类型配置翻倍
+## 当前保留的测试
 
-## 安装
+- [tests/catalog-vanilla-format.test.ts](D:/dsp-dev/dspcalc/tests/catalog-vanilla-format.test.ts)
+- [tests/catalog-resolve.test.ts](D:/dsp-dev/dspcalc/tests/catalog-resolve.test.ts)
+- [tests/minimal-abstract-config.test.ts](D:/dsp-dev/dspcalc/tests/minimal-abstract-config.test.ts)
+- [tests/minimal-file-load.test.ts](D:/dsp-dev/dspcalc/tests/minimal-file-load.test.ts)
 
-```bash
-npm install dsp-mod-calculator
-```
+这些测试覆盖的是当前仍然有效的内容：
 
-## 快速开始
+- `Vanilla.json` 兼容格式校验
+- 原始数据到解析模型的装载流程
+- 最小抽象配置的系数与变种展开语义
 
-```typescript
-import { loadGameDataFromFile, calculate } from 'dsp-mod-calculator';
+## 关键文档
 
-// 加载游戏数据
-const gameData = await loadGameDataFromFile('./data/Vanilla.json');
+- [docs/solver-spec.md](D:/dsp-dev/dspcalc/docs/solver-spec.md)
+- [docs/data-format.md](D:/dsp-dev/dspcalc/docs/data-format.md)
+- [docs/minimal-test-config.md](D:/dsp-dev/dspcalc/docs/minimal-test-config.md)
 
-// 计算处理器需求
-const result = calculate({
-  demands: [
-    { itemId: '1303', rate: 60 }, // 处理器 60/分钟
-  ],
-  defaultProliferator: {
-    level: 3,
-    mode: 'speed',
-  },
-}, gameData);
-
-console.log('建筑需求:', result.totalBuildings);
-console.log('原矿需求:', result.rawRequirements);
-```
-
-## 文档
-
-- [🧭 求解器与渲染层 SPEC](docs/solver-spec.md) - 重构后的权威输入/输出与分层定义
-- [📖 API 参考](docs/api.md) - 完整的 API 文档
-- [🌐 Web 界面](docs/web.md) - 可视化界面使用指南
-- [📊 数据格式](docs/data-format.md) - 游戏数据格式说明
-- [🧮 线性规划算法](docs/lp-algorithm.md) - 求解原理详解
-
-## Web 界面
-
-提供基于浏览器的可视化界面，支持：
-
-- 📋 多需求管理（同时计算多个产物）
-- ⚡ 增产剂配置（全局覆盖 + 单配方自定义）
-- 🏭 建筑选择（全局类别覆盖 + 单配方选择）
-- 📊 实时结果显示（配方卡片、物料平衡、电力估算）
-
-**使用方式：**
+## 常用命令
 
 ```bash
-# 构建 Web 版本
-npm run build:web
-
-# 打开 dist-web/index.html
-```
-
-详细功能说明见 [Web 界面文档](docs/web.md)。
-
-## 示例：多产物配方配平
-
-原油精炼配方：`2原油 → 1精炼油 + 2氢气`
-
-```typescript
-import { solveBalancing } from 'dsp-mod-calculator';
-
-// 求解 60 精炼油/分钟 的最优配平方案
-const recipeCounts = solveBalancing(
-  '1120',    // 精炼油物品ID
-  60,        // 60/分钟
-  gameData,
-  { objective: 'min-buildings' }
-);
-
-console.log(recipeCounts);
-// Map {
-//   '16' => 0.5,    // 等离子精炼配方
-//   '58' => 0.25    // 液氢燃料棒配方（消耗多余氢气）
-// }
-```
-
-## 数据结构
-
-兼容 [github.com/DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc) 的数据格式。
-
-```json
-{
-  "items": [
-    { "ID": 1001, "Type": 1, "Name": "铁矿", "IconName": "iron-ore" }
-  ],
-  "recipes": [
-    {
-      "ID": 1,
-      "Name": "铁块",
-      "Items": [1001],
-      "ItemCounts": [1],
-      "Results": [1101],
-      "ResultCounts": [1],
-      "TimeSpend": 60,
-      "Factories": [2302, 2315, 2319],
-      "Proliferator": 3
-    }
-  ]
-}
-```
-
-详细说明见 [数据格式文档](docs/data-format.md)。
-
-## 开发
-
-```bash
-# 安装依赖
-npm install
-
-# 构建
 npm run build
-
-# 运行测试
-npm test
-
-# 构建 Web 版本
-npm run build:web
+npm run typecheck
+npm test -- --runInBand
+npx webpack --config webpack.config.js
 ```
 
-## License
+## 目录说明
 
-MIT
+- [src/catalog](D:/dsp-dev/dspcalc/src/catalog): 原始数据格式、规则文件、文件装载、解析模型
+- [src/solver](D:/dsp-dev/dspcalc/src/solver): 新 solver 的输入输出类型
+- [src/presentation](D:/dsp-dev/dspcalc/src/presentation): 展示层纯模型
+- [src/web](D:/dsp-dev/dspcalc/src/web): 当前 Web 入口
+- [src/legacy](D:/dsp-dev/dspcalc/src/legacy): 历史实现参考

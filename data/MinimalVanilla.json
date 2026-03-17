@@ -1,0 +1,50 @@
+{
+  "items": [
+    {
+      "ID": 1001,
+      "Type": 1,
+      "Name": "矿石",
+      "IconName": "ore",
+      "GridIndex": 1
+    },
+    {
+      "ID": 1101,
+      "Type": 2,
+      "Name": "铁板",
+      "IconName": "plate",
+      "GridIndex": 2
+    },
+    {
+      "ID": 1141,
+      "Type": 5,
+      "Name": "增产剂 Mk.I",
+      "IconName": "spray-mk1",
+      "GridIndex": 3
+    },
+    {
+      "ID": 5001,
+      "Type": 6,
+      "Name": "测试熔炉",
+      "IconName": "test-smelter",
+      "GridIndex": 4,
+      "Speed": 1,
+      "WorkEnergyPerTick": 16666.666666666668,
+      "Space": 1
+    }
+  ],
+  "recipes": [
+    {
+      "ID": 1,
+      "Type": 1,
+      "Factories": [5001],
+      "Name": "矿石 -> 铁板",
+      "Items": [1001],
+      "ItemCounts": [1],
+      "Results": [1101],
+      "ResultCounts": [1],
+      "TimeSpend": 3600,
+      "Proliferator": 3,
+      "IconName": "plate"
+    }
+  ]
+}
