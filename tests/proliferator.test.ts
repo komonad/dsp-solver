@@ -8,8 +8,8 @@ import {
   setCustomProliferatorParams,
   resetProliferatorParams,
   getProliferatorParams
-} from '../src/core/proliferator';
-import { ProliferatorConfig } from '../src/types';
+} from '../src/legacy/core/proliferator';
+import { ProliferatorConfig } from '../src/legacy/types';
 
 describe('Proliferator Calculation', () => {
   beforeEach(() => {

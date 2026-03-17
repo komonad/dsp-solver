@@ -4,8 +4,8 @@
  * 场景：同时需要 E 和 B
  */
 
-import { solveMultiDemand, MultiDemandResult } from '../src/core/multiDemandSolver';
-import type { GameData, Recipe, Item, Building } from '../src/types';
+import { solveMultiDemand, MultiDemandResult } from '../src/legacy/core/multiDemandSolver';
+import type { GameData, Recipe, Item, Building } from '../src/legacy/types';
 
 function createTestData(): GameData {
   const items: Item[] = [

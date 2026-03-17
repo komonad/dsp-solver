@@ -1,7 +1,7 @@
-import { loadGameDataFromFile } from '../src/data/loader';
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
-import { buildDisplayRecipeRows, calculateDisplayIoRates } from '../src/web/displayModel';
-import type { GameData, Recipe, Building } from '../src/types';
+import { loadGameDataFromFile } from '../src/legacy/data/loader';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
+import { buildDisplayRecipeRows, calculateDisplayIoRates } from '../src/legacy/web/displayModel';
+import type { GameData, Recipe, Building } from '../src/legacy/types';
 
 describe('display model', () => {
   let gameData: GameData;

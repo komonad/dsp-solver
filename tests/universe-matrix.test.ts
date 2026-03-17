@@ -2,9 +2,9 @@
  * 宇宙矩阵配方收集测试
  */
 
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
-import { loadGameDataFromFile } from '../src/data/loader';
-import type { GameData } from '../src/types';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
+import { loadGameDataFromFile } from '../src/legacy/data/loader';
+import type { GameData } from '../src/legacy/types';
 
 // 使用真实数据测试
 describe('宇宙矩阵测试', () => {

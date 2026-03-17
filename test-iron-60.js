@@ -36,10 +36,10 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var loader_1 = require("./src/data/loader");
-var multiDemandSolver_1 = require("./src/core/multiDemandSolver");
-var autoBuilding_1 = require("./src/core/autoBuilding");
-var resultModel_1 = require("./src/web/resultModel");
+var loader_1 = require("./src/legacy/data/loader");
+var multiDemandSolver_1 = require("./src/legacy/core/multiDemandSolver");
+var autoBuilding_1 = require("./src/legacy/core/autoBuilding");
+var resultModel_1 = require("./src/legacy/web/resultModel");
 function test60IronPlate() {
     return __awaiter(this, void 0, void 0, function () {
         var gameData, ironPlateItem, ironPlateRecipe, demands, recipeBuildings, result, model;

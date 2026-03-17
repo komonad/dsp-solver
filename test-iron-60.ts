@@ -1,7 +1,7 @@
-import { loadGameDataFromFile } from './src/data/loader';
-import { solveMultiDemand } from './src/core/multiDemandSolver';
-import { buildLayeredRecipeBuildings } from './src/core/autoBuilding';
-import { buildResultModel } from './src/web/resultModel';
+import { loadGameDataFromFile } from './src/legacy/data/loader';
+import { solveMultiDemand } from './src/legacy/core/multiDemandSolver';
+import { buildLayeredRecipeBuildings } from './src/legacy/core/autoBuilding';
+import { buildResultModel } from './src/legacy/web/resultModel';
 
 async function test60IronPlate() {
   console.log('=== 测试案例：vanilla配置下需求60铁块 ===');

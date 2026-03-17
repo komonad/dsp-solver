@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createRoot } from 'react-dom/client';
 import { loadGameDataFromURL } from '../data/loader';
 import type { GameData, Recipe } from '../types';
 import { solveMultiDemand, type MultiDemandResult } from '../core/multiDemandSolver';
@@ -17,7 +16,7 @@ type Demand = { itemId: string; rate: number };
 
 const STORAGE_KEY = 'dsp-react-state';
 
-function App() {
+export default function LegacyApp() {
   const [configKey, setConfigKey] = useState<ConfigKey>('test');
   const [gameData, setGameData] = useState<GameData | null>(null);
   const [demands, setDemands] = useState<Demand[]>([{ itemId: '11005', rate: 60 }]);
@@ -434,13 +433,3 @@ function App() {
     </div>
   );
 }
-
-const rootElement = document.getElementById('app') || (() => {
-  const element = document.createElement('div');
-  element.id = 'app';
-  document.body.innerHTML = '';
-  document.body.appendChild(element);
-  return element;
-})();
-
-createRoot(rootElement).render(<App />);

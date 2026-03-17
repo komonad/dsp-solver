@@ -2,8 +2,8 @@
  * 配方修改器测试 (简化版)
  */
 
-import { recalculateWithModifications } from '../src/core/recipeModifier';
-import type { GameData, Recipe, Item, Building } from '../src/types';
+import { recalculateWithModifications } from '../src/legacy/core/recipeModifier';
+import type { GameData, Recipe, Item, Building } from '../src/legacy/types';
 
 function createTestData(): GameData {
   const items: Item[] = [

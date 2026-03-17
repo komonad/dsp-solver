@@ -1,5 +1,5 @@
-import { solveFromRequest } from '../src/core/solveRequest';
-import { buildLayeredRecipeBuildings } from '../src/core/autoBuilding';
+import { solveFromRequest } from '../src/legacy/core/solveRequest';
+import { buildLayeredRecipeBuildings } from '../src/legacy/core/autoBuilding';
 import { loadWebTestConfig } from './test-config-loader';
 
 test('layered auto-building makes fullerene-silver feasible with intrinsic productivity', async () => {

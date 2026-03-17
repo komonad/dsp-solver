@@ -1,4 +1,4 @@
-import { loadGameDataFromFile } from '../src/data/loader';
+import { loadGameDataFromFile } from '../src/legacy/data/loader';
 
 test('TestConfig custom recipes use TimeSpend ticks and load as 1 second cycles', async () => {
   const gameData = await loadGameDataFromFile('./data/TestConfig.json');

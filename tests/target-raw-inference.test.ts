@@ -1,5 +1,5 @@
 import { loadWebTestConfig } from './test-config-loader';
-import { inferImplicitRawItems } from '../src/core/rawInference';
+import { inferImplicitRawItems } from '../src/legacy/core/rawInference';
 
 test('implicit raw inference only marks items with no producers', async () => {
   const gameData = await loadWebTestConfig();

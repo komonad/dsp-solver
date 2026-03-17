@@ -1,5 +1,5 @@
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
-import { buildLayeredRecipeBuildings } from '../src/core/autoBuilding';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
+import { buildLayeredRecipeBuildings } from '../src/legacy/core/autoBuilding';
 import { loadWebTestConfig } from './test-config-loader';
 
 test('default web solve path for test config uses layered buildings and solves fullerene-silver', async () => {

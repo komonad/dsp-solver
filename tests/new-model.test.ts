@@ -5,9 +5,9 @@
  * 所有单位：每分钟
  */
 
-import { solveProductionLP, validateSolution, calculateSchemeDetails } from '../src/core/lpSolver';
-import { calculateProductionRequirements, formatProductionReport } from '../src/core/productionModel';
-import type { GameData, Recipe, Item, Building, ProliferatorConfig } from '../src/types';
+import { solveProductionLP, validateSolution, calculateSchemeDetails } from '../src/legacy/core/lpSolver';
+import { calculateProductionRequirements, formatProductionReport } from '../src/legacy/core/productionModel';
+import type { GameData, Recipe, Item, Building, ProliferatorConfig } from '../src/legacy/types';
 
 function createTestData(): GameData {
   const items: Item[] = [

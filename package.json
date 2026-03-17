@@ -5,12 +5,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsc -b tsconfig.lib.json",
+    "build:all": "npm run build && npm run build:web",
+    "dev": "tsc -b tsconfig.lib.json --watch",
     "test": "jest",
+    "typecheck": "tsc -b tsconfig.lib.json && tsc -p tsconfig.web.json --noEmit",
     "lint": "eslint src --ext .ts",
-    "build:web": "webpack && copy data\\*.json dist-web\\",
-    "watch:web": "webpack --watch",
+    "build:web": "webpack --config webpack.config.js",
+    "watch:web": "webpack --config webpack.config.js --watch",
     "serve:web": "cd dist-web && python -m http.server 8081",
     "dev:web": "powershell -Command \"$watch = Start-Process cmd.exe -ArgumentList '/c','npm.cmd run watch:web' -PassThru; try { Set-Location 'dist-web'; python -m http.server 8081 } finally { if ($watch -and !$watch.HasExited) { Stop-Process -Id $watch.Id -Force } }\""
   },
@@ -26,6 +28,8 @@
   "devDependencies": {
     "@types/jest": "^29.5.0",
     "@types/node": "^20.0.0",
+    "copy-webpack-plugin": "^14.0.0",
+    "html-webpack-plugin": "^5.6.6",
     "jest": "^29.5.0",
     "playwright": "^1.58.2",
     "ts-jest": "^29.1.0",

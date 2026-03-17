@@ -1,4 +1,4 @@
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
 import { testGameData, strategyLayered } from './test-config';
 
 describe('web parity scenarios', () => {

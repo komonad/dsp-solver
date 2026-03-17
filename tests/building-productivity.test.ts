@@ -18,7 +18,7 @@
  *   - 量子化工厂：1.0x速度，+100%产出
  */
 
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
 import {
   testGameData,
   strategyLayered,

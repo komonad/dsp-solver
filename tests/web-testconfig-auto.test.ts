@@ -1,4 +1,4 @@
-import { solveFromRequest, SolveRequest } from '../src/core/solveRequest';
+import { solveFromRequest, SolveRequest } from '../src/legacy/core/solveRequest';
 import { loadWebTestConfig } from './test-config-loader';
 
 describe('web TestConfig auto-building parity', () => {

@@ -13,8 +13,8 @@ import {
   createExcludeDemand,
   createDemandBatch,
   type DemandConfig,
-} from '../src/core/demandEngine';
-import type { GameData, Recipe, Item, Building } from '../src/types';
+} from '../src/legacy/core/demandEngine';
+import type { GameData, Recipe, Item, Building } from '../src/legacy/types';
 
 function createTestData(): GameData {
   const items: Item[] = [

@@ -1,4 +1,4 @@
-import { solveFromRequest, SolveRequest } from '../src/core/solveRequest';
+import { solveFromRequest, SolveRequest } from '../src/legacy/core/solveRequest';
 import { testGameData, strategyLayered } from './test-config';
 
 describe('SolveRequest shared format', () => {

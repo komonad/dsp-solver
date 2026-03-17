@@ -1,5 +1,5 @@
-import { GameData, Item, Recipe, Building } from '../src/types';
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
+import { GameData, Item, Recipe, Building } from '../src/legacy/types';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
 
 // 创建炼油配置数据
 function createRefineryData(): GameData {

@@ -1,4 +1,4 @@
-import { loadGameDataFromFile } from '../src/data/loader';
+import { loadGameDataFromFile } from '../src/legacy/data/loader';
 
 test('vanilla does not contain stale test item ids', async () => {
   const gameData = await loadGameDataFromFile('./data/Vanilla.json');

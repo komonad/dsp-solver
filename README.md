@@ -49,6 +49,7 @@ console.log('原矿需求:', result.rawRequirements);
 
 ## 文档
 
+- [🧭 求解器与渲染层 SPEC](docs/solver-spec.md) - 重构后的权威输入/输出与分层定义
 - [📖 API 参考](docs/api.md) - 完整的 API 文档
 - [🌐 Web 界面](docs/web.md) - 可视化界面使用指南
 - [📊 数据格式](docs/data-format.md) - 游戏数据格式说明

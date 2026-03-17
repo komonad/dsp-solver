@@ -17,7 +17,7 @@
  *       r3,r4 使用量子/低温化工厂（有加成）打破循环
  */
 
-import type { GameData, Item, Recipe, Building } from '../src/types';
+import type { GameData, Item, Recipe, Building } from '../src/legacy/types';
 
 // ============ 建筑定义 ============
 

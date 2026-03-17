@@ -4,8 +4,8 @@
  * 生产60个E需要多少A？
  */
 
-import { solveMultiDemand } from '../src/core/multiDemandSolver';
-import type { GameData, Recipe, Item, Building } from '../src/types';
+import { solveMultiDemand } from '../src/legacy/core/multiDemandSolver';
+import type { GameData, Recipe, Item, Building } from '../src/legacy/types';
 
 function createChainTestData(): GameData {
   const items: Item[] = [
