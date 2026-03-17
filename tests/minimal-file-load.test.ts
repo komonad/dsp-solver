@@ -1,22 +1,22 @@
 import {
-  loadCatalogRuleSetFromFile,
+  loadCatalogDefaultConfigFromFile,
   loadResolvedCatalogFromFiles,
   loadVanillaDatasetFromFile,
 } from '../src/catalog';
 
+const minimalDatasetPath = './tests/fixtures/MinimalVanilla.json';
+const minimalDefaultConfigPath = './tests/fixtures/Minimal.defaults.json';
+
 test('minimal config files load end-to-end into a resolved catalog model', async () => {
-  const dataset = await loadVanillaDatasetFromFile('./data/MinimalVanilla.json');
-  const rules = await loadCatalogRuleSetFromFile('./data/MinimalRules.json');
-  const resolved = await loadResolvedCatalogFromFiles(
-    './data/MinimalVanilla.json',
-    './data/MinimalRules.json'
-  );
+  const dataset = await loadVanillaDatasetFromFile(minimalDatasetPath);
+  const defaultConfig = await loadCatalogDefaultConfigFromFile(minimalDefaultConfigPath);
+  const resolved = await loadResolvedCatalogFromFiles(minimalDatasetPath, minimalDefaultConfigPath);
 
   expect(dataset.items).toHaveLength(4);
   expect(dataset.recipes).toHaveLength(1);
-  expect(rules.buildingRules).toHaveLength(1);
-  expect(rules.recipeModifierRules).toHaveLength(2);
-  expect(rules.proliferatorLevels).toHaveLength(1);
+  expect(defaultConfig.buildingRules).toHaveLength(1);
+  expect(defaultConfig.recipeModifierRules).toHaveLength(2);
+  expect(defaultConfig.proliferatorLevels).toHaveLength(1);
 
   const recipe = resolved.recipeMap.get('1');
   const building = resolved.buildingMap.get('5001');
@@ -30,7 +30,7 @@ test('minimal config files load end-to-end into a resolved catalog model', async
   expect(recipe?.supportsProliferatorModes).toEqual(['none', 'speed', 'productivity']);
   expect(recipe?.maxProliferatorLevel).toBe(1);
 
-  expect(building?.name).toBe('测试熔炉');
+  expect(building?.name).toBe('Test Smelter');
   expect(building?.category).toBe('smelter');
   expect(building?.speedMultiplier).toBe(1);
   expect(building?.workPowerMW).toBeCloseTo(1, 6);
@@ -43,10 +43,7 @@ test('minimal config files load end-to-end into a resolved catalog model', async
 });
 
 test('minimal config files contain enough information to derive spray consumption and variant coefficients', async () => {
-  const resolved = await loadResolvedCatalogFromFiles(
-    './data/MinimalVanilla.json',
-    './data/MinimalRules.json'
-  );
+  const resolved = await loadResolvedCatalogFromFiles(minimalDatasetPath, minimalDefaultConfigPath);
 
   const recipe = resolved.recipeMap.get('1');
   const building = resolved.buildingMap.get('5001');
@@ -61,9 +58,20 @@ test('minimal config files contain enough information to derive spray consumptio
   const speedVariantSingleBuildingRunsPerMin =
     (60 / recipe!.cycleTimeSec) * building!.speedMultiplier * level1!.speedMultiplier;
   const productivityVariantOutputPerRun =
-    recipe!.outputs[0].amount * (1 + building!.intrinsicProductivityBonus) * level1!.productivityMultiplier;
+    recipe!.outputs[0].amount *
+    (1 + building!.intrinsicProductivityBonus) *
+    level1!.productivityMultiplier;
 
   expect(sprayPerRun).toBe(0.1);
   expect(speedVariantSingleBuildingRunsPerMin).toBe(2);
   expect(productivityVariantOutputPerRun).toBe(2);
+});
+
+test('minimal dataset still resolves without a default config file', async () => {
+  const resolved = await loadResolvedCatalogFromFiles(minimalDatasetPath);
+
+  expect(resolved.defaultConfig).toEqual({});
+  expect(resolved.proliferatorLevels).toEqual([]);
+  expect(resolved.buildingMap.get('5001')?.category).toBe('factory');
+  expect(resolved.recipeMap.get('1')?.supportsProliferatorModes).toEqual(['none']);
 });

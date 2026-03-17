@@ -1,36 +1,37 @@
 # dspcalc
 
-当前仓库处于重构阶段。
+This repository is being rebuilt around a strict split between:
 
-现阶段保留并维护的是一条新的 `catalog -> resolve -> solver spec -> presentation` 链路，目标是为《戴森球计划》及其 MOD 提供一个基于线性规划的多产物、多配方配平求解器。
+- raw dataset files
+- default dataset configuration
+- solver input/output specs
+- presentation/web rendering
 
-## 当前状态
+The current goal is a linear-programming-based production solver for Dyson Sphere Program and its mods, with browser rendering that never invents business logic on its own.
 
-- 原始数据格式以 [data/Vanilla.json](D:/dsp-dev/dspcalc/data/Vanilla.json) 兼容结构为基准
-- 新的 catalog 入口位于 [src/catalog](D:/dsp-dev/dspcalc/src/catalog)
-- Web 目前只是重构占位入口，不代表最终产品能力
-- [src/legacy](D:/dsp-dev/dspcalc/src/legacy) 仅保留作历史参考，不再作为当前架构的测试目标
+## Current structure
 
-## 当前保留的测试
+- [src/catalog](/D:/dsp-dev/dspcalc/src/catalog): dataset format, default config format, loading, and resolution into the internal catalog model
+- [src/solver](/D:/dsp-dev/dspcalc/src/solver): solver request/result types
+- [src/presentation](/D:/dsp-dev/dspcalc/src/presentation): pure presentation-facing view models
+- [src/web](/D:/dsp-dev/dspcalc/src/web): current web entry
+- [src/legacy](/D:/dsp-dev/dspcalc/src/legacy): historical reference only
 
-- [tests/catalog-vanilla-format.test.ts](D:/dsp-dev/dspcalc/tests/catalog-vanilla-format.test.ts)
-- [tests/catalog-resolve.test.ts](D:/dsp-dev/dspcalc/tests/catalog-resolve.test.ts)
-- [tests/minimal-abstract-config.test.ts](D:/dsp-dev/dspcalc/tests/minimal-abstract-config.test.ts)
-- [tests/minimal-file-load.test.ts](D:/dsp-dev/dspcalc/tests/minimal-file-load.test.ts)
+## Data files
 
-这些测试覆盖的是当前仍然有效的内容：
+- [Vanilla.json](/D:/dsp-dev/dspcalc/data/Vanilla.json): raw dataset in the external vanilla-compatible format
+- [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json): optional default configuration for that dataset
 
-- `Vanilla.json` 兼容格式校验
-- 原始数据到解析模型的装载流程
-- 最小抽象配置的系数与变种展开语义
+Minimal examples used only for tests live under [tests/fixtures](/D:/dsp-dev/dspcalc/tests/fixtures).
 
-## 关键文档
+## Tests kept during refactor
 
-- [docs/solver-spec.md](D:/dsp-dev/dspcalc/docs/solver-spec.md)
-- [docs/data-format.md](D:/dsp-dev/dspcalc/docs/data-format.md)
-- [docs/minimal-test-config.md](D:/dsp-dev/dspcalc/docs/minimal-test-config.md)
+- [catalog-vanilla-format.test.ts](/D:/dsp-dev/dspcalc/tests/catalog-vanilla-format.test.ts)
+- [catalog-resolve.test.ts](/D:/dsp-dev/dspcalc/tests/catalog-resolve.test.ts)
+- [minimal-abstract-config.test.ts](/D:/dsp-dev/dspcalc/tests/minimal-abstract-config.test.ts)
+- [minimal-file-load.test.ts](/D:/dsp-dev/dspcalc/tests/minimal-file-load.test.ts)
 
-## 常用命令
+## Common commands
 
 ```bash
 npm run build
@@ -39,10 +40,8 @@ npm test -- --runInBand
 npx webpack --config webpack.config.js
 ```
 
-## 目录说明
+## Key docs
 
-- [src/catalog](D:/dsp-dev/dspcalc/src/catalog): 原始数据格式、规则文件、文件装载、解析模型
-- [src/solver](D:/dsp-dev/dspcalc/src/solver): 新 solver 的输入输出类型
-- [src/presentation](D:/dsp-dev/dspcalc/src/presentation): 展示层纯模型
-- [src/web](D:/dsp-dev/dspcalc/src/web): 当前 Web 入口
-- [src/legacy](D:/dsp-dev/dspcalc/src/legacy): 历史实现参考
+- [data-format.md](/D:/dsp-dev/dspcalc/docs/data-format.md)
+- [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
+- [minimal-test-config.md](/D:/dsp-dev/dspcalc/docs/minimal-test-config.md)

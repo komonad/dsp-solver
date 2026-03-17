@@ -1,9 +1,9 @@
 import { readFileSync } from 'fs';
 import {
-  loadCatalogRuleSetFromFile,
+  loadCatalogDefaultConfigFromFile,
   resolveCatalogModel,
   type VanillaDatasetSpec,
-  validateCatalogRuleSetSpec,
+  validateCatalogDefaultConfigSpec,
 } from '../src/catalog';
 
 function loadVanillaDataset(): VanillaDatasetSpec {
@@ -11,24 +11,46 @@ function loadVanillaDataset(): VanillaDatasetSpec {
   return JSON.parse(rawText) as VanillaDatasetSpec;
 }
 
-test('Vanilla.rules.json is internally valid', async () => {
-  const rawText = readFileSync('./data/Vanilla.rules.json', 'utf8').replace(/^\uFEFF/, '');
+test('Vanilla.defaults.json is internally valid', async () => {
+  const rawText = readFileSync('./data/Vanilla.defaults.json', 'utf8').replace(/^\uFEFF/, '');
   const raw = JSON.parse(rawText) as unknown;
-  const validation = validateCatalogRuleSetSpec(raw);
+  const validation = validateCatalogDefaultConfigSpec(raw);
 
   expect(validation.valid).toBe(true);
   expect(validation.errors).toEqual([]);
-  const rules = await loadCatalogRuleSetFromFile('./data/Vanilla.rules.json');
-  expect(rules.proliferatorLevels.find(level => level.Level === 1)).toMatchObject({
+
+  const defaultConfig = await loadCatalogDefaultConfigFromFile('./data/Vanilla.defaults.json');
+  expect(defaultConfig.proliferatorLevels?.find(level => level.Level === 1)).toMatchObject({
     ItemID: 1141,
-    SprayCount: 12,
+    SprayCount: 13,
+    SpeedMultiplier: 1.25,
+    ProductivityMultiplier: 1.125,
+    PowerMultiplier: 1.3,
   });
+  expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
+});
+
+test('proliferator level config does not require ItemID for calculation-only usage', () => {
+  const validation = validateCatalogDefaultConfigSpec({
+    proliferatorLevels: [
+      {
+        Level: 1,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+    ],
+  });
+
+  expect(validation.valid).toBe(true);
+  expect(validation.errors).toEqual([]);
 });
 
 test('resolveCatalogModel compiles Vanilla.json into the internal catalog model', async () => {
   const dataset = loadVanillaDataset();
-  const rules = await loadCatalogRuleSetFromFile('./data/Vanilla.rules.json');
-  const resolved = resolveCatalogModel(dataset, rules);
+  const defaultConfig = await loadCatalogDefaultConfigFromFile('./data/Vanilla.defaults.json');
+  const resolved = resolveCatalogModel(dataset, defaultConfig);
 
   expect(resolved.version).toBe('vanilla-compatible@1');
   expect(resolved.items).toHaveLength(174);
@@ -37,7 +59,22 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
   expect(resolved.proliferatorLevelMap.get(1)).toMatchObject({
     itemId: '1141',
-    sprayCount: 12,
+    sprayCount: 13,
+    speedMultiplier: 1.25,
+    productivityMultiplier: 1.125,
+    powerMultiplier: 1.3,
+  });
+  expect(resolved.proliferatorLevelMap.get(2)).toMatchObject({
+    sprayCount: 28,
+    speedMultiplier: 1.5,
+    productivityMultiplier: 1.2,
+    powerMultiplier: 1.7,
+  });
+  expect(resolved.proliferatorLevelMap.get(3)).toMatchObject({
+    sprayCount: 75,
+    speedMultiplier: 2,
+    productivityMultiplier: 1.25,
+    powerMultiplier: 2.5,
   });
   expect(resolved.rawItemIds).toHaveLength(16);
   expect(resolved.syntheticRecipeIds).toHaveLength(78);
@@ -81,4 +118,22 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   const universeMatrix = resolved.itemMap.get('6006');
   expect(ironOre?.kind).toBe('raw');
   expect(universeMatrix?.kind).toBe('product');
+});
+
+test('resolveCatalogModel still returns a valid fallback model without default config', () => {
+  const dataset = loadVanillaDataset();
+  const resolved = resolveCatalogModel(dataset);
+
+  expect(resolved.defaultConfig).toEqual({});
+  expect(resolved.proliferatorLevels).toEqual([]);
+
+  const ironSmelting = resolved.recipeMap.get('1');
+  const assembler4 = resolved.buildingMap.get('2318');
+  const ironOre = resolved.itemMap.get('1001');
+
+  expect(ironSmelting?.supportsProliferatorModes).toEqual(['none']);
+  expect(ironSmelting?.maxProliferatorLevel).toBe(0);
+  expect(assembler4?.category).toBe('factory');
+  expect(ironOre?.kind).toBe('intermediate');
+  expect(resolved.rawItemIds).not.toContain('1001');
 });

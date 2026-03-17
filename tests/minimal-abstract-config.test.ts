@@ -54,14 +54,14 @@ interface CompiledVariant {
 
 const minimalCatalog: MinimalCatalogSpec = {
   items: [
-    { itemId: 'ore', name: '矿石', kind: 'raw' },
-    { itemId: 'plate', name: '铁板', kind: 'product' },
-    { itemId: 'spray_mk1', name: '增产剂 Mk.I', kind: 'utility' },
+    { itemId: 'ore', name: 'Test Ore', kind: 'raw' },
+    { itemId: 'plate', name: 'Test Plate', kind: 'product' },
+    { itemId: 'spray_mk1', name: 'Proliferator Mk.I', kind: 'utility' },
   ],
   buildings: [
     {
       buildingId: 'smelter',
-      name: '测试熔炉',
+      name: 'Test Smelter',
       speedMultiplier: 1,
       workPowerMW: 1,
     },
@@ -79,7 +79,7 @@ const minimalCatalog: MinimalCatalogSpec = {
   recipes: [
     {
       recipeId: 'ore_to_plate',
-      name: '矿石 -> 铁板',
+      name: 'Ore to Plate',
       cycleTimeSec: 60,
       inputs: [{ itemId: 'ore', amount: 1 }],
       outputs: [{ itemId: 'plate', amount: 1 }],

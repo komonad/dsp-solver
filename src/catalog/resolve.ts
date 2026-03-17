@@ -1,6 +1,6 @@
 import {
   type CatalogBuildingRuleSpec,
-  type CatalogRuleSetSpec,
+  type CatalogDefaultConfigSpec,
   type ItemKind,
   type ProliferatorMode,
   type RecipeModifierRuleSpec,
@@ -10,26 +10,37 @@ import {
   type ResolvedProliferatorLevelSpec,
   type ResolvedRecipeSpec,
   type VanillaDatasetSpec,
-  validateCatalogRuleSetSpec,
+  validateCatalogDefaultConfigSpec,
   validateVanillaDatasetSpec,
 } from './spec';
 
-function cloneRuleSet(rules: CatalogRuleSetSpec): CatalogRuleSetSpec {
+function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDefaultConfigSpec {
   return {
-    proliferatorLevels: rules.proliferatorLevels.map(level => ({ ...level })),
-    buildingRules: rules.buildingRules.map(rule => ({
+    proliferatorLevels: defaultConfig.proliferatorLevels?.map(level => ({ ...level })),
+    buildingRules: defaultConfig.buildingRules?.map(rule => ({
       ...rule,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
-    recipeModifierRules: rules.recipeModifierRules.map(rule => ({
+    recipeModifierRules: defaultConfig.recipeModifierRules?.map(rule => ({
       ...rule,
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
-    rawItemTypeIds: rules.rawItemTypeIds ? [...rules.rawItemTypeIds] : undefined,
-    syntheticRecipeTypeIds: rules.syntheticRecipeTypeIds ? [...rules.syntheticRecipeTypeIds] : undefined,
-    syntheticRecipeNamePrefixes: rules.syntheticRecipeNamePrefixes ? [...rules.syntheticRecipeNamePrefixes] : undefined,
-    syntheticFactoryIds: rules.syntheticFactoryIds ? [...rules.syntheticFactoryIds] : undefined,
+    recommendedRawItemIds: defaultConfig.recommendedRawItemIds
+      ? [...defaultConfig.recommendedRawItemIds]
+      : undefined,
+    recommendedRawItemTypeIds: defaultConfig.recommendedRawItemTypeIds
+      ? [...defaultConfig.recommendedRawItemTypeIds]
+      : undefined,
+    syntheticRecipeTypeIds: defaultConfig.syntheticRecipeTypeIds
+      ? [...defaultConfig.syntheticRecipeTypeIds]
+      : undefined,
+    syntheticRecipeNamePrefixes: defaultConfig.syntheticRecipeNamePrefixes
+      ? [...defaultConfig.syntheticRecipeNamePrefixes]
+      : undefined,
+    syntheticFactoryIds: defaultConfig.syntheticFactoryIds
+      ? [...defaultConfig.syntheticFactoryIds]
+      : undefined,
   };
 }
 
@@ -42,31 +53,33 @@ function assertValidDataset(dataset: VanillaDatasetSpec): void {
   }
 }
 
-function assertValidRuleSet(rules: CatalogRuleSetSpec): void {
-  const validation = validateCatalogRuleSetSpec(rules);
+function assertValidDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): void {
+  const validation = validateCatalogDefaultConfigSpec(defaultConfig);
 
   if (!validation.valid) {
     const issues = validation.errors.map(issue => `${issue.path}: ${issue.message}`).join('\n');
-    throw new Error(`Invalid catalog rule set spec.\n${issues}`);
+    throw new Error(`Invalid catalog default config spec.\n${issues}`);
   }
 }
 
 function inferItemKind(params: {
   itemType: number;
   itemId: number;
-  rawItemTypeSet: Set<number>;
+  recommendedRawItemIdSet: Set<number>;
+  recommendedRawItemTypeSet: Set<number>;
   producedItemIds: Set<number>;
   consumedItemIds: Set<number>;
 }): ItemKind {
   const {
     itemType,
     itemId,
-    rawItemTypeSet,
+    recommendedRawItemIdSet,
+    recommendedRawItemTypeSet,
     producedItemIds,
     consumedItemIds,
   } = params;
 
-  if (rawItemTypeSet.has(itemType)) {
+  if (recommendedRawItemIdSet.has(itemId) || recommendedRawItemTypeSet.has(itemType)) {
     return 'raw';
   }
 
@@ -74,11 +87,18 @@ function inferItemKind(params: {
     return 'utility';
   }
 
-  if (producedItemIds.has(itemId) && consumedItemIds.has(itemId)) {
+  const isProduced = producedItemIds.has(itemId);
+  const isConsumed = consumedItemIds.has(itemId);
+
+  if (!isProduced && isConsumed) {
+    return 'raw';
+  }
+
+  if (isProduced && isConsumed) {
     return 'intermediate';
   }
 
-  if (producedItemIds.has(itemId) && !consumedItemIds.has(itemId)) {
+  if (isProduced && !isConsumed) {
     return 'product';
   }
 
@@ -88,47 +108,66 @@ function inferItemKind(params: {
 function normalizeModes(rule: RecipeModifierRuleSpec): ProliferatorMode[] {
   const modes = rule.SupportedModes ?? [];
 
+  if (modes.length === 0) {
+    return ['none'];
+  }
+
   if (modes.includes('none')) {
     return [...new Set(modes)];
   }
 
-  return ['none', ...modes];
+  return ['none', ...new Set(modes)];
 }
 
 function defaultNoneMode(): ProliferatorMode[] {
   return ['none'];
 }
 
-function deriveWorkPowerMW(buildingItem: { WorkEnergyPerTick?: number }, rule: CatalogBuildingRuleSpec): number {
-  if (rule.WorkPowerMWOverride !== undefined) {
+function deriveWorkPowerMW(
+  buildingItem: { WorkEnergyPerTick?: number },
+  rule?: CatalogBuildingRuleSpec
+): number {
+  if (rule?.WorkPowerMWOverride !== undefined) {
     return rule.WorkPowerMWOverride;
   }
 
   if (buildingItem.WorkEnergyPerTick === undefined) {
-    throw new Error(`Building ${rule.ID} is missing WorkEnergyPerTick and no WorkPowerMWOverride was provided.`);
+    const idText = rule ? `${rule.ID}` : 'unknown';
+    throw new Error(
+      `Building ${idText} is missing WorkEnergyPerTick and no WorkPowerMWOverride was provided.`
+    );
   }
 
   return (buildingItem.WorkEnergyPerTick * 60) / 1_000_000;
 }
 
-function deriveSpeedMultiplier(buildingItem: { Speed?: number }, rule: CatalogBuildingRuleSpec): number {
-  if (rule.SpeedMultiplierOverride !== undefined) {
+function deriveSpeedMultiplier(
+  buildingItem: { Speed?: number },
+  rule?: CatalogBuildingRuleSpec
+): number {
+  if (rule?.SpeedMultiplierOverride !== undefined) {
     return rule.SpeedMultiplierOverride;
   }
 
   if (buildingItem.Speed === undefined) {
-    throw new Error(`Building ${rule.ID} is missing Speed and no SpeedMultiplierOverride was provided.`);
+    const idText = rule ? `${rule.ID}` : 'unknown';
+    throw new Error(`Building ${idText} is missing Speed and no SpeedMultiplierOverride was provided.`);
   }
 
   return buildingItem.Speed;
+}
+
+function deriveBuildingCategory(rule?: CatalogBuildingRuleSpec): string {
+  return rule?.Category?.trim() || 'factory';
 }
 
 function buildRecipeTags(params: {
   recipeName: string;
   recipeType: number;
   recipeFactories: number[];
+  recipeInputCount: number;
   outputCount: number;
-  modifier: RecipeModifierRuleSpec;
+  modifier?: RecipeModifierRuleSpec;
   syntheticRecipeTypeSet: Set<number>;
   syntheticRecipeNamePrefixes: string[];
   syntheticFactoryIdSet: Set<number>;
@@ -137,6 +176,7 @@ function buildRecipeTags(params: {
     recipeName,
     recipeType,
     recipeFactories,
+    recipeInputCount,
     outputCount,
     modifier,
     syntheticRecipeTypeSet,
@@ -146,6 +186,7 @@ function buildRecipeTags(params: {
 
   const tags: string[] = [];
   const isSynthetic =
+    recipeInputCount === 0 ||
     syntheticRecipeTypeSet.has(recipeType) ||
     recipeFactories.some(factoryId => syntheticFactoryIdSet.has(factoryId)) ||
     syntheticRecipeNamePrefixes.some(prefix => recipeName.startsWith(prefix));
@@ -158,7 +199,7 @@ function buildRecipeTags(params: {
     tags.push('multi-output');
   }
 
-  if (modifier.Tags) {
+  if (modifier?.Tags) {
     tags.push(...modifier.Tags);
   }
 
@@ -170,31 +211,34 @@ function buildRecipeTags(params: {
 
 export function resolveCatalogModel(
   dataset: VanillaDatasetSpec,
-  rules: CatalogRuleSetSpec
+  defaultConfig: CatalogDefaultConfigSpec = {}
 ): ResolvedCatalogModel {
   assertValidDataset(dataset);
-  assertValidRuleSet(rules);
+  assertValidDefaultConfig(defaultConfig);
 
-  const resolvedRules = cloneRuleSet(rules);
-  const rawItemTypeSet = new Set(resolvedRules.rawItemTypeIds ?? []);
-  const syntheticRecipeTypeSet = new Set(resolvedRules.syntheticRecipeTypeIds ?? []);
-  const syntheticRecipeNamePrefixes = resolvedRules.syntheticRecipeNamePrefixes ?? [];
-  const syntheticFactoryIdSet = new Set(resolvedRules.syntheticFactoryIds ?? []);
+  const resolvedDefaultConfig = cloneDefaultConfig(defaultConfig);
+  const recommendedRawItemIdSet = new Set(resolvedDefaultConfig.recommendedRawItemIds ?? []);
+  const recommendedRawItemTypeSet = new Set(
+    resolvedDefaultConfig.recommendedRawItemTypeIds ?? []
+  );
+  const syntheticRecipeTypeSet = new Set(resolvedDefaultConfig.syntheticRecipeTypeIds ?? []);
+  const syntheticRecipeNamePrefixes = resolvedDefaultConfig.syntheticRecipeNamePrefixes ?? [];
+  const syntheticFactoryIdSet = new Set(resolvedDefaultConfig.syntheticFactoryIds ?? []);
   const buildingRuleMap = new Map<number, CatalogBuildingRuleSpec>(
-    resolvedRules.buildingRules.map(rule => [rule.ID, rule])
+    (resolvedDefaultConfig.buildingRules ?? []).map(rule => [rule.ID, rule])
   );
   const modifierRuleMap = new Map<number, RecipeModifierRuleSpec>(
-    resolvedRules.recipeModifierRules.map(rule => [rule.Code, rule])
+    (resolvedDefaultConfig.recipeModifierRules ?? []).map(rule => [rule.Code, rule])
   );
   const itemById = new Map(dataset.items.map(item => [item.ID, item]));
-  const usedFactoryIds = Array.from(
-    new Set(dataset.recipes.flatMap(recipe => recipe.Factories))
-  ).sort((a, b) => a - b);
+  const usedFactoryIds = Array.from(new Set(dataset.recipes.flatMap(recipe => recipe.Factories))).sort(
+    (a, b) => a - b
+  );
   const producedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Results));
   const consumedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Items));
   const highestConfiguredProliferatorLevel = Math.max(
     0,
-    ...resolvedRules.proliferatorLevels.map(level => level.Level)
+    ...(resolvedDefaultConfig.proliferatorLevels ?? []).map(level => level.Level)
   );
 
   const items: ResolvedItemSpec[] = dataset.items.map(item => ({
@@ -204,7 +248,8 @@ export function resolveCatalogModel(
     kind: inferItemKind({
       itemType: item.Type,
       itemId: item.ID,
-      rawItemTypeSet,
+      recommendedRawItemIdSet,
+      recommendedRawItemTypeSet,
       producedItemIds,
       consumedItemIds,
     }),
@@ -214,28 +259,24 @@ export function resolveCatalogModel(
 
   const recipes: ResolvedRecipeSpec[] = dataset.recipes.map(recipe => {
     const modifier = modifierRuleMap.get(recipe.Proliferator);
-
-    if (!modifier) {
-      throw new Error(`Recipe ${recipe.ID} (${recipe.Name}) references unknown modifier code ${recipe.Proliferator}.`);
-    }
-
+    const modifierKind = modifier?.Kind ?? 'none';
+    const supportsProliferatorModes =
+      modifierKind === 'proliferator' && modifier ? normalizeModes(modifier) : defaultNoneMode();
+    const maxProliferatorLevel =
+      modifierKind === 'proliferator'
+        ? (modifier?.MaxLevel ?? highestConfiguredProliferatorLevel)
+        : 0;
     const { isSynthetic, tags } = buildRecipeTags({
       recipeName: recipe.Name,
       recipeType: recipe.Type,
       recipeFactories: recipe.Factories,
+      recipeInputCount: recipe.Items.length,
       outputCount: recipe.Results.length,
       modifier,
       syntheticRecipeTypeSet,
       syntheticRecipeNamePrefixes,
       syntheticFactoryIdSet,
     });
-
-    const supportsProliferatorModes =
-      modifier.Kind === 'proliferator' ? normalizeModes(modifier) : defaultNoneMode();
-    const maxProliferatorLevel =
-      modifier.Kind === 'proliferator'
-        ? (modifier.MaxLevel ?? highestConfiguredProliferatorLevel)
-        : 0;
 
     return {
       recipeId: recipe.ID.toString(),
@@ -253,7 +294,7 @@ export function resolveCatalogModel(
       })),
       allowedBuildingIds: recipe.Factories.map(factoryId => factoryId.toString()),
       modifierCode: recipe.Proliferator,
-      modifierKind: modifier.Kind,
+      modifierKind,
       supportsProliferatorModes,
       maxProliferatorLevel,
       isSynthetic,
@@ -270,20 +311,16 @@ export function resolveCatalogModel(
       throw new Error(`Factory item ${factoryId} is referenced by recipes but missing from items.`);
     }
 
-    if (!rule) {
-      throw new Error(`Factory item ${factoryId} (${item.Name}) is missing a building rule.`);
-    }
-
     return {
       buildingId: factoryId.toString(),
       typeId: item.Type,
       name: item.Name,
-      category: rule.Category,
+      category: deriveBuildingCategory(rule),
       speedMultiplier: deriveSpeedMultiplier(item, rule),
       workPowerMW: deriveWorkPowerMW(item, rule),
-      idlePowerMW: rule.IdlePowerMW,
-      intrinsicProductivityBonus: rule.IntrinsicProductivityBonus ?? 0,
-      tags: rule.Tags ? [...rule.Tags] : undefined,
+      idlePowerMW: rule?.IdlePowerMW,
+      intrinsicProductivityBonus: rule?.IntrinsicProductivityBonus ?? 0,
+      tags: rule?.Tags ? [...rule.Tags] : undefined,
       source: {
         item,
         rule,
@@ -291,7 +328,9 @@ export function resolveCatalogModel(
     };
   });
 
-  const proliferatorLevels: ResolvedProliferatorLevelSpec[] = resolvedRules.proliferatorLevels
+  const proliferatorLevels: ResolvedProliferatorLevelSpec[] = (
+    resolvedDefaultConfig.proliferatorLevels ?? []
+  )
     .slice()
     .sort((left, right) => left.Level - right.Level)
     .map(level => ({
@@ -305,7 +344,9 @@ export function resolveCatalogModel(
     }));
 
   const rawItemIds = items.filter(item => item.kind === 'raw').map(item => item.itemId);
-  const syntheticRecipeIds = recipes.filter(recipe => recipe.isSynthetic).map(recipe => recipe.recipeId);
+  const syntheticRecipeIds = recipes
+    .filter(recipe => recipe.isSynthetic)
+    .map(recipe => recipe.recipeId);
   const itemMap = new Map(items.map(item => [item.itemId, item]));
   const recipeMap = new Map(recipes.map(recipe => [recipe.recipeId, recipe]));
   const buildingMap = new Map(buildings.map(building => [building.buildingId, building]));
@@ -314,7 +355,7 @@ export function resolveCatalogModel(
   return {
     version: 'vanilla-compatible@1',
     dataset,
-    rules: resolvedRules,
+    defaultConfig: resolvedDefaultConfig,
     items,
     recipes,
     buildings,

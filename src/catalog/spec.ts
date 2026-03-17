@@ -44,7 +44,7 @@ export interface ProliferatorLevelConfigSpec {
 
 export interface CatalogBuildingRuleSpec {
   ID: number;
-  Category: string;
+  Category?: string;
   IdlePowerMW?: number;
   IntrinsicProductivityBonus?: number;
   SpeedMultiplierOverride?: number;
@@ -60,11 +60,12 @@ export interface RecipeModifierRuleSpec {
   Tags?: string[];
 }
 
-export interface CatalogRuleSetSpec {
-  proliferatorLevels: ProliferatorLevelConfigSpec[];
-  buildingRules: CatalogBuildingRuleSpec[];
-  recipeModifierRules: RecipeModifierRuleSpec[];
-  rawItemTypeIds?: number[];
+export interface CatalogDefaultConfigSpec {
+  proliferatorLevels?: ProliferatorLevelConfigSpec[];
+  buildingRules?: CatalogBuildingRuleSpec[];
+  recipeModifierRules?: RecipeModifierRuleSpec[];
+  recommendedRawItemIds?: number[];
+  recommendedRawItemTypeIds?: number[];
   syntheticRecipeTypeIds?: number[];
   syntheticRecipeNamePrefixes?: string[];
   syntheticFactoryIds?: number[];
@@ -117,7 +118,7 @@ export interface ResolvedBuildingSpec {
   tags?: string[];
   source: {
     item: VanillaItemRecord;
-    rule: CatalogBuildingRuleSpec;
+    rule?: CatalogBuildingRuleSpec;
   };
 }
 
@@ -134,7 +135,7 @@ export interface ResolvedProliferatorLevelSpec {
 export interface ResolvedCatalogModel {
   version: string;
   dataset: VanillaDatasetSpec;
-  rules: CatalogRuleSetSpec;
+  defaultConfig: CatalogDefaultConfigSpec;
   items: ResolvedItemSpec[];
   recipes: ResolvedRecipeSpec[];
   buildings: ResolvedBuildingSpec[];
@@ -157,7 +158,7 @@ export interface VanillaDatasetValidationResult {
   errors: ValidationIssue[];
 }
 
-export interface CatalogRuleSetValidationResult {
+export interface CatalogDefaultConfigValidationResult {
   valid: boolean;
   errors: ValidationIssue[];
 }
@@ -304,30 +305,34 @@ export function validateVanillaDatasetSpec(value: unknown): VanillaDatasetValida
   };
 }
 
-export function validateCatalogRuleSetSpec(value: unknown): CatalogRuleSetValidationResult {
+export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefaultConfigValidationResult {
   const errors: ValidationIssue[] = [];
 
   if (!isRecord(value)) {
     return {
       valid: false,
-      errors: [{ path: '$', message: 'Catalog rule set must be an object.' }],
+      errors: [{ path: '$', message: 'Catalog default config must be an object.' }],
     };
   }
 
-  if (!Array.isArray(value.proliferatorLevels)) {
-    pushIssue(errors, '$.proliferatorLevels', 'proliferatorLevels must be an array.');
+  if (value.proliferatorLevels !== undefined && !Array.isArray(value.proliferatorLevels)) {
+    pushIssue(errors, '$.proliferatorLevels', 'proliferatorLevels must be an array when present.');
   }
 
-  if (!Array.isArray(value.buildingRules)) {
-    pushIssue(errors, '$.buildingRules', 'buildingRules must be an array.');
+  if (value.buildingRules !== undefined && !Array.isArray(value.buildingRules)) {
+    pushIssue(errors, '$.buildingRules', 'buildingRules must be an array when present.');
   }
 
-  if (!Array.isArray(value.recipeModifierRules)) {
-    pushIssue(errors, '$.recipeModifierRules', 'recipeModifierRules must be an array.');
+  if (value.recipeModifierRules !== undefined && !Array.isArray(value.recipeModifierRules)) {
+    pushIssue(errors, '$.recipeModifierRules', 'recipeModifierRules must be an array when present.');
   }
 
-  if (value.rawItemTypeIds !== undefined && !isNumberArray(value.rawItemTypeIds)) {
-    pushIssue(errors, '$.rawItemTypeIds', 'rawItemTypeIds must be a number array when present.');
+  if (value.recommendedRawItemIds !== undefined && !isNumberArray(value.recommendedRawItemIds)) {
+    pushIssue(errors, '$.recommendedRawItemIds', 'recommendedRawItemIds must be a number array when present.');
+  }
+
+  if (value.recommendedRawItemTypeIds !== undefined && !isNumberArray(value.recommendedRawItemTypeIds)) {
+    pushIssue(errors, '$.recommendedRawItemTypeIds', 'recommendedRawItemTypeIds must be a number array when present.');
   }
 
   if (value.syntheticRecipeTypeIds !== undefined && !isNumberArray(value.syntheticRecipeTypeIds)) {
@@ -346,38 +351,14 @@ export function validateCatalogRuleSetSpec(value: unknown): CatalogRuleSetValida
     return { valid: false, errors };
   }
 
-  const config = value as unknown as CatalogRuleSetSpec;
+  const config = value as unknown as CatalogDefaultConfigSpec;
   const levels = new Set<number>();
   const buildingIds = new Set<number>();
   const modifierCodes = new Set<number>();
   const modeSet = new Set<ProliferatorMode>(['none', 'speed', 'productivity']);
   const kindSet = new Set<RecipeModifierKind>(['none', 'proliferator', 'special']);
 
-  config.buildingRules.forEach((rule, index) => {
-    const path = `$.buildingRules[${index}]`;
-
-    if (!isRecord(rule)) {
-      pushIssue(errors, path, 'Building rule must be an object.');
-      return;
-    }
-
-    if (!isFiniteNumber(rule.ID)) pushIssue(errors, `${path}.ID`, 'ID must be a finite number.');
-    if (typeof rule.Category !== 'string' || rule.Category.length === 0) pushIssue(errors, `${path}.Category`, 'Category must be a non-empty string.');
-    if (rule.IdlePowerMW !== undefined && (!isFiniteNumber(rule.IdlePowerMW) || rule.IdlePowerMW < 0)) pushIssue(errors, `${path}.IdlePowerMW`, 'IdlePowerMW must be a non-negative finite number when present.');
-    if (rule.IntrinsicProductivityBonus !== undefined && (!isFiniteNumber(rule.IntrinsicProductivityBonus) || rule.IntrinsicProductivityBonus < 0)) pushIssue(errors, `${path}.IntrinsicProductivityBonus`, 'IntrinsicProductivityBonus must be a non-negative finite number when present.');
-    if (rule.SpeedMultiplierOverride !== undefined && (!isFiniteNumber(rule.SpeedMultiplierOverride) || rule.SpeedMultiplierOverride <= 0)) pushIssue(errors, `${path}.SpeedMultiplierOverride`, 'SpeedMultiplierOverride must be a positive finite number when present.');
-    if (rule.WorkPowerMWOverride !== undefined && (!isFiniteNumber(rule.WorkPowerMWOverride) || rule.WorkPowerMWOverride < 0)) pushIssue(errors, `${path}.WorkPowerMWOverride`, 'WorkPowerMWOverride must be a non-negative finite number when present.');
-    if (rule.Tags !== undefined && !isStringArray(rule.Tags)) pushIssue(errors, `${path}.Tags`, 'Tags must be a string array when present.');
-
-    if (isFiniteNumber(rule.ID)) {
-      if (buildingIds.has(rule.ID)) {
-        pushIssue(errors, `${path}.ID`, `Duplicate building rule ID ${rule.ID}.`);
-      }
-      buildingIds.add(rule.ID);
-    }
-  });
-
-  config.proliferatorLevels.forEach((level, index) => {
+  (config.proliferatorLevels ?? []).forEach((level, index) => {
     const path = `$.proliferatorLevels[${index}]`;
 
     if (!isRecord(level)) {
@@ -392,9 +373,8 @@ export function validateCatalogRuleSetSpec(value: unknown): CatalogRuleSetValida
     if (!isFiniteNumber(level.ProductivityMultiplier) || level.ProductivityMultiplier <= 0) pushIssue(errors, `${path}.ProductivityMultiplier`, 'ProductivityMultiplier must be a positive finite number.');
     if (!isFiniteNumber(level.PowerMultiplier) || level.PowerMultiplier <= 0) pushIssue(errors, `${path}.PowerMultiplier`, 'PowerMultiplier must be a positive finite number.');
 
-    if (isFiniteNumber(level.Level) && level.Level > 0) {
-      if (level.ItemID === undefined) pushIssue(errors, `${path}.ItemID`, 'ItemID is required for proliferator levels above 0.');
-      if (level.SprayCount === undefined) pushIssue(errors, `${path}.SprayCount`, 'SprayCount is required for proliferator levels above 0.');
+    if (isFiniteNumber(level.Level) && level.Level > 0 && level.SprayCount === undefined) {
+      pushIssue(errors, `${path}.SprayCount`, 'SprayCount is required for proliferator levels above 0.');
     }
 
     if (isFiniteNumber(level.Level)) {
@@ -405,7 +385,33 @@ export function validateCatalogRuleSetSpec(value: unknown): CatalogRuleSetValida
     }
   });
 
-  config.recipeModifierRules.forEach((rule, index) => {
+  (config.buildingRules ?? []).forEach((rule, index) => {
+    const path = `$.buildingRules[${index}]`;
+
+    if (!isRecord(rule)) {
+      pushIssue(errors, path, 'Building rule must be an object.');
+      return;
+    }
+
+    if (!isFiniteNumber(rule.ID)) pushIssue(errors, `${path}.ID`, 'ID must be a finite number.');
+    if (rule.Category !== undefined && (typeof rule.Category !== 'string' || rule.Category.length === 0)) {
+      pushIssue(errors, `${path}.Category`, 'Category must be a non-empty string when present.');
+    }
+    if (rule.IdlePowerMW !== undefined && (!isFiniteNumber(rule.IdlePowerMW) || rule.IdlePowerMW < 0)) pushIssue(errors, `${path}.IdlePowerMW`, 'IdlePowerMW must be a non-negative finite number when present.');
+    if (rule.IntrinsicProductivityBonus !== undefined && (!isFiniteNumber(rule.IntrinsicProductivityBonus) || rule.IntrinsicProductivityBonus < 0)) pushIssue(errors, `${path}.IntrinsicProductivityBonus`, 'IntrinsicProductivityBonus must be a non-negative finite number when present.');
+    if (rule.SpeedMultiplierOverride !== undefined && (!isFiniteNumber(rule.SpeedMultiplierOverride) || rule.SpeedMultiplierOverride <= 0)) pushIssue(errors, `${path}.SpeedMultiplierOverride`, 'SpeedMultiplierOverride must be a positive finite number when present.');
+    if (rule.WorkPowerMWOverride !== undefined && (!isFiniteNumber(rule.WorkPowerMWOverride) || rule.WorkPowerMWOverride < 0)) pushIssue(errors, `${path}.WorkPowerMWOverride`, 'WorkPowerMWOverride must be a non-negative finite number when present.');
+    if (rule.Tags !== undefined && !isStringArray(rule.Tags)) pushIssue(errors, `${path}.Tags`, 'Tags must be a string array when present.');
+
+    if (isFiniteNumber(rule.ID)) {
+      if (buildingIds.has(rule.ID)) {
+        pushIssue(errors, `${path}.ID`, `Duplicate building rule ID ${rule.ID}.`);
+      }
+      buildingIds.add(rule.ID);
+    }
+  });
+
+  (config.recipeModifierRules ?? []).forEach((rule, index) => {
     const path = `$.recipeModifierRules[${index}]`;
 
     if (!isRecord(rule)) {

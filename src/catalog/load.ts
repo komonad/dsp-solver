@@ -1,10 +1,10 @@
 import { readFile } from 'fs/promises';
 import { resolveCatalogModel } from './resolve';
 import {
-  type CatalogRuleSetSpec,
+  type CatalogDefaultConfigSpec,
   type ResolvedCatalogModel,
   type VanillaDatasetSpec,
-  validateCatalogRuleSetSpec,
+  validateCatalogDefaultConfigSpec,
   validateVanillaDatasetSpec,
 } from './spec';
 
@@ -36,25 +36,31 @@ export async function loadVanillaDatasetFromFile(filePath: string): Promise<Vani
   return dataset as VanillaDatasetSpec;
 }
 
-export async function loadCatalogRuleSetFromFile(filePath: string): Promise<CatalogRuleSetSpec> {
-  const rules = await loadJsonFile<unknown>(filePath);
-  const validation = validateCatalogRuleSetSpec(rules);
+export async function loadCatalogDefaultConfigFromFile(
+  filePath: string
+): Promise<CatalogDefaultConfigSpec> {
+  const defaultConfig = await loadJsonFile<unknown>(filePath);
+  const validation = validateCatalogDefaultConfigSpec(defaultConfig);
 
   if (!validation.valid) {
-    throw new Error(formatIssues(`Invalid catalog rule set file: ${filePath}`, validation.errors));
+    throw new Error(
+      formatIssues(`Invalid catalog default config file: ${filePath}`, validation.errors)
+    );
   }
 
-  return rules as CatalogRuleSetSpec;
+  return defaultConfig as CatalogDefaultConfigSpec;
 }
 
 export async function loadResolvedCatalogFromFiles(
   datasetFilePath: string,
-  ruleSetFilePath: string
+  defaultConfigFilePath?: string
 ): Promise<ResolvedCatalogModel> {
-  const [dataset, rules] = await Promise.all([
-    loadVanillaDatasetFromFile(datasetFilePath),
-    loadCatalogRuleSetFromFile(ruleSetFilePath),
-  ]);
+  const datasetPromise = loadVanillaDatasetFromFile(datasetFilePath);
+  const defaultConfigPromise = defaultConfigFilePath
+    ? loadCatalogDefaultConfigFromFile(defaultConfigFilePath)
+    : Promise.resolve<CatalogDefaultConfigSpec>({});
 
-  return resolveCatalogModel(dataset, rules);
+  const [dataset, defaultConfig] = await Promise.all([datasetPromise, defaultConfigPromise]);
+
+  return resolveCatalogModel(dataset, defaultConfig);
 }

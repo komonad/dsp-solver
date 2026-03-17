@@ -52,7 +52,8 @@ export default function App() {
               maxWidth: 780,
             }}
           >
-            新架构已经和 legacy 实现脱钩，接下来以 `Vanilla.json` 兼容格式为核心推进。
+            The rebuild now treats dataset defaults as configurable input, not as hardcoded
+            vanilla semantics.
           </h1>
           <p
             style={{
@@ -63,8 +64,10 @@ export default function App() {
               color: 'rgba(24, 51, 89, 0.82)',
             }}
           >
-            当前页面只作为重构中的占位入口。新求解器会围绕 `Vanilla.json` 的 `items / recipes`
-            数据结构建立规范，再由配套规则文件提供建筑、配方 modifier 和增产剂等级语义。
+            The current page is only a placeholder for the new architecture. Raw catalog data comes
+            from a vanilla-compatible dataset file, while dataset-coupled defaults live in a
+            separate optional default-config file that users will later be able to override in
+            solver input.
           </p>
         </section>
 
@@ -76,21 +79,23 @@ export default function App() {
           }}
         >
           <article style={cardStyle}>
-            <h2 style={{ marginTop: 0 }}>Canonical Input</h2>
+            <h2 style={{ marginTop: 0 }}>Raw Dataset</h2>
             <p style={{ marginBottom: 0, lineHeight: 1.65 }}>
-              以 `Vanilla.json` 兼容格式作为 catalog 文件标准，避免项目内部发明第二套原始数据格式。
+              `Vanilla.json` remains the raw source format. It only carries items and recipes.
             </p>
           </article>
           <article style={cardStyle}>
-            <h2 style={{ marginTop: 0 }}>Rule Files</h2>
+            <h2 style={{ marginTop: 0 }}>Default Config</h2>
             <p style={{ marginBottom: 0, lineHeight: 1.65 }}>
-              `Vanilla` 只是一份数据文件；缺失的建筑、modifier 和增产剂语义统一由配套规则文件提供。
+              Dataset-coupled defaults such as proliferator tables and modifier-code meanings now
+              live in an optional companion config file instead of code.
             </p>
           </article>
           <article style={cardStyle}>
-            <h2 style={{ marginTop: 0 }}>Legacy Status</h2>
+            <h2 style={{ marginTop: 0 }}>Web Boundary</h2>
             <p style={{ marginBottom: 0, lineHeight: 1.65 }}>
-              `src/legacy` 仅保留为参考材料，不再作为当前架构的默认入口或对外导出面。
+              The future web layer will render solver output directly and must not invent its own
+              calculations.
             </p>
           </article>
         </section>

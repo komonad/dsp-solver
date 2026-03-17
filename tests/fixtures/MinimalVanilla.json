@@ -3,28 +3,28 @@
     {
       "ID": 1001,
       "Type": 1,
-      "Name": "矿石",
+      "Name": "Test Ore",
       "IconName": "ore",
       "GridIndex": 1
     },
     {
       "ID": 1101,
       "Type": 2,
-      "Name": "铁板",
+      "Name": "Test Plate",
       "IconName": "plate",
       "GridIndex": 2
     },
     {
       "ID": 1141,
       "Type": 5,
-      "Name": "增产剂 Mk.I",
+      "Name": "Proliferator Mk.I",
       "IconName": "spray-mk1",
       "GridIndex": 3
     },
     {
       "ID": 5001,
       "Type": 6,
-      "Name": "测试熔炉",
+      "Name": "Test Smelter",
       "IconName": "test-smelter",
       "GridIndex": 4,
       "Speed": 1,
@@ -37,7 +37,7 @@
       "ID": 1,
       "Type": 1,
       "Factories": [5001],
-      "Name": "矿石 -> 铁板",
+      "Name": "Ore to Plate",
       "Items": [1001],
       "ItemCounts": [1],
       "Results": [1101],

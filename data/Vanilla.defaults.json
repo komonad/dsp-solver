@@ -1,9 +1,9 @@
 {
   "proliferatorLevels": [
     { "Level": 0, "SpeedMultiplier": 1, "ProductivityMultiplier": 1, "PowerMultiplier": 1 },
-    { "Level": 1, "ItemID": 1141, "SprayCount": 12, "SpeedMultiplier": 1.125, "ProductivityMultiplier": 1.125, "PowerMultiplier": 1.3 },
-    { "Level": 2, "ItemID": 1142, "SprayCount": 12, "SpeedMultiplier": 1.2, "ProductivityMultiplier": 1.2, "PowerMultiplier": 1.5 },
-    { "Level": 3, "ItemID": 1143, "SprayCount": 12, "SpeedMultiplier": 1.25, "ProductivityMultiplier": 1.25, "PowerMultiplier": 1.7 }
+    { "Level": 1, "ItemID": 1141, "SprayCount": 13, "SpeedMultiplier": 1.25, "ProductivityMultiplier": 1.125, "PowerMultiplier": 1.3 },
+    { "Level": 2, "ItemID": 1142, "SprayCount": 28, "SpeedMultiplier": 1.5, "ProductivityMultiplier": 1.2, "PowerMultiplier": 1.7 },
+    { "Level": 3, "ItemID": 1143, "SprayCount": 75, "SpeedMultiplier": 2, "ProductivityMultiplier": 1.25, "PowerMultiplier": 2.5 }
   ],
   "buildingRules": [
     { "ID": 0, "Category": "synthetic", "Tags": ["synthetic-factory", "ikarus"] },
@@ -37,8 +37,8 @@
     { "Code": 3, "Kind": "proliferator", "SupportedModes": ["none", "speed", "productivity"], "MaxLevel": 3, "Tags": ["full-proliferator"] },
     { "Code": 4, "Kind": "special", "SupportedModes": ["none"], "MaxLevel": 0, "Tags": ["ray-receiver-lens"] }
   ],
-  "rawItemTypeIds": [1],
+  "recommendedRawItemTypeIds": [1],
   "syntheticRecipeTypeIds": [-1],
-  "syntheticRecipeNamePrefixes": ["[无中生有]", "[充电]", "[射线接收带透镜]"],
+  "syntheticRecipeNamePrefixes": ["[\u65e0\u4e2d\u751f\u6709]", "[\u5145\u7535]", "[\u5c04\u7ebf\u63a5\u6536\u5e26\u900f\u955c]"],
   "syntheticFactoryIds": [0, 1]
 }

@@ -1,198 +1,22 @@
-# API 参考
+# API Notes
 
-## 核心计算
+This file is intentionally non-authoritative during the rebuild.
 
-### calculate(config, gameData)
+The current authoritative documents are:
 
-执行完整的生产计算（使用 LP 求解器自动配平）。
+- [data-format.md](/D:/dsp-dev/dspcalc/docs/data-format.md)
+- [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
 
-```typescript
-import { calculate } from 'dsp-mod-calculator';
+Important current proliferator defaults for the vanilla dataset are:
 
-const result = calculate({
-  demands: [
-    { itemId: '1303', rate: 60 }, // 处理器 60/分钟
-  ],
-  defaultProliferator: {
-    level: 3,
-    mode: 'speed',
-    sprayCount: 12,
-  },
-}, gameData);
-```
+- level 1: `+12.5% productivity`, `+25% speed`, `+30% extra power`, `13 sprays`
+- level 2: `+20% productivity`, `+50% speed`, `+70% extra power`, `28 sprays`
+- level 3: `+25% productivity`, `+100% speed`, `+150% extra power`, `75 sprays`
 
-**参数：**
-- `config.demands` - 需求列表
-- `config.defaultProliferator` - 默认增产剂配置
-- `config.treatAsRaw` - 标记为原矿的物品ID列表
-- `config.existingSupplies` - 现有产线供给
+When represented in configuration multipliers, that means:
 
-**返回：**
-- `totalBuildings` - 总建筑数
-- `rawRequirements` - 原矿需求
-- `recipeCounts` - 各配方执行次数
-- `powerConsumption` - 功耗估算
+- level 1: `productivityMultiplier=1.125`, `speedMultiplier=1.25`, `powerMultiplier=1.3`
+- level 2: `productivityMultiplier=1.2`, `speedMultiplier=1.5`, `powerMultiplier=1.7`
+- level 3: `productivityMultiplier=1.25`, `speedMultiplier=2.0`, `powerMultiplier=2.5`
 
-### quickCalculate(itemId, rate, gameData)
-
-快速计算单个物品的上游需求（不考虑配平）。
-
-```typescript
-import { quickCalculate } from 'dsp-mod-calculator';
-
-const result = quickCalculate('1303', 60, gameData);
-```
-
-### solveMultiDemand(demands, gameData, options)
-
-求解多需求的综合生产方案。
-
-```typescript
-import { solveMultiDemand } from 'dsp-mod-calculator';
-
-const result = solveMultiDemand(
-  [
-    { itemId: '1303', rate: 60 },
-    { itemId: '1305', rate: 30 },
-  ],
-  gameData,
-  {
-    globalProliferator: { level: 3, mode: 'speed' },
-    noByproducts: false,
-  }
-);
-```
-
-## 线性规划求解
-
-### buildMultiProductLPModel(itemId, rate, gameData, options)
-
-为多产物配方构建 LP 模型。
-
-```typescript
-import { buildMultiProductLPModel } from 'dsp-mod-calculator';
-
-const model = buildMultiProductLPModel('1120', 60, gameData, {
-  objective: 'min-buildings',
-  allowExternalInput: true,
-});
-```
-
-### solveBalancing(itemId, rate, gameData, options)
-
-求解多产物配方的配平方案。
-
-```typescript
-import { solveBalancing } from 'dsp-mod-calculator';
-
-const recipeCounts = solveBalancing('1120', 60, gameData, {
-  objective: 'min-waste',
-});
-// Map { '16' => 0.5, '58' => 0.25 }
-```
-
-**objective 选项：**
-- `min-buildings` - 最小化建筑数量
-- `min-waste` - 最小化副产物浪费
-- `min-power` - 最小化功耗
-
-### validateSolution(recipeCounts, gameData)
-
-验证配平方案的可行性。
-
-```typescript
-import { validateSolution } from 'dsp-mod-calculator';
-
-const validation = validateSolution(recipeCounts, gameData);
-console.log(validation.valid);   // true/false
-console.log(validation.reasons); // 如果不可行，显示原因
-```
-
-## 增产剂
-
-### setCustomProliferatorParams(params)
-
-设置自定义增产剂参数，适配模组。
-
-```typescript
-import { setCustomProliferatorParams } from 'dsp-mod-calculator';
-
-setCustomProliferatorParams({
-  0: { speedBonus: 0, productivityBonus: 0, powerBonus: 0, sprayCount: 0 },
-  1: { speedBonus: 0.2, productivityBonus: 0.2, powerBonus: 0.3, sprayCount: 15 },
-  2: { speedBonus: 0.3, productivityBonus: 0.3, powerBonus: 0.5, sprayCount: 15 },
-  3: { speedBonus: 0.5, productivityBonus: 0.5, powerBonus: 0.7, sprayCount: 15 },
-});
-```
-
-### resetProliferatorParams()
-
-重置为默认参数。
-
-```typescript
-import { resetProliferatorParams } from 'dsp-mod-calculator';
-
-resetProliferatorParams();
-```
-
-### calculateProliferatorEffect(config, baseOutput)
-
-计算增产效果。
-
-```typescript
-import { calculateProliferatorEffect } from 'dsp-mod-calculator';
-
-const effect = calculateProliferatorEffect(
-  { level: 3, mode: 'productivity' },
-  100
-);
-console.log(effect.output); // 125 (100 * 1.25)
-```
-
-## 建筑翻倍效果
-
-### enableDoublingForBuilding(buildingId, multiplier, items?)
-
-为建筑启用翻倍效果（模组特性）。
-
-```typescript
-import { enableDoublingForBuilding } from 'dsp-mod-calculator';
-
-// 位面熔炉对铁块和磁铁产生2倍产出
-enableDoublingForBuilding('2315', 2, ['1101', '1102']);
-```
-
-### setBuildingDoublingConfig(buildingId, config)
-
-设置详细的翻倍配置。
-
-```typescript
-import { setBuildingDoublingConfig } from 'dsp-mod-calculator';
-
-setBuildingDoublingConfig('2315', {
-  multiplier: 2,
-  applicableItems: ['1101', '1102'],
-});
-```
-
-## 数据加载
-
-### loadGameDataFromFile(path)
-
-从文件加载游戏数据。
-
-```typescript
-import { loadGameDataFromFile } from 'dsp-mod-calculator';
-
-const gameData = await loadGameDataFromFile('./data/Vanilla.json');
-```
-
-### loadGameDataFromJSON(json)
-
-从 JSON 对象加载游戏数据。
-
-```typescript
-import { loadGameDataFromJSON } from 'dsp-mod-calculator';
-
-const gameData = loadGameDataFromJSON(jsonObject);
-```
+`ItemID` for a proliferator level is optional. It is only needed if the dataset wants proliferator use to map to a concrete item in the catalog.
