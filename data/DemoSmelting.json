@@ -1,0 +1,53 @@
+{
+  "items": [
+    {
+      "ID": 1001,
+      "Type": 1,
+      "Name": "Demo Ore",
+      "IconName": "demo-ore",
+      "GridIndex": 1
+    },
+    {
+      "ID": 1101,
+      "Type": 2,
+      "Name": "Demo Plate",
+      "IconName": "demo-plate",
+      "GridIndex": 2
+    },
+    {
+      "ID": 5001,
+      "Type": 6,
+      "Name": "Compact Smelter",
+      "IconName": "compact-smelter",
+      "GridIndex": 3,
+      "Speed": 1,
+      "WorkEnergyPerTick": 16666.666666666668,
+      "Space": 1
+    },
+    {
+      "ID": 5002,
+      "Type": 6,
+      "Name": "Turbo Smelter",
+      "IconName": "turbo-smelter",
+      "GridIndex": 4,
+      "Speed": 2,
+      "WorkEnergyPerTick": 66666.66666666667,
+      "Space": 2
+    }
+  ],
+  "recipes": [
+    {
+      "ID": 1,
+      "Type": 1,
+      "Factories": [5001, 5002],
+      "Name": "Ore to Plate",
+      "Items": [1001],
+      "ItemCounts": [1],
+      "Results": [1101],
+      "ResultCounts": [1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "demo-plate"
+    }
+  ]
+}

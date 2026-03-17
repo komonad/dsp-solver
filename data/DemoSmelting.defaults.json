@@ -1,0 +1,21 @@
+{
+  "buildingRules": [
+    {
+      "ID": 5001,
+      "Category": "smelter"
+    },
+    {
+      "ID": 5002,
+      "Category": "smelter"
+    }
+  ],
+  "recipeModifierRules": [
+    {
+      "Code": 0,
+      "Kind": "none",
+      "SupportedModes": ["none"],
+      "MaxLevel": 0
+    }
+  ],
+  "recommendedRawItemTypeIds": [1]
+}
