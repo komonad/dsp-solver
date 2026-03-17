@@ -1,4 +1,9 @@
-import { buildWorkbenchRequest, parseAdvancedSolveOverrides } from '../src/web/requestBuilder';
+import {
+  buildPreferredRecipeOverrides,
+  buildWorkbenchRequest,
+  mergeAdvancedSolveOverrides,
+  parseAdvancedSolveOverrides,
+} from '../src/web/requestBuilder';
 
 test('buildWorkbenchRequest merges base request fields with advanced overrides', () => {
   const request = buildWorkbenchRequest({
@@ -64,5 +69,61 @@ test('parseAdvancedSolveOverrides rejects invalid payloads with a readable error
     value: {},
     error:
       'disabledRecipeIds must be a string array when present. preferredProliferatorModeByRecipe must be an object whose values are one of none, speed, or productivity.',
+  });
+});
+
+test('buildPreferredRecipeOverrides converts editable rows into request maps', () => {
+  const overrides = buildPreferredRecipeOverrides([
+    {
+      recipeId: '1',
+      preferredBuildingId: '5001',
+      preferredProliferatorMode: 'speed',
+      preferredProliferatorLevel: 1,
+    },
+    {
+      recipeId: '2',
+      preferredBuildingId: '',
+      preferredProliferatorMode: '',
+      preferredProliferatorLevel: '',
+    },
+  ]);
+
+  expect(overrides).toEqual({
+    preferredBuildingByRecipe: { '1': '5001' },
+    preferredProliferatorModeByRecipe: { '1': 'speed' },
+    preferredProliferatorLevelByRecipe: { '1': 1 },
+  });
+});
+
+test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', () => {
+  const merged = mergeAdvancedSolveOverrides(
+    {
+      disabledRecipeIds: ['1'],
+      disabledBuildingIds: ['5001'],
+      preferredBuildingByRecipe: { '1': '5001' },
+      preferredProliferatorModeByRecipe: { '1': 'speed' },
+    },
+    {
+      disabledRecipeIds: ['2'],
+      disabledBuildingIds: ['5002'],
+      preferredBuildingByRecipe: { '2': '5002' },
+      preferredProliferatorModeByRecipe: { '1': 'productivity' },
+      preferredProliferatorLevelByRecipe: { '1': 3 },
+    }
+  );
+
+  expect(merged).toEqual({
+    disabledRecipeIds: ['1', '2'],
+    disabledBuildingIds: ['5001', '5002'],
+    preferredBuildingByRecipe: {
+      '1': '5001',
+      '2': '5002',
+    },
+    preferredProliferatorModeByRecipe: {
+      '1': 'productivity',
+    },
+    preferredProliferatorLevelByRecipe: {
+      '1': 3,
+    },
   });
 });

@@ -95,6 +95,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     rawInputs: [],
     disabledRecipes: [],
     disabledBuildings: [],
+    preferredRecipeSettings: [],
     hasAdvancedOverrides: false,
   });
   expect(model.status).toBe('optimal');
@@ -152,4 +153,39 @@ test('presentation model still exposes catalog summary before solving', () => {
   expect(model.recipePlans).toEqual([]);
   expect(model.itemBalance).toEqual([]);
   expect(model.catalogSummary.itemCount).toBe(4);
+});
+
+test('presentation model exposes named recipe preference summaries from the request', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const model = buildPresentationModel({
+    catalog,
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+      preferredBuildingByRecipe: { '1': '5001' },
+      preferredProliferatorModeByRecipe: { '1': 'speed' },
+      preferredProliferatorLevelByRecipe: { '1': 1 },
+    },
+    datasetLabel: 'Demo Smelting',
+  });
+
+  expect(model.requestSummary).toEqual({
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    rawInputs: [],
+    disabledRecipes: [],
+    disabledBuildings: [],
+    preferredRecipeSettings: [
+      {
+        recipeId: '1',
+        recipeName: 'Ore to Plate',
+        buildingName: 'Compact Smelter',
+        proliferatorPreferenceLabel: 'Speed Lv.1',
+      },
+    ],
+    hasAdvancedOverrides: true,
+  });
 });

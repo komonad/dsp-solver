@@ -1,12 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import type { ResolvedCatalogModel } from '../catalog/spec';
+import type { ProliferatorMode, ResolvedCatalogModel, ResolvedRecipeSpec } from '../catalog';
 import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
 import { solveCatalogRequest } from '../solver/solve';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
 import {
+  buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
+  mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
+  type EditableRecipePreference,
   type EditableTarget,
 } from './requestBuilder';
 
@@ -84,6 +87,25 @@ function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
   );
 }
 
+function pickDefaultRecipePreference(catalog: ResolvedCatalogModel): string {
+  return catalog.recipes[0]?.recipeId ?? '';
+}
+
+function getModeLabel(mode: ProliferatorMode): string {
+  if (mode === 'none') {
+    return 'None';
+  }
+  if (mode === 'speed') {
+    return 'Speed';
+  }
+  return 'Productivity';
+}
+
+function sortModeOptions(modes: ProliferatorMode[]): ProliferatorMode[] {
+  const order: ProliferatorMode[] = ['none', 'speed', 'productivity'];
+  return order.filter(mode => modes.includes(mode));
+}
+
 export default function App() {
   const initialPreset = DATASET_PRESETS[0];
   const [presetId, setPresetId] = useState(initialPreset.id);
@@ -103,6 +125,8 @@ export default function App() {
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
+  const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
+  const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [lastRequest, setLastRequest] = useState<SolveRequest | undefined>();
   const [result, setResult] = useState<SolveResult | null>(null);
@@ -132,6 +156,8 @@ export default function App() {
       setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
       setDisabledBuildingIds([]);
       setDisabledBuildingDraftId(nextCatalog.buildings[0]?.buildingId ?? '');
+      setRecipePreferences([]);
+      setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
       setAdvancedOverridesText('');
       setLastRequest(undefined);
       setResult(null);
@@ -183,6 +209,14 @@ export default function App() {
     [buildingOptions, disabledBuildingIds]
   );
 
+  const recipePreferenceOptions = useMemo(
+    () =>
+      recipeOptions.filter(
+        recipe => !recipePreferences.some(preference => preference.recipeId === recipe.recipeId)
+      ),
+    [recipeOptions, recipePreferences]
+  );
+
   useEffect(() => {
     if (!rawDraftItemId && rawOptions.length > 0) {
       setRawDraftItemId(rawOptions[0].itemId);
@@ -220,6 +254,20 @@ export default function App() {
       setDisabledBuildingDraftId(disableBuildingOptions[0].buildingId);
     }
   }, [disabledBuildingDraftId, disableBuildingOptions]);
+
+  useEffect(() => {
+    if (!recipePreferenceDraftId && recipePreferenceOptions.length > 0) {
+      setRecipePreferenceDraftId(recipePreferenceOptions[0].recipeId);
+      return;
+    }
+    if (
+      recipePreferenceDraftId &&
+      recipePreferenceOptions.length > 0 &&
+      !recipePreferenceOptions.some(recipe => recipe.recipeId === recipePreferenceDraftId)
+    ) {
+      setRecipePreferenceDraftId(recipePreferenceOptions[0].recipeId);
+    }
+  }, [recipePreferenceDraftId, recipePreferenceOptions]);
 
   const parsedOverrides = useMemo(
     () => parseAdvancedSolveOverrides(advancedOverridesText),
@@ -312,6 +360,68 @@ export default function App() {
     setDisabledBuildingIds(current => current.filter(entry => entry !== buildingId));
   }
 
+  function addRecipePreference() {
+    if (!recipePreferenceDraftId || recipePreferences.some(entry => entry.recipeId === recipePreferenceDraftId)) {
+      return;
+    }
+    setRecipePreferences(current => [
+      ...current,
+      {
+        recipeId: recipePreferenceDraftId,
+        preferredBuildingId: '',
+        preferredProliferatorMode: '',
+        preferredProliferatorLevel: '',
+      },
+    ]);
+  }
+
+  function updateRecipePreference(recipeId: string, patch: Partial<EditableRecipePreference>) {
+    setRecipePreferences(current =>
+      current.map(preference =>
+        preference.recipeId === recipeId ? { ...preference, ...patch } : preference
+      )
+    );
+  }
+
+  function removeRecipePreference(recipeId: string) {
+    setRecipePreferences(current => current.filter(entry => entry.recipeId !== recipeId));
+  }
+
+  function getRecipeDefinition(recipeId: string): ResolvedRecipeSpec | undefined {
+    return catalog?.recipeMap.get(recipeId);
+  }
+
+  function getRecipeBuildingOptions(recipeId: string) {
+    const recipe = getRecipeDefinition(recipeId);
+    if (!catalog || !recipe) {
+      return [];
+    }
+
+    return recipe.allowedBuildingIds
+      .map(buildingId => catalog.buildingMap.get(buildingId))
+      .filter((building): building is NonNullable<typeof building> => Boolean(building))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  function getRecipeModeOptions(recipeId: string): ProliferatorMode[] {
+    const recipe = getRecipeDefinition(recipeId);
+    if (!recipe) {
+      return [];
+    }
+    return sortModeOptions(Array.from(new Set(recipe.supportsProliferatorModes)));
+  }
+
+  function getRecipeLevelOptions(recipeId: string): number[] {
+    const recipe = getRecipeDefinition(recipeId);
+    if (!catalog || !recipe || recipe.maxProliferatorLevel <= 0) {
+      return [];
+    }
+    return catalog.proliferatorLevels
+      .map(level => level.level)
+      .filter(level => level > 0 && level <= recipe.maxProliferatorLevel)
+      .sort((left, right) => left - right);
+  }
+
   function solve() {
     if (!catalog) {
       return;
@@ -321,16 +431,19 @@ export default function App() {
       setSolveError(parsedOverrides.error);
       return;
     }
+    const uiOverrides = mergeAdvancedSolveOverrides(
+      {
+        disabledRecipeIds,
+        disabledBuildingIds,
+      },
+      buildPreferredRecipeOverrides(recipePreferences)
+    );
     const request = buildWorkbenchRequest({
       targets,
       objective,
       balancePolicy,
       rawInputItemIds,
-      advancedOverrides: {
-        ...parsedOverrides.value,
-        disabledRecipeIds,
-        disabledBuildingIds,
-      },
+      advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),
     });
     setLastRequest(request);
     if (request.targets.length === 0) {
@@ -637,6 +750,169 @@ export default function App() {
 
                 <div style={{ display: 'grid', gap: 10 }}>
                   <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                    RECIPE PREFERENCES
+                  </div>
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                    <select
+                      value={recipePreferenceDraftId}
+                      onChange={event => setRecipePreferenceDraftId(event.target.value)}
+                      style={inputStyle}
+                      disabled={!catalog || recipePreferenceOptions.length === 0}
+                    >
+                      {recipePreferenceOptions.map(recipe => (
+                        <option key={recipe.recipeId} value={recipe.recipeId}>
+                          {recipe.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={addRecipePreference}
+                      style={subtleButtonStyle}
+                      disabled={!recipePreferenceDraftId}
+                    >
+                      Add Preference
+                    </button>
+                  </div>
+
+                  <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13, lineHeight: 1.5 }}>
+                    These are soft per-recipe preferences. The advanced JSON panel is still available for forced overrides and less common fields.
+                  </div>
+
+                  {recipePreferences.length === 0 ? (
+                    <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>No recipe-level preferences.</div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 12 }}>
+                      {recipePreferences.map(preference => {
+                        const recipe = catalog?.recipeMap.get(preference.recipeId);
+                        const buildingChoices = getRecipeBuildingOptions(preference.recipeId);
+                        const modeChoices = getRecipeModeOptions(preference.recipeId);
+                        const levelChoices = getRecipeLevelOptions(preference.recipeId);
+                        const levelSelectDisabled =
+                          levelChoices.length === 0 || preference.preferredProliferatorMode === 'none';
+
+                        return (
+                          <div
+                            key={preference.recipeId}
+                            style={{
+                              borderRadius: 16,
+                              border: '1px solid rgba(24, 51, 89, 0.12)',
+                              background: 'rgba(255,255,255,0.6)',
+                              padding: 14,
+                              display: 'grid',
+                              gap: 12,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                gap: 12,
+                                alignItems: 'center',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              <div style={{ fontWeight: 700 }}>{recipe?.name ?? preference.recipeId}</div>
+                              <button
+                                type="button"
+                                onClick={() => removeRecipePreference(preference.recipeId)}
+                                style={subtleButtonStyle}
+                              >
+                                Remove
+                              </button>
+                            </div>
+
+                            <div
+                              style={{
+                                display: 'grid',
+                                gap: 10,
+                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                              }}
+                            >
+                              <div style={{ display: 'grid', gap: 6 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                  PREFERRED BUILDING
+                                </div>
+                                <select
+                                  value={preference.preferredBuildingId}
+                                  onChange={event =>
+                                    updateRecipePreference(preference.recipeId, {
+                                      preferredBuildingId: event.target.value,
+                                    })
+                                  }
+                                  style={inputStyle}
+                                >
+                                  <option value="">Auto</option>
+                                  {buildingChoices.map(building => (
+                                    <option key={building.buildingId} value={building.buildingId}>
+                                      {building.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div style={{ display: 'grid', gap: 6 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                  PREFERRED SPRAY MODE
+                                </div>
+                                <select
+                                  value={preference.preferredProliferatorMode}
+                                  onChange={event => {
+                                    const nextMode = event.target.value as '' | ProliferatorMode;
+                                    updateRecipePreference(preference.recipeId, {
+                                      preferredProliferatorMode: nextMode,
+                                      preferredProliferatorLevel:
+                                        nextMode === 'none'
+                                          ? ''
+                                          : preference.preferredProliferatorLevel,
+                                    });
+                                  }}
+                                  style={inputStyle}
+                                >
+                                  <option value="">Auto</option>
+                                  {modeChoices.map(mode => (
+                                    <option key={mode} value={mode}>
+                                      {getModeLabel(mode)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div style={{ display: 'grid', gap: 6 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                  PREFERRED SPRAY LEVEL
+                                </div>
+                                <select
+                                  value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
+                                  onChange={event =>
+                                    updateRecipePreference(preference.recipeId, {
+                                      preferredProliferatorLevel: event.target.value
+                                        ? Number(event.target.value)
+                                        : '',
+                                    })
+                                  }
+                                  style={inputStyle}
+                                  disabled={levelSelectDisabled}
+                                >
+                                  <option value="">Auto</option>
+                                  {levelChoices.map(level => (
+                                    <option key={level} value={String(level)}>
+                                      Level {level}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
                     ADVANCED OVERRIDES JSON
                   </div>
                   <textarea
@@ -759,6 +1035,26 @@ export default function App() {
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>ADVANCED JSON</div>
                           <div style={{ marginTop: 6 }}>{model.requestSummary.hasAdvancedOverrides ? 'Yes' : 'No'}</div>
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                          RECIPE PREFERENCES
+                        </div>
+                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                          {model.requestSummary.preferredRecipeSettings.length === 0 ? (
+                            <div>None</div>
+                          ) : (
+                            model.requestSummary.preferredRecipeSettings.map(setting => (
+                              <div key={setting.recipeId}>
+                                {setting.recipeName}
+                                {setting.buildingName ? ` | ${setting.buildingName}` : ''}
+                                {setting.proliferatorPreferenceLabel
+                                  ? ` | ${setting.proliferatorPreferenceLabel}`
+                                  : ''}
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
                     </div>

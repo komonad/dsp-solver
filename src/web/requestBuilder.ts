@@ -1,3 +1,4 @@
+import type { ProliferatorMode } from '../catalog';
 import type { BalancePolicy, SolveObjective, SolveRequest } from '../solver';
 
 export type AdvancedSolveOverrides = Omit<
@@ -8,6 +9,13 @@ export type AdvancedSolveOverrides = Omit<
 export interface EditableTarget {
   itemId: string;
   ratePerMin: number;
+}
+
+export interface EditableRecipePreference {
+  recipeId: string;
+  preferredBuildingId: string;
+  preferredProliferatorMode: '' | ProliferatorMode;
+  preferredProliferatorLevel: '' | number;
 }
 
 export interface BuildWorkbenchRequestParams {
@@ -108,6 +116,22 @@ function readOptionalModeRecord(
   return value;
 }
 
+function mergeUniqueStringArrays(left?: string[], right?: string[]): string[] | undefined {
+  const merged = Array.from(new Set([...(left ?? []), ...(right ?? [])]));
+  return merged.length > 0 ? merged : undefined;
+}
+
+function mergeRecord<T extends string | number>(
+  left?: Record<string, T>,
+  right?: Record<string, T>
+): Record<string, T> | undefined {
+  const merged = {
+    ...(left ?? {}),
+    ...(right ?? {}),
+  };
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 export function parseAdvancedSolveOverrides(text: string): ParseAdvancedOverridesResult {
   if (!text.trim()) {
     return { value: {}, error: '' };
@@ -147,6 +171,146 @@ export function parseAdvancedSolveOverrides(text: string): ParseAdvancedOverride
   }
 
   return { value, error: '' };
+}
+
+export function buildPreferredRecipeOverrides(
+  preferences: EditableRecipePreference[]
+): Pick<
+  AdvancedSolveOverrides,
+  | 'preferredBuildingByRecipe'
+  | 'preferredProliferatorLevelByRecipe'
+  | 'preferredProliferatorModeByRecipe'
+> {
+  const preferredBuildingByRecipe: Record<string, string> = {};
+  const preferredProliferatorLevelByRecipe: Record<string, number> = {};
+  const preferredProliferatorModeByRecipe: Record<string, ProliferatorMode> = {};
+
+  preferences.forEach(preference => {
+    if (!preference.recipeId) {
+      return;
+    }
+
+    if (preference.preferredBuildingId) {
+      preferredBuildingByRecipe[preference.recipeId] = preference.preferredBuildingId;
+    }
+
+    if (preference.preferredProliferatorMode) {
+      preferredProliferatorModeByRecipe[preference.recipeId] = preference.preferredProliferatorMode;
+    }
+
+    if (
+      typeof preference.preferredProliferatorLevel === 'number' &&
+      Number.isFinite(preference.preferredProliferatorLevel) &&
+      preference.preferredProliferatorLevel >= 0
+    ) {
+      preferredProliferatorLevelByRecipe[preference.recipeId] =
+        preference.preferredProliferatorLevel;
+    }
+  });
+
+  return {
+    preferredBuildingByRecipe:
+      Object.keys(preferredBuildingByRecipe).length > 0
+        ? preferredBuildingByRecipe
+        : undefined,
+    preferredProliferatorLevelByRecipe:
+      Object.keys(preferredProliferatorLevelByRecipe).length > 0
+        ? preferredProliferatorLevelByRecipe
+        : undefined,
+    preferredProliferatorModeByRecipe:
+      Object.keys(preferredProliferatorModeByRecipe).length > 0
+        ? preferredProliferatorModeByRecipe
+        : undefined,
+  };
+}
+
+export function mergeAdvancedSolveOverrides(
+  base: AdvancedSolveOverrides = {},
+  override: AdvancedSolveOverrides = {}
+): AdvancedSolveOverrides {
+  const merged: AdvancedSolveOverrides = {};
+
+  const disabledRecipeIds = mergeUniqueStringArrays(
+    base.disabledRecipeIds,
+    override.disabledRecipeIds
+  );
+  if (disabledRecipeIds) {
+    merged.disabledRecipeIds = disabledRecipeIds;
+  }
+
+  const disabledBuildingIds = mergeUniqueStringArrays(
+    base.disabledBuildingIds,
+    override.disabledBuildingIds
+  );
+  if (disabledBuildingIds) {
+    merged.disabledBuildingIds = disabledBuildingIds;
+  }
+
+  const forcedRecipeByItem = mergeRecord(
+    base.forcedRecipeByItem,
+    override.forcedRecipeByItem
+  );
+  if (forcedRecipeByItem) {
+    merged.forcedRecipeByItem = forcedRecipeByItem;
+  }
+
+  const preferredRecipeByItem = mergeRecord(
+    base.preferredRecipeByItem,
+    override.preferredRecipeByItem
+  );
+  if (preferredRecipeByItem) {
+    merged.preferredRecipeByItem = preferredRecipeByItem;
+  }
+
+  const forcedBuildingByRecipe = mergeRecord(
+    base.forcedBuildingByRecipe,
+    override.forcedBuildingByRecipe
+  );
+  if (forcedBuildingByRecipe) {
+    merged.forcedBuildingByRecipe = forcedBuildingByRecipe;
+  }
+
+  const preferredBuildingByRecipe = mergeRecord(
+    base.preferredBuildingByRecipe,
+    override.preferredBuildingByRecipe
+  );
+  if (preferredBuildingByRecipe) {
+    merged.preferredBuildingByRecipe = preferredBuildingByRecipe;
+  }
+
+  const forcedProliferatorLevelByRecipe = mergeRecord(
+    base.forcedProliferatorLevelByRecipe,
+    override.forcedProliferatorLevelByRecipe
+  );
+  if (forcedProliferatorLevelByRecipe) {
+    merged.forcedProliferatorLevelByRecipe = forcedProliferatorLevelByRecipe;
+  }
+
+  const preferredProliferatorLevelByRecipe = mergeRecord(
+    base.preferredProliferatorLevelByRecipe,
+    override.preferredProliferatorLevelByRecipe
+  );
+  if (preferredProliferatorLevelByRecipe) {
+    merged.preferredProliferatorLevelByRecipe = preferredProliferatorLevelByRecipe;
+  }
+
+  const forcedProliferatorModeByRecipe = mergeRecord(
+    base.forcedProliferatorModeByRecipe,
+    override.forcedProliferatorModeByRecipe
+  );
+  if (forcedProliferatorModeByRecipe) {
+    merged.forcedProliferatorModeByRecipe = forcedProliferatorModeByRecipe;
+  }
+
+  const preferredProliferatorModeByRecipe = mergeRecord(
+    base.preferredProliferatorModeByRecipe,
+    override.preferredProliferatorModeByRecipe
+  );
+  if (preferredProliferatorModeByRecipe) {
+    merged.preferredProliferatorModeByRecipe = preferredProliferatorModeByRecipe;
+  }
+
+  return merged;
 }
 
 export function buildWorkbenchRequest(params: BuildWorkbenchRequestParams): SolveRequest {

@@ -1,4 +1,4 @@
-import type { ResolvedCatalogModel } from '../catalog';
+import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
 import type { SolveRequest, SolveResult } from '../solver';
 
 export interface PresentationCatalogSummary {
@@ -24,6 +24,13 @@ export interface PresentationRequestTarget {
   ratePerMin: number;
 }
 
+export interface PresentationRecipePreference {
+  recipeId: string;
+  recipeName: string;
+  buildingName?: string;
+  proliferatorPreferenceLabel?: string;
+}
+
 export interface PresentationRequestSummary {
   objective: SolveRequest['objective'];
   balancePolicy: SolveRequest['balancePolicy'];
@@ -31,6 +38,7 @@ export interface PresentationRequestSummary {
   rawInputs: PresentationNamedItem[];
   disabledRecipes: PresentationNamedItem[];
   disabledBuildings: PresentationNamedItem[];
+  preferredRecipeSettings: PresentationRecipePreference[];
   hasAdvancedOverrides: boolean;
 }
 
@@ -151,6 +159,37 @@ function formatProliferatorLabel(
   return `Productivity Lv.${proliferatorLevel}`;
 }
 
+function formatPreferredProliferatorLabel(
+  proliferatorMode?: ProliferatorMode,
+  proliferatorLevel?: number
+): string | undefined {
+  if (proliferatorMode === undefined && proliferatorLevel === undefined) {
+    return undefined;
+  }
+
+  if (proliferatorMode === 'none') {
+    return 'None';
+  }
+
+  if (proliferatorMode === 'speed') {
+    return proliferatorLevel !== undefined
+      ? `Speed Lv.${proliferatorLevel}`
+      : 'Speed (Auto Level)';
+  }
+
+  if (proliferatorMode === 'productivity') {
+    return proliferatorLevel !== undefined
+      ? `Productivity Lv.${proliferatorLevel}`
+      : 'Productivity (Auto Level)';
+  }
+
+  if (proliferatorLevel !== undefined) {
+    return `Auto Mode Lv.${proliferatorLevel}`;
+  }
+
+  return undefined;
+}
+
 export function buildPresentationModel(
   params: BuildPresentationModelParams
 ): PresentationModel {
@@ -182,6 +221,25 @@ export function buildPresentationModel(
             itemName: getBuildingName(catalog, buildingId),
           }))
         ),
+        preferredRecipeSettings: Array.from(
+          new Set([
+            ...Object.keys(request.preferredBuildingByRecipe ?? {}),
+            ...Object.keys(request.preferredProliferatorModeByRecipe ?? {}),
+            ...Object.keys(request.preferredProliferatorLevelByRecipe ?? {}),
+          ])
+        )
+          .map(recipeId => ({
+            recipeId,
+            recipeName: getRecipeName(catalog, recipeId),
+            buildingName: request.preferredBuildingByRecipe?.[recipeId]
+              ? getBuildingName(catalog, request.preferredBuildingByRecipe[recipeId])
+              : undefined,
+            proliferatorPreferenceLabel: formatPreferredProliferatorLabel(
+              request.preferredProliferatorModeByRecipe?.[recipeId],
+              request.preferredProliferatorLevelByRecipe?.[recipeId]
+            ),
+          }))
+          .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
         hasAdvancedOverrides:
           Object.keys(request.forcedRecipeByItem ?? {}).length > 0 ||
           Object.keys(request.preferredRecipeByItem ?? {}).length > 0 ||
