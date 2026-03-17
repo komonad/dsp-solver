@@ -1,5 +1,19 @@
+/**
+ * Solver-visible proliferator strategy for a recipe variant.
+ *
+ * - `none`: no proliferator effect
+ * - `speed`: faster execution, unchanged input consumption per run
+ * - `productivity`: higher output per run, unchanged input consumption per run
+ */
 export type ProliferatorMode = 'none' | 'speed' | 'productivity';
 
+/**
+ * High-level meaning assigned to a raw dataset modifier code.
+ *
+ * - `none`: the code means no extra modifier semantics
+ * - `proliferator`: the code is interpreted through proliferator-level rules
+ * - `special`: reserved for dataset-specific non-proliferator behaviors
+ */
 export type RecipeModifierKind = 'none' | 'proliferator' | 'special';
 
 /**
@@ -82,147 +96,305 @@ export interface VanillaDatasetSpec {
   recipes: VanillaRecipeRecord[];
 }
 
+/**
+ * Dataset-coupled default definition for one proliferator level.
+ *
+ * This is optional metadata/config, not part of the raw dataset itself.
+ */
 export interface ProliferatorLevelConfigSpec {
+  /** Logical proliferator level, usually 1/2/3 for DSP-style data. */
   Level: number;
+  /** Optional concrete catalog item ID for this proliferator consumable. */
   ItemID?: number;
+  /** Number of item applications provided by one proliferator item. */
   SprayCount?: number;
+  /** Speed-mode execution multiplier at this level. */
   SpeedMultiplier: number;
+  /** Productivity-mode output multiplier at this level. */
   ProductivityMultiplier: number;
+  /** Extra working-power multiplier at this level. */
   PowerMultiplier: number;
 }
 
+/**
+ * Optional per-building default overrides and metadata.
+ *
+ * These values are dataset defaults and may later be overridden by user input
+ * or future config layers.
+ */
 export interface CatalogBuildingRuleSpec {
+  /** Upstream numeric building item ID that this rule applies to. */
   ID: number;
+  /** Optional building category for grouping, filtering, or batch preferences. */
   Category?: string;
+  /** Optional idle power metadata in MW. Not currently used by solver output. */
   IdlePowerMW?: number;
+  /** Optional built-in output bonus applied to recipe outputs on this building. */
   IntrinsicProductivityBonus?: number;
+  /** Optional override when raw dataset speed cannot be used directly. */
   SpeedMultiplierOverride?: number;
+  /** Optional override when raw dataset work power cannot be used directly. */
   WorkPowerMWOverride?: number;
+  /** Optional free-form tags for presentation or grouping. */
   Tags?: string[];
 }
 
+/**
+ * Mapping from a raw dataset modifier code to internal semantics.
+ */
 export interface RecipeModifierRuleSpec {
+  /** Raw dataset modifier code, such as the recipe's Proliferator field. */
   Code: number;
+  /** High-level interpretation of that raw code. */
   Kind: RecipeModifierKind;
+  /** Supported proliferator modes when Kind is `proliferator`. */
   SupportedModes?: ProliferatorMode[];
+  /** Highest allowed proliferator level when Kind is `proliferator`. */
   MaxLevel?: number;
+  /** Optional free-form tags attached to recipes using this code. */
   Tags?: string[];
 }
 
+/**
+ * Optional dataset companion defaults.
+ *
+ * Nothing here is required globally. These values exist to supply semantics or
+ * recommendations that the raw dataset file cannot express cleanly on its own.
+ */
 export interface CatalogDefaultConfigSpec {
+  /** Optional proliferator level table for this dataset. */
   proliferatorLevels?: ProliferatorLevelConfigSpec[];
+  /** Optional building metadata/defaults keyed by building ID. */
   buildingRules?: CatalogBuildingRuleSpec[];
+  /** Optional mapping from raw modifier codes to internal meaning. */
   recipeModifierRules?: RecipeModifierRuleSpec[];
+  /** Optional recommended raw-input item IDs. */
   recommendedRawItemIds?: number[];
+  /** Optional recommended raw-input item type codes. */
   recommendedRawItemTypeIds?: number[];
+  /** Optional recipe type codes that should default to synthetic. */
   syntheticRecipeTypeIds?: number[];
+  /** Optional recipe-name prefixes that should default to synthetic. */
   syntheticRecipeNamePrefixes?: string[];
+  /** Optional factory IDs that should default to synthetic-only behavior. */
   syntheticFactoryIds?: number[];
 }
 
+/**
+ * Normalized item role after parsing dataset + defaults.
+ */
 export type ItemKind = 'raw' | 'intermediate' | 'product' | 'utility';
 
+/**
+ * Resolved item model consumed by solver and presentation code.
+ *
+ * IDs are normalized to strings so all downstream layers can use one stable ID
+ * type regardless of the source dataset.
+ */
 export interface ResolvedItemSpec {
+  /** Normalized string item ID. */
   itemId: string;
+  /** Raw upstream item type code. */
   typeId: number;
+  /** Display name. */
   name: string;
+  /** Resolved role/classification of the item. */
   kind: ItemKind;
+  /** Optional icon resource name. */
   icon?: string;
+  /** Optional normalized tags. */
   tags?: string[];
+  /** Original raw item record for traceability. */
   source: VanillaItemRecord;
 }
 
+/**
+ * Resolved per-run recipe IO entry.
+ */
 export interface RecipeIOItem {
+  /** Normalized string item ID. */
   itemId: string;
+  /** Per-run amount for this item. */
   amount: number;
 }
 
+/**
+ * Resolved recipe model consumed by the solver.
+ */
 export interface ResolvedRecipeSpec {
+  /** Normalized string recipe ID. */
   recipeId: string;
+  /** Raw upstream recipe type code. */
   typeId: number;
+  /** Display name. */
   name: string;
+  /** Recipe duration in seconds, derived from TimeSpend using 60 ticks = 1 second. */
   cycleTimeSec: number;
+  /** Original upstream duration in ticks. */
   timeSpend: number;
+  /** Per-run inputs. */
   inputs: RecipeIOItem[];
+  /** Per-run outputs. */
   outputs: RecipeIOItem[];
+  /** Authoritative list of allowed building IDs for this recipe. */
   allowedBuildingIds: string[];
+  /** Original raw modifier code from the dataset. */
   modifierCode: number;
+  /** Resolved interpretation of modifierCode. */
   modifierKind: RecipeModifierKind;
+  /** Allowed proliferator modes for this recipe after resolution. */
   supportsProliferatorModes: ProliferatorMode[];
+  /** Highest allowed proliferator level for this recipe after resolution. */
   maxProliferatorLevel: number;
+  /** Whether this recipe is treated as synthetic/default-disabled for upstream expansion. */
   isSynthetic: boolean;
+  /** Optional normalized tags. */
   tags?: string[];
+  /** Original raw recipe record for traceability. */
   source: VanillaRecipeRecord;
 }
 
+/**
+ * Resolved building model consumed by the solver.
+ */
 export interface ResolvedBuildingSpec {
+  /** Normalized string building ID. */
   buildingId: string;
+  /** Raw upstream item type code for the building item. */
   typeId: number;
+  /** Display name. */
   name: string;
+  /** Resolved building category. */
   category: string;
+  /** Effective building speed multiplier used by solver math. */
   speedMultiplier: number;
+  /** Working power in MW at base load, before proliferator power multipliers. */
   workPowerMW: number;
+  /** Optional idle power metadata in MW. */
   idlePowerMW?: number;
+  /** Built-in output bonus applied multiplicatively to recipe outputs. */
   intrinsicProductivityBonus: number;
+  /** Optional normalized tags. */
   tags?: string[];
+  /** Raw provenance for this resolved building entry. */
   source: {
+    /** Raw item entry that represents this building. */
     item: VanillaItemRecord;
+    /** Optional dataset default rule used during resolution. */
     rule?: CatalogBuildingRuleSpec;
   };
 }
 
+/**
+ * Resolved proliferator level model consumed by solver option compilation.
+ */
 export interface ResolvedProliferatorLevelSpec {
+  /** Logical proliferator level. */
   level: number;
+  /** Optional normalized item ID of the proliferator consumable. */
   itemId?: string;
+  /** Number of applications provided by one proliferator item. */
   sprayCount?: number;
+  /** Speed-mode execution multiplier. */
   speedMultiplier: number;
+  /** Productivity-mode output multiplier. */
   productivityMultiplier: number;
+  /** Working-power multiplier. */
   powerMultiplier: number;
+  /** Original config record for traceability. */
   source: ProliferatorLevelConfigSpec;
 }
 
+/**
+ * Fully resolved catalog model.
+ *
+ * This is the boundary object consumed by the solver. The web layer should not
+ * reinterpret raw dataset semantics once a catalog has been resolved.
+ */
 export interface ResolvedCatalogModel {
+  /** Schema/version label for the resolved model. */
   version: string;
+  /** Original raw dataset. */
   dataset: VanillaDatasetSpec;
+  /** Optional companion defaults used during resolution. */
   defaultConfig: CatalogDefaultConfigSpec;
+  /** Resolved item list. */
   items: ResolvedItemSpec[];
+  /** Resolved recipe list. */
   recipes: ResolvedRecipeSpec[];
+  /** Resolved building list. */
   buildings: ResolvedBuildingSpec[];
+  /** Resolved proliferator level list. */
   proliferatorLevels: ResolvedProliferatorLevelSpec[];
+  /** Fast lookup map for items. */
   itemMap: Map<string, ResolvedItemSpec>;
+  /** Fast lookup map for recipes. */
   recipeMap: Map<string, ResolvedRecipeSpec>;
+  /** Fast lookup map for buildings. */
   buildingMap: Map<string, ResolvedBuildingSpec>;
+  /** Fast lookup map for proliferator levels. */
   proliferatorLevelMap: Map<number, ResolvedProliferatorLevelSpec>;
+  /** Default raw-input item IDs inferred from dataset + defaults. */
   rawItemIds: string[];
+  /** Recipe IDs treated as synthetic by default. */
   syntheticRecipeIds: string[];
 }
 
+/**
+ * Structured validation problem used by dataset/config validators.
+ */
 export interface ValidationIssue {
+  /** JSON-like path of the offending field. */
   path: string;
+  /** Human-readable validation message. */
   message: string;
 }
 
+/**
+ * Validation result for a raw dataset payload.
+ */
 export interface VanillaDatasetValidationResult {
+  /** Whether validation succeeded without errors. */
   valid: boolean;
+  /** Collected validation issues. */
   errors: ValidationIssue[];
 }
 
+/**
+ * Validation result for a dataset default-config payload.
+ */
 export interface CatalogDefaultConfigValidationResult {
+  /** Whether validation succeeded without errors. */
   valid: boolean;
+  /** Collected validation issues. */
   errors: ValidationIssue[];
 }
 
+/**
+ * Lightweight summary used for introspection/debugging of a raw dataset file.
+ */
 export interface VanillaDatasetSummary {
+  /** Top-level keys found in the dataset object. */
   topLevelKeys: string[];
+  /** Number of item records. */
   itemCount: number;
+  /** Number of recipe records. */
   recipeCount: number;
+  /** Distinct item type codes present in the dataset. */
   itemTypes: number[];
+  /** Distinct recipe type codes present in the dataset. */
   recipeTypes: number[];
+  /** Distinct raw modifier codes present in recipes. */
   proliferatorCodes: number[];
+  /** Distinct building IDs referenced by recipe Factories arrays. */
   factoryIds: number[];
+  /** Union of keys observed across item records. */
   itemKeys: string[];
+  /** Union of keys observed across recipe records. */
   recipeKeys: string[];
+  /** Per-key frequency summary across item records. */
   itemKeyCounts: Record<string, number>;
+  /** Per-key frequency summary across recipe records. */
   recipeKeyCounts: Record<string, number>;
 }
 
