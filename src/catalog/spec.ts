@@ -2,34 +2,83 @@ export type ProliferatorMode = 'none' | 'speed' | 'productivity';
 
 export type RecipeModifierKind = 'none' | 'proliferator' | 'special';
 
+/**
+ * Raw item record loaded directly from a Vanilla-compatible dataset file.
+ *
+ * These fields intentionally stay close to the upstream JSON shape.
+ */
 export interface VanillaItemRecord {
+  /** Stable upstream numeric item ID. */
   ID: number;
+  /** Upstream item type/category code from the dataset. */
   Type: number;
+  /** User-facing display name from the dataset. */
   Name: string;
+  /** Upstream icon resource name. */
   IconName: string;
+  /** Optional upstream grid-position hint. */
   GridIndex?: number;
+  /** Optional working energy usage in game units per tick. */
   WorkEnergyPerTick?: number;
+  /** Optional building speed multiplier from the dataset item entry. */
   Speed?: number;
+  /** Optional placement size metadata from the dataset. */
   Space?: number;
+  /** Optional upstream multiple-output hint. */
   MultipleOutput?: number;
 }
 
+/**
+ * Raw recipe record loaded directly from a Vanilla-compatible dataset file.
+ *
+ * A recipe is defined by parallel input/output ID arrays plus their matching
+ * count arrays. The parser keeps this shape intact and resolves it into a more
+ * explicit internal model later.
+ */
 export interface VanillaRecipeRecord {
+  /** Stable upstream numeric recipe ID. */
   ID: number;
+  /** Upstream recipe type/category code from the dataset. */
   Type: number;
+  /**
+   * Authoritative list of concrete building IDs that may run this recipe.
+   * This is not derived from building category.
+   */
   Factories: number[];
+  /** User-facing display name from the dataset. */
   Name: string;
+  /** Input item IDs, positionally matched with ItemCounts. */
   Items: number[];
+  /** Per-run input amounts, positionally matched with Items. */
   ItemCounts: number[];
+  /** Output item IDs, positionally matched with ResultCounts. */
   Results: number[];
+  /** Per-run output amounts, positionally matched with Results. */
   ResultCounts: number[];
+  /**
+   * Upstream recipe duration in game ticks.
+   *
+   * The current parser interprets this with the DSP convention
+   * `60 ticks = 1 second`, so:
+   * - `TimeSpend = 60` means a 1-second recipe
+   * - `TimeSpend = 3600` means a 60-second recipe
+   */
   TimeSpend: number;
+  /**
+   * Raw modifier code from the dataset.
+   *
+   * This is not a proliferator level by itself. Its meaning is resolved
+   * through dataset defaults or other configuration.
+   */
   Proliferator: number;
+  /** Upstream icon resource name. */
   IconName: string;
 }
 
 export interface VanillaDatasetSpec {
+  /** Raw item list from the dataset file. */
   items: VanillaItemRecord[];
+  /** Raw recipe list from the dataset file. */
   recipes: VanillaRecipeRecord[];
 }
 

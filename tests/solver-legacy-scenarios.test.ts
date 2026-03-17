@@ -36,7 +36,7 @@ function buildLegacyRefineryDataset(): VanillaDatasetSpec {
         ItemCounts: [1, 1],
         Results: [1117, 1116],
         ResultCounts: [2, 1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'refining-1',
       },
@@ -49,7 +49,7 @@ function buildLegacyRefineryDataset(): VanillaDatasetSpec {
         ItemCounts: [1, 2],
         Results: [1117],
         ResultCounts: [1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'refining-2',
       },
@@ -115,7 +115,7 @@ function buildLegacyCycleDataset(): VanillaDatasetSpec {
         ItemCounts: [1],
         Results: [11003, 11004],
         ResultCounts: [1, 1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'gas-separation',
       },
@@ -128,7 +128,7 @@ function buildLegacyCycleDataset(): VanillaDatasetSpec {
         ItemCounts: [1],
         Results: [11001, 11002],
         ResultCounts: [1, 1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'methane-cracking',
       },
@@ -141,7 +141,7 @@ function buildLegacyCycleDataset(): VanillaDatasetSpec {
         ItemCounts: [1, 1, 1],
         Results: [11005],
         ResultCounts: [1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'fullersilver',
       },
@@ -154,7 +154,7 @@ function buildLegacyCycleDataset(): VanillaDatasetSpec {
         ItemCounts: [1, 1, 1],
         Results: [10003],
         ResultCounts: [1],
-        TimeSpend: 3600,
+        TimeSpend: 60,
         Proliferator: 0,
         IconName: 'fullerol',
       },
@@ -222,7 +222,7 @@ test('legacy refinery scenario uses both refinery recipes to eliminate heavy-oil
   ]);
   expect(getItemBalance(result, '1116').netRatePerMin).toBeCloseTo(0, 6);
   expect(result.surplusOutputs).toEqual([]);
-  expect(result.powerSummary.activePowerMW).toBeCloseTo(40, 6);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(2, 6);
 });
 
 test.each([
@@ -271,7 +271,7 @@ test('legacy cycle scenario becomes feasible with the low-temperature chemical p
   expect(getExternalRate(result, '10002')).toBeCloseTo(106.66666667, 6);
   expect(getExternalRate(result, '12001')).toBeCloseTo(133.33333333, 6);
   expect(getSurplusRate(result, '11003')).toBeCloseTo(240, 6);
-  expect(result.powerSummary.activePowerMW).toBeCloseTo(389.7, 6);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(8.1, 6);
 });
 
 test.each([
@@ -308,6 +308,6 @@ test.each([
     expect(getExternalRate(result, '10002')).toBeCloseTo(expectedExternal.bioEthanol, 6);
     expect(getExternalRate(result, '12001')).toBeCloseTo(expectedExternal.refinedSilver, 6);
     expect(getSurplusRate(result, '11003')).toBeCloseTo(60, 6);
-    expect(result.powerSummary.activePowerMW).toBeCloseTo(129.6, 6);
+    expect(result.powerSummary.activePowerMW).toBeCloseTo(4.32, 6);
   }
 );
