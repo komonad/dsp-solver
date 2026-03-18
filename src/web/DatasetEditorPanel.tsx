@@ -14,6 +14,7 @@ interface DatasetEditorPanelProps {
   onDefaultConfigTextChange: (value: string) => void;
   onApply: () => void;
   onReset: () => void;
+  children?: React.ReactNode;
 }
 
 const textareaStyle: React.CSSProperties = {
@@ -65,6 +66,7 @@ export default function DatasetEditorPanel(props: DatasetEditorPanelProps) {
     onDefaultConfigTextChange,
     onApply,
     onReset,
+    children,
   } = props;
 
   return (
@@ -120,6 +122,7 @@ export default function DatasetEditorPanel(props: DatasetEditorPanelProps) {
             {errorText}
           </pre>
         ) : null}
+        {children}
       </div>
     </details>
   );

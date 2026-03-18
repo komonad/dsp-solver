@@ -175,6 +175,8 @@ export interface CatalogRecommendedSolveSpec {
  * recommendations that the raw dataset file cannot express cleanly on its own.
  */
 export interface CatalogDefaultConfigSpec {
+  /** Optional ordered icon-atlas pack IDs that the frontend should search for IconName lookups. */
+  iconAtlasIds?: string[];
   /** Optional proliferator level table for this dataset. */
   proliferatorLevels?: ProliferatorLevelConfigSpec[];
   /** Optional building metadata/defaults keyed by building ID. */
@@ -339,6 +341,8 @@ export interface ResolvedCatalogModel {
   dataset: VanillaDatasetSpec;
   /** Optional companion defaults used during resolution. */
   defaultConfig: CatalogDefaultConfigSpec;
+  /** Ordered icon-atlas pack IDs resolved from dataset defaults for frontend rendering. */
+  iconAtlasIds: string[];
   /** Resolved item list. */
   items: ResolvedItemSpec[];
   /** Resolved recipe list. */
@@ -563,6 +567,10 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
 
   if (value.proliferatorLevels !== undefined && !Array.isArray(value.proliferatorLevels)) {
     pushIssue(errors, '$.proliferatorLevels', 'proliferatorLevels must be an array when present.');
+  }
+
+  if (value.iconAtlasIds !== undefined && !isStringArray(value.iconAtlasIds)) {
+    pushIssue(errors, '$.iconAtlasIds', 'iconAtlasIds must be a string array when present.');
   }
 
   if (value.buildingRules !== undefined && !Array.isArray(value.buildingRules)) {

@@ -3,11 +3,14 @@ import {
   buildWorkbenchCacheKey,
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
+  readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
+  writeWorkbenchDatasetDraft,
   writeWorkbenchEditorState,
   type WorkbenchCacheSource,
+  type WorkbenchDatasetDraft,
   type WorkbenchEditorState,
 } from '../src/web/persistence';
 
@@ -89,6 +92,7 @@ test('workbench cache stores active dataset source and editor state per dataset 
     disabledRawInputItemIds: [],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
+    preferredRecipeByItem: { '1101': '1' },
     recipePreferences: [],
     advancedOverridesText: '{"preferredRecipeByItem":{"1101":"1"}}',
   };
@@ -122,6 +126,7 @@ test('clearWorkbenchCache removes both active source and entries', () => {
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
+    preferredRecipeByItem: {},
     recipePreferences: [],
     advancedOverridesText: '',
   });
@@ -130,6 +135,26 @@ test('clearWorkbenchCache removes both active source and entries', () => {
 
   expect(readActiveWorkbenchCacheSource(storage)).toBeNull();
   expect(readWorkbenchEditorState(storage, source)).toBeNull();
+  expect(readWorkbenchDatasetDraft(storage, source)).toBeNull();
+});
+
+test('dataset drafts are stored per source key and cleared with the rest of the cache', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'demo-smelting',
+    datasetPath: './DemoSmelting.json',
+    defaultConfigPath: './DemoSmelting.defaults.json',
+  };
+  const draft: WorkbenchDatasetDraft = {
+    datasetText: '{"items":[],"recipes":[]}',
+    defaultConfigText: '{"recommendedRawItemIds":[1001]}',
+  };
+
+  writeWorkbenchDatasetDraft(storage, source, draft);
+  expect(readWorkbenchDatasetDraft(storage, source)).toEqual(draft);
+
+  clearWorkbenchCache(storage);
+  expect(readWorkbenchDatasetDraft(storage, source)).toBeNull();
 });
 
 test('sanitizeWorkbenchEditorState drops references that do not exist in the loaded catalog', () => {
@@ -147,6 +172,11 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001', '9999'],
     disabledRecipeIds: ['1', '9999'],
     disabledBuildingIds: ['5001', '9999'],
+    preferredRecipeByItem: {
+      '1101': '1',
+      '9999': '1',
+      '1001': '1',
+    },
     recipePreferences: [
       {
         recipeId: '1',
@@ -174,6 +204,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001'],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
+    preferredRecipeByItem: { '1101': '1' },
     recipePreferences: [
       {
         recipeId: '1',

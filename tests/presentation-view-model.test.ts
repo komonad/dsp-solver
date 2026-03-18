@@ -87,6 +87,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     proliferatorLevelCount: 0,
     rawItemCount: 1,
     targetableItemCount: 2,
+    iconAtlasIds: ['Vanilla'],
   });
   expect(model.requestSummary).toEqual({
     objective: 'min_buildings',
@@ -168,6 +169,7 @@ test('presentation model still exposes catalog summary before solving', () => {
   expect(model.recipePlans).toEqual([]);
   expect(model.itemBalance).toEqual([]);
   expect(model.itemLedgerSections).toEqual([]);
+  expect(model.itemSlicesById).toEqual({});
   expect(model.catalogSummary.itemCount).toBe(4);
 });
 
@@ -180,6 +182,7 @@ test('overview sections keep surplus outputs separate from buildings and power',
       proliferatorLevelCount: 0,
       rawItemCount: 0,
       targetableItemCount: 0,
+      iconAtlasIds: [],
     },
     status: 'optimal',
     diagnostics: { messages: [], unmetPreferences: [] },
@@ -213,6 +216,7 @@ test('overview sections keep surplus outputs separate from buildings and power',
     surplusOutputs: [{ itemId: '1116', itemName: 'Heavy Oil', iconKey: undefined, ratePerMin: 30 }],
     itemBalance: [],
     itemLedgerSections: [],
+    itemSlicesById: {},
   };
 
   const overview = buildPresentationOverviewSections(model);
@@ -382,4 +386,50 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
     recipeTypeCount: 1,
   });
   expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(4, 6);
+});
+
+test('presentation model exposes per-item slices with producer and consumer plans', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const request = {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings' as const,
+    balancePolicy: 'force_balance' as const,
+    rawInputItemIds: [],
+  };
+  const result = solveCatalogRequest(catalog, request);
+  const model = buildPresentationModel({
+    catalog,
+    request,
+    result,
+  });
+
+  expect(model.itemSlicesById['1101']).toMatchObject({
+    itemId: '1101',
+    itemName: 'Demo Plate',
+    targetRatePerMin: 60,
+    externalInputRatePerMin: 0,
+    isTarget: true,
+  });
+  expect(model.itemSlicesById['1101'].producerPlans).toEqual([
+    expect.objectContaining({
+      recipeId: '1',
+      buildingId: '5002',
+      itemRatePerMin: 60,
+    }),
+  ]);
+  expect(model.itemSlicesById['1101'].consumerPlans).toEqual([]);
+  expect(model.itemSlicesById['1001']).toMatchObject({
+    itemId: '1001',
+    itemName: 'Demo Ore',
+    externalInputRatePerMin: 60,
+    isRawInput: true,
+  });
+  expect(model.itemSlicesById['1001'].producerPlans).toEqual([]);
+  expect(model.itemSlicesById['1001'].consumerPlans).toEqual([
+    expect.objectContaining({
+      recipeId: '1',
+      buildingId: '5002',
+      itemRatePerMin: 60,
+    }),
+  ]);
 });

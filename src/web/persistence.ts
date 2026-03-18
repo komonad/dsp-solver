@@ -25,14 +25,21 @@ export interface WorkbenchEditorState {
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
+  preferredRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   advancedOverridesText: string;
+}
+
+export interface WorkbenchDatasetDraft {
+  datasetText: string;
+  defaultConfigText: string;
 }
 
 interface WorkbenchCachePayload {
   version: 1;
   activeSource?: WorkbenchCacheSource;
   entries: Record<string, WorkbenchEditorState>;
+  sourceDrafts?: Record<string, WorkbenchDatasetDraft>;
 }
 
 type MinimalStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -116,6 +123,9 @@ function readCachePayload(storage?: MinimalStorage): WorkbenchCachePayload | nul
       version: 1,
       activeSource: activeSource ?? undefined,
       entries: parsed.entries as Record<string, WorkbenchEditorState>,
+      sourceDrafts: isRecord(parsed.sourceDrafts)
+        ? (parsed.sourceDrafts as Record<string, WorkbenchDatasetDraft>)
+        : undefined,
     };
   } catch {
     return null;
@@ -184,6 +194,40 @@ export function writeWorkbenchEditorState(
       ...payload.entries,
       [buildWorkbenchCacheKey(source)]: editorState,
     },
+    sourceDrafts: payload.sourceDrafts,
+  });
+}
+
+export function readWorkbenchDatasetDraft(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource
+): WorkbenchDatasetDraft | null {
+  const payload = readCachePayload(storage);
+  if (!payload) {
+    return null;
+  }
+
+  return payload.sourceDrafts?.[buildWorkbenchCacheKey(source)] ?? null;
+}
+
+export function writeWorkbenchDatasetDraft(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource,
+  draft: WorkbenchDatasetDraft
+): void {
+  const payload = readCachePayload(storage) ?? {
+    version: 1 as const,
+    entries: {},
+  };
+
+  writeCachePayload(storage, {
+    version: 1,
+    activeSource: source,
+    entries: payload.entries,
+    sourceDrafts: {
+      ...(payload.sourceDrafts ?? {}),
+      [buildWorkbenchCacheKey(source)]: draft,
+    },
   });
 }
 
@@ -198,6 +242,21 @@ export function sanitizeWorkbenchEditorState(
   const validItemIds = new Set(catalog.items.map(item => item.itemId));
   const validRecipeIds = new Set(catalog.recipes.map(recipe => recipe.recipeId));
   const validBuildingIds = new Set(catalog.buildings.map(building => building.buildingId));
+  const preferredRecipeByItem = Object.entries(state.preferredRecipeByItem ?? {}).reduce<
+    Record<string, string>
+  >((next, [itemId, recipeId]) => {
+    if (!validItemIds.has(itemId) || !validRecipeIds.has(recipeId)) {
+      return next;
+    }
+
+    const recipe = catalog.recipeMap.get(recipeId);
+    if (!recipe || !recipe.outputs.some(output => output.itemId === itemId)) {
+      return next;
+    }
+
+    next[itemId] = recipeId;
+    return next;
+  }, {});
 
   const targets = Array.isArray(state.targets)
     ? state.targets.filter(
@@ -276,6 +335,7 @@ export function sanitizeWorkbenchEditorState(
     disabledBuildingIds: sanitizeStringArray(state.disabledBuildingIds).filter(buildingId =>
       validBuildingIds.has(buildingId)
     ),
+    preferredRecipeByItem,
     recipePreferences,
     advancedOverridesText:
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',

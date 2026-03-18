@@ -1,14 +1,14 @@
 import React from 'react';
 import {
-  getIconAtlasSrc,
   getIconFallbackColor,
   getIconFallbackText,
-  getIconSprite,
+  getResolvedIconSprite,
 } from './iconRegistry';
 
 export interface EntityIconProps {
   label: string;
   iconKey?: string;
+  atlasIds?: string[];
   size?: number;
 }
 
@@ -17,10 +17,16 @@ export interface EntityLabelProps extends EntityIconProps {
   gap?: number;
 }
 
+export interface EntityLabelButtonProps extends EntityLabelProps {
+  onClick: () => void;
+  buttonStyle?: React.CSSProperties;
+}
+
 export function EntityIcon(props: EntityIconProps) {
-  const { label, iconKey, size = 22 } = props;
-  const sprite = getIconSprite(iconKey);
-  const atlasSrc = getIconAtlasSrc(iconKey);
+  const { label, iconKey, atlasIds, size = 22 } = props;
+  const resolvedIcon = getResolvedIconSprite(iconKey, atlasIds);
+  const sprite = resolvedIcon?.sprite;
+  const atlasSrc = resolvedIcon?.src;
 
   if (sprite && atlasSrc) {
     const scale = size / sprite.width;
@@ -69,7 +75,7 @@ export function EntityIcon(props: EntityIconProps) {
 }
 
 export function EntityLabel(props: EntityLabelProps) {
-  const { label, iconKey, size = 22, gap = 8, textStyle } = props;
+  const { label, iconKey, atlasIds, size = 22, gap = 8, textStyle } = props;
 
   return (
     <span
@@ -82,7 +88,7 @@ export function EntityLabel(props: EntityLabelProps) {
       }}
       title={label}
     >
-      <EntityIcon label={label} iconKey={iconKey} size={size} />
+      <EntityIcon label={label} iconKey={iconKey} atlasIds={atlasIds} size={size} />
       <span
         style={{
           minWidth: 0,
@@ -95,5 +101,31 @@ export function EntityLabel(props: EntityLabelProps) {
         {label}
       </span>
     </span>
+  );
+}
+
+export function EntityLabelButton(props: EntityLabelButtonProps) {
+  const { onClick, buttonStyle, ...labelProps } = props;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        border: 'none',
+        padding: 0,
+        margin: 0,
+        background: 'transparent',
+        color: 'inherit',
+        font: 'inherit',
+        cursor: 'pointer',
+        textAlign: 'left',
+        minWidth: 0,
+        maxWidth: '100%',
+        ...buttonStyle,
+      }}
+    >
+      <EntityLabel {...labelProps} />
+    </button>
   );
 }

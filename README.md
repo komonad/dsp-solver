@@ -13,8 +13,11 @@ Recent web workbench additions:
 
 - automatic solve on any input change
 - persisted workbench state in the browser, plus a reset button
-- vanilla icon atlas support with deterministic fallback badges for datasets without icon assets
+- persisted dataset-editor drafts per dataset source
+- configurable icon atlas pack lookup with deterministic fallback badges for datasets without icon assets
 - an in-browser dataset/default-config editor for session-local experimentation
+- a structured browser editor for items, recipes, building rules, and key default-config fields
+- per-item slice inspection, with raw-input toggles and item-level recipe preference entry points
 
 ## Current structure
 
@@ -113,6 +116,8 @@ Bundled files currently copied into [dist-web](/D:/dsp-dev/dspcalc/dist-web) inc
 - [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json)
 - [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json)
 - [Vanilla.png](/D:/dsp-dev/dspcalc/data/icons/Vanilla.png)
+- [GenesisBook.png](/D:/dsp-dev/dspcalc/data/icons/GenesisBook.png)
+- [MoreMegaStructure.png](/D:/dsp-dev/dspcalc/data/icons/MoreMegaStructure.png)
 
 If you want to use a custom dataset in the browser, place that dataset JSON and its optional defaults JSON under the hosted web root and then point the UI at those relative paths.
 
@@ -129,3 +134,9 @@ The vanilla icon atlas currently shipped in the web bundle is sourced from the p
 
 - upstream repo: [DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc)
 - local license copy: [dsp-calc.MulanPSL2.LICENSE](/D:/dsp-dev/dspcalc/third_party/dsp-calc.MulanPSL2.LICENSE)
+
+Additional atlas packs currently wired into the frontend:
+
+- `Vanilla`
+- `GenesisBook`
+- `MoreMegaStructure`

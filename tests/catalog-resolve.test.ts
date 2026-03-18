@@ -28,6 +28,7 @@ test('Vanilla.defaults.json is internally valid', async () => {
     ProductivityMultiplier: 1.125,
     PowerMultiplier: 1.3,
   });
+  expect(defaultConfig.iconAtlasIds).toEqual(['Vanilla']);
   expect(defaultConfig.recommendedDisabledBuildingIds).toEqual([1]);
   expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
 });
@@ -59,6 +60,7 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   expect(resolved.recipes).toHaveLength(238);
   expect(resolved.buildings).toHaveLength(24);
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
+  expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
   expect(resolved.proliferatorLevelMap.get(1)).toMatchObject({
     itemId: '1141',
     sprayCount: 13,
@@ -128,6 +130,7 @@ test('resolveCatalogModel still returns a valid fallback model without default c
   const resolved = resolveCatalogModel(dataset);
 
   expect(resolved.defaultConfig).toEqual({});
+  expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
   expect(resolved.proliferatorLevels).toEqual([]);
 
   const ironSmelting = resolved.recipeMap.get('1');
@@ -175,6 +178,7 @@ test.each([
 
     expect(resolved.recipes).toHaveLength(expectedRecipeCount);
     expect(resolved.buildings).toHaveLength(expectedBuildingCount);
+    expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
     expect(resolved.recommendedSolve).toEqual(expectedRecommendedSolve);
   }
 );

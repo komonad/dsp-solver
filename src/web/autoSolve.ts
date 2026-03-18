@@ -24,6 +24,7 @@ export interface ComputeWorkbenchSolveParams {
   disabledRawInputItemIds?: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
+  preferredRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   advancedOverridesText: string;
   locale?: AppLocale;
@@ -54,6 +55,7 @@ export function computeWorkbenchSolve(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
+    preferredRecipeByItem,
     recipePreferences,
     advancedOverridesText,
     locale = DEFAULT_APP_LOCALE,
@@ -73,6 +75,7 @@ export function computeWorkbenchSolve(
     {
       disabledRecipeIds,
       disabledBuildingIds,
+      preferredRecipeByItem,
     },
     mergeAdvancedSolveOverrides(
       buildPreferredRecipeOverrides(recipePreferences),

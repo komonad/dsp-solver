@@ -14,6 +14,7 @@ export interface PresentationCatalogSummary {
   datasetLabel?: string;
   datasetPath?: string;
   defaultConfigPath?: string;
+  iconAtlasIds: string[];
   itemCount: number;
   recipeCount: number;
   buildingCount: number;
@@ -137,6 +138,40 @@ export interface PresentationItemLedgerSection {
   items: PresentationItemLedgerEntry[];
 }
 
+export interface PresentationItemSlicePlan {
+  recipeId: string;
+  recipeName: string;
+  recipeIconKey?: string;
+  buildingId: string;
+  buildingName: string;
+  buildingIconKey?: string;
+  proliferatorLabel: string;
+  itemRatePerMin: number;
+  runsPerMin: number;
+  exactBuildingCount: number;
+  roundedUpBuildingCount: number;
+  roundedPlacementPowerMW: number;
+  inputs: PresentationItemRate[];
+  outputs: PresentationItemRate[];
+}
+
+export interface PresentationItemSlice {
+  itemId: string;
+  itemName: string;
+  iconKey?: string;
+  producedRatePerMin: number;
+  consumedRatePerMin: number;
+  netRatePerMin: number;
+  externalInputRatePerMin: number;
+  targetRatePerMin: number;
+  surplusRatePerMin: number;
+  isRawInput: boolean;
+  isTarget: boolean;
+  isSurplusOutput: boolean;
+  producerPlans: PresentationItemSlicePlan[];
+  consumerPlans: PresentationItemSlicePlan[];
+}
+
 export interface PresentationSolveSummary {
   netInputs: PresentationItemRate[];
   netOutputs: PresentationItemRate[];
@@ -187,6 +222,7 @@ export interface PresentationModel {
   surplusOutputs: PresentationItemRate[];
   itemBalance: PresentationItemBalance[];
   itemLedgerSections: PresentationItemLedgerSection[];
+  itemSlicesById: Record<string, PresentationItemSlice>;
 }
 
 export interface BuildPresentationModelParams {
@@ -372,6 +408,107 @@ function buildPresentationItemLedgerSections(
   ];
 }
 
+function sortItemSlicePlans(
+  plans: PresentationItemSlicePlan[]
+): PresentationItemSlicePlan[] {
+  return plans.slice().sort((left, right) => {
+    const rateDelta = right.itemRatePerMin - left.itemRatePerMin;
+    if (Math.abs(rateDelta) > EPSILON) {
+      return rateDelta;
+    }
+
+    const buildingDelta = right.roundedUpBuildingCount - left.roundedUpBuildingCount;
+    if (buildingDelta !== 0) {
+      return buildingDelta;
+    }
+
+    const recipeNameDelta = left.recipeName.localeCompare(right.recipeName);
+    if (recipeNameDelta !== 0) {
+      return recipeNameDelta;
+    }
+
+    return left.buildingName.localeCompare(right.buildingName);
+  });
+}
+
+function buildPresentationItemSlices(
+  recipePlans: PresentationRecipePlan[],
+  itemLedgerSections: PresentationItemLedgerSection[]
+): Record<string, PresentationItemSlice> {
+  const ledgerByItemId = new Map<string, PresentationItemLedgerEntry>();
+  itemLedgerSections.forEach(section => {
+    section.items.forEach(entry => {
+      ledgerByItemId.set(entry.itemId, entry);
+    });
+  });
+
+  return Object.fromEntries(
+    Array.from(ledgerByItemId.values()).map(entry => {
+      const producerPlans = sortItemSlicePlans(
+        recipePlans
+          .filter(plan => plan.outputs.some(output => output.itemId === entry.itemId))
+          .map(plan => ({
+            recipeId: plan.recipeId,
+            recipeName: plan.recipeName,
+            recipeIconKey: plan.recipeIconKey,
+            buildingId: plan.buildingId,
+            buildingName: plan.buildingName,
+            buildingIconKey: plan.buildingIconKey,
+            proliferatorLabel: plan.proliferatorLabel,
+            itemRatePerMin:
+              plan.outputs.find(output => output.itemId === entry.itemId)?.ratePerMin ?? 0,
+            runsPerMin: plan.runsPerMin,
+            exactBuildingCount: plan.exactBuildingCount,
+            roundedUpBuildingCount: plan.roundedUpBuildingCount,
+            roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
+            inputs: plan.inputs,
+            outputs: plan.outputs,
+          }))
+      );
+      const consumerPlans = sortItemSlicePlans(
+        recipePlans
+          .filter(plan => plan.inputs.some(input => input.itemId === entry.itemId))
+          .map(plan => ({
+            recipeId: plan.recipeId,
+            recipeName: plan.recipeName,
+            recipeIconKey: plan.recipeIconKey,
+            buildingId: plan.buildingId,
+            buildingName: plan.buildingName,
+            buildingIconKey: plan.buildingIconKey,
+            proliferatorLabel: plan.proliferatorLabel,
+            itemRatePerMin:
+              plan.inputs.find(input => input.itemId === entry.itemId)?.ratePerMin ?? 0,
+            runsPerMin: plan.runsPerMin,
+            exactBuildingCount: plan.exactBuildingCount,
+            roundedUpBuildingCount: plan.roundedUpBuildingCount,
+            roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
+            inputs: plan.inputs,
+            outputs: plan.outputs,
+          }))
+      );
+
+      const slice: PresentationItemSlice = {
+        itemId: entry.itemId,
+        itemName: entry.itemName,
+        iconKey: entry.iconKey,
+        producedRatePerMin: entry.producedRatePerMin,
+        consumedRatePerMin: entry.consumedRatePerMin,
+        netRatePerMin: entry.netRatePerMin,
+        externalInputRatePerMin: entry.externalInputRatePerMin,
+        targetRatePerMin: entry.targetRatePerMin,
+        surplusRatePerMin: entry.surplusRatePerMin,
+        isRawInput: entry.isRawInput,
+        isTarget: entry.isTarget,
+        isSurplusOutput: entry.isSurplusOutput,
+        producerPlans,
+        consumerPlans,
+      };
+
+      return [entry.itemId, slice];
+    })
+  );
+}
+
 function buildPresentationSolveSummary(
   result: SolveResult,
   catalog: ResolvedCatalogModel
@@ -554,6 +691,7 @@ export function buildPresentationModel(
         datasetLabel,
         datasetPath,
         defaultConfigPath,
+        iconAtlasIds: [...catalog.iconAtlasIds],
         itemCount: catalog.items.length,
         recipeCount: catalog.recipes.length,
         buildingCount: catalog.buildings.length,
@@ -573,14 +711,36 @@ export function buildPresentationModel(
       surplusOutputs: [],
       itemBalance: [],
       itemLedgerSections: [],
+      itemSlicesById: {},
     };
   }
+
+  const recipePlans = result.recipePlans.map(plan => ({
+    recipeId: plan.recipeId,
+    recipeName: getRecipeName(catalog, plan.recipeId),
+    recipeIconKey: getRecipeIcon(catalog, plan.recipeId),
+    buildingId: plan.buildingId,
+    buildingName: getBuildingName(catalog, plan.buildingId),
+    buildingIconKey: getBuildingIcon(catalog, plan.buildingId),
+    proliferatorLevel: plan.proliferatorLevel,
+    proliferatorMode: plan.proliferatorMode,
+    proliferatorLabel: formatProliferatorLabel(plan.proliferatorMode, plan.proliferatorLevel, locale),
+    runsPerMin: plan.runsPerMin,
+    exactBuildingCount: plan.exactBuildingCount,
+    roundedUpBuildingCount: plan.roundedUpBuildingCount,
+    activePowerMW: plan.activePowerMW,
+    roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
+    inputs: mapItemRates(catalog, plan.inputs),
+    outputs: mapItemRates(catalog, plan.outputs),
+  }));
+  const itemLedgerSections = buildPresentationItemLedgerSections(catalog, request, result, locale);
 
   return {
     catalogSummary: {
       datasetLabel,
       datasetPath,
       defaultConfigPath,
+      iconAtlasIds: [...catalog.iconAtlasIds],
       itemCount: catalog.items.length,
       recipeCount: catalog.recipes.length,
       buildingCount: catalog.buildings.length,
@@ -599,28 +759,7 @@ export function buildPresentationModel(
       requestedRatePerMin: target.requestedRatePerMin,
       actualRatePerMin: target.actualRatePerMin,
     })),
-    recipePlans: result.recipePlans.map(plan => ({
-      recipeId: plan.recipeId,
-      recipeName: getRecipeName(catalog, plan.recipeId),
-      recipeIconKey: getRecipeIcon(catalog, plan.recipeId),
-      buildingId: plan.buildingId,
-      buildingName: getBuildingName(catalog, plan.buildingId),
-      buildingIconKey: getBuildingIcon(catalog, plan.buildingId),
-      proliferatorLevel: plan.proliferatorLevel,
-      proliferatorMode: plan.proliferatorMode,
-      proliferatorLabel: formatProliferatorLabel(
-        plan.proliferatorMode,
-        plan.proliferatorLevel,
-        locale
-      ),
-      runsPerMin: plan.runsPerMin,
-      exactBuildingCount: plan.exactBuildingCount,
-      roundedUpBuildingCount: plan.roundedUpBuildingCount,
-      activePowerMW: plan.activePowerMW,
-      roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
-      inputs: mapItemRates(catalog, plan.inputs),
-      outputs: mapItemRates(catalog, plan.outputs),
-    })),
+    recipePlans,
     buildingSummary: result.buildingSummary.map(summary => ({
       buildingId: summary.buildingId,
       buildingName: getBuildingName(catalog, summary.buildingId),
@@ -642,6 +781,7 @@ export function buildPresentationModel(
       consumedRatePerMin: entry.consumedRatePerMin,
       netRatePerMin: entry.netRatePerMin,
     })),
-    itemLedgerSections: buildPresentationItemLedgerSections(catalog, request, result, locale),
+    itemLedgerSections,
+    itemSlicesById: buildPresentationItemSlices(recipePlans, itemLedgerSections),
   };
 }

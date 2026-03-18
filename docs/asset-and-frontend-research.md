@@ -2,10 +2,16 @@
 
 ## Current icon approach
 
-The web app now uses a sprite-atlas pipeline for vanilla-compatible icons:
+The web app now uses a sprite-atlas pipeline with dataset-configurable pack order:
 
 - Atlas metadata: [vanillaAtlas.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/vanillaAtlas.json)
 - Atlas image: [Vanilla.png](/D:/dsp-dev/dspcalc/data/icons/Vanilla.png)
+- Additional atlas metadata:
+  - [GenesisBook.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/GenesisBook.json)
+  - [MoreMegaStructure.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/MoreMegaStructure.json)
+- Additional atlas images:
+  - [GenesisBook.png](/D:/dsp-dev/dspcalc/data/icons/GenesisBook.png)
+  - [MoreMegaStructure.png](/D:/dsp-dev/dspcalc/data/icons/MoreMegaStructure.png)
 - Runtime registry: [iconRegistry.ts](/D:/dsp-dev/dspcalc/src/web/iconRegistry.ts)
 - React rendering: [EntityIcon.tsx](/D:/dsp-dev/dspcalc/src/web/EntityIcon.tsx)
 
@@ -13,24 +19,32 @@ Lookup key:
 
 - Use dataset `IconName`
 - Do not use localized display name
+- Search atlas packs in `defaultConfig.iconAtlasIds` order
+- Fall back to `Vanilla` when no pack order is configured
 
 Fallback behavior:
 
-- If `IconName` is present in the vanilla atlas, render the sprite
+- If `IconName` is present in the configured atlas packs, render the sprite
 - Otherwise render a deterministic fallback badge from the entity label
 - This keeps test datasets and custom mod datasets usable even when no icon pack exists
 
 ## Built-in dataset editor
 
-The web app now includes an in-browser dataset/default-config editor:
+The web app now includes two in-browser editing surfaces:
 
 - Panel component: [DatasetEditorPanel.tsx](/D:/dsp-dev/dspcalc/src/web/DatasetEditorPanel.tsx)
+- Structured editor: [StructuredDatasetEditor.tsx](/D:/dsp-dev/dspcalc/src/web/StructuredDatasetEditor.tsx)
+- Pure helper layer: [catalogEditor.ts](/D:/dsp-dev/dspcalc/src/web/catalogEditor.ts)
 - Parse/resolve path: [catalogClient.ts](/D:/dsp-dev/dspcalc/src/web/catalogClient.ts)
 
 Current scope:
 
 - Edit raw dataset JSON
 - Edit default-config JSON
+- Edit items structurally
+- Edit recipes structurally
+- Edit building rules structurally
+- Edit key default-config fields structurally
 - Apply changes in the current browser session
 - Reset editor text back to the last loaded source
 
@@ -38,6 +52,7 @@ Current limitation:
 
 - Edited dataset text is not persisted across full page reloads
 - Only workbench UI state is persisted today
+- Recipe array fields are currently edited as comma-separated numeric lists, not a grid editor
 
 ## Recommended frontend direction
 
@@ -56,6 +71,7 @@ Recommended next stack steps:
    - result panels
    - dataset editor
    - icon/entity display primitives
+   - item ledger + item slice inspector
 2. Migrate the build tool from webpack to Vite when the UI surface stabilizes
 3. Introduce targeted libraries instead of a full rewrite
    - Radix UI for primitives/dialogs/popovers
@@ -79,6 +95,12 @@ Useful findings:
 - Main item/building icons are sprite-sheet based
 - `IconName` maps cleanly to atlas keys
 - The repo also contains mod-specific atlases and some individual PNGs
+- `src/GameData.jsx` carries explicit mod GUIDs and composes dataset/icon packs by enabled mod list
+- The `icon/` directory currently exposes at least:
+  - `Vanilla`
+  - `GenesisBook`
+  - `MoreMegaStructure`
+  - `FractionateEverything`
 
 License handling:
 
@@ -87,7 +109,11 @@ License handling:
 
 ## DSP data-dump research
 
-Most practical export path found so far:
+Two viable export paths are clear now.
+
+### Path A: offline asset extraction
+
+Most practical offline path found so far:
 
 1. Use a Unity asset extractor
    - [AssetRipper](https://github.com/AssetRipper/AssetRipper)
@@ -100,6 +126,28 @@ What that gist already does:
 - Reads extracted DSP proto assets
 - Emits recipe/item/building-related JSON
 - Builds an icon sprite sheet
+
+This is the fastest route for a one-off or scripted offline dataset refresh because it does not require maintaining a live game mod.
+
+### Path B: in-game BepInEx exporter mod
+
+`GreyHak/dsp-csv-gen` is not a recipe exporter, but it proves the operational shape we need:
+
+- BepInEx plugin
+- in-game trigger
+- disk output
+- configurable output path
+- support for loading additional world data before export
+
+That makes it a good reference architecture for a future `dspcalc` exporter mod that would:
+
+1. iterate game proto data in-process
+2. write `dataset.json`
+3. write `defaults.json`
+4. emit icon atlas metadata and PNGs
+5. optionally include enabled mod GUIDs in the export manifest
+
+The real gap today is not feasibility; it is implementation effort. The exporter mod still needs to be written.
 
 Other useful public references:
 

@@ -1,6 +1,7 @@
 import {
   getIconAtlasSrc,
   getIconFallbackText,
+  getResolvedIconSprite,
   getIconSprite,
 } from '../src/web/iconRegistry';
 
@@ -19,6 +20,19 @@ test('vanilla icon atlas resolves known icon keys', () => {
 test('icon registry returns no sprite for unknown keys', () => {
   expect(getIconSprite('non-existent-icon')).toBeUndefined();
   expect(getIconAtlasSrc('non-existent-icon')).toBeUndefined();
+});
+
+test('icon registry respects configured atlas search order and falls back to vanilla default', () => {
+  expect(getResolvedIconSprite('iron-plate', ['Vanilla'])?.atlasId).toBe('Vanilla');
+  expect(getResolvedIconSprite('iron-plate', ['UnknownPack'])?.atlasId).toBeUndefined();
+  expect(getResolvedIconSprite('iron-plate')?.atlasId).toBe('Vanilla');
+});
+
+test('icon registry can resolve mod atlas packs when requested', () => {
+  expect(getResolvedIconSprite('Ccoal', ['MoreMegaStructure'])?.atlasId).toBe(
+    'MoreMegaStructure'
+  );
+  expect(getIconAtlasSrc('Ccoal', ['MoreMegaStructure'])).toBe('./icons/MoreMegaStructure.png');
 });
 
 test('icon fallback text supports ascii and non-ascii labels', () => {

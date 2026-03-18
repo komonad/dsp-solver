@@ -16,6 +16,7 @@ import {
 
 function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDefaultConfigSpec {
   return {
+    iconAtlasIds: defaultConfig.iconAtlasIds ? [...defaultConfig.iconAtlasIds] : undefined,
     proliferatorLevels: defaultConfig.proliferatorLevels?.map(level => ({ ...level })),
     buildingRules: defaultConfig.buildingRules?.map(rule => ({
       ...rule,
@@ -246,6 +247,10 @@ export function resolveCatalogModel(
     0,
     ...(resolvedDefaultConfig.proliferatorLevels ?? []).map(level => level.Level)
   );
+  const iconAtlasIds =
+    resolvedDefaultConfig.iconAtlasIds && resolvedDefaultConfig.iconAtlasIds.length > 0
+      ? Array.from(new Set(resolvedDefaultConfig.iconAtlasIds.map(entry => entry.trim()).filter(Boolean)))
+      : ['Vanilla'];
 
   const items: ResolvedItemSpec[] = dataset.items.map(item => ({
     itemId: item.ID.toString(),
@@ -369,6 +374,7 @@ export function resolveCatalogModel(
     version: 'vanilla-compatible@1',
     dataset,
     defaultConfig: resolvedDefaultConfig,
+    iconAtlasIds,
     items,
     recipes,
     buildings,

@@ -1,4 +1,5 @@
 {
+  "iconAtlasIds": ["Vanilla"],
   "buildingRules": [
     {
       "ID": 2304,

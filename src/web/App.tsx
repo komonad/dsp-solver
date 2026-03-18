@@ -21,8 +21,10 @@ import {
 } from './catalogClient';
 import { computeWorkbenchSolve } from './autoSolve';
 import DatasetEditorPanel from './DatasetEditorPanel';
-import { EntityLabel } from './EntityIcon';
+import { EntityLabel, EntityLabelButton } from './EntityIcon';
+import ItemSlicePanel from './ItemSlicePanel';
 import { computeLedgerSectionScrollTop } from './ledgerScroll';
+import StructuredDatasetEditor from './StructuredDatasetEditor';
 import {
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
@@ -32,9 +34,11 @@ import {
 import {
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
+  readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
+  writeWorkbenchDatasetDraft,
   writeWorkbenchEditorState,
   type WorkbenchCacheSource,
   type WorkbenchEditorState,
@@ -185,6 +189,7 @@ function buildDefaultWorkbenchEditorState(
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: catalog.recommendedDisabledBuildingIds,
+    preferredRecipeByItem: {},
     recipePreferences: [],
     advancedOverridesText: '',
   };
@@ -242,9 +247,11 @@ export default function App() {
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
+  const [preferredRecipeByItem, setPreferredRecipeByItem] = useState<Record<string, string>>({});
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState('');
   const itemLedgerScrollRef = useRef<HTMLDivElement | null>(null);
   const itemLedgerSectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -265,9 +272,15 @@ export default function App() {
     setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
     setDisabledBuildingIds(editorState.disabledBuildingIds);
     setDisabledBuildingDraftId('');
+    setPreferredRecipeByItem(editorState.preferredRecipeByItem);
     setRecipePreferences(editorState.recipePreferences);
     setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
     setAdvancedOverridesText(editorState.advancedOverridesText);
+    setSelectedItemId(
+      editorState.targets[0]?.itemId ??
+        nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ??
+        ''
+    );
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -281,6 +294,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
+      preferredRecipeByItem,
       recipePreferences,
       advancedOverridesText,
     };
@@ -310,12 +324,25 @@ export default function App() {
         trimmedDatasetPath,
         trimmedDefaultConfigPath || undefined
       );
-      const nextCatalog = loaded.catalog;
       const nextSource: WorkbenchCacheSource = {
         presetId: nextPresetId,
         datasetPath: trimmedDatasetPath,
         defaultConfigPath: trimmedDefaultConfigPath,
       };
+      const cachedDraft = readWorkbenchDatasetDraft(browserStorage, nextSource);
+      let restoredSource = loaded;
+      if (cachedDraft) {
+        try {
+          restoredSource = resolveCatalogSourceTexts(
+            cachedDraft.datasetText,
+            cachedDraft.defaultConfigText
+          );
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : String(error);
+          setDatasetEditorError(`${bundle.datasetSource.editorApplyFailedPrefix}${detail}`);
+        }
+      }
+      const nextCatalog = restoredSource.catalog;
       const cachedEditorState = readWorkbenchEditorState(browserStorage, nextSource);
       const defaultEditorState = buildDefaultWorkbenchEditorState(nextCatalog);
       const restoredEditorState = cachedEditorState
@@ -335,8 +362,8 @@ export default function App() {
       setLoadedSource(nextSource);
       setLoadedDatasetText(loaded.datasetText);
       setLoadedDefaultConfigText(loaded.defaultConfigText);
-      setDatasetEditorText(loaded.datasetText);
-      setDefaultConfigEditorText(loaded.defaultConfigText);
+      setDatasetEditorText(restoredSource.datasetText);
+      setDefaultConfigEditorText(restoredSource.defaultConfigText);
       setCatalogLabel(nextLabel);
       applyWorkbenchEditorState(nextCatalog, nextEditorState);
     } catch (error) {
@@ -463,6 +490,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
+      preferredRecipeByItem,
       recipePreferences,
       advancedOverridesText,
     });
@@ -476,10 +504,27 @@ export default function App() {
     disabledRecipeIds,
     loadedSource,
     objective,
+    preferredRecipeByItem,
     proliferatorPolicy,
     rawInputItemIds,
     recipePreferences,
     targets,
+  ]);
+
+  useEffect(() => {
+    if (!browserStorage || !loadedSource) {
+      return;
+    }
+
+    writeWorkbenchDatasetDraft(browserStorage, loadedSource, {
+      datasetText: datasetEditorText,
+      defaultConfigText: defaultConfigEditorText,
+    });
+  }, [
+    browserStorage,
+    datasetEditorText,
+    defaultConfigEditorText,
+    loadedSource,
   ]);
 
   const parsedOverrides = useMemo(
@@ -507,6 +552,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
+      preferredRecipeByItem,
       recipePreferences,
       advancedOverridesText,
       locale,
@@ -522,6 +568,7 @@ export default function App() {
     isLoading,
     locale,
     objective,
+    preferredRecipeByItem,
     proliferatorPolicy,
     rawInputItemIds,
     recipePreferences,
@@ -548,6 +595,7 @@ export default function App() {
     [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]
   );
   const requestSummary = model?.requestSummary;
+  const iconAtlasIds = model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
 
   function onPresetChange(nextPresetId: DatasetPresetId) {
     setPresetId(nextPresetId);
@@ -570,6 +618,9 @@ export default function App() {
 
   function clearCachedWorkbenchState() {
     clearWorkbenchCache(browserStorage);
+    setDatasetEditorText(loadedDatasetText);
+    setDefaultConfigEditorText(loadedDefaultConfigText);
+    setDatasetEditorError('');
 
     if (catalog) {
       applyWorkbenchEditorState(catalog, buildDefaultWorkbenchEditorState(catalog));
@@ -579,6 +630,12 @@ export default function App() {
   function resetDatasetEditorToLoadedSource() {
     setDatasetEditorText(loadedDatasetText);
     setDefaultConfigEditorText(loadedDefaultConfigText);
+    setDatasetEditorError('');
+  }
+
+  function updateDatasetEditorTexts(nextDatasetText: string, nextDefaultConfigText: string) {
+    setDatasetEditorText(nextDatasetText);
+    setDefaultConfigEditorText(nextDefaultConfigText);
     setDatasetEditorError('');
   }
 
@@ -783,6 +840,98 @@ export default function App() {
       .sort((left, right) => left - right);
   }
 
+  useEffect(() => {
+    if (!catalog) {
+      setSelectedItemId('');
+      return;
+    }
+
+    const validItemIds = new Set(model ? Object.keys(model.itemSlicesById) : []);
+    if (selectedItemId && validItemIds.has(selectedItemId)) {
+      return;
+    }
+
+    const fallbackItemId =
+      targets[0]?.itemId ??
+      model?.targets[0]?.itemId ??
+      model?.itemLedgerSections[0]?.items[0]?.itemId ??
+      catalog.items.find(item => item.kind !== 'utility')?.itemId ??
+      '';
+
+    setSelectedItemId(fallbackItemId);
+  }, [catalog, model, selectedItemId, targets]);
+
+  const selectedItemSlice =
+    selectedItemId && model ? model.itemSlicesById[selectedItemId] : undefined;
+
+  const selectedItemPreferredRecipeOptions = useMemo(() => {
+    if (!catalog || !selectedItemSlice) {
+      return [];
+    }
+
+    return catalog.recipes
+      .filter(recipe => recipe.outputs.some(output => output.itemId === selectedItemSlice.itemId))
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map(recipe => ({
+        recipeId: recipe.recipeId,
+        recipeName: recipe.name,
+        recipeIconKey: recipe.icon,
+      }));
+  }, [catalog, selectedItemSlice]);
+
+  function updatePreferredRecipeForItem(itemId: string, recipeId: string) {
+    setPreferredRecipeByItem(current => {
+      const next = { ...current };
+      if (!recipeId) {
+        delete next[itemId];
+      } else {
+        next[itemId] = recipeId;
+      }
+      return next;
+    });
+  }
+
+  function clearPreferredRecipeForItem(itemId: string) {
+    setPreferredRecipeByItem(current => {
+      if (!current[itemId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[itemId];
+      return next;
+    });
+  }
+
+  function locateItemInLedger(itemId: string) {
+    const targetSection =
+      model?.itemLedgerSections.find(section => section.items.some(item => item.itemId === itemId)) ??
+      null;
+
+    if (!targetSection) {
+      return;
+    }
+
+    setSelectedItemId(itemId);
+    scrollItemLedgerToSection(targetSection.key);
+  }
+
+  function renderClickableItemLabel(item: {
+    itemId: string;
+    itemName: string;
+    iconKey?: string;
+  }) {
+    return (
+      <EntityLabelButton
+        label={item.itemName}
+        iconKey={item.iconKey}
+        atlasIds={iconAtlasIds}
+        size={18}
+        gap={8}
+        onClick={() => setSelectedItemId(item.itemId)}
+      />
+    );
+  }
+
   return (
     <main style={pageStyle}>
       <div style={shellStyle}>
@@ -951,7 +1100,26 @@ export default function App() {
                   onDefaultConfigTextChange={setDefaultConfigEditorText}
                   onApply={applyDatasetEditorChanges}
                   onReset={resetDatasetEditorToLoadedSource}
-                />
+                >
+                  <StructuredDatasetEditor
+                    title={bundle.datasetSource.structuredEditorTitle}
+                    helpText={bundle.datasetSource.structuredEditorHelp}
+                    unavailableText={bundle.datasetSource.structuredEditorUnavailable}
+                    tabs={{
+                      items: bundle.datasetSource.structuredEditorTabs.items,
+                      recipes: bundle.datasetSource.structuredEditorTabs.recipes,
+                      buildingRules: bundle.datasetSource.structuredEditorTabs.buildingRules,
+                      defaults: bundle.datasetSource.structuredEditorTabs.defaults,
+                    }}
+                    actions={{
+                      add: bundle.datasetSource.structuredEditorAddButton,
+                      remove: bundle.datasetSource.structuredEditorRemoveButton,
+                    }}
+                    datasetText={datasetEditorText}
+                    defaultConfigText={defaultConfigEditorText}
+                    onSourceTextsChange={updateDatasetEditorTexts}
+                  />
+                </DatasetEditorPanel>
               </div>
             </article>
 
@@ -1389,11 +1557,7 @@ export default function App() {
                         <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                           {requestSummary.targets.map(target => (
                             <div key={target.itemId}>
-                              <EntityLabel
-                                label={target.itemName}
-                                iconKey={target.iconKey}
-                                size={18}
-                              />{' '}
+                              {renderClickableItemLabel(target)}{' '}
                               : {formatRate(target.ratePerMin, locale)}
                             </div>
                           ))}
@@ -1411,6 +1575,7 @@ export default function App() {
                                 <EntityLabel
                                   label={setting.recipeName}
                                   iconKey={setting.recipeIconKey}
+                                  atlasIds={iconAtlasIds}
                                   size={18}
                                 />
                                 {setting.buildingName ? (
@@ -1420,6 +1585,7 @@ export default function App() {
                                     <EntityLabel
                                       label={setting.buildingName}
                                       iconKey={setting.buildingIconKey}
+                                      atlasIds={iconAtlasIds}
                                       size={18}
                                     />
                                   </>
@@ -1469,7 +1635,7 @@ export default function App() {
                           ) : (
                             model.solvedSummary?.netInputs.map(item => (
                               <div key={item.itemId}>
-                                <EntityLabel label={item.itemName} iconKey={item.iconKey} size={18} />:{' '}
+                                {renderClickableItemLabel(item)}:{' '}
                                 {formatRate(item.ratePerMin, locale)}
                               </div>
                             ))
@@ -1483,7 +1649,7 @@ export default function App() {
                           ) : (
                             model.solvedSummary?.netOutputs.map(item => (
                               <div key={item.itemId}>
-                                <EntityLabel label={item.itemName} iconKey={item.iconKey} size={18} />:{' '}
+                                {renderClickableItemLabel(item)}:{' '}
                                 {formatRate(item.ratePerMin, locale)}
                               </div>
                             ))
@@ -1530,6 +1696,7 @@ export default function App() {
                                   <EntityLabel
                                     label={plan.recipeName}
                                     iconKey={plan.recipeIconKey}
+                                    atlasIds={iconAtlasIds}
                                     size={22}
                                   />
                                 </div>
@@ -1537,6 +1704,7 @@ export default function App() {
                                   <EntityLabel
                                     label={plan.buildingName}
                                     iconKey={plan.buildingIconKey}
+                                    atlasIds={iconAtlasIds}
                                     size={18}
                                   />{' '}
                                   | {plan.proliferatorLabel}
@@ -1556,11 +1724,7 @@ export default function App() {
                                 <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
                                   {plan.inputs.map(input => (
                                     <div key={input.itemId}>
-                                      <EntityLabel
-                                        label={input.itemName}
-                                        iconKey={input.iconKey}
-                                        size={18}
-                                      />{' '}
+                                      {renderClickableItemLabel(input)}{' '}
                                       : {formatRate(input.ratePerMin, locale)}
                                     </div>
                                   ))}
@@ -1571,11 +1735,7 @@ export default function App() {
                                 <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
                                   {plan.outputs.map(output => (
                                     <div key={output.itemId}>
-                                      <EntityLabel
-                                        label={output.itemName}
-                                        iconKey={output.iconKey}
-                                        size={18}
-                                      />{' '}
+                                      {renderClickableItemLabel(output)}{' '}
                                       : {formatRate(output.ratePerMin, locale)}
                                     </div>
                                   ))}
@@ -1616,11 +1776,7 @@ export default function App() {
                           {model.itemBalance.map(entry => (
                             <div key={entry.itemId} style={{ paddingBottom: 6, borderBottom: '1px solid rgba(24, 51, 89, 0.08)' }}>
                               <div style={{ fontWeight: 700 }}>
-                                <EntityLabel
-                                  label={entry.itemName}
-                                  iconKey={entry.iconKey}
-                                  size={18}
-                                />
+                                {renderClickableItemLabel(entry)}
                               </div>
                               <div style={{ fontSize: 13 }}>
                                 {bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)} / {bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)} / {bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}
@@ -1652,10 +1808,27 @@ export default function App() {
                           padding: 16,
                           maxHeight: 'calc(100vh - 48px)',
                           display: 'grid',
-                          gridTemplateRows: 'auto auto minmax(0, 1fr)',
+                          gridTemplateRows: 'auto auto auto minmax(0, 1fr)',
                           gap: 12,
                         }}
                       >
+                        <ItemSlicePanel
+                          locale={locale}
+                          atlasIds={iconAtlasIds}
+                          slice={selectedItemSlice}
+                          preferredRecipeId={
+                            selectedItemSlice
+                              ? preferredRecipeByItem[selectedItemSlice.itemId]
+                              : undefined
+                          }
+                          preferredRecipeOptions={selectedItemPreferredRecipeOptions}
+                          onSelectItem={setSelectedItemId}
+                          onMarkRaw={markItemAsRawInput}
+                          onUnmarkRaw={unmarkItemAsRawInput}
+                          onPreferredRecipeChange={updatePreferredRecipeForItem}
+                          onClearPreferredRecipe={clearPreferredRecipeForItem}
+                          onLocateInLedger={locateItemInLedger}
+                        />
                         <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
                         <div style={{ display: 'grid', gap: 8 }}>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1720,11 +1893,13 @@ export default function App() {
                                     >
                                       <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
                                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                                          <EntityLabel
+                                          <EntityLabelButton
                                             label={entry.itemName}
                                             iconKey={entry.iconKey}
+                                            atlasIds={iconAtlasIds}
                                             size={20}
                                             textStyle={{ fontWeight: 700 }}
+                                            onClick={() => setSelectedItemId(entry.itemId)}
                                           />
                                           {entry.isRawInput ? (
                                             <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>

@@ -59,6 +59,7 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
+    preferredRecipeByItem: {},
     recipePreferences: [],
     advancedOverridesText: '',
   });
@@ -86,6 +87,7 @@ test('computeWorkbenchSolve surfaces advanced-override parse errors without emit
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
+    preferredRecipeByItem: {},
     recipePreferences: [],
     advancedOverridesText: '{',
   });
@@ -107,6 +109,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
+    preferredRecipeByItem: {},
     recipePreferences: [],
     advancedOverridesText: '',
   });

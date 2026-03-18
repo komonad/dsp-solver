@@ -62,6 +62,17 @@ export interface LocaleBundle {
     editorDefaultsLabel: string;
     editorHelp: string;
     editorApplyFailedPrefix: string;
+    structuredEditorTitle: string;
+    structuredEditorHelp: string;
+    structuredEditorUnavailable: string;
+    structuredEditorTabs: {
+      items: string;
+      recipes: string;
+      buildingRules: string;
+      defaults: string;
+    };
+    structuredEditorAddButton: string;
+    structuredEditorRemoveButton: string;
   };
   solveRequest: {
     title: string;
@@ -262,6 +273,18 @@ const zhCN: LocaleBundle = {
     editorDefaultsLabel: '默认配置 JSON',
     editorHelp: '用于直接编辑 items / recipes / buildings 相关原始 JSON，并在浏览器内重新解析当前数据集。',
     editorApplyFailedPrefix: '应用编辑失败：',
+    structuredEditorTitle: '结构化编辑器',
+    structuredEditorHelp:
+      '用于直接编辑物品、配方、建筑规则和默认配置。字段修改会同步回上面的 JSON 文本。',
+    structuredEditorUnavailable: '当前 JSON 还无法解析，结构化编辑器暂不可用。',
+    structuredEditorTabs: {
+      items: '物品',
+      recipes: '配方',
+      buildingRules: '建筑规则',
+      defaults: '默认配置',
+    },
+    structuredEditorAddButton: '新增',
+    structuredEditorRemoveButton: '删除',
   },
   solveRequest: {
     title: '求解请求',

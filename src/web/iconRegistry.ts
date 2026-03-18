@@ -1,4 +1,6 @@
 import vanillaAtlas from './iconAtlas/vanillaAtlas.json';
+import genesisBookAtlas from './iconAtlas/GenesisBook.json';
+import moreMegaStructureAtlas from './iconAtlas/MoreMegaStructure.json';
 
 export interface IconSpriteDefinition {
   x: number;
@@ -9,19 +11,69 @@ export interface IconSpriteDefinition {
   total_height: number;
 }
 
-const VANILLA_ATLAS_SRC = './icons/Vanilla.png';
-const atlas = vanillaAtlas as Record<string, IconSpriteDefinition>;
+export interface IconAtlasDefinition {
+  src: string;
+  atlas: Record<string, IconSpriteDefinition>;
+}
 
-export function getIconSprite(iconKey: string | undefined): IconSpriteDefinition | undefined {
+export interface ResolvedIconSprite {
+  atlasId: string;
+  src: string;
+  sprite: IconSpriteDefinition;
+}
+
+const ICON_ATLASES: Record<string, IconAtlasDefinition> = {
+  Vanilla: {
+    src: './icons/Vanilla.png',
+    atlas: vanillaAtlas as Record<string, IconSpriteDefinition>,
+  },
+  GenesisBook: {
+    src: './icons/GenesisBook.png',
+    atlas: genesisBookAtlas as Record<string, IconSpriteDefinition>,
+  },
+  MoreMegaStructure: {
+    src: './icons/MoreMegaStructure.png',
+    atlas: moreMegaStructureAtlas as Record<string, IconSpriteDefinition>,
+  },
+};
+
+function normalizeAtlasIds(atlasIds?: string[]): string[] {
+  const normalized = (atlasIds ?? []).map(entry => entry.trim()).filter(Boolean);
+  return normalized.length > 0 ? normalized : ['Vanilla'];
+}
+
+export function getResolvedIconSprite(
+  iconKey: string | undefined,
+  atlasIds?: string[]
+): ResolvedIconSprite | undefined {
   if (!iconKey) {
     return undefined;
   }
 
-  return atlas[iconKey];
+  for (const atlasId of normalizeAtlasIds(atlasIds)) {
+    const atlas = ICON_ATLASES[atlasId];
+    const sprite = atlas?.atlas[iconKey];
+    if (atlas && sprite) {
+      return {
+        atlasId,
+        src: atlas.src,
+        sprite,
+      };
+    }
+  }
+
+  return undefined;
 }
 
-export function getIconAtlasSrc(iconKey: string | undefined): string | undefined {
-  return getIconSprite(iconKey) ? VANILLA_ATLAS_SRC : undefined;
+export function getIconSprite(
+  iconKey: string | undefined,
+  atlasIds?: string[]
+): IconSpriteDefinition | undefined {
+  return getResolvedIconSprite(iconKey, atlasIds)?.sprite;
+}
+
+export function getIconAtlasSrc(iconKey: string | undefined, atlasIds?: string[]): string | undefined {
+  return getResolvedIconSprite(iconKey, atlasIds)?.src;
 }
 
 export function getIconFallbackText(label: string): string {
