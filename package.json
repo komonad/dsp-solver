@@ -13,8 +13,10 @@
     "lint": "eslint src --ext .ts",
     "build:web": "webpack --config webpack.config.js",
     "watch:web": "webpack --config webpack.config.js --watch",
-    "serve:web": "cd dist-web && python -m http.server 8081",
-    "dev:web": "powershell -Command \"$watch = Start-Process cmd.exe -ArgumentList '/c','npm.cmd run watch:web' -PassThru; try { Set-Location 'dist-web'; python -m http.server 8081 } finally { if ($watch -and !$watch.HasExited) { Stop-Process -Id $watch.Id -Force } }\""
+    "host": "node scripts/host-web.mjs",
+    "host:web": "node scripts/host-web.mjs",
+    "serve:web": "node scripts/host-web.mjs",
+    "dev:web": "powershell -Command \"$watch = Start-Process cmd.exe -ArgumentList '/c','npm.cmd run watch:web' -PassThru; try { node scripts/host-web.mjs } finally { if ($watch -and !$watch.HasExited) { Stop-Process -Id $watch.Id -Force } }\""
   },
   "keywords": [
     "dyson-sphere-program",
