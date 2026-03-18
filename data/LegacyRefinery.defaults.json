@@ -1,0 +1,17 @@
+{
+  "buildingRules": [
+    {
+      "ID": 2304,
+      "Category": "refinery"
+    }
+  ],
+  "recipeModifierRules": [
+    {
+      "Code": 0,
+      "Kind": "none",
+      "SupportedModes": ["none"],
+      "MaxLevel": 0
+    }
+  ],
+  "recommendedRawItemIds": [1007, 1120]
+}

@@ -1,178 +1,10 @@
-import {
-  resolveCatalogModel,
-  type CatalogDefaultConfigSpec,
-  type VanillaDatasetSpec,
-} from '../src/catalog';
+import { loadResolvedCatalogFromFiles } from '../src/catalog';
 import { solveCatalogRequest, type SolveResult } from '../src/solver';
 
-function workEnergyForMW(megawatts: number): number {
-  return (megawatts * 1_000_000) / 60;
-}
-
-function buildLegacyRefineryDataset(): VanillaDatasetSpec {
-  return {
-    items: [
-      { ID: 1007, Type: 1, Name: 'Crude Oil', IconName: 'oil', GridIndex: 1 },
-      { ID: 1120, Type: 2, Name: 'Hydrogen', IconName: 'hydrogen', GridIndex: 2 },
-      { ID: 1117, Type: 2, Name: 'Light Oil', IconName: 'light-oil', GridIndex: 3 },
-      { ID: 1116, Type: 2, Name: 'Heavy Oil', IconName: 'heavy-oil', GridIndex: 4 },
-      {
-        ID: 2304,
-        Type: 6,
-        Name: 'Refinery',
-        IconName: 'refinery',
-        GridIndex: 5,
-        Speed: 1,
-        WorkEnergyPerTick: workEnergyForMW(1),
-      },
-    ],
-    recipes: [
-      {
-        ID: 1,
-        Type: 1,
-        Factories: [2304],
-        Name: 'Crude Oil Cracking',
-        Items: [1007, 1120],
-        ItemCounts: [1, 1],
-        Results: [1117, 1116],
-        ResultCounts: [2, 1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'refining-1',
-      },
-      {
-        ID: 2,
-        Type: 1,
-        Factories: [2304],
-        Name: 'Heavy Oil Refining',
-        Items: [1116, 1120],
-        ItemCounts: [1, 2],
-        Results: [1117],
-        ResultCounts: [1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'refining-2',
-      },
-    ],
-  };
-}
-
-function buildLegacyRefineryDefaults(): CatalogDefaultConfigSpec {
-  return {
-    buildingRules: [{ ID: 2304, Category: 'refinery' }],
-    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
-    recommendedRawItemIds: [1007, 1120],
-  };
-}
-
-function buildLegacyCycleDataset(): VanillaDatasetSpec {
-  return {
-    items: [
-      { ID: 10001, Type: 1, Name: 'Gas Cloud', IconName: 'gas-cloud', GridIndex: 1 },
-      { ID: 10002, Type: 1, Name: 'Bio Ethanol', IconName: 'bio-ethanol', GridIndex: 2 },
-      { ID: 10003, Type: 2, Name: 'Fullerol', IconName: 'fullerol', GridIndex: 3 },
-      { ID: 11001, Type: 2, Name: 'Graphene', IconName: 'graphene', GridIndex: 4 },
-      { ID: 11002, Type: 2, Name: 'Hydrogen', IconName: 'hydrogen', GridIndex: 5 },
-      { ID: 11003, Type: 2, Name: 'Methane', IconName: 'methane', GridIndex: 6 },
-      { ID: 11004, Type: 2, Name: 'Fullerene', IconName: 'fullerene', GridIndex: 7 },
-      { ID: 11005, Type: 2, Name: 'Fullersilver', IconName: 'fullersilver', GridIndex: 8 },
-      { ID: 12001, Type: 1, Name: 'Refined Silver', IconName: 'refined-silver', GridIndex: 9 },
-      {
-        ID: 2309,
-        Type: 6,
-        Name: 'Chemical Plant',
-        IconName: 'chemical-plant',
-        GridIndex: 10,
-        Speed: 1,
-        WorkEnergyPerTick: workEnergyForMW(1),
-      },
-      {
-        ID: 2313,
-        Type: 6,
-        Name: 'Low Temperature Chemical Plant',
-        IconName: 'low-temp-chemical-plant',
-        GridIndex: 11,
-        Speed: 1,
-        WorkEnergyPerTick: workEnergyForMW(0.9),
-      },
-      {
-        ID: 2314,
-        Type: 6,
-        Name: 'Quantum Chemical Plant',
-        IconName: 'quantum-chemical-plant',
-        GridIndex: 12,
-        Speed: 1,
-        WorkEnergyPerTick: workEnergyForMW(1.44),
-      },
-    ],
-    recipes: [
-      {
-        ID: 90001,
-        Type: 1,
-        Factories: [2309, 2313, 2314],
-        Name: 'Gas Cloud Separation',
-        Items: [10001],
-        ItemCounts: [1],
-        Results: [11003, 11004],
-        ResultCounts: [1, 1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'gas-separation',
-      },
-      {
-        ID: 90002,
-        Type: 1,
-        Factories: [2309, 2313, 2314],
-        Name: 'Methane Cracking',
-        Items: [11003],
-        ItemCounts: [1],
-        Results: [11001, 11002],
-        ResultCounts: [1, 1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'methane-cracking',
-      },
-      {
-        ID: 90003,
-        Type: 1,
-        Factories: [2309, 2313, 2314],
-        Name: 'Fullersilver Synthesis',
-        Items: [10003, 12001, 11004],
-        ItemCounts: [1, 1, 1],
-        Results: [11005],
-        ResultCounts: [1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'fullersilver',
-      },
-      {
-        ID: 90004,
-        Type: 1,
-        Factories: [2309, 2313, 2314],
-        Name: 'Fullerol Synthesis',
-        Items: [11005, 10002, 11004],
-        ItemCounts: [1, 1, 1],
-        Results: [10003],
-        ResultCounts: [1],
-        TimeSpend: 60,
-        Proliferator: 0,
-        IconName: 'fullerol',
-      },
-    ],
-  };
-}
-
-function buildLegacyCycleDefaults(): CatalogDefaultConfigSpec {
-  return {
-    buildingRules: [
-      { ID: 2309, Category: 'chemical' },
-      { ID: 2313, Category: 'chemical', IntrinsicProductivityBonus: 0.25 },
-      { ID: 2314, Category: 'chemical', IntrinsicProductivityBonus: 1 },
-    ],
-    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
-    recommendedRawItemIds: [10001, 10002, 12001],
-  };
-}
+const legacyRefineryDatasetPath = './data/LegacyRefinery.json';
+const legacyRefineryDefaultsPath = './data/LegacyRefinery.defaults.json';
+const legacyCycleDatasetPath = './data/LegacyCycle.json';
+const legacyCycleDefaultsPath = './data/LegacyCycle.defaults.json';
 
 function getPlan(result: SolveResult, recipeId: string) {
   return result.recipePlans.find(plan => plan.recipeId === recipeId);
@@ -194,8 +26,11 @@ function getItemBalance(result: SolveResult, itemId: string) {
   return entry;
 }
 
-test('legacy refinery scenario uses both refinery recipes to eliminate heavy-oil surplus', () => {
-  const catalog = resolveCatalogModel(buildLegacyRefineryDataset(), buildLegacyRefineryDefaults());
+test('legacy refinery scenario uses both refinery recipes to eliminate heavy-oil surplus', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    legacyRefineryDatasetPath,
+    legacyRefineryDefaultsPath
+  );
   const result = solveCatalogRequest(catalog, {
     targets: [{ itemId: '1117', ratePerMin: 60 }],
     objective: 'min_external_input',
@@ -230,8 +65,11 @@ test.each([
   { targetItemId: '10003', targetName: 'fullerol' },
 ])(
   'legacy cycle scenario is infeasible with only the regular chemical plant for $targetName exports',
-  ({ targetItemId }) => {
-    const catalog = resolveCatalogModel(buildLegacyCycleDataset(), buildLegacyCycleDefaults());
+  async ({ targetItemId }) => {
+    const catalog = await loadResolvedCatalogFromFiles(
+      legacyCycleDatasetPath,
+      legacyCycleDefaultsPath
+    );
     const result = solveCatalogRequest(catalog, {
       targets: [{ itemId: targetItemId, ratePerMin: 60 }],
       objective: 'min_external_input',
@@ -243,8 +81,11 @@ test.each([
   }
 );
 
-test('legacy cycle scenario becomes feasible with the low-temperature chemical plant 25% intrinsic productivity', () => {
-  const catalog = resolveCatalogModel(buildLegacyCycleDataset(), buildLegacyCycleDefaults());
+test('legacy cycle scenario becomes feasible with the low-temperature chemical plant 25% intrinsic productivity', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    legacyCycleDatasetPath,
+    legacyCycleDefaultsPath
+  );
   const result = solveCatalogRequest(catalog, {
     targets: [{ itemId: '11005', ratePerMin: 60 }],
     objective: 'min_external_input',
@@ -289,8 +130,11 @@ test.each([
   },
 ])(
   'legacy cycle scenario prefers the quantum chemical plant for $targetName exports',
-  ({ targetItemId, expectedExternal, expectedRuns }) => {
-    const catalog = resolveCatalogModel(buildLegacyCycleDataset(), buildLegacyCycleDefaults());
+  async ({ targetItemId, expectedExternal, expectedRuns }) => {
+    const catalog = await loadResolvedCatalogFromFiles(
+      legacyCycleDatasetPath,
+      legacyCycleDefaultsPath
+    );
     const result = solveCatalogRequest(catalog, {
       targets: [{ itemId: targetItemId, ratePerMin: 60 }],
       objective: 'min_external_input',

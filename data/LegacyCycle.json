@@ -1,0 +1,148 @@
+{
+  "items": [
+    {
+      "ID": 10001,
+      "Type": 1,
+      "Name": "Gas Cloud",
+      "IconName": "gas-cloud",
+      "GridIndex": 1
+    },
+    {
+      "ID": 10002,
+      "Type": 1,
+      "Name": "Bio Ethanol",
+      "IconName": "bio-ethanol",
+      "GridIndex": 2
+    },
+    {
+      "ID": 10003,
+      "Type": 2,
+      "Name": "Fullerol",
+      "IconName": "fullerol",
+      "GridIndex": 3
+    },
+    {
+      "ID": 11001,
+      "Type": 2,
+      "Name": "Graphene",
+      "IconName": "graphene",
+      "GridIndex": 4
+    },
+    {
+      "ID": 11002,
+      "Type": 2,
+      "Name": "Hydrogen",
+      "IconName": "hydrogen",
+      "GridIndex": 5
+    },
+    {
+      "ID": 11003,
+      "Type": 2,
+      "Name": "Methane",
+      "IconName": "methane",
+      "GridIndex": 6
+    },
+    {
+      "ID": 11004,
+      "Type": 2,
+      "Name": "Fullerene",
+      "IconName": "fullerene",
+      "GridIndex": 7
+    },
+    {
+      "ID": 11005,
+      "Type": 2,
+      "Name": "Fullersilver",
+      "IconName": "fullersilver",
+      "GridIndex": 8
+    },
+    {
+      "ID": 12001,
+      "Type": 1,
+      "Name": "Refined Silver",
+      "IconName": "refined-silver",
+      "GridIndex": 9
+    },
+    {
+      "ID": 2309,
+      "Type": 6,
+      "Name": "Chemical Plant",
+      "IconName": "chemical-plant",
+      "GridIndex": 10,
+      "Speed": 1,
+      "WorkEnergyPerTick": 16666.666666666668
+    },
+    {
+      "ID": 2313,
+      "Type": 6,
+      "Name": "Low Temperature Chemical Plant",
+      "IconName": "low-temp-chemical-plant",
+      "GridIndex": 11,
+      "Speed": 1,
+      "WorkEnergyPerTick": 15000
+    },
+    {
+      "ID": 2314,
+      "Type": 6,
+      "Name": "Quantum Chemical Plant",
+      "IconName": "quantum-chemical-plant",
+      "GridIndex": 12,
+      "Speed": 1,
+      "WorkEnergyPerTick": 24000
+    }
+  ],
+  "recipes": [
+    {
+      "ID": 90001,
+      "Type": 1,
+      "Factories": [2309, 2313, 2314],
+      "Name": "Gas Cloud Separation",
+      "Items": [10001],
+      "ItemCounts": [1],
+      "Results": [11003, 11004],
+      "ResultCounts": [1, 1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "gas-separation"
+    },
+    {
+      "ID": 90002,
+      "Type": 1,
+      "Factories": [2309, 2313, 2314],
+      "Name": "Methane Cracking",
+      "Items": [11003],
+      "ItemCounts": [1],
+      "Results": [11001, 11002],
+      "ResultCounts": [1, 1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "methane-cracking"
+    },
+    {
+      "ID": 90003,
+      "Type": 1,
+      "Factories": [2309, 2313, 2314],
+      "Name": "Fullersilver Synthesis",
+      "Items": [10003, 12001, 11004],
+      "ItemCounts": [1, 1, 1],
+      "Results": [11005],
+      "ResultCounts": [1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "fullersilver"
+    },
+    {
+      "ID": 90004,
+      "Type": 1,
+      "Factories": [2309, 2313, 2314],
+      "Name": "Fullerol Synthesis",
+      "Items": [11005, 10002, 11004],
+      "ItemCounts": [1, 1, 1],
+      "Results": [10003],
+      "ResultCounts": [1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "fullerol"
+    }
+  ]
+}

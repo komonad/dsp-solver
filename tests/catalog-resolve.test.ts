@@ -1,6 +1,7 @@
 import { readFileSync } from 'fs';
 import {
   loadCatalogDefaultConfigFromFile,
+  loadResolvedCatalogFromFiles,
   resolveCatalogModel,
   type VanillaDatasetSpec,
   validateCatalogDefaultConfigSpec,
@@ -139,3 +140,26 @@ test('resolveCatalogModel still returns a valid fallback model without default c
   expect(ironOre?.kind).toBe('intermediate');
   expect(resolved.rawItemIds).not.toContain('1001');
 });
+
+test.each([
+  {
+    datasetPath: './data/LegacyRefinery.json',
+    defaultsPath: './data/LegacyRefinery.defaults.json',
+    expectedRecipeCount: 2,
+    expectedBuildingCount: 1,
+  },
+  {
+    datasetPath: './data/LegacyCycle.json',
+    defaultsPath: './data/LegacyCycle.defaults.json',
+    expectedRecipeCount: 4,
+    expectedBuildingCount: 3,
+  },
+])(
+  'loadResolvedCatalogFromFiles supports scenario dataset $datasetPath',
+  async ({ datasetPath, defaultsPath, expectedRecipeCount, expectedBuildingCount }) => {
+    const resolved = await loadResolvedCatalogFromFiles(datasetPath, defaultsPath);
+
+    expect(resolved.recipes).toHaveLength(expectedRecipeCount);
+    expect(resolved.buildings).toHaveLength(expectedBuildingCount);
+  }
+);

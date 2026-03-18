@@ -25,6 +25,20 @@ export const DATASET_PRESETS: DatasetPresetDefinition[] = [
     defaultConfigPath: './DemoSmelting.defaults.json',
   },
   {
+    id: 'legacy-refinery',
+    label: 'Legacy Refinery',
+    description: 'The light-oil scenario that closes heavy oil through the paired refinery recipes.',
+    datasetPath: './LegacyRefinery.json',
+    defaultConfigPath: './LegacyRefinery.defaults.json',
+  },
+  {
+    id: 'legacy-cycle',
+    label: 'Legacy Cycle',
+    description: 'The fullerol/fullersilver loop with low-temperature and quantum chemical plant productivity bonuses.',
+    datasetPath: './LegacyCycle.json',
+    defaultConfigPath: './LegacyCycle.defaults.json',
+  },
+  {
     id: 'custom',
     label: 'Custom Paths',
     description: 'Load any dataset/default-config pair that is reachable from the current web root.',

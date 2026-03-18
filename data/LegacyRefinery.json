@@ -1,0 +1,69 @@
+{
+  "items": [
+    {
+      "ID": 1007,
+      "Type": 1,
+      "Name": "Crude Oil",
+      "IconName": "oil",
+      "GridIndex": 1
+    },
+    {
+      "ID": 1120,
+      "Type": 2,
+      "Name": "Hydrogen",
+      "IconName": "hydrogen",
+      "GridIndex": 2
+    },
+    {
+      "ID": 1117,
+      "Type": 2,
+      "Name": "Light Oil",
+      "IconName": "light-oil",
+      "GridIndex": 3
+    },
+    {
+      "ID": 1116,
+      "Type": 2,
+      "Name": "Heavy Oil",
+      "IconName": "heavy-oil",
+      "GridIndex": 4
+    },
+    {
+      "ID": 2304,
+      "Type": 6,
+      "Name": "Refinery",
+      "IconName": "refinery",
+      "GridIndex": 5,
+      "Speed": 1,
+      "WorkEnergyPerTick": 16666.666666666668
+    }
+  ],
+  "recipes": [
+    {
+      "ID": 1,
+      "Type": 1,
+      "Factories": [2304],
+      "Name": "Crude Oil Cracking",
+      "Items": [1007, 1120],
+      "ItemCounts": [1, 1],
+      "Results": [1117, 1116],
+      "ResultCounts": [2, 1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "refining-1"
+    },
+    {
+      "ID": 2,
+      "Type": 1,
+      "Factories": [2304],
+      "Name": "Heavy Oil Refining",
+      "Items": [1116, 1120],
+      "ItemCounts": [1, 2],
+      "Results": [1117],
+      "ResultCounts": [1],
+      "TimeSpend": 60,
+      "Proliferator": 0,
+      "IconName": "refining-2"
+    }
+  ]
+}

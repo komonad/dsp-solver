@@ -1,0 +1,27 @@
+{
+  "buildingRules": [
+    {
+      "ID": 2309,
+      "Category": "chemical"
+    },
+    {
+      "ID": 2313,
+      "Category": "chemical",
+      "IntrinsicProductivityBonus": 0.25
+    },
+    {
+      "ID": 2314,
+      "Category": "chemical",
+      "IntrinsicProductivityBonus": 1
+    }
+  ],
+  "recipeModifierRules": [
+    {
+      "Code": 0,
+      "Kind": "none",
+      "SupportedModes": ["none"],
+      "MaxLevel": 0
+    }
+  ],
+  "recommendedRawItemIds": [10001, 10002, 12001]
+}
