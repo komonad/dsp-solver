@@ -80,6 +80,49 @@ const subtleButtonStyle: React.CSSProperties = {
   color: '#183359',
 };
 
+const resultTopGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gap: 20,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+};
+
+const resultBodyGridStyle: React.CSSProperties = {
+  display: 'grid',
+  gap: 20,
+  gridTemplateColumns: 'minmax(0, 3fr) minmax(280px, 1fr)',
+  alignItems: 'start',
+};
+
+const resultMainColumnStyle: React.CSSProperties = {
+  display: 'grid',
+  gap: 20,
+};
+
+const resultSideColumnStyle: React.CSSProperties = {
+  display: 'grid',
+  gap: 20,
+  position: 'sticky',
+  top: 24,
+};
+
+const compactLedgerButtonStyle: React.CSSProperties = {
+  ...subtleButtonStyle,
+  minHeight: 34,
+  padding: '6px 10px',
+  fontSize: 12,
+  fontWeight: 700,
+};
+
+const collapsibleSectionStyle: React.CSSProperties = {
+  borderTop: '1px solid rgba(24, 51, 89, 0.10)',
+  paddingTop: 12,
+};
+
+const summaryStyle: React.CSSProperties = {
+  cursor: 'pointer',
+  fontWeight: 700,
+};
+
 function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
   return (
     catalog.items.find(item => item.kind === 'product')?.itemId ??
@@ -117,7 +160,6 @@ export default function App() {
     useState<WorkbenchProliferatorPolicy>('auto');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
   const [disabledRawInputItemIds, setDisabledRawInputItemIds] = useState<string[]>([]);
-  const [rawDraftItemId, setRawDraftItemId] = useState('');
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
@@ -150,7 +192,6 @@ export default function App() {
       setProliferatorPolicy('auto');
       setRawInputItemIds([]);
       setDisabledRawInputItemIds([]);
-      setRawDraftItemId(nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ?? '');
       setDisabledRecipeIds([]);
       setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
       setDisabledBuildingIds(nextCatalog.recommendedDisabledBuildingIds);
@@ -181,18 +222,6 @@ export default function App() {
     [catalog]
   );
 
-  const effectiveRawInputSet = useMemo(() => {
-    const effectiveRawItems = new Set<string>(catalog?.rawItemIds ?? []);
-    disabledRawInputItemIds.forEach(itemId => effectiveRawItems.delete(itemId));
-    rawInputItemIds.forEach(itemId => effectiveRawItems.add(itemId));
-    return effectiveRawItems;
-  }, [catalog, disabledRawInputItemIds, rawInputItemIds]);
-
-  const rawOptions = useMemo(
-    () => itemOptions.filter(item => !effectiveRawInputSet.has(item.itemId)),
-    [effectiveRawInputSet, itemOptions]
-  );
-
   const recipeOptions = useMemo(
     () => catalog?.recipes.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
     [catalog]
@@ -220,16 +249,6 @@ export default function App() {
       ),
     [recipeOptions, recipePreferences]
   );
-
-  useEffect(() => {
-    if (!rawDraftItemId && rawOptions.length > 0) {
-      setRawDraftItemId(rawOptions[0].itemId);
-      return;
-    }
-    if (rawDraftItemId && rawOptions.length > 0 && !rawOptions.some(item => item.itemId === rawDraftItemId)) {
-      setRawDraftItemId(rawOptions[0].itemId);
-    }
-  }, [rawDraftItemId, rawOptions]);
 
   useEffect(() => {
     if (!disabledRecipeDraftId && disableRecipeOptions.length > 0) {
@@ -410,17 +429,6 @@ export default function App() {
     }
   }
 
-  function addRawOverride() {
-    if (!rawDraftItemId || effectiveRawInputSet.has(rawDraftItemId)) {
-      return;
-    }
-    markItemAsRawInput(rawDraftItemId);
-  }
-
-  function removeRawOverride(itemId: string) {
-    setRawInputItemIds(current => current.filter(entry => entry !== itemId));
-  }
-
   function addDisabledRecipe() {
     if (!disabledRecipeDraftId || disabledRecipeIds.includes(disabledRecipeDraftId)) {
       return;
@@ -522,7 +530,7 @@ export default function App() {
           style={{
             display: 'grid',
             gap: 20,
-            gridTemplateColumns: 'minmax(320px, 420px) minmax(0, 1fr)',
+            gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)',
             alignItems: 'start',
           }}
         >
@@ -670,335 +678,293 @@ export default function App() {
                   </select>
                 </div>
 
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                    <select
-                      value={rawDraftItemId}
-                      onChange={event => setRawDraftItemId(event.target.value)}
-                      style={inputStyle}
-                      disabled={!catalog || rawOptions.length === 0}
-                    >
-                      {rawOptions.map(item => (
-                        <option key={item.itemId} value={item.itemId}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
+                <details style={collapsibleSectionStyle}>
+                  <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>
+                  <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                      <select
+                        value={disabledRecipeDraftId}
+                        onChange={event => setDisabledRecipeDraftId(event.target.value)}
+                        style={inputStyle}
+                        disabled={!catalog || disableRecipeOptions.length === 0}
+                      >
+                        {disableRecipeOptions.map(recipe => (
+                          <option key={recipe.recipeId} value={recipe.recipeId}>
+                            {recipe.name}
+                          </option>
+                        ))}
+                      </select>
 
-                    <button type="button" onClick={addRawOverride} style={subtleButtonStyle} disabled={!rawDraftItemId}>
-                      {bundle.solveRequest.markAsRaw}
-                    </button>
-                  </div>
+                      <button type="button" onClick={addDisabledRecipe} style={subtleButtonStyle} disabled={!disabledRecipeDraftId}>
+                        {bundle.solveRequest.disableButton}
+                      </button>
+                    </div>
 
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {rawInputItemIds.length === 0 ? (
-                      <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noRawOverrides}</span>
-                    ) : (
-                      rawInputItemIds.map(itemId => (
-                        <button
-                          key={itemId}
-                          type="button"
-                          onClick={() => removeRawOverride(itemId)}
-                          style={{
-                            borderRadius: 999,
-                            border: '1px solid rgba(24, 51, 89, 0.16)',
-                            background: 'rgba(24, 51, 89, 0.06)',
-                            color: '#183359',
-                            padding: '6px 12px',
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {(catalog?.itemMap.get(itemId)?.name ?? itemId) + ` ${bundle.common.removeSuffix}`}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.solveRequest.disabledRecipesLabel}</div>
-                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                    <select
-                      value={disabledRecipeDraftId}
-                      onChange={event => setDisabledRecipeDraftId(event.target.value)}
-                      style={inputStyle}
-                      disabled={!catalog || disableRecipeOptions.length === 0}
-                    >
-                      {disableRecipeOptions.map(recipe => (
-                        <option key={recipe.recipeId} value={recipe.recipeId}>
-                          {recipe.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button type="button" onClick={addDisabledRecipe} style={subtleButtonStyle} disabled={!disabledRecipeDraftId}>
-                      {bundle.solveRequest.disableButton}
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {disabledRecipeIds.length === 0 ? (
-                      <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledRecipes}</span>
-                    ) : (
-                      disabledRecipeIds.map(recipeId => (
-                        <button
-                          key={recipeId}
-                          type="button"
-                          onClick={() => removeDisabledRecipe(recipeId)}
-                          style={{
-                            borderRadius: 999,
-                            border: '1px solid rgba(24, 51, 89, 0.16)',
-                            background: 'rgba(24, 51, 89, 0.06)',
-                            color: '#183359',
-                            padding: '6px 12px',
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.solveRequest.disabledBuildingsLabel}</div>
-                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                    <select
-                      value={disabledBuildingDraftId}
-                      onChange={event => setDisabledBuildingDraftId(event.target.value)}
-                      style={inputStyle}
-                      disabled={!catalog || disableBuildingOptions.length === 0}
-                    >
-                      {disableBuildingOptions.map(building => (
-                        <option key={building.buildingId} value={building.buildingId}>
-                          {building.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button type="button" onClick={addDisabledBuilding} style={subtleButtonStyle} disabled={!disabledBuildingDraftId}>
-                      {bundle.solveRequest.disableButton}
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {disabledBuildingIds.length === 0 ? (
-                      <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledBuildings}</span>
-                    ) : (
-                      disabledBuildingIds.map(buildingId => (
-                        <button
-                          key={buildingId}
-                          type="button"
-                          onClick={() => removeDisabledBuilding(buildingId)}
-                          style={{
-                            borderRadius: 999,
-                            border: '1px solid rgba(24, 51, 89, 0.16)',
-                            background: 'rgba(24, 51, 89, 0.06)',
-                            color: '#183359',
-                            padding: '6px 12px',
-                            fontSize: 13,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ` ${bundle.common.removeSuffix}`}
-                        </button>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                    {bundle.solveRequest.recipePreferencesLabel}
-                  </div>
-                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                    <select
-                      value={recipePreferenceDraftId}
-                      onChange={event => setRecipePreferenceDraftId(event.target.value)}
-                      style={inputStyle}
-                      disabled={!catalog || recipePreferenceOptions.length === 0}
-                    >
-                      {recipePreferenceOptions.map(recipe => (
-                        <option key={recipe.recipeId} value={recipe.recipeId}>
-                          {recipe.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      type="button"
-                      onClick={addRecipePreference}
-                      style={subtleButtonStyle}
-                      disabled={!recipePreferenceDraftId}
-                    >
-                      {bundle.solveRequest.addPreference}
-                    </button>
-                  </div>
-
-                  <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13, lineHeight: 1.5 }}>
-                    {bundle.solveRequest.recipePreferencesHelp}
-                  </div>
-
-                  {recipePreferences.length === 0 ? (
-                    <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noRecipePreferences}</div>
-                  ) : (
-                    <div style={{ display: 'grid', gap: 12 }}>
-                      {recipePreferences.map(preference => {
-                        const recipe = catalog?.recipeMap.get(preference.recipeId);
-                        const buildingChoices = getRecipeBuildingOptions(preference.recipeId);
-                        const modeChoices = getRecipeModeOptions(preference.recipeId);
-                        const levelChoices = getRecipeLevelOptions(preference.recipeId);
-                        const levelSelectDisabled =
-                          proliferatorPolicy === 'disable_all' ||
-                          levelChoices.length === 0 ||
-                          preference.preferredProliferatorMode === 'none';
-
-                        return (
-                          <div
-                            key={preference.recipeId}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {disabledRecipeIds.length === 0 ? (
+                        <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledRecipes}</span>
+                      ) : (
+                        disabledRecipeIds.map(recipeId => (
+                          <button
+                            key={recipeId}
+                            type="button"
+                            onClick={() => removeDisabledRecipe(recipeId)}
                             style={{
-                              borderRadius: 16,
-                              border: '1px solid rgba(24, 51, 89, 0.12)',
-                              background: 'rgba(255,255,255,0.6)',
-                              padding: 14,
-                              display: 'grid',
-                              gap: 12,
+                              borderRadius: 999,
+                              border: '1px solid rgba(24, 51, 89, 0.16)',
+                              background: 'rgba(24, 51, 89, 0.06)',
+                              color: '#183359',
+                              padding: '6px 12px',
+                              fontSize: 13,
+                              cursor: 'pointer',
                             }}
                           >
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                gap: 12,
-                                alignItems: 'center',
-                                flexWrap: 'wrap',
-                              }}
-                            >
-                              <div style={{ fontWeight: 700 }}>{recipe?.name ?? preference.recipeId}</div>
-                              <button
-                                type="button"
-                                onClick={() => removeRecipePreference(preference.recipeId)}
-                                style={subtleButtonStyle}
-                              >
-                                {bundle.solveRequest.removeTarget}
-                              </button>
-                            </div>
-
-                            <div
-                              style={{
-                                display: 'grid',
-                                gap: 10,
-                                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                              }}
-                            >
-                              <div style={{ display: 'grid', gap: 6 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                  {bundle.solveRequest.preferredBuildingLabel}
-                                </div>
-                                <select
-                                  value={preference.preferredBuildingId}
-                                  onChange={event =>
-                                    updateRecipePreference(preference.recipeId, {
-                                      preferredBuildingId: event.target.value,
-                                    })
-                                  }
-                                  style={inputStyle}
-                                >
-                                  <option value="">{bundle.common.auto}</option>
-                                  {buildingChoices.map(building => (
-                                    <option key={building.buildingId} value={building.buildingId}>
-                                      {building.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div style={{ display: 'grid', gap: 6 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                  {bundle.solveRequest.preferredSprayModeLabel}
-                                </div>
-                                <select
-                                  value={preference.preferredProliferatorMode}
-                                  onChange={event => {
-                                    const nextMode = event.target.value as '' | ProliferatorMode;
-                                    updateRecipePreference(preference.recipeId, {
-                                      preferredProliferatorMode: nextMode,
-                                      preferredProliferatorLevel:
-                                        nextMode === 'none'
-                                          ? ''
-                                          : preference.preferredProliferatorLevel,
-                                    });
-                                  }}
-                                  style={inputStyle}
-                                  disabled={proliferatorPolicy === 'disable_all'}
-                                >
-                                  <option value="">{bundle.common.auto}</option>
-                                  {modeChoices.map(mode => (
-                                    <option key={mode} value={mode}>
-                                      {formatProliferatorMode(mode, locale)}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              <div style={{ display: 'grid', gap: 6 }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                  {bundle.solveRequest.preferredSprayLevelLabel}
-                                </div>
-                                <select
-                                  value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
-                                  onChange={event =>
-                                    updateRecipePreference(preference.recipeId, {
-                                      preferredProliferatorLevel: event.target.value
-                                        ? Number(event.target.value)
-                                        : '',
-                                    })
-                                  }
-                                  style={inputStyle}
-                                  disabled={levelSelectDisabled}
-                                >
-                                  <option value="">{bundle.common.auto}</option>
-                                  {levelChoices.map(level => (
-                                    <option key={level} value={String(level)}>
-                                      {`${bundle.solveRequest.levelPrefix} ${level}`}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            {(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
+                          </button>
+                        ))
+                      )}
                     </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                    {bundle.solveRequest.advancedOverridesLabel}
                   </div>
-                  <textarea
-                    value={advancedOverridesText}
-                    onChange={event => setAdvancedOverridesText(event.target.value)}
-                    placeholder={'{\n  "preferredBuildingByRecipe": { "1": "5002" },\n  "forcedProliferatorModeByRecipe": { "2": "speed" }\n}'}
-                    style={{
-                      ...inputStyle,
-                      minHeight: 140,
-                      resize: 'vertical',
-                      fontFamily: '"IBM Plex Mono", monospace',
-                    }}
-                  />
-                  {parsedOverrides.error ? (
-                    <div style={{ color: '#8e2020', fontSize: 13 }}>{parsedOverrides.error}</div>
-                  ) : (
-                    <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>
-                      {bundle.solveRequest.advancedOverridesHelp}
+                </details>
+
+                <details style={collapsibleSectionStyle}>
+                  <summary style={summaryStyle}>{bundle.solveRequest.disabledBuildingsLabel}</summary>
+                  <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                      <select
+                        value={disabledBuildingDraftId}
+                        onChange={event => setDisabledBuildingDraftId(event.target.value)}
+                        style={inputStyle}
+                        disabled={!catalog || disableBuildingOptions.length === 0}
+                      >
+                        {disableBuildingOptions.map(building => (
+                          <option key={building.buildingId} value={building.buildingId}>
+                            {building.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button type="button" onClick={addDisabledBuilding} style={subtleButtonStyle} disabled={!disabledBuildingDraftId}>
+                        {bundle.solveRequest.disableButton}
+                      </button>
                     </div>
-                  )}
-                </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {disabledBuildingIds.length === 0 ? (
+                        <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledBuildings}</span>
+                      ) : (
+                        disabledBuildingIds.map(buildingId => (
+                          <button
+                            key={buildingId}
+                            type="button"
+                            onClick={() => removeDisabledBuilding(buildingId)}
+                            style={{
+                              borderRadius: 999,
+                              border: '1px solid rgba(24, 51, 89, 0.16)',
+                              background: 'rgba(24, 51, 89, 0.06)',
+                              color: '#183359',
+                              padding: '6px 12px',
+                              fontSize: 13,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ` ${bundle.common.removeSuffix}`}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </details>
+
+                <details style={collapsibleSectionStyle}>
+                  <summary style={summaryStyle}>{bundle.solveRequest.recipePreferencesLabel}</summary>
+                  <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                      <select
+                        value={recipePreferenceDraftId}
+                        onChange={event => setRecipePreferenceDraftId(event.target.value)}
+                        style={inputStyle}
+                        disabled={!catalog || recipePreferenceOptions.length === 0}
+                      >
+                        {recipePreferenceOptions.map(recipe => (
+                          <option key={recipe.recipeId} value={recipe.recipeId}>
+                            {recipe.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={addRecipePreference}
+                        style={subtleButtonStyle}
+                        disabled={!recipePreferenceDraftId}
+                      >
+                        {bundle.solveRequest.addPreference}
+                      </button>
+                    </div>
+
+                    <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13, lineHeight: 1.5 }}>
+                      {bundle.solveRequest.recipePreferencesHelp}
+                    </div>
+
+                    {recipePreferences.length === 0 ? (
+                      <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noRecipePreferences}</div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: 12 }}>
+                        {recipePreferences.map(preference => {
+                          const recipe = catalog?.recipeMap.get(preference.recipeId);
+                          const buildingChoices = getRecipeBuildingOptions(preference.recipeId);
+                          const modeChoices = getRecipeModeOptions(preference.recipeId);
+                          const levelChoices = getRecipeLevelOptions(preference.recipeId);
+                          const levelSelectDisabled =
+                            proliferatorPolicy === 'disable_all' ||
+                            levelChoices.length === 0 ||
+                            preference.preferredProliferatorMode === 'none';
+
+                          return (
+                            <div
+                              key={preference.recipeId}
+                              style={{
+                                borderRadius: 16,
+                                border: '1px solid rgba(24, 51, 89, 0.12)',
+                                background: 'rgba(255,255,255,0.6)',
+                                padding: 14,
+                                display: 'grid',
+                                gap: 12,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  gap: 12,
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <div style={{ fontWeight: 700 }}>{recipe?.name ?? preference.recipeId}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeRecipePreference(preference.recipeId)}
+                                  style={subtleButtonStyle}
+                                >
+                                  {bundle.solveRequest.removeTarget}
+                                </button>
+                              </div>
+
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gap: 10,
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                }}
+                              >
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                    {bundle.solveRequest.preferredBuildingLabel}
+                                  </div>
+                                  <select
+                                    value={preference.preferredBuildingId}
+                                    onChange={event =>
+                                      updateRecipePreference(preference.recipeId, {
+                                        preferredBuildingId: event.target.value,
+                                      })
+                                    }
+                                    style={inputStyle}
+                                  >
+                                    <option value="">{bundle.common.auto}</option>
+                                    {buildingChoices.map(building => (
+                                      <option key={building.buildingId} value={building.buildingId}>
+                                        {building.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                    {bundle.solveRequest.preferredSprayModeLabel}
+                                  </div>
+                                  <select
+                                    value={preference.preferredProliferatorMode}
+                                    onChange={event => {
+                                      const nextMode = event.target.value as '' | ProliferatorMode;
+                                      updateRecipePreference(preference.recipeId, {
+                                        preferredProliferatorMode: nextMode,
+                                        preferredProliferatorLevel:
+                                          nextMode === 'none'
+                                            ? ''
+                                            : preference.preferredProliferatorLevel,
+                                      });
+                                    }}
+                                    style={inputStyle}
+                                    disabled={proliferatorPolicy === 'disable_all'}
+                                  >
+                                    <option value="">{bundle.common.auto}</option>
+                                    {modeChoices.map(mode => (
+                                      <option key={mode} value={mode}>
+                                        {formatProliferatorMode(mode, locale)}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                    {bundle.solveRequest.preferredSprayLevelLabel}
+                                  </div>
+                                  <select
+                                    value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
+                                    onChange={event =>
+                                      updateRecipePreference(preference.recipeId, {
+                                        preferredProliferatorLevel: event.target.value
+                                          ? Number(event.target.value)
+                                          : '',
+                                      })
+                                    }
+                                    style={inputStyle}
+                                    disabled={levelSelectDisabled}
+                                  >
+                                    <option value="">{bundle.common.auto}</option>
+                                    {levelChoices.map(level => (
+                                      <option key={level} value={String(level)}>
+                                        {`${bundle.solveRequest.levelPrefix} ${level}`}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </details>
+
+                <details style={collapsibleSectionStyle}>
+                  <summary style={summaryStyle}>{bundle.solveRequest.advancedOverridesLabel}</summary>
+                  <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                    <textarea
+                      value={advancedOverridesText}
+                      onChange={event => setAdvancedOverridesText(event.target.value)}
+                      placeholder={'{\n  "preferredBuildingByRecipe": { "1": "5002" },\n  "forcedProliferatorModeByRecipe": { "2": "speed" }\n}'}
+                      style={{
+                        ...inputStyle,
+                        minHeight: 140,
+                        resize: 'vertical',
+                        fontFamily: '"IBM Plex Mono", monospace',
+                      }}
+                    />
+                    {parsedOverrides.error ? (
+                      <div style={{ color: '#8e2020', fontSize: 13 }}>{parsedOverrides.error}</div>
+                    ) : (
+                      <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>
+                        {bundle.solveRequest.advancedOverridesHelp}
+                      </div>
+                    )}
+                  </div>
+                </details>
 
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
                   {bundle.solveRequest.autoSolveHint}
@@ -1017,6 +983,7 @@ export default function App() {
 
             {model ? (
               <>
+                <section style={resultTopGridStyle}>
                 <article style={cardStyle}>
                   <h2 style={{ marginTop: 0 }}>{bundle.summary.catalogTitle}</h2>
                   <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
@@ -1131,9 +1098,18 @@ export default function App() {
                     <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
                   )}
                 </article>
+                </section>
 
                 {model.status ? (
-                  <>
+                  <section style={resultBodyGridStyle}>
+                    <div style={resultMainColumnStyle}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 20,
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        }}
+                      >
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{overviewSections?.targetsAndExternalInputs.title}</h2>
                       <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
@@ -1179,6 +1155,7 @@ export default function App() {
                         </div>
                       </div>
                     </article>
+                      </div>
 
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{overviewSections?.surplusOutputs.title}</h2>
@@ -1192,135 +1169,6 @@ export default function App() {
                             </div>
                           ))
                         )}
-                      </div>
-                    </article>
-
-                    <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>{bundle.itemLedger.title}</h2>
-                      <div style={{ display: 'grid', gap: 18 }}>
-                        {model.itemLedgerSections.map(section => (
-                          <section key={section.key} style={{ display: 'grid', gap: 10 }}>
-                            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em' }}>
-                              {section.title}
-                            </div>
-                            {section.items.length === 0 ? (
-                              <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.itemLedger.noItems}</div>
-                            ) : (
-                              <div style={{ display: 'grid', gap: 10 }}>
-                                {section.items.map(entry => (
-                                  <div
-                                    key={entry.itemId}
-                                    style={{
-                                      border: '1px solid rgba(24, 51, 89, 0.12)',
-                                      borderRadius: 16,
-                                      padding: 14,
-                                      display: 'grid',
-                                      gap: 10,
-                                    }}
-                                  >
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        gap: 12,
-                                        alignItems: 'flex-start',
-                                        flexWrap: 'wrap',
-                                      }}
-                                    >
-                                      <div style={{ display: 'grid', gap: 6 }}>
-                                        <div style={{ fontSize: 17, fontWeight: 700 }}>{entry.itemName}</div>
-                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                          {entry.isRawInput ? (
-                                            <span
-                                              style={{
-                                                padding: '3px 8px',
-                                                borderRadius: 999,
-                                                background: 'rgba(24, 51, 89, 0.10)',
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                              }}
-                                            >
-                                              {bundle.itemLedger.rawBadge}
-                                            </span>
-                                          ) : null}
-                                          {entry.isTarget ? (
-                                            <span
-                                              style={{
-                                                padding: '3px 8px',
-                                                borderRadius: 999,
-                                                background: 'rgba(212, 120, 48, 0.14)',
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                              }}
-                                            >
-                                              {bundle.itemLedger.targetBadge}
-                                            </span>
-                                          ) : null}
-                                          {entry.isSurplusOutput ? (
-                                            <span
-                                              style={{
-                                                padding: '3px 8px',
-                                                borderRadius: 999,
-                                                background: 'rgba(56, 143, 122, 0.14)',
-                                                fontSize: 12,
-                                                fontWeight: 700,
-                                              }}
-                                            >
-                                              {bundle.itemLedger.surplusBadge}
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                      </div>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          entry.isRawInput
-                                            ? unmarkItemAsRawInput(entry.itemId)
-                                            : markItemAsRawInput(entry.itemId)
-                                        }
-                                        style={subtleButtonStyle}
-                                      >
-                                        {entry.isRawInput
-                                          ? bundle.itemLedger.unmarkRawButton
-                                          : bundle.itemLedger.markRawButton}
-                                      </button>
-                                    </div>
-
-                                    <div
-                                      style={{
-                                        display: 'grid',
-                                        gap: 10,
-                                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                                      }}
-                                    >
-                                      <div>
-                                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                          {bundle.diagnostics.producedLabel}
-                                        </div>
-                                        <div style={{ marginTop: 4 }}>{formatRate(entry.producedRatePerMin, locale)}</div>
-                                      </div>
-                                      <div>
-                                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                          {bundle.diagnostics.consumedLabel}
-                                        </div>
-                                        <div style={{ marginTop: 4 }}>{formatRate(entry.consumedRatePerMin, locale)}</div>
-                                      </div>
-                                      {Math.abs(entry.netRatePerMin) > 1e-8 ? (
-                                        <div>
-                                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                                            {bundle.diagnostics.netLabel}
-                                          </div>
-                                          <div style={{ marginTop: 4 }}>{formatRate(entry.netRatePerMin, locale)}</div>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </section>
-                        ))}
                       </div>
                     </article>
 
@@ -1380,43 +1228,38 @@ export default function App() {
 
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{bundle.diagnostics.title}</h2>
-                      <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{bundle.diagnostics.diagnosticsLabel}</div>
-                          <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                            {model.diagnostics &&
-                            model.diagnostics.messages.length === 0 &&
-                            model.diagnostics.unmetPreferences.length === 0 ? (
-                              <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.diagnostics.noDiagnostics}</div>
-                            ) : (
-                              <>
-                                {(model.diagnostics?.messages ?? []).map((message, index) => (
-                                  <div key={`message-${index}`}>{message}</div>
-                                ))}
-                                {(model.diagnostics?.unmetPreferences ?? []).map((message, index) => (
-                                  <div key={`pref-${index}`}>{message}</div>
-                                ))}
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div style={{ fontWeight: 700 }}>{bundle.diagnostics.itemBalanceLabel}</div>
-                          <div style={{ marginTop: 8, display: 'grid', gap: 6, maxHeight: 280, overflow: 'auto' }}>
-                            {model.itemBalance.map(entry => (
-                              <div key={entry.itemId} style={{ paddingBottom: 6, borderBottom: '1px solid rgba(24, 51, 89, 0.08)' }}>
-                                <div style={{ fontWeight: 700 }}>{entry.itemName}</div>
-                                <div style={{ fontSize: 13 }}>
-                                  {bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)} / {bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)} / {bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}
-                                </div>
-                              </div>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {model.diagnostics &&
+                        model.diagnostics.messages.length === 0 &&
+                        model.diagnostics.unmetPreferences.length === 0 ? (
+                          <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.diagnostics.noDiagnostics}</div>
+                        ) : (
+                          <>
+                            {(model.diagnostics?.messages ?? []).map((message, index) => (
+                              <div key={`message-${index}`}>{message}</div>
                             ))}
-                          </div>
-                        </div>
+                            {(model.diagnostics?.unmetPreferences ?? []).map((message, index) => (
+                              <div key={`pref-${index}`}>{message}</div>
+                            ))}
+                          </>
+                        )}
                       </div>
 
                       <details style={{ marginTop: 14 }}>
+                        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{bundle.diagnostics.itemBalanceLabel}</summary>
+                        <div style={{ marginTop: 12, display: 'grid', gap: 6, maxHeight: 260, overflow: 'auto' }}>
+                          {model.itemBalance.map(entry => (
+                            <div key={entry.itemId} style={{ paddingBottom: 6, borderBottom: '1px solid rgba(24, 51, 89, 0.08)' }}>
+                              <div style={{ fontWeight: 700 }}>{entry.itemName}</div>
+                              <div style={{ fontSize: 13 }}>
+                                {bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)} / {bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)} / {bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+
+                      <details style={{ marginTop: 12 }}>
                         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{bundle.diagnostics.solveRequestJson}</summary>
                         <pre style={{ marginTop: 12, padding: 12, borderRadius: 14, background: 'rgba(24, 51, 89, 0.06)', overflow: 'auto', fontSize: 13 }}>
                           {JSON.stringify(lastRequest, null, 2)}
@@ -1429,7 +1272,85 @@ export default function App() {
                         </pre>
                       </details>
                     </article>
-                  </>
+                    </div>
+
+                    <aside style={resultSideColumnStyle}>
+                      <article style={{ ...cardStyle, padding: 16 }}>
+                        <h2 style={{ marginTop: 0, marginBottom: 12 }}>{bundle.itemLedger.title}</h2>
+                        <div style={{ display: 'grid', gap: 16 }}>
+                          {model.itemLedgerSections.map(section => (
+                            <section key={section.key} style={{ display: 'grid', gap: 8 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(24, 51, 89, 0.72)' }}>
+                                {section.title}
+                              </div>
+                              {section.items.length === 0 ? (
+                                <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.itemLedger.noItems}</div>
+                              ) : (
+                                <div style={{ display: 'grid', gap: 0, borderTop: '1px solid rgba(24, 51, 89, 0.10)' }}>
+                                  {section.items.map(entry => (
+                                    <div
+                                      key={entry.itemId}
+                                      style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'minmax(0, 1fr) auto',
+                                        gap: 10,
+                                        alignItems: 'center',
+                                        padding: '10px 0',
+                                        borderBottom: '1px solid rgba(24, 51, 89, 0.10)',
+                                      }}
+                                    >
+                                      <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                                          <div style={{ fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.itemName}>
+                                            {entry.itemName}
+                                          </div>
+                                          {entry.isRawInput ? (
+                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>
+                                              {bundle.itemLedger.rawBadge}
+                                            </span>
+                                          ) : null}
+                                          {entry.isTarget ? (
+                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(212, 120, 48, 0.14)', fontSize: 11, fontWeight: 700 }}>
+                                              {bundle.itemLedger.targetBadge}
+                                            </span>
+                                          ) : null}
+                                          {entry.isSurplusOutput ? (
+                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(56, 143, 122, 0.14)', fontSize: 11, fontWeight: 700 }}>
+                                              {bundle.itemLedger.surplusBadge}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'rgba(24, 51, 89, 0.78)' }}>
+                                          <span>{bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)}</span>
+                                          <span>{bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)}</span>
+                                          {Math.abs(entry.netRatePerMin) > 1e-8 ? (
+                                            <span>{bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}</span>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          entry.isRawInput
+                                            ? unmarkItemAsRawInput(entry.itemId)
+                                            : markItemAsRawInput(entry.itemId)
+                                        }
+                                        style={compactLedgerButtonStyle}
+                                      >
+                                        {entry.isRawInput
+                                          ? bundle.itemLedger.unmarkRawButton
+                                          : bundle.itemLedger.markRawButton}
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </section>
+                          ))}
+                        </div>
+                      </article>
+                    </aside>
+                  </section>
                 ) : (
                   <article style={cardStyle}>
                     <h2 style={{ marginTop: 0 }}>{bundle.ready.title}</h2>
