@@ -78,7 +78,7 @@ export interface LocaleBundle {
     preferredSprayLevelLabel: string;
     advancedOverridesLabel: string;
     advancedOverridesHelp: string;
-    solveButton: string;
+    autoSolveHint: string;
     levelPrefix: string;
     validTargetRequired: string;
   };
@@ -264,7 +264,7 @@ const zhCN: LocaleBundle = {
     advancedOverridesLabel: '高级覆盖 JSON',
     advancedOverridesHelp:
       '用于填写偏好/强制建筑、配方、增产剂等高级请求字段。',
-    solveButton: '开始求解',
+    autoSolveHint: '已改为自动求解。左侧任一会影响求解的输入变更后，右侧结果会立即更新。',
     levelPrefix: '等级',
     validTargetRequired: '至少需要一个有效目标。',
   },
@@ -325,7 +325,7 @@ const zhCN: LocaleBundle = {
   },
   ready: {
     title: '准备就绪',
-    description: '数据集已加载。调整左侧请求后点击“开始求解”即可查看结果。',
+    description: '数据集已加载。调整左侧请求后，页面会自动重新求解并更新结果。',
   },
   advancedOverrides: {
     invalidJsonPrefix: 'JSON 无效：',

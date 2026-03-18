@@ -13,14 +13,10 @@ import {
   getLocaleBundle,
 } from '../i18n';
 import { buildPresentationModel, buildPresentationOverviewSections } from '../presentation';
-import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
-import { solveCatalogRequest } from '../solver/solve';
+import type { BalancePolicy, SolveObjective } from '../solver';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
+import { computeWorkbenchSolve } from './autoSolve';
 import {
-  buildGlobalProliferatorOverrides,
-  buildPreferredRecipeOverrides,
-  buildWorkbenchRequest,
-  mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
   type EditableTarget,
@@ -128,9 +124,6 @@ export default function App() {
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
-  const [lastRequest, setLastRequest] = useState<SolveRequest | undefined>();
-  const [result, setResult] = useState<SolveResult | null>(null);
-  const [solveError, setSolveError] = useState('');
 
   async function loadCatalog(nextDatasetPath: string, nextDefaultConfigPath: string, nextLabel: string) {
     if (!nextDatasetPath.trim()) {
@@ -142,6 +135,7 @@ export default function App() {
     try {
       setIsLoading(true);
       setLoadError('');
+      setCatalog(null);
       const nextCatalog = await loadResolvedCatalogFromUrl(
         nextDatasetPath.trim(),
         nextDefaultConfigPath.trim() || undefined
@@ -162,9 +156,6 @@ export default function App() {
       setRecipePreferences([]);
       setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
       setAdvancedOverridesText('');
-      setLastRequest(undefined);
-      setResult(null);
-      setSolveError('');
     } catch (error) {
       setCatalog(null);
       const detail = error instanceof Error ? error.message : String(error);
@@ -277,6 +268,47 @@ export default function App() {
     () => parseAdvancedSolveOverrides(advancedOverridesText, locale),
     [advancedOverridesText, locale]
   );
+
+  const autoSolveState = useMemo(() => {
+    if (!catalog || isLoading) {
+      return {
+        request: undefined,
+        result: null,
+        error: '',
+      };
+    }
+
+    return computeWorkbenchSolve({
+      catalog,
+      targets,
+      objective,
+      balancePolicy,
+      proliferatorPolicy,
+      rawInputItemIds,
+      disabledRecipeIds,
+      disabledBuildingIds,
+      recipePreferences,
+      advancedOverridesText,
+      locale,
+    });
+  }, [
+    advancedOverridesText,
+    balancePolicy,
+    catalog,
+    disabledBuildingIds,
+    disabledRecipeIds,
+    isLoading,
+    locale,
+    objective,
+    proliferatorPolicy,
+    rawInputItemIds,
+    recipePreferences,
+    targets,
+  ]);
+
+  const lastRequest = autoSolveState.request;
+  const result = autoSolveState.result;
+  const solveError = autoSolveState.error;
 
   const model = useMemo(
     () =>
@@ -434,47 +466,6 @@ export default function App() {
       .map(level => level.level)
       .filter(level => level > 0 && level <= recipe.maxProliferatorLevel)
       .sort((left, right) => left - right);
-  }
-
-  function solve() {
-    if (!catalog) {
-      return;
-    }
-    if (parsedOverrides.error) {
-      setResult(null);
-      setSolveError(parsedOverrides.error);
-      return;
-    }
-    const uiOverrides = mergeAdvancedSolveOverrides(
-      {
-        disabledRecipeIds,
-        disabledBuildingIds,
-      },
-      mergeAdvancedSolveOverrides(
-        buildPreferredRecipeOverrides(recipePreferences),
-        buildGlobalProliferatorOverrides(catalog, proliferatorPolicy)
-      )
-    );
-    const request = buildWorkbenchRequest({
-      targets,
-      objective,
-      balancePolicy,
-      rawInputItemIds,
-      advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),
-    });
-    setLastRequest(request);
-    if (request.targets.length === 0) {
-      setResult(null);
-      setSolveError(bundle.solveRequest.validTargetRequired);
-      return;
-    }
-    try {
-      setResult(solveCatalogRequest(catalog, request));
-      setSolveError('');
-    } catch (error) {
-      setResult(null);
-      setSolveError(error instanceof Error ? error.message : String(error));
-    }
   }
 
   return (
@@ -972,9 +963,9 @@ export default function App() {
                   )}
                 </div>
 
-                <button type="button" onClick={solve} style={buttonStyle} disabled={!catalog}>
-                  {bundle.solveRequest.solveButton}
-                </button>
+                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
+                  {bundle.solveRequest.autoSolveHint}
+                </div>
               </div>
             </article>
           </div>
