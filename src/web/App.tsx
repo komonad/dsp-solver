@@ -154,6 +154,8 @@ export default function App() {
       setCatalogLabel(nextLabel);
       const nextTargetId = pickDefaultTarget(nextCatalog);
       setTargets(nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : []);
+      setObjective(nextCatalog.recommendedSolve.objective ?? 'min_buildings');
+      setBalancePolicy(nextCatalog.recommendedSolve.balancePolicy ?? 'force_balance');
       setProliferatorPolicy('auto');
       setRawInputItemIds([]);
       setRawDraftItemId(nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ?? '');

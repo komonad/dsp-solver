@@ -147,19 +147,34 @@ test.each([
     defaultsPath: './data/LegacyRefinery.defaults.json',
     expectedRecipeCount: 2,
     expectedBuildingCount: 1,
+    expectedRecommendedSolve: {
+      objective: 'min_external_input',
+      balancePolicy: 'force_balance',
+    },
   },
   {
     datasetPath: './data/LegacyCycle.json',
     defaultsPath: './data/LegacyCycle.defaults.json',
     expectedRecipeCount: 4,
     expectedBuildingCount: 3,
+    expectedRecommendedSolve: {
+      objective: 'min_external_input',
+      balancePolicy: 'allow_surplus',
+    },
   },
 ])(
   'loadResolvedCatalogFromFiles supports scenario dataset $datasetPath',
-  async ({ datasetPath, defaultsPath, expectedRecipeCount, expectedBuildingCount }) => {
+  async ({
+    datasetPath,
+    defaultsPath,
+    expectedRecipeCount,
+    expectedBuildingCount,
+    expectedRecommendedSolve,
+  }) => {
     const resolved = await loadResolvedCatalogFromFiles(datasetPath, defaultsPath);
 
     expect(resolved.recipes).toHaveLength(expectedRecipeCount);
     expect(resolved.buildings).toHaveLength(expectedBuildingCount);
+    expect(resolved.recommendedSolve).toEqual(expectedRecommendedSolve);
   }
 );

@@ -13,5 +13,9 @@
       "MaxLevel": 0
     }
   ],
+  "recommendedSolve": {
+    "objective": "min_external_input",
+    "balancePolicy": "force_balance"
+  },
   "recommendedRawItemIds": [1007, 1120]
 }

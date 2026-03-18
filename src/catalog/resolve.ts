@@ -26,6 +26,9 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
+    recommendedSolve: defaultConfig.recommendedSolve
+      ? { ...defaultConfig.recommendedSolve }
+      : undefined,
     recommendedDisabledBuildingIds: defaultConfig.recommendedDisabledBuildingIds
       ? [...defaultConfig.recommendedDisabledBuildingIds]
       : undefined,
@@ -372,6 +375,7 @@ export function resolveCatalogModel(
     recipeMap,
     buildingMap,
     proliferatorLevelMap,
+    recommendedSolve: resolvedDefaultConfig.recommendedSolve ?? {},
     recommendedDisabledBuildingIds,
     rawItemIds,
     syntheticRecipeIds,

@@ -156,6 +156,19 @@ export interface RecipeModifierRuleSpec {
 }
 
 /**
+ * Optional dataset-level recommended solve settings.
+ *
+ * These are not hard constraints. They describe the request defaults that a
+ * UI or calling layer should prefer when opening this dataset.
+ */
+export interface CatalogRecommendedSolveSpec {
+  /** Optional recommended primary optimization objective. */
+  objective?: 'min_buildings' | 'min_power' | 'min_external_input';
+  /** Optional recommended material-balance policy. */
+  balancePolicy?: 'allow_surplus' | 'force_balance';
+}
+
+/**
  * Optional dataset companion defaults.
  *
  * Nothing here is required globally. These values exist to supply semantics or
@@ -168,6 +181,8 @@ export interface CatalogDefaultConfigSpec {
   buildingRules?: CatalogBuildingRuleSpec[];
   /** Optional mapping from raw modifier codes to internal meaning. */
   recipeModifierRules?: RecipeModifierRuleSpec[];
+  /** Optional recommended solve defaults for UI/request initialization. */
+  recommendedSolve?: CatalogRecommendedSolveSpec;
   /** Optional building IDs that UI/request layers should disable by default. */
   recommendedDisabledBuildingIds?: number[];
   /** Optional recommended raw-input item IDs. */
@@ -336,6 +351,8 @@ export interface ResolvedCatalogModel {
   buildingMap: Map<string, ResolvedBuildingSpec>;
   /** Fast lookup map for proliferator levels. */
   proliferatorLevelMap: Map<number, ResolvedProliferatorLevelSpec>;
+  /** Recommended request defaults carried through from the dataset defaults. */
+  recommendedSolve: CatalogRecommendedSolveSpec;
   /** Default disabled building IDs inferred from dataset defaults. */
   recommendedDisabledBuildingIds: string[];
   /** Default raw-input item IDs inferred from dataset + defaults. */
@@ -552,6 +569,10 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     pushIssue(errors, '$.recipeModifierRules', 'recipeModifierRules must be an array when present.');
   }
 
+  if (value.recommendedSolve !== undefined && !isRecord(value.recommendedSolve)) {
+    pushIssue(errors, '$.recommendedSolve', 'recommendedSolve must be an object when present.');
+  }
+
   if (value.recommendedRawItemIds !== undefined && !isNumberArray(value.recommendedRawItemIds)) {
     pushIssue(errors, '$.recommendedRawItemIds', 'recommendedRawItemIds must be a number array when present.');
   }
@@ -593,6 +614,32 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
   const modifierCodes = new Set<number>();
   const modeSet = new Set<ProliferatorMode>(['none', 'speed', 'productivity']);
   const kindSet = new Set<RecipeModifierKind>(['none', 'proliferator', 'special']);
+  const objectiveSet = new Set(['min_buildings', 'min_power', 'min_external_input']);
+  const balancePolicySet = new Set(['allow_surplus', 'force_balance']);
+
+  if (config.recommendedSolve !== undefined) {
+    if (
+      config.recommendedSolve.objective !== undefined &&
+      !objectiveSet.has(config.recommendedSolve.objective)
+    ) {
+      pushIssue(
+        errors,
+        '$.recommendedSolve.objective',
+        'objective must be one of min_buildings, min_power, or min_external_input.'
+      );
+    }
+
+    if (
+      config.recommendedSolve.balancePolicy !== undefined &&
+      !balancePolicySet.has(config.recommendedSolve.balancePolicy)
+    ) {
+      pushIssue(
+        errors,
+        '$.recommendedSolve.balancePolicy',
+        'balancePolicy must be one of allow_surplus or force_balance.'
+      );
+    }
+  }
 
   (config.proliferatorLevels ?? []).forEach((level, index) => {
     const path = `$.proliferatorLevels[${index}]`;
