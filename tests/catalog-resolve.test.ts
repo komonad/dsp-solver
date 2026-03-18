@@ -27,6 +27,7 @@ test('Vanilla.defaults.json is internally valid', async () => {
     ProductivityMultiplier: 1.125,
     PowerMultiplier: 1.3,
   });
+  expect(defaultConfig.recommendedDisabledBuildingIds).toEqual([1]);
   expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
 });
 
@@ -76,6 +77,7 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
     productivityMultiplier: 1.25,
     powerMultiplier: 2.5,
   });
+  expect(resolved.recommendedDisabledBuildingIds).toEqual(['1']);
   expect(resolved.rawItemIds).toHaveLength(16);
   expect(resolved.syntheticRecipeIds).toHaveLength(78);
 

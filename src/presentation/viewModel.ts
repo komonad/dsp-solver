@@ -34,6 +34,7 @@ export interface PresentationRecipePreference {
 export interface PresentationRequestSummary {
   objective: SolveRequest['objective'];
   balancePolicy: SolveRequest['balancePolicy'];
+  proliferatorPolicyLabel: string;
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
   disabledRecipes: PresentationNamedItem[];
@@ -190,6 +191,33 @@ function formatPreferredProliferatorLabel(
   return undefined;
 }
 
+function inferGlobalProliferatorPolicyLabel(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest
+): string {
+  const affectedRecipeIds = catalog.recipes
+    .filter(
+      recipe =>
+        recipe.maxProliferatorLevel > 0 ||
+        recipe.supportsProliferatorModes.some(mode => mode !== 'none')
+    )
+    .map(recipe => recipe.recipeId);
+
+  if (affectedRecipeIds.length === 0) {
+    return 'Auto';
+  }
+
+  const forcedModes = request.forcedProliferatorModeByRecipe ?? {};
+  const forcedLevels = request.forcedProliferatorLevelByRecipe ?? {};
+  const allDisabled = affectedRecipeIds.every(
+    recipeId =>
+      forcedModes[recipeId] === 'none' &&
+      (forcedLevels[recipeId] === undefined || forcedLevels[recipeId] === 0)
+  );
+
+  return allDisabled ? 'Disabled' : 'Auto';
+}
+
 export function buildPresentationModel(
   params: BuildPresentationModelParams
 ): PresentationModel {
@@ -198,6 +226,7 @@ export function buildPresentationModel(
     ? {
         objective: request.objective,
         balancePolicy: request.balancePolicy,
+        proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request),
         targets: request.targets.map(target => ({
           itemId: target.itemId,
           itemName: getItemName(catalog, target.itemId),

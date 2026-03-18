@@ -1,4 +1,4 @@
-import type { ProliferatorMode } from '../catalog';
+import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
 import type { BalancePolicy, SolveObjective, SolveRequest } from '../solver';
 
 export type AdvancedSolveOverrides = Omit<
@@ -17,6 +17,8 @@ export interface EditableRecipePreference {
   preferredProliferatorMode: '' | ProliferatorMode;
   preferredProliferatorLevel: '' | number;
 }
+
+export type WorkbenchProliferatorPolicy = 'auto' | 'disable_all';
 
 export interface BuildWorkbenchRequestParams {
   targets: EditableTarget[];
@@ -221,6 +223,35 @@ export function buildPreferredRecipeOverrides(
       Object.keys(preferredProliferatorModeByRecipe).length > 0
         ? preferredProliferatorModeByRecipe
         : undefined,
+  };
+}
+
+export function buildGlobalProliferatorOverrides(
+  catalog: ResolvedCatalogModel,
+  policy: WorkbenchProliferatorPolicy
+): Pick<
+  AdvancedSolveOverrides,
+  'forcedProliferatorModeByRecipe' | 'forcedProliferatorLevelByRecipe'
+> {
+  if (policy === 'auto') {
+    return {};
+  }
+
+  const affectedRecipeIds = catalog.recipes
+    .filter(
+      recipe =>
+        recipe.maxProliferatorLevel > 0 ||
+        recipe.supportsProliferatorModes.some(mode => mode !== 'none')
+    )
+    .map(recipe => recipe.recipeId);
+
+  return {
+    forcedProliferatorModeByRecipe: Object.fromEntries(
+      affectedRecipeIds.map(recipeId => [recipeId, 'none'])
+    ),
+    forcedProliferatorLevelByRecipe: Object.fromEntries(
+      affectedRecipeIds.map(recipeId => [recipeId, 0])
+    ),
   };
 }
 

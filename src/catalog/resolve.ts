@@ -26,6 +26,9 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
+    recommendedDisabledBuildingIds: defaultConfig.recommendedDisabledBuildingIds
+      ? [...defaultConfig.recommendedDisabledBuildingIds]
+      : undefined,
     recommendedRawItemIds: defaultConfig.recommendedRawItemIds
       ? [...defaultConfig.recommendedRawItemIds]
       : undefined,
@@ -351,6 +354,11 @@ export function resolveCatalogModel(
   const recipeMap = new Map(recipes.map(recipe => [recipe.recipeId, recipe]));
   const buildingMap = new Map(buildings.map(building => [building.buildingId, building]));
   const proliferatorLevelMap = new Map(proliferatorLevels.map(level => [level.level, level]));
+  const recommendedDisabledBuildingIds = (
+    resolvedDefaultConfig.recommendedDisabledBuildingIds ?? []
+  )
+    .map(buildingId => buildingId.toString())
+    .filter(buildingId => buildingMap.has(buildingId));
 
   return {
     version: 'vanilla-compatible@1',
@@ -364,6 +372,7 @@ export function resolveCatalogModel(
     recipeMap,
     buildingMap,
     proliferatorLevelMap,
+    recommendedDisabledBuildingIds,
     rawItemIds,
     syntheticRecipeIds,
   };

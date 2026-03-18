@@ -91,6 +91,7 @@ test('presentation model carries frontend-visible names and totals from a solved
   expect(model.requestSummary).toEqual({
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
+    proliferatorPolicyLabel: 'Auto',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
@@ -174,6 +175,7 @@ test('presentation model exposes named recipe preference summaries from the requ
   expect(model.requestSummary).toEqual({
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
+    proliferatorPolicyLabel: 'Auto',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
@@ -188,4 +190,36 @@ test('presentation model exposes named recipe preference summaries from the requ
     ],
     hasAdvancedOverrides: true,
   });
+});
+
+test('presentation model detects global proliferator disable requests', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), {
+    ...buildDemoDefaults(),
+    proliferatorLevels: [
+      {
+        Level: 1,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+    ],
+    recipeModifierRules: [
+      { Code: 0, Kind: 'proliferator', SupportedModes: ['none', 'speed', 'productivity'], MaxLevel: 1 },
+    ],
+  });
+
+  const model = buildPresentationModel({
+    catalog,
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+      forcedProliferatorModeByRecipe: { '1': 'none' },
+      forcedProliferatorLevelByRecipe: { '1': 0 },
+    },
+  });
+
+  expect(model.requestSummary?.proliferatorPolicyLabel).toBe('Disabled');
 });

@@ -5,12 +5,14 @@ import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '.
 import { solveCatalogRequest } from '../solver/solve';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
 import {
+  buildGlobalProliferatorOverrides,
   buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
   mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
   type EditableTarget,
+  type WorkbenchProliferatorPolicy,
 } from './requestBuilder';
 
 const pageStyle: React.CSSProperties = {
@@ -119,6 +121,8 @@ export default function App() {
   const [targets, setTargets] = useState<EditableTarget[]>([]);
   const [objective, setObjective] = useState<SolveObjective>('min_buildings');
   const [balancePolicy, setBalancePolicy] = useState<BalancePolicy>('force_balance');
+  const [proliferatorPolicy, setProliferatorPolicy] =
+    useState<WorkbenchProliferatorPolicy>('auto');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
   const [rawDraftItemId, setRawDraftItemId] = useState('');
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
@@ -150,12 +154,13 @@ export default function App() {
       setCatalogLabel(nextLabel);
       const nextTargetId = pickDefaultTarget(nextCatalog);
       setTargets(nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : []);
+      setProliferatorPolicy('auto');
       setRawInputItemIds([]);
       setRawDraftItemId(nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ?? '');
       setDisabledRecipeIds([]);
       setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
-      setDisabledBuildingIds([]);
-      setDisabledBuildingDraftId(nextCatalog.buildings[0]?.buildingId ?? '');
+      setDisabledBuildingIds(nextCatalog.recommendedDisabledBuildingIds);
+      setDisabledBuildingDraftId('');
       setRecipePreferences([]);
       setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
       setAdvancedOverridesText('');
@@ -436,7 +441,10 @@ export default function App() {
         disabledRecipeIds,
         disabledBuildingIds,
       },
-      buildPreferredRecipeOverrides(recipePreferences)
+      mergeAdvancedSolveOverrides(
+        buildPreferredRecipeOverrides(recipePreferences),
+        buildGlobalProliferatorOverrides(catalog, proliferatorPolicy)
+      )
     );
     const request = buildWorkbenchRequest({
       targets,
@@ -587,7 +595,7 @@ export default function App() {
                   </button>
                 </div>
 
-                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                   <select
                     value={objective}
                     onChange={event => setObjective(event.target.value as SolveObjective)}
@@ -605,6 +613,17 @@ export default function App() {
                   >
                     <option value="force_balance">Force Balance</option>
                     <option value="allow_surplus">Allow Surplus</option>
+                  </select>
+
+                  <select
+                    value={proliferatorPolicy}
+                    onChange={event =>
+                      setProliferatorPolicy(event.target.value as WorkbenchProliferatorPolicy)
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="auto">Spray Auto</option>
+                    <option value="disable_all">No Proliferator</option>
                   </select>
                 </div>
 
@@ -790,7 +809,9 @@ export default function App() {
                         const modeChoices = getRecipeModeOptions(preference.recipeId);
                         const levelChoices = getRecipeLevelOptions(preference.recipeId);
                         const levelSelectDisabled =
-                          levelChoices.length === 0 || preference.preferredProliferatorMode === 'none';
+                          proliferatorPolicy === 'disable_all' ||
+                          levelChoices.length === 0 ||
+                          preference.preferredProliferatorMode === 'none';
 
                         return (
                           <div
@@ -869,6 +890,7 @@ export default function App() {
                                     });
                                   }}
                                   style={inputStyle}
+                                  disabled={proliferatorPolicy === 'disable_all'}
                                 >
                                   <option value="">Auto</option>
                                   {modeChoices.map(mode => (
@@ -991,7 +1013,7 @@ export default function App() {
                   {solveError ? <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div> : null}
                   {model.requestSummary ? (
                     <div style={{ display: 'grid', gap: 12 }}>
-                      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+                      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>OBJECTIVE</div>
                           <div style={{ marginTop: 6 }}>{model.requestSummary.objective}</div>
@@ -999,6 +1021,10 @@ export default function App() {
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>BALANCE</div>
                           <div style={{ marginTop: 6 }}>{model.requestSummary.balancePolicy}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>SPRAY</div>
+                          <div style={{ marginTop: 6 }}>{model.requestSummary.proliferatorPolicyLabel}</div>
                         </div>
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>STATUS</div>
@@ -1033,7 +1059,7 @@ export default function App() {
                           <div style={{ marginTop: 6 }}>{model.requestSummary.disabledBuildings.length}</div>
                         </div>
                         <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>ADVANCED JSON</div>
+                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>ADVANCED OVERRIDES</div>
                           <div style={{ marginTop: 6 }}>{model.requestSummary.hasAdvancedOverrides ? 'Yes' : 'No'}</div>
                         </div>
                       </div>

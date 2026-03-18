@@ -168,6 +168,8 @@ export interface CatalogDefaultConfigSpec {
   buildingRules?: CatalogBuildingRuleSpec[];
   /** Optional mapping from raw modifier codes to internal meaning. */
   recipeModifierRules?: RecipeModifierRuleSpec[];
+  /** Optional building IDs that UI/request layers should disable by default. */
+  recommendedDisabledBuildingIds?: number[];
   /** Optional recommended raw-input item IDs. */
   recommendedRawItemIds?: number[];
   /** Optional recommended raw-input item type codes. */
@@ -334,6 +336,8 @@ export interface ResolvedCatalogModel {
   buildingMap: Map<string, ResolvedBuildingSpec>;
   /** Fast lookup map for proliferator levels. */
   proliferatorLevelMap: Map<number, ResolvedProliferatorLevelSpec>;
+  /** Default disabled building IDs inferred from dataset defaults. */
+  recommendedDisabledBuildingIds: string[];
   /** Default raw-input item IDs inferred from dataset + defaults. */
   rawItemIds: string[];
   /** Recipe IDs treated as synthetic by default. */
@@ -550,6 +554,17 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
 
   if (value.recommendedRawItemIds !== undefined && !isNumberArray(value.recommendedRawItemIds)) {
     pushIssue(errors, '$.recommendedRawItemIds', 'recommendedRawItemIds must be a number array when present.');
+  }
+
+  if (
+    value.recommendedDisabledBuildingIds !== undefined &&
+    !isNumberArray(value.recommendedDisabledBuildingIds)
+  ) {
+    pushIssue(
+      errors,
+      '$.recommendedDisabledBuildingIds',
+      'recommendedDisabledBuildingIds must be a number array when present.'
+    );
   }
 
   if (value.recommendedRawItemTypeIds !== undefined && !isNumberArray(value.recommendedRawItemTypeIds)) {

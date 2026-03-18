@@ -1,9 +1,65 @@
 import {
+  buildGlobalProliferatorOverrides,
   buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
   mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
 } from '../src/web/requestBuilder';
+import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
+
+function workEnergyForMW(megawatts: number): number {
+  return (megawatts * 1_000_000) / 60;
+}
+
+function buildProliferatorDemoCatalog() {
+  const dataset: VanillaDatasetSpec = {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 2 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Smelter',
+        IconName: 'smelter',
+        GridIndex: 3,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForMW(1),
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Ore to Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 3,
+        IconName: 'plate',
+      },
+    ],
+  };
+  const defaults: CatalogDefaultConfigSpec = {
+    proliferatorLevels: [
+      {
+        Level: 1,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+    ],
+    buildingRules: [{ ID: 5001, Category: 'smelter' }],
+    recipeModifierRules: [
+      { Code: 3, Kind: 'proliferator', SupportedModes: ['none', 'speed', 'productivity'], MaxLevel: 1 },
+    ],
+  };
+
+  return resolveCatalogModel(dataset, defaults);
+}
 
 test('buildWorkbenchRequest merges base request fields with advanced overrides', () => {
   const request = buildWorkbenchRequest({
@@ -125,5 +181,15 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
     preferredProliferatorLevelByRecipe: {
       '1': 3,
     },
+  });
+});
+
+test('buildGlobalProliferatorOverrides disables all configurable recipes when requested', () => {
+  const catalog = buildProliferatorDemoCatalog();
+  const overrides = buildGlobalProliferatorOverrides(catalog, 'disable_all');
+
+  expect(overrides).toEqual({
+    forcedProliferatorModeByRecipe: { '1': 'none' },
+    forcedProliferatorLevelByRecipe: { '1': 0 },
   });
 });

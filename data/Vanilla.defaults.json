@@ -37,6 +37,7 @@
     { "Code": 3, "Kind": "proliferator", "SupportedModes": ["none", "speed", "productivity"], "MaxLevel": 3, "Tags": ["full-proliferator"] },
     { "Code": 4, "Kind": "special", "SupportedModes": ["none"], "MaxLevel": 0, "Tags": ["ray-receiver-lens"] }
   ],
+  "recommendedDisabledBuildingIds": [1],
   "recommendedRawItemTypeIds": [1],
   "syntheticRecipeTypeIds": [-1],
   "syntheticRecipeNamePrefixes": ["[\u65e0\u4e2d\u751f\u6709]", "[\u5145\u7535]", "[\u5c04\u7ebf\u63a5\u6536\u5e26\u900f\u955c]"],
