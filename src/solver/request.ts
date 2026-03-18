@@ -45,6 +45,12 @@ export interface SolveRequest {
   balancePolicy: BalancePolicy;
   /** Additional items that this request should treat as external/raw inputs. */
   rawInputItemIds?: string[];
+  /**
+   * Dataset-default raw items that this request should treat as internal
+   * instead. This lets the UI remove a default raw flag without mutating the
+   * dataset itself.
+   */
+  disabledRawInputItemIds?: string[];
   /** Recipe IDs that are forbidden in this request. */
   disabledRecipeIds?: string[];
   /** Building IDs that are forbidden in this request. */

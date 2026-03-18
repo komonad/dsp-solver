@@ -8,6 +8,8 @@ import {
 } from '../i18n';
 import type { SolveRequest, SolveResult } from '../solver';
 
+const EPSILON = 1e-8;
+
 export interface PresentationCatalogSummary {
   datasetLabel?: string;
   datasetPath?: string;
@@ -98,6 +100,32 @@ export interface PresentationItemBalance {
   netRatePerMin: number;
 }
 
+export type PresentationItemLedgerSectionKey =
+  | 'net_inputs'
+  | 'net_outputs'
+  | 'intermediates';
+
+export interface PresentationItemLedgerEntry {
+  itemId: string;
+  itemName: string;
+  producedRatePerMin: number;
+  consumedRatePerMin: number;
+  netRatePerMin: number;
+  throughputRatePerMin: number;
+  isRawInput: boolean;
+  isTarget: boolean;
+  isSurplusOutput: boolean;
+  externalInputRatePerMin: number;
+  targetRatePerMin: number;
+  surplusRatePerMin: number;
+}
+
+export interface PresentationItemLedgerSection {
+  key: PresentationItemLedgerSectionKey;
+  title: string;
+  items: PresentationItemLedgerEntry[];
+}
+
 /**
  * Frontend-facing grouping for the top-level solved summary cards.
  *
@@ -137,6 +165,7 @@ export interface PresentationModel {
   externalInputs: PresentationItemRate[];
   surplusOutputs: PresentationItemRate[];
   itemBalance: PresentationItemBalance[];
+  itemLedgerSections: PresentationItemLedgerSection[];
 }
 
 export interface BuildPresentationModelParams {
@@ -178,6 +207,129 @@ function mapItemRates(
     itemName: getItemName(catalog, itemRate.itemId),
     ratePerMin: itemRate.ratePerMin,
   }));
+}
+
+function buildEffectiveRawInputSet(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest | undefined
+): Set<string> {
+  const rawInputIds = new Set<string>(catalog.rawItemIds);
+
+  for (const itemId of request?.disabledRawInputItemIds ?? []) {
+    rawInputIds.delete(itemId);
+  }
+
+  for (const itemId of request?.rawInputItemIds ?? []) {
+    rawInputIds.add(itemId);
+  }
+
+  return rawInputIds;
+}
+
+function sortItemLedgerEntries(
+  items: PresentationItemLedgerEntry[],
+  sectionKey: PresentationItemLedgerSectionKey
+): PresentationItemLedgerEntry[] {
+  return items.slice().sort((left, right) => {
+    const sectionRate =
+      sectionKey === 'net_inputs'
+        ? right.externalInputRatePerMin - left.externalInputRatePerMin
+        : sectionKey === 'net_outputs'
+          ? Math.max(
+              right.targetRatePerMin,
+              right.surplusRatePerMin,
+              Math.abs(right.netRatePerMin)
+            ) -
+            Math.max(
+              left.targetRatePerMin,
+              left.surplusRatePerMin,
+              Math.abs(left.netRatePerMin)
+            )
+          : right.throughputRatePerMin - left.throughputRatePerMin;
+
+    if (Math.abs(sectionRate) > EPSILON) {
+      return sectionRate;
+    }
+
+    const throughputRate = right.throughputRatePerMin - left.throughputRatePerMin;
+    if (Math.abs(throughputRate) > EPSILON) {
+      return throughputRate;
+    }
+
+    return left.itemName.localeCompare(right.itemName);
+  });
+}
+
+function buildPresentationItemLedgerSections(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest | undefined,
+  result: SolveResult,
+  locale: AppLocale
+): PresentationItemLedgerSection[] {
+  const bundle = getLocaleBundle(locale);
+  const effectiveRawInputIds = buildEffectiveRawInputSet(catalog, request);
+  const targetRateByItem = new Map(
+    result.targets.map(target => [target.itemId, target.requestedRatePerMin])
+  );
+  const externalInputRateByItem = new Map(
+    result.externalInputs.map(entry => [entry.itemId, entry.ratePerMin])
+  );
+  const surplusRateByItem = new Map(
+    result.surplusOutputs.map(entry => [entry.itemId, entry.ratePerMin])
+  );
+
+  const allEntries = result.itemBalance.map(entry => {
+    const externalInputRatePerMin = externalInputRateByItem.get(entry.itemId) ?? 0;
+    const targetRatePerMin = targetRateByItem.get(entry.itemId) ?? 0;
+    const surplusRatePerMin = surplusRateByItem.get(entry.itemId) ?? 0;
+
+    return {
+      itemId: entry.itemId,
+      itemName: getItemName(catalog, entry.itemId),
+      producedRatePerMin: entry.producedRatePerMin,
+      consumedRatePerMin: entry.consumedRatePerMin,
+      netRatePerMin: entry.netRatePerMin,
+      throughputRatePerMin: Math.max(entry.producedRatePerMin, entry.consumedRatePerMin),
+      isRawInput: effectiveRawInputIds.has(entry.itemId),
+      isTarget: targetRatePerMin > EPSILON,
+      isSurplusOutput: surplusRatePerMin > EPSILON,
+      externalInputRatePerMin,
+      targetRatePerMin,
+      surplusRatePerMin,
+    };
+  });
+
+  const netOutputs = allEntries.filter(entry => entry.isTarget || entry.isSurplusOutput);
+  const netInputs = allEntries.filter(
+    entry =>
+      !entry.isTarget &&
+      !entry.isSurplusOutput &&
+      entry.externalInputRatePerMin > EPSILON
+  );
+  const intermediates = allEntries.filter(
+    entry =>
+      !entry.isTarget &&
+      !entry.isSurplusOutput &&
+      entry.externalInputRatePerMin <= EPSILON
+  );
+
+  return [
+    {
+      key: 'net_inputs',
+      title: bundle.itemLedger.netInputsTitle,
+      items: sortItemLedgerEntries(netInputs, 'net_inputs'),
+    },
+    {
+      key: 'net_outputs',
+      title: bundle.itemLedger.netOutputsTitle,
+      items: sortItemLedgerEntries(netOutputs, 'net_outputs'),
+    },
+    {
+      key: 'intermediates',
+      title: bundle.itemLedger.intermediatesTitle,
+      items: sortItemLedgerEntries(intermediates, 'intermediates'),
+    },
+  ];
 }
 
 function inferGlobalProliferatorPolicyLabel(
@@ -335,6 +487,7 @@ export function buildPresentationModel(
       externalInputs: [],
       surplusOutputs: [],
       itemBalance: [],
+      itemLedgerSections: [],
     };
   }
 
@@ -398,5 +551,6 @@ export function buildPresentationModel(
       consumedRatePerMin: entry.consumedRatePerMin,
       netRatePerMin: entry.netRatePerMin,
     })),
+    itemLedgerSections: buildPresentationItemLedgerSections(catalog, request, result, locale),
   };
 }

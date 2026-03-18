@@ -411,3 +411,25 @@ test('disabled recipes can make an otherwise simple request infeasible', () => {
 
   expect(result.status).toBe('infeasible');
 });
+
+test('disabledRawInputItemIds can cancel a dataset default raw item', () => {
+  const catalog = resolveCatalogModel(buildSingleRecipeDataset([5001]), buildNoProliferatorDefaults());
+
+  const defaultRawResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1001', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(defaultRawResult.status).toBe('optimal');
+  expect(defaultRawResult.externalInputs).toEqual([{ itemId: '1001', ratePerMin: 60 }]);
+
+  const disabledRawResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1001', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    disabledRawInputItemIds: ['1001'],
+  });
+
+  expect(disabledRawResult.status).toBe('infeasible');
+});

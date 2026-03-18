@@ -20,6 +20,7 @@ export interface ComputeWorkbenchSolveParams {
   balancePolicy: BalancePolicy;
   proliferatorPolicy: WorkbenchProliferatorPolicy;
   rawInputItemIds: string[];
+  disabledRawInputItemIds?: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
   recipePreferences: EditableRecipePreference[];
@@ -48,6 +49,7 @@ export function computeWorkbenchSolve(
     balancePolicy,
     proliferatorPolicy,
     rawInputItemIds,
+    disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
     recipePreferences,
@@ -80,6 +82,7 @@ export function computeWorkbenchSolve(
     objective,
     balancePolicy,
     rawInputItemIds,
+    disabledRawInputItemIds,
     advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),
   });
 

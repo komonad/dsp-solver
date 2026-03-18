@@ -126,6 +126,18 @@ export interface LocaleBundle {
     exactLabel: string;
     roundedLabel: string;
   };
+  itemLedger: {
+    title: string;
+    netInputsTitle: string;
+    netOutputsTitle: string;
+    intermediatesTitle: string;
+    rawBadge: string;
+    targetBadge: string;
+    surplusBadge: string;
+    markRawButton: string;
+    unmarkRawButton: string;
+    noItems: string;
+  };
   diagnostics: {
     title: string;
     diagnosticsLabel: string;
@@ -311,6 +323,18 @@ const zhCN: LocaleBundle = {
     powerLabel: '功耗',
     exactLabel: '精确',
     roundedLabel: '取整',
+  },
+  itemLedger: {
+    title: '全物品总表',
+    netInputsTitle: '净输入',
+    netOutputsTitle: '净输出',
+    intermediatesTitle: '中间流转',
+    rawBadge: '原矿',
+    targetBadge: '目标',
+    surplusBadge: '冗余',
+    markRawButton: '标记为原矿',
+    unmarkRawButton: '取消原矿',
+    noItems: '当前分组没有物品。',
   },
   diagnostics: {
     title: '诊断与审计',

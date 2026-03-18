@@ -153,6 +153,7 @@ test('presentation model still exposes catalog summary before solving', () => {
   expect(model.externalInputs).toEqual([]);
   expect(model.recipePlans).toEqual([]);
   expect(model.itemBalance).toEqual([]);
+  expect(model.itemLedgerSections).toEqual([]);
   expect(model.catalogSummary.itemCount).toBe(4);
 });
 
@@ -188,6 +189,7 @@ test('overview sections keep surplus outputs separate from buildings and power',
     externalInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
     surplusOutputs: [{ itemId: '1116', itemName: 'Heavy Oil', ratePerMin: 30 }],
     itemBalance: [],
+    itemLedgerSections: [],
   };
 
   const overview = buildPresentationOverviewSections(model);
@@ -281,4 +283,68 @@ test('presentation model detects global proliferator disable requests', () => {
   });
 
   expect(model.requestSummary?.proliferatorPolicyLabel).toBe('禁用');
+});
+
+test('presentation model groups the item ledger into net inputs, outputs, and intermediates', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const request = {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings' as const,
+    balancePolicy: 'force_balance' as const,
+    rawInputItemIds: [],
+  };
+  const result = solveCatalogRequest(catalog, request);
+  const model = buildPresentationModel({
+    catalog,
+    request,
+    result,
+  });
+
+  expect(model.itemLedgerSections).toEqual([
+    {
+      key: 'net_inputs',
+      title: '净输入',
+      items: [
+        {
+          itemId: '1001',
+          itemName: 'Demo Ore',
+          producedRatePerMin: 60,
+          consumedRatePerMin: 60,
+          netRatePerMin: 0,
+          throughputRatePerMin: 60,
+          isRawInput: true,
+          isTarget: false,
+          isSurplusOutput: false,
+          externalInputRatePerMin: 60,
+          targetRatePerMin: 0,
+          surplusRatePerMin: 0,
+        },
+      ],
+    },
+    {
+      key: 'net_outputs',
+      title: '净输出',
+      items: [
+        {
+          itemId: '1101',
+          itemName: 'Demo Plate',
+          producedRatePerMin: 60,
+          consumedRatePerMin: 60,
+          netRatePerMin: 0,
+          throughputRatePerMin: 60,
+          isRawInput: false,
+          isTarget: true,
+          isSurplusOutput: false,
+          externalInputRatePerMin: 0,
+          targetRatePerMin: 60,
+          surplusRatePerMin: 0,
+        },
+      ],
+    },
+    {
+      key: 'intermediates',
+      title: '中间流转',
+      items: [],
+    },
+  ]);
 });

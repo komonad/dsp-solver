@@ -116,6 +116,12 @@ function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveReque
     }
   }
 
+  for (const itemId of request.disabledRawInputItemIds ?? []) {
+    if (!catalog.itemMap.has(itemId)) {
+      messages.push(`Unknown disabled raw-input item: ${itemId}.`);
+    }
+  }
+
   for (const recipeId of request.disabledRecipeIds ?? []) {
     if (!catalog.recipeMap.has(recipeId)) {
       messages.push(`Unknown disabled recipe: ${recipeId}.`);
@@ -903,10 +909,12 @@ export function solveCatalogRequest(
   }
 
   const targetRateMap = aggregateTargetRates(request);
-  const rawInputItemIds = new Set<string>([
-    ...catalog.rawItemIds,
-    ...(request.rawInputItemIds ?? []),
-  ]);
+  const disabledRawInputItemIds = new Set(request.disabledRawInputItemIds ?? []);
+  const rawInputItemIds = new Set<string>(
+    [...catalog.rawItemIds, ...(request.rawInputItemIds ?? [])].filter(
+      itemId => !disabledRawInputItemIds.has(itemId)
+    )
+  );
   const disabledRecipeIds = new Set(request.disabledRecipeIds ?? []);
   const disabledBuildingIds = new Set(request.disabledBuildingIds ?? []);
   const collected = collectUpstreamRecipes(

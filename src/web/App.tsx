@@ -116,6 +116,7 @@ export default function App() {
   const [proliferatorPolicy, setProliferatorPolicy] =
     useState<WorkbenchProliferatorPolicy>('auto');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
+  const [disabledRawInputItemIds, setDisabledRawInputItemIds] = useState<string[]>([]);
   const [rawDraftItemId, setRawDraftItemId] = useState('');
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
@@ -148,6 +149,7 @@ export default function App() {
       setBalancePolicy(nextCatalog.recommendedSolve.balancePolicy ?? 'force_balance');
       setProliferatorPolicy('auto');
       setRawInputItemIds([]);
+      setDisabledRawInputItemIds([]);
       setRawDraftItemId(nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ?? '');
       setDisabledRecipeIds([]);
       setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
@@ -179,9 +181,16 @@ export default function App() {
     [catalog]
   );
 
+  const effectiveRawInputSet = useMemo(() => {
+    const effectiveRawItems = new Set<string>(catalog?.rawItemIds ?? []);
+    disabledRawInputItemIds.forEach(itemId => effectiveRawItems.delete(itemId));
+    rawInputItemIds.forEach(itemId => effectiveRawItems.add(itemId));
+    return effectiveRawItems;
+  }, [catalog, disabledRawInputItemIds, rawInputItemIds]);
+
   const rawOptions = useMemo(
-    () => itemOptions.filter(item => !rawInputItemIds.includes(item.itemId)),
-    [itemOptions, rawInputItemIds]
+    () => itemOptions.filter(item => !effectiveRawInputSet.has(item.itemId)),
+    [effectiveRawInputSet, itemOptions]
   );
 
   const recipeOptions = useMemo(
@@ -285,6 +294,7 @@ export default function App() {
       balancePolicy,
       proliferatorPolicy,
       rawInputItemIds,
+      disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
       recipePreferences,
@@ -295,6 +305,7 @@ export default function App() {
     advancedOverridesText,
     balancePolicy,
     catalog,
+    disabledRawInputItemIds,
     disabledBuildingIds,
     disabledRecipeIds,
     isLoading,
@@ -373,11 +384,37 @@ export default function App() {
     setTargets(current => current.filter((_, targetIndex) => targetIndex !== index));
   }
 
-  function addRawOverride() {
-    if (!rawDraftItemId || rawInputItemIds.includes(rawDraftItemId)) {
+  function markItemAsRawInput(itemId: string) {
+    if (!itemId) {
       return;
     }
-    setRawInputItemIds(current => [...current, rawDraftItemId]);
+
+    const isDatasetRawItem = catalog?.rawItemIds.includes(itemId) ?? false;
+    setDisabledRawInputItemIds(current => current.filter(entry => entry !== itemId));
+    if (!isDatasetRawItem) {
+      setRawInputItemIds(current => (current.includes(itemId) ? current : [...current, itemId]));
+    }
+  }
+
+  function unmarkItemAsRawInput(itemId: string) {
+    if (!itemId) {
+      return;
+    }
+
+    const isDatasetRawItem = catalog?.rawItemIds.includes(itemId) ?? false;
+    setRawInputItemIds(current => current.filter(entry => entry !== itemId));
+    if (isDatasetRawItem) {
+      setDisabledRawInputItemIds(current =>
+        current.includes(itemId) ? current : [...current, itemId]
+      );
+    }
+  }
+
+  function addRawOverride() {
+    if (!rawDraftItemId || effectiveRawInputSet.has(rawDraftItemId)) {
+      return;
+    }
+    markItemAsRawInput(rawDraftItemId);
   }
 
   function removeRawOverride(itemId: string) {
@@ -1155,6 +1192,135 @@ export default function App() {
                             </div>
                           ))
                         )}
+                      </div>
+                    </article>
+
+                    <article style={cardStyle}>
+                      <h2 style={{ marginTop: 0 }}>{bundle.itemLedger.title}</h2>
+                      <div style={{ display: 'grid', gap: 18 }}>
+                        {model.itemLedgerSections.map(section => (
+                          <section key={section.key} style={{ display: 'grid', gap: 10 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.08em' }}>
+                              {section.title}
+                            </div>
+                            {section.items.length === 0 ? (
+                              <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.itemLedger.noItems}</div>
+                            ) : (
+                              <div style={{ display: 'grid', gap: 10 }}>
+                                {section.items.map(entry => (
+                                  <div
+                                    key={entry.itemId}
+                                    style={{
+                                      border: '1px solid rgba(24, 51, 89, 0.12)',
+                                      borderRadius: 16,
+                                      padding: 14,
+                                      display: 'grid',
+                                      gap: 10,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        gap: 12,
+                                        alignItems: 'flex-start',
+                                        flexWrap: 'wrap',
+                                      }}
+                                    >
+                                      <div style={{ display: 'grid', gap: 6 }}>
+                                        <div style={{ fontSize: 17, fontWeight: 700 }}>{entry.itemName}</div>
+                                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                          {entry.isRawInput ? (
+                                            <span
+                                              style={{
+                                                padding: '3px 8px',
+                                                borderRadius: 999,
+                                                background: 'rgba(24, 51, 89, 0.10)',
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              {bundle.itemLedger.rawBadge}
+                                            </span>
+                                          ) : null}
+                                          {entry.isTarget ? (
+                                            <span
+                                              style={{
+                                                padding: '3px 8px',
+                                                borderRadius: 999,
+                                                background: 'rgba(212, 120, 48, 0.14)',
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              {bundle.itemLedger.targetBadge}
+                                            </span>
+                                          ) : null}
+                                          {entry.isSurplusOutput ? (
+                                            <span
+                                              style={{
+                                                padding: '3px 8px',
+                                                borderRadius: 999,
+                                                background: 'rgba(56, 143, 122, 0.14)',
+                                                fontSize: 12,
+                                                fontWeight: 700,
+                                              }}
+                                            >
+                                              {bundle.itemLedger.surplusBadge}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          entry.isRawInput
+                                            ? unmarkItemAsRawInput(entry.itemId)
+                                            : markItemAsRawInput(entry.itemId)
+                                        }
+                                        style={subtleButtonStyle}
+                                      >
+                                        {entry.isRawInput
+                                          ? bundle.itemLedger.unmarkRawButton
+                                          : bundle.itemLedger.markRawButton}
+                                      </button>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        display: 'grid',
+                                        gap: 10,
+                                        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                                      }}
+                                    >
+                                      <div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                          {bundle.diagnostics.producedLabel}
+                                        </div>
+                                        <div style={{ marginTop: 4 }}>{formatRate(entry.producedRatePerMin, locale)}</div>
+                                      </div>
+                                      <div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                          {bundle.diagnostics.consumedLabel}
+                                        </div>
+                                        <div style={{ marginTop: 4 }}>{formatRate(entry.consumedRatePerMin, locale)}</div>
+                                      </div>
+                                      {Math.abs(entry.netRatePerMin) > 1e-8 ? (
+                                        <div>
+                                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                            {bundle.diagnostics.netLabel}
+                                          </div>
+                                          <div style={{ marginTop: 4 }}>{formatRate(entry.netRatePerMin, locale)}</div>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </section>
+                        ))}
                       </div>
                     </article>
 

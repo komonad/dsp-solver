@@ -4,7 +4,7 @@ import type { BalancePolicy, SolveObjective, SolveRequest } from '../solver';
 
 export type AdvancedSolveOverrides = Omit<
   SolveRequest,
-  'targets' | 'objective' | 'balancePolicy' | 'rawInputItemIds'
+  'targets' | 'objective' | 'balancePolicy' | 'rawInputItemIds' | 'disabledRawInputItemIds'
 >;
 
 export interface EditableTarget {
@@ -26,6 +26,7 @@ export interface BuildWorkbenchRequestParams {
   objective: SolveObjective;
   balancePolicy: BalancePolicy;
   rawInputItemIds: string[];
+  disabledRawInputItemIds?: string[];
   advancedOverrides?: AdvancedSolveOverrides;
 }
 
@@ -385,6 +386,9 @@ export function buildWorkbenchRequest(params: BuildWorkbenchRequestParams): Solv
     objective: params.objective,
     balancePolicy: params.balancePolicy,
     rawInputItemIds: params.rawInputItemIds,
+    ...(params.disabledRawInputItemIds && params.disabledRawInputItemIds.length > 0
+      ? { disabledRawInputItemIds: params.disabledRawInputItemIds }
+      : {}),
     ...params.advancedOverrides,
   };
 }
