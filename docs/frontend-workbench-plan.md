@@ -211,6 +211,143 @@ Why:
 
 - These are debugging and validation views, but still essential.
 
+## Production Graph View
+
+The current flat recipe-plan list is not enough. The main production view should become a product-grouped production graph.
+
+### Core Rules
+
+#### 1. Recipe order must follow graph traversal order
+
+The list should not be sorted alphabetically or by raw recipe ID.
+
+Recommended rule:
+
+- Start from the requested target items.
+- Traverse upstream through the actually used plans.
+- Emit product groups in traversal order.
+- Within each group, keep producer plans close to the consumers that caused them to appear.
+
+Why:
+
+- This gives users locality.
+- Neighbouring rows stay related in the same part of the graph.
+- Large plans remain inspectable without mentally reconstructing the dependency graph from scratch.
+
+Recommended implementation:
+
+- Build a solved dependency graph from `SolveResult.recipePlans`.
+- Use a stable DFS or BFS from targets.
+- Preserve a deterministic tie-break:
+  - first by shortest distance from any target
+  - then by upstream appearance order
+  - then by recipe/building ID as a final stable fallback
+
+#### 2. Recipe plans must be grouped by produced item
+
+The primary view should group by product item, not by recipe.
+
+That means:
+
+- Each group represents one item.
+- The group shows all plan entries that produce that item.
+- The same plan entry may appear in more than one group if it has multiple outputs.
+
+This duplication is correct and should be intentional.
+
+Why:
+
+- Users reason about “how this item is made”, not “what every recipe does globally”.
+- Multi-output recipes participate in multiple item decisions, so they need to be visible in multiple groups.
+
+Recommended group header content:
+
+- Item name
+- Requested/actual/net rate
+- Whether it is treated as raw input
+- Whether surplus exists
+- Short summary of active production strategy
+
+Recommended row content inside one group:
+
+- Recipe name
+- Building name
+- Proliferator label
+- Rate contribution for this group item
+- Full input/output list
+- Building count and power
+
+### 3. Product-level strategy controls must exist in the product group
+
+If the user wants to change how one item is produced, that interaction should be attached to that item’s group.
+
+Examples:
+
+- Mark this item as raw input
+- Prefer a specific recipe for this item
+- Force a specific recipe for this item
+- Inspect which recipes are currently producing this item
+
+Why:
+
+- The user intent is item-centric.
+- Putting these controls only in the left-side global form forces too much context switching.
+
+Recommended interaction:
+
+- Each product group header gets a compact “strategy” action area.
+- Clicking it opens an inline editor or side panel scoped to that item.
+
+Recommended controls in that item strategy editor:
+
+- `Treat as raw input`
+- `Preferred recipe`
+- `Forced recipe`
+- `Clear item overrides`
+
+Optional later:
+
+- default building preference for recipes producing this item
+- default proliferator preference for recipes producing this item
+
+## Presentation Model Changes Needed
+
+To support the production graph view, the presentation layer should stop exposing only a flat `recipePlans` array for the main UI.
+
+Add a higher-level structure such as:
+
+- `productionGroups[]`
+- each group keyed by `itemId`
+- each group contains:
+  - item summary
+  - item-level strategy state derived from request
+  - ordered producer entries
+
+Each producer entry should include:
+
+- `planKey`
+- `recipeId`
+- `buildingId`
+- `proliferator label`
+- `contributedOutputRatePerMin` for the current group item
+- full plan inputs/outputs
+
+Important:
+
+- This grouping must be built in `src/presentation`, not inside React.
+- Duplication of multi-output plans across groups is acceptable.
+- The ordering algorithm must be deterministic and separately unit tested.
+
+## Recommended Next UI Refactor
+
+When splitting the current page, add one more layer:
+
+- `ResultOverviewPanel`
+- `ProductionGraphPanel`
+- `DiagnosticsPanel`
+
+`ProductionGraphPanel` should become the main interaction surface for item-level strategy editing.
+
 ## Next Engineering Steps
 
 ### Step 1
@@ -239,9 +376,21 @@ Why:
   - surplus output visibility
   - Chinese UI labels
 
+### Step 6
+
+- Add presentation tests for:
+  - target-rooted production group ordering
+  - multi-output plan duplication across item groups
+  - item-level strategy summaries in group headers
+
+### Step 7
+
+- Add UI interactions for item-level strategy editing directly from product groups.
+
 ## Testing Rules
 
 - Presentation grouping must be tested in `src/presentation`.
 - Request-building behavior must be tested separately from React rendering.
 - React components should be tested only against already-built presentation/request models.
 - Browser smoke tests must validate that the built bundle shows the same labels and sections as the tested models.
+- Production graph ordering must be validated with deterministic unit tests, not only browser snapshots.
