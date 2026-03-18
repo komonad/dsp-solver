@@ -114,10 +114,14 @@ const resultMainColumnStyle: React.CSSProperties = {
 };
 
 const resultSideColumnStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 20,
   position: 'sticky',
   top: 24,
+  alignSelf: 'start',
+  maxHeight: 'calc(100vh - 24px)',
+  minHeight: 0,
+  display: 'grid',
+  gap: 20,
+  gridTemplateRows: 'minmax(220px, 360px) minmax(0, 1fr)',
 };
 
 const compactLedgerButtonStyle: React.CSSProperties = {
@@ -1806,10 +1810,8 @@ export default function App() {
                         style={{
                           ...cardStyle,
                           padding: 16,
-                          maxHeight: 'calc(100vh - 48px)',
-                          display: 'grid',
-                          gridTemplateRows: 'auto auto auto minmax(0, 1fr)',
-                          gap: 12,
+                          minHeight: 0,
+                          overflow: 'auto',
                         }}
                       >
                         <ItemSlicePanel
@@ -1829,6 +1831,19 @@ export default function App() {
                           onClearPreferredRecipe={clearPreferredRecipeForItem}
                           onLocateInLedger={locateItemInLedger}
                         />
+                      </article>
+
+                      <article
+                        style={{
+                          ...cardStyle,
+                          padding: 16,
+                          minHeight: 0,
+                          overflow: 'hidden',
+                          display: 'grid',
+                          gridTemplateRows: 'auto auto minmax(0, 1fr)',
+                          gap: 12,
+                        }}
+                      >
                         <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
                         <div style={{ display: 'grid', gap: 8 }}>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
