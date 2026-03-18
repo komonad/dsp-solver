@@ -91,6 +91,33 @@ export interface PresentationItemBalance {
   netRatePerMin: number;
 }
 
+/**
+ * Frontend-facing grouping for the top-level solved summary cards.
+ *
+ * Keeping this structure in the presentation layer prevents React components
+ * from inventing their own grouping semantics for the same solver result.
+ */
+export interface PresentationOverviewSections {
+  /** Targets plus the final external-input list shown beside them. */
+  targetsAndExternalInputs: {
+    title: 'Targets & External Inputs';
+    targets: PresentationSolvedTarget[];
+    externalInputs: PresentationItemRate[];
+  };
+  /** Building totals and power totals, without any unrelated result groups. */
+  buildingsAndPower: {
+    title: 'Buildings & Power';
+    buildingSummary: PresentationBuildingSummary[];
+    activePowerMW: number;
+    roundedPlacementPowerMW: number;
+  };
+  /** Explicit surplus outputs shown as their own card. */
+  surplusOutputs: {
+    title: 'Surplus Outputs';
+    items: PresentationItemRate[];
+  };
+}
+
 export interface PresentationModel {
   catalogSummary: PresentationCatalogSummary;
   requestSummary?: PresentationRequestSummary;
@@ -216,6 +243,34 @@ function inferGlobalProliferatorPolicyLabel(
   );
 
   return allDisabled ? 'Disabled' : 'Auto';
+}
+
+/**
+ * Build the solved-summary card groups that the web workbench renders above
+ * the detailed plan tables.
+ *
+ * This keeps section membership stable and independently testable.
+ */
+export function buildPresentationOverviewSections(
+  model: PresentationModel
+): PresentationOverviewSections {
+  return {
+    targetsAndExternalInputs: {
+      title: 'Targets & External Inputs',
+      targets: model.targets,
+      externalInputs: model.externalInputs,
+    },
+    buildingsAndPower: {
+      title: 'Buildings & Power',
+      buildingSummary: model.buildingSummary,
+      activePowerMW: model.powerSummary?.activePowerMW ?? 0,
+      roundedPlacementPowerMW: model.powerSummary?.roundedPlacementPowerMW ?? 0,
+    },
+    surplusOutputs: {
+      title: 'Surplus Outputs',
+      items: model.surplusOutputs,
+    },
+  };
 }
 
 export function buildPresentationModel(

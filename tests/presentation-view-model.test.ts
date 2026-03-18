@@ -1,5 +1,5 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
-import { buildPresentationModel } from '../src/presentation';
+import { buildPresentationModel, buildPresentationOverviewSections, type PresentationModel } from '../src/presentation';
 import { solveCatalogRequest } from '../src/solver';
 
 function workEnergyForMW(megawatts: number): number {
@@ -154,6 +154,65 @@ test('presentation model still exposes catalog summary before solving', () => {
   expect(model.recipePlans).toEqual([]);
   expect(model.itemBalance).toEqual([]);
   expect(model.catalogSummary.itemCount).toBe(4);
+});
+
+test('overview sections keep surplus outputs separate from buildings and power', () => {
+  const model: PresentationModel = {
+    catalogSummary: {
+      itemCount: 0,
+      recipeCount: 0,
+      buildingCount: 0,
+      proliferatorLevelCount: 0,
+      rawItemCount: 0,
+      targetableItemCount: 0,
+    },
+    status: 'optimal',
+    diagnostics: { messages: [], unmetPreferences: [] },
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', requestedRatePerMin: 60, actualRatePerMin: 60 }],
+    recipePlans: [],
+    buildingSummary: [
+      {
+        buildingId: '5002',
+        buildingName: 'Turbo Smelter',
+        category: 'smelter',
+        exactCount: 0.5,
+        roundedUpCount: 1,
+        activePowerMW: 4,
+        roundedPlacementPowerMW: 4,
+      },
+    ],
+    powerSummary: {
+      activePowerMW: 4,
+      roundedPlacementPowerMW: 4,
+    },
+    externalInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
+    surplusOutputs: [{ itemId: '1116', itemName: 'Heavy Oil', ratePerMin: 30 }],
+    itemBalance: [],
+  };
+
+  const overview = buildPresentationOverviewSections(model);
+
+  expect(overview.targetsAndExternalInputs).toEqual({
+    title: 'Targets & External Inputs',
+    targets: model.targets,
+    externalInputs: model.externalInputs,
+  });
+  expect(overview.buildingsAndPower).toEqual({
+    title: 'Buildings & Power',
+    buildingSummary: model.buildingSummary,
+    activePowerMW: 4,
+    roundedPlacementPowerMW: 4,
+  });
+  expect(overview.surplusOutputs).toEqual({
+    title: 'Surplus Outputs',
+    items: model.surplusOutputs,
+  });
+  expect(Object.keys(overview.buildingsAndPower)).toEqual([
+    'title',
+    'buildingSummary',
+    'activePowerMW',
+    'roundedPlacementPowerMW',
+  ]);
 });
 
 test('presentation model exposes named recipe preference summaries from the request', () => {

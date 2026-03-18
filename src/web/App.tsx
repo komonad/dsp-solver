@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ProliferatorMode, ResolvedCatalogModel, ResolvedRecipeSpec } from '../catalog';
-import { buildPresentationModel } from '../presentation';
+import { buildPresentationModel, buildPresentationOverviewSections } from '../presentation';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
 import { solveCatalogRequest } from '../solver/solve';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
@@ -294,6 +294,11 @@ export default function App() {
           })
         : null,
     [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath]
+  );
+
+  const overviewSections = useMemo(
+    () => (model ? buildPresentationOverviewSections(model) : null),
+    [model]
   );
 
   function onPresetChange(nextPresetId: string) {
@@ -1094,10 +1099,10 @@ export default function App() {
                 {model.status ? (
                   <>
                     <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>Targets & External Inputs</h2>
+                      <h2 style={{ marginTop: 0 }}>{overviewSections?.targetsAndExternalInputs.title}</h2>
                       <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {model.targets.map(target => (
+                          {overviewSections?.targetsAndExternalInputs.targets.map(target => (
                             <div key={target.itemId} style={{ border: '1px solid rgba(24, 51, 89, 0.12)', borderRadius: 14, padding: 12 }}>
                               <div style={{ fontWeight: 700 }}>{target.itemName}</div>
                               <div style={{ marginTop: 4 }}>Request: {formatRate(target.requestedRatePerMin)}</div>
@@ -1106,10 +1111,10 @@ export default function App() {
                           ))}
                         </div>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {model.externalInputs.length === 0 ? (
+                          {(overviewSections?.targetsAndExternalInputs.externalInputs.length ?? 0) === 0 ? (
                             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>No external inputs.</div>
                           ) : (
-                            model.externalInputs.map(item => (
+                            overviewSections?.targetsAndExternalInputs.externalInputs.map(item => (
                               <div key={item.itemId}>
                                 {item.itemName}: {formatRate(item.ratePerMin)}
                               </div>
@@ -1120,10 +1125,10 @@ export default function App() {
                     </article>
 
                     <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>Buildings & Power</h2>
+                      <h2 style={{ marginTop: 0 }}>{overviewSections?.buildingsAndPower.title}</h2>
                       <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {model.buildingSummary.map(summary => (
+                          {overviewSections?.buildingsAndPower.buildingSummary.map(summary => (
                             <div key={summary.buildingId} style={{ border: '1px solid rgba(24, 51, 89, 0.12)', borderRadius: 14, padding: 12 }}>
                               <div style={{ fontWeight: 700 }}>{summary.buildingName}</div>
                               <div style={{ marginTop: 4 }}>Exact: {summary.exactCount.toFixed(2)}</div>
@@ -1133,19 +1138,24 @@ export default function App() {
                           ))}
                         </div>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          <div>Active: {formatPower(model.powerSummary?.activePowerMW ?? 0)}</div>
-                          <div>Rounded Placement: {formatPower(model.powerSummary?.roundedPlacementPowerMW ?? 0)}</div>
-                          <div style={{ marginTop: 10, fontWeight: 700 }}>Surplus Outputs</div>
-                          {model.surplusOutputs.length === 0 ? (
-                            <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>None</div>
-                          ) : (
-                            model.surplusOutputs.map(item => (
-                              <div key={item.itemId}>
-                                {item.itemName}: {formatRate(item.ratePerMin)}
-                              </div>
-                            ))
-                          )}
+                          <div>Active: {formatPower(overviewSections?.buildingsAndPower.activePowerMW ?? 0)}</div>
+                          <div>Rounded Placement: {formatPower(overviewSections?.buildingsAndPower.roundedPlacementPowerMW ?? 0)}</div>
                         </div>
+                      </div>
+                    </article>
+
+                    <article style={cardStyle}>
+                      <h2 style={{ marginTop: 0 }}>{overviewSections?.surplusOutputs.title}</h2>
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        {(overviewSections?.surplusOutputs.items.length ?? 0) === 0 ? (
+                          <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>None</div>
+                        ) : (
+                          overviewSections?.surplusOutputs.items.map(item => (
+                            <div key={item.itemId}>
+                              {item.itemName}: {formatRate(item.ratePerMin)}
+                            </div>
+                          ))
+                        )}
                       </div>
                     </article>
 
