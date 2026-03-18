@@ -17,6 +17,7 @@ export interface WorkbenchExtraBundle {
     noProducerPlans: string;
     noConsumerPlans: string;
     openInLedgerButton: string;
+    closeButton: string;
   };
 }
 
@@ -24,7 +25,8 @@ const zhCN: WorkbenchExtraBundle = {
   itemSlice: {
     title: '物品截面',
     emptyTitle: '选择一个物品',
-    emptyDescription: '点击总表、方案摘要或配方明细中的物品，可以在这里查看它的局部截面并直接调整原矿/优先配方。',
+    emptyDescription:
+      '点击总表、方案摘要或配方明细中的物品，可以在这里查看它的局部截面，并直接调整原矿或优先配方。',
     summaryTitle: '流量摘要',
     producersTitle: '生产方案',
     consumersTitle: '消耗方案',
@@ -37,6 +39,7 @@ const zhCN: WorkbenchExtraBundle = {
     noProducerPlans: '当前没有生产该物品的已用方案。',
     noConsumerPlans: '当前没有消耗该物品的已用方案。',
     openInLedgerButton: '在总表中定位',
+    closeButton: '关闭',
   },
 };
 

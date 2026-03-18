@@ -12,6 +12,7 @@ import {
   getDatasetPresetText,
   getLocaleBundle,
 } from '../i18n';
+import { getWorkbenchExtraBundle } from '../i18n/workbenchExtra';
 import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective } from '../solver';
 import {
@@ -121,7 +122,28 @@ const resultSideColumnStyle: React.CSSProperties = {
   minHeight: 0,
   display: 'grid',
   gap: 20,
-  gridTemplateRows: 'minmax(220px, 360px) minmax(0, 1fr)',
+};
+
+const modalBackdropStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(15, 24, 41, 0.38)',
+  display: 'flex',
+  justifyContent: 'flex-end',
+  alignItems: 'flex-start',
+  padding: 24,
+  zIndex: 1000,
+};
+
+const modalPanelStyle: React.CSSProperties = {
+  width: 'min(520px, calc(100vw - 48px))',
+  maxHeight: 'calc(100vh - 48px)',
+  overflow: 'auto',
+  background: 'rgba(255,255,255,0.96)',
+  border: '1px solid rgba(18, 45, 77, 0.12)',
+  borderRadius: 22,
+  padding: 20,
+  boxShadow: '0 24px 80px rgba(24, 51, 89, 0.24)',
 };
 
 const compactLedgerButtonStyle: React.CSSProperties = {
@@ -202,6 +224,7 @@ function buildDefaultWorkbenchEditorState(
 export default function App() {
   const locale = DEFAULT_APP_LOCALE;
   const bundle = getLocaleBundle(locale);
+  const workbenchExtra = getWorkbenchExtraBundle(locale);
   const browserStorage = useMemo(() => getBrowserStorage(), []);
   const initialCachedSource = useMemo(
     () => readActiveWorkbenchCacheSource(browserStorage),
@@ -256,6 +279,7 @@ export default function App() {
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [selectedItemId, setSelectedItemId] = useState('');
+  const [isItemSliceOpen, setIsItemSliceOpen] = useState(false);
   const itemLedgerScrollRef = useRef<HTMLDivElement | null>(null);
   const itemLedgerSectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -285,6 +309,7 @@ export default function App() {
         nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ??
         ''
     );
+    setIsItemSliceOpen(false);
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -847,6 +872,7 @@ export default function App() {
   useEffect(() => {
     if (!catalog) {
       setSelectedItemId('');
+      setIsItemSliceOpen(false);
       return;
     }
 
@@ -867,6 +893,33 @@ export default function App() {
 
   const selectedItemSlice =
     selectedItemId && model ? model.itemSlicesById[selectedItemId] : undefined;
+
+  useEffect(() => {
+    if (isItemSliceOpen && !selectedItemSlice) {
+      setIsItemSliceOpen(false);
+    }
+  }, [isItemSliceOpen, selectedItemSlice]);
+
+  useEffect(() => {
+    if (!isItemSliceOpen || typeof window === 'undefined') {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsItemSliceOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isItemSliceOpen]);
 
   const selectedItemPreferredRecipeOptions = useMemo(() => {
     if (!catalog || !selectedItemSlice) {
@@ -919,6 +972,11 @@ export default function App() {
     scrollItemLedgerToSection(targetSection.key);
   }
 
+  function openItemSlice(itemId: string) {
+    setSelectedItemId(itemId);
+    setIsItemSliceOpen(true);
+  }
+
   function renderClickableItemLabel(item: {
     itemId: string;
     itemName: string;
@@ -931,7 +989,7 @@ export default function App() {
         atlasIds={iconAtlasIds}
         size={18}
         gap={8}
-        onClick={() => setSelectedItemId(item.itemId)}
+        onClick={() => openItemSlice(item.itemId)}
       />
     );
   }
@@ -1811,33 +1869,6 @@ export default function App() {
                           ...cardStyle,
                           padding: 16,
                           minHeight: 0,
-                          overflow: 'auto',
-                        }}
-                      >
-                        <ItemSlicePanel
-                          locale={locale}
-                          atlasIds={iconAtlasIds}
-                          slice={selectedItemSlice}
-                          preferredRecipeId={
-                            selectedItemSlice
-                              ? preferredRecipeByItem[selectedItemSlice.itemId]
-                              : undefined
-                          }
-                          preferredRecipeOptions={selectedItemPreferredRecipeOptions}
-                          onSelectItem={setSelectedItemId}
-                          onMarkRaw={markItemAsRawInput}
-                          onUnmarkRaw={unmarkItemAsRawInput}
-                          onPreferredRecipeChange={updatePreferredRecipeForItem}
-                          onClearPreferredRecipe={clearPreferredRecipeForItem}
-                          onLocateInLedger={locateItemInLedger}
-                        />
-                      </article>
-
-                      <article
-                        style={{
-                          ...cardStyle,
-                          padding: 16,
-                          minHeight: 0,
                           overflow: 'hidden',
                           display: 'grid',
                           gridTemplateRows: 'auto auto minmax(0, 1fr)',
@@ -1914,7 +1945,7 @@ export default function App() {
                                             atlasIds={iconAtlasIds}
                                             size={20}
                                             textStyle={{ fontWeight: 700 }}
-                                            onClick={() => setSelectedItemId(entry.itemId)}
+                                            onClick={() => openItemSlice(entry.itemId)}
                                           />
                                           {entry.isRawInput ? (
                                             <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>
@@ -1982,6 +2013,46 @@ export default function App() {
           </div>
         </section>
       </div>
+      {isItemSliceOpen && selectedItemSlice ? (
+        <div
+          style={modalBackdropStyle}
+          onClick={() => setIsItemSliceOpen(false)}
+        >
+          <div
+            style={modalPanelStyle}
+            onClick={event => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setIsItemSliceOpen(false)}
+                style={subtleButtonStyle}
+              >
+                {workbenchExtra.itemSlice.closeButton}
+              </button>
+            </div>
+            <ItemSlicePanel
+              locale={locale}
+              atlasIds={iconAtlasIds}
+              slice={selectedItemSlice}
+              preferredRecipeId={preferredRecipeByItem[selectedItemSlice.itemId]}
+              preferredRecipeOptions={selectedItemPreferredRecipeOptions}
+              onSelectItem={openItemSlice}
+              onMarkRaw={markItemAsRawInput}
+              onUnmarkRaw={unmarkItemAsRawInput}
+              onPreferredRecipeChange={updatePreferredRecipeForItem}
+              onClearPreferredRecipe={clearPreferredRecipeForItem}
+              onLocateInLedger={locateItemInLedger}
+            />
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
