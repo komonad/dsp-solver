@@ -48,6 +48,8 @@ export interface LocaleBundle {
     defaultsPathPlaceholder: string;
     loadButton: string;
     loadingButton: string;
+    autoCacheHint: string;
+    clearCacheButton: string;
     loadErrorTitle: string;
     waitingTitle: string;
     waitingDescription: string;
@@ -138,6 +140,8 @@ export interface LocaleBundle {
     surplusBadge: string;
     markRawButton: string;
     unmarkRawButton: string;
+    jumpToTopButton: string;
+    jumpToBottomButton: string;
     noItems: string;
   };
   diagnostics: {
@@ -237,6 +241,8 @@ const zhCN: LocaleBundle = {
     defaultsPathPlaceholder: './Vanilla.defaults.json',
     loadButton: '加载数据集',
     loadingButton: '加载中...',
+    autoCacheHint: '当前工作台状态会自动缓存到浏览器。',
+    clearCacheButton: '清除缓存并重置',
     loadErrorTitle: '数据集加载失败',
     waitingTitle: '等待加载数据集',
     waitingDescription: '先加载一个内置数据集，或者填写自定义数据集文件路径。',
@@ -338,6 +344,8 @@ const zhCN: LocaleBundle = {
     surplusBadge: '冗余',
     markRawButton: '标记为原矿',
     unmarkRawButton: '取消原矿',
+    jumpToTopButton: '回到顶部',
+    jumpToBottomButton: '滚动到底部',
     noItems: '当前分组没有物品。',
   },
   diagnostics: {

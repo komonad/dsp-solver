@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProliferatorMode, ResolvedCatalogModel, ResolvedRecipeSpec } from '../catalog';
 import {
   DEFAULT_APP_LOCALE,
@@ -22,6 +22,16 @@ import {
   type EditableTarget,
   type WorkbenchProliferatorPolicy,
 } from './requestBuilder';
+import {
+  clearWorkbenchCache,
+  readActiveWorkbenchCacheSource,
+  readWorkbenchEditorState,
+  sanitizeWorkbenchEditorState,
+  writeActiveWorkbenchCacheSource,
+  writeWorkbenchEditorState,
+  type WorkbenchCacheSource,
+  type WorkbenchEditorState,
+} from './persistence';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -142,15 +152,68 @@ function sortModeOptions(modes: ProliferatorMode[]): ProliferatorMode[] {
   return order.filter(mode => modes.includes(mode));
 }
 
+function getBrowserStorage(): Storage | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildDefaultWorkbenchEditorState(
+  catalog: ResolvedCatalogModel
+): WorkbenchEditorState {
+  const nextTargetId = pickDefaultTarget(catalog);
+  return {
+    targets: nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : [],
+    objective: catalog.recommendedSolve.objective ?? 'min_buildings',
+    balancePolicy: catalog.recommendedSolve.balancePolicy ?? 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'auto',
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: catalog.recommendedDisabledBuildingIds,
+    recipePreferences: [],
+    advancedOverridesText: '',
+  };
+}
+
 export default function App() {
   const locale = DEFAULT_APP_LOCALE;
   const bundle = getLocaleBundle(locale);
-  const initialPreset = DATASET_PRESETS[0];
-  const [presetId, setPresetId] = useState(initialPreset.id);
-  const [datasetPath, setDatasetPath] = useState(initialPreset.datasetPath);
-  const [defaultConfigPath, setDefaultConfigPath] = useState(initialPreset.defaultConfigPath ?? '');
-  const [catalogLabel, setCatalogLabel] = useState(getDatasetPresetText(initialPreset.id, locale).label);
+  const browserStorage = useMemo(() => getBrowserStorage(), []);
+  const initialCachedSource = useMemo(
+    () => readActiveWorkbenchCacheSource(browserStorage),
+    [browserStorage]
+  );
+  const fallbackPreset = DATASET_PRESETS[0];
+  const initialPreset =
+    DATASET_PRESETS.find(
+      preset =>
+        preset.id === initialCachedSource?.presetId ||
+        (initialCachedSource &&
+          preset.datasetPath === initialCachedSource.datasetPath &&
+          (preset.defaultConfigPath ?? '') === initialCachedSource.defaultConfigPath)
+    ) ?? (initialCachedSource?.presetId === 'custom' ? DATASET_PRESETS[DATASET_PRESETS.length - 1] : fallbackPreset);
+  const [presetId, setPresetId] = useState<DatasetPresetId>(
+    initialCachedSource?.presetId ?? initialPreset.id
+  );
+  const [datasetPath, setDatasetPath] = useState(
+    initialCachedSource?.datasetPath ?? initialPreset.datasetPath
+  );
+  const [defaultConfigPath, setDefaultConfigPath] = useState(
+    initialCachedSource?.defaultConfigPath ?? initialPreset.defaultConfigPath ?? ''
+  );
+  const [catalogLabel, setCatalogLabel] = useState(
+    getDatasetPresetText(initialCachedSource?.presetId ?? initialPreset.id, locale).label
+  );
   const [catalog, setCatalog] = useState<ResolvedCatalogModel | null>(null);
+  const [loadedSource, setLoadedSource] = useState<WorkbenchCacheSource | null>(null);
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -170,41 +233,81 @@ export default function App() {
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
+  const itemLedgerScrollRef = useRef<HTMLDivElement | null>(null);
+  const itemLedgerSectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  async function loadCatalog(nextDatasetPath: string, nextDefaultConfigPath: string, nextLabel: string) {
+  function applyWorkbenchEditorState(
+    nextCatalog: ResolvedCatalogModel,
+    editorState: WorkbenchEditorState
+  ) {
+    setTargets(editorState.targets);
+    setObjective(editorState.objective);
+    setBalancePolicy(editorState.balancePolicy);
+    setAutoPromoteUnavailableItemsToRawInputs(
+      editorState.autoPromoteUnavailableItemsToRawInputs
+    );
+    setProliferatorPolicy(editorState.proliferatorPolicy);
+    setRawInputItemIds(editorState.rawInputItemIds);
+    setDisabledRawInputItemIds(editorState.disabledRawInputItemIds);
+    setDisabledRecipeIds(editorState.disabledRecipeIds);
+    setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
+    setDisabledBuildingIds(editorState.disabledBuildingIds);
+    setDisabledBuildingDraftId('');
+    setRecipePreferences(editorState.recipePreferences);
+    setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
+    setAdvancedOverridesText(editorState.advancedOverridesText);
+  }
+
+  async function loadCatalog(
+    nextDatasetPath: string,
+    nextDefaultConfigPath: string,
+    nextLabel: string,
+    nextPresetId: DatasetPresetId
+  ) {
     if (!nextDatasetPath.trim()) {
       setLoadError(bundle.datasetSource.datasetPathRequired);
       setCatalog(null);
+      setLoadedSource(null);
       return;
     }
 
     try {
+      const trimmedDatasetPath = nextDatasetPath.trim();
+      const trimmedDefaultConfigPath = nextDefaultConfigPath.trim();
       setIsLoading(true);
       setLoadError('');
       setCatalog(null);
       const nextCatalog = await loadResolvedCatalogFromUrl(
-        nextDatasetPath.trim(),
-        nextDefaultConfigPath.trim() || undefined
+        trimmedDatasetPath,
+        trimmedDefaultConfigPath || undefined
       );
+      const nextSource: WorkbenchCacheSource = {
+        presetId: nextPresetId,
+        datasetPath: trimmedDatasetPath,
+        defaultConfigPath: trimmedDefaultConfigPath,
+      };
+      const cachedEditorState = readWorkbenchEditorState(browserStorage, nextSource);
+      const defaultEditorState = buildDefaultWorkbenchEditorState(nextCatalog);
+      const restoredEditorState = cachedEditorState
+        ? sanitizeWorkbenchEditorState(nextCatalog, cachedEditorState)
+        : null;
+      const nextEditorState = restoredEditorState
+        ? {
+            ...defaultEditorState,
+            ...restoredEditorState,
+            targets: restoredEditorState.targets.length
+              ? restoredEditorState.targets
+              : defaultEditorState.targets,
+          }
+        : defaultEditorState;
+
       setCatalog(nextCatalog);
+      setLoadedSource(nextSource);
       setCatalogLabel(nextLabel);
-      const nextTargetId = pickDefaultTarget(nextCatalog);
-      setTargets(nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : []);
-      setObjective(nextCatalog.recommendedSolve.objective ?? 'min_buildings');
-      setBalancePolicy(nextCatalog.recommendedSolve.balancePolicy ?? 'force_balance');
-      setAutoPromoteUnavailableItemsToRawInputs(false);
-      setProliferatorPolicy('auto');
-      setRawInputItemIds([]);
-      setDisabledRawInputItemIds([]);
-      setDisabledRecipeIds([]);
-      setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
-      setDisabledBuildingIds(nextCatalog.recommendedDisabledBuildingIds);
-      setDisabledBuildingDraftId('');
-      setRecipePreferences([]);
-      setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
-      setAdvancedOverridesText('');
+      applyWorkbenchEditorState(nextCatalog, nextEditorState);
     } catch (error) {
       setCatalog(null);
+      setLoadedSource(null);
       const detail = error instanceof Error ? error.message : String(error);
       setLoadError(`${bundle.datasetSource.loadFailedPrefix}${detail}`);
     } finally {
@@ -213,9 +316,22 @@ export default function App() {
   }
 
   useEffect(() => {
-    void loadCatalog(datasetPath, defaultConfigPath, catalogLabel);
+    void loadCatalog(
+      initialCachedSource?.datasetPath ?? datasetPath,
+      initialCachedSource?.defaultConfigPath ?? defaultConfigPath,
+      catalogLabel,
+      initialCachedSource?.presetId ?? presetId
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    writeActiveWorkbenchCacheSource(browserStorage, {
+      presetId,
+      datasetPath,
+      defaultConfigPath,
+    });
+  }, [browserStorage, defaultConfigPath, datasetPath, presetId]);
 
   const itemOptions = useMemo(
     () =>
@@ -295,6 +411,40 @@ export default function App() {
       setRecipePreferenceDraftId(recipePreferenceOptions[0].recipeId);
     }
   }, [recipePreferenceDraftId, recipePreferenceOptions]);
+
+  useEffect(() => {
+    if (!browserStorage || !loadedSource) {
+      return;
+    }
+
+    writeWorkbenchEditorState(browserStorage, loadedSource, {
+      targets,
+      objective,
+      balancePolicy,
+      autoPromoteUnavailableItemsToRawInputs,
+      proliferatorPolicy,
+      rawInputItemIds,
+      disabledRawInputItemIds,
+      disabledRecipeIds,
+      disabledBuildingIds,
+      recipePreferences,
+      advancedOverridesText,
+    });
+  }, [
+    advancedOverridesText,
+    autoPromoteUnavailableItemsToRawInputs,
+    balancePolicy,
+    browserStorage,
+    disabledBuildingIds,
+    disabledRawInputItemIds,
+    disabledRecipeIds,
+    loadedSource,
+    objective,
+    proliferatorPolicy,
+    rawInputItemIds,
+    recipePreferences,
+    targets,
+  ]);
 
   const parsedOverrides = useMemo(
     () => parseAdvancedSolveOverrides(advancedOverridesText, locale),
@@ -377,8 +527,37 @@ export default function App() {
     void loadCatalog(
       preset.datasetPath,
       preset.defaultConfigPath ?? '',
-      getDatasetPresetText(preset.id, locale).label
+      getDatasetPresetText(preset.id, locale).label,
+      preset.id
     );
+  }
+
+  function clearCachedWorkbenchState() {
+    clearWorkbenchCache(browserStorage);
+
+    if (catalog) {
+      applyWorkbenchEditorState(catalog, buildDefaultWorkbenchEditorState(catalog));
+    }
+  }
+
+  function scrollItemLedgerToTop() {
+    itemLedgerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function scrollItemLedgerToBottom() {
+    const container = itemLedgerScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  }
+
+  function scrollItemLedgerToSection(sectionKey: string) {
+    itemLedgerSectionRefs.current[sectionKey]?.scrollIntoView({
+      block: 'start',
+      behavior: 'smooth',
+    });
   }
 
   function addTarget() {
@@ -576,12 +755,41 @@ export default function App() {
 
                 <button
                   type="button"
-                  onClick={() => void loadCatalog(datasetPath, defaultConfigPath, catalogLabel)}
+                  onClick={() =>
+                    void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId)
+                  }
                   style={buttonStyle}
                   disabled={isLoading}
                 >
                   {isLoading ? bundle.datasetSource.loadingButton : bundle.datasetSource.loadButton}
                 </button>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 10,
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                      color: 'rgba(24, 51, 89, 0.66)',
+                    }}
+                  >
+                    {bundle.datasetSource.autoCacheHint}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearCachedWorkbenchState}
+                    style={subtleButtonStyle}
+                  >
+                    {bundle.datasetSource.clearCacheButton}
+                  </button>
+                </div>
 
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
                   {getDatasetPresetText(
@@ -1285,11 +1493,59 @@ export default function App() {
                     </div>
 
                     <aside style={resultSideColumnStyle}>
-                      <article style={{ ...cardStyle, padding: 16 }}>
-                        <h2 style={{ marginTop: 0, marginBottom: 12 }}>{bundle.itemLedger.title}</h2>
-                        <div style={{ display: 'grid', gap: 16 }}>
+                      <article
+                        style={{
+                          ...cardStyle,
+                          padding: 16,
+                          maxHeight: 'calc(100vh - 48px)',
+                          display: 'grid',
+                          gridTemplateRows: 'auto auto minmax(0, 1fr)',
+                          gap: 12,
+                        }}
+                      >
+                        <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {model.itemLedgerSections.map(section => (
+                              <button
+                                key={`jump-${section.key}`}
+                                type="button"
+                                onClick={() => scrollItemLedgerToSection(section.key)}
+                                style={compactLedgerButtonStyle}
+                              >
+                                {section.title}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={scrollItemLedgerToTop}
+                              style={compactLedgerButtonStyle}
+                            >
+                              {bundle.itemLedger.jumpToTopButton}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={scrollItemLedgerToBottom}
+                              style={compactLedgerButtonStyle}
+                            >
+                              {bundle.itemLedger.jumpToBottomButton}
+                            </button>
+                          </div>
+                        </div>
+                        <div
+                          ref={itemLedgerScrollRef}
+                          style={{ display: 'grid', gap: 16, overflow: 'auto', minHeight: 0, paddingRight: 4 }}
+                        >
                           {model.itemLedgerSections.map(section => (
-                            <section key={section.key} style={{ display: 'grid', gap: 8 }}>
+                            <section
+                              key={section.key}
+                              ref={node => {
+                                itemLedgerSectionRefs.current[section.key] = node;
+                              }}
+                              style={{ display: 'grid', gap: 8 }}
+                            >
                               <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(24, 51, 89, 0.72)' }}>
                                 {section.title}
                               </div>
