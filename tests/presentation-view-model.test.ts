@@ -91,7 +91,7 @@ test('presentation model carries frontend-visible names and totals from a solved
   expect(model.requestSummary).toEqual({
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
-    proliferatorPolicyLabel: 'Auto',
+    proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
@@ -131,7 +131,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     recipeName: 'Ore to Plate',
     buildingId: '5002',
     buildingName: 'Turbo Smelter',
-    proliferatorLabel: 'None',
+    proliferatorLabel: '无增产剂',
     runsPerMin: 60,
     exactBuildingCount: 0.5,
     roundedUpBuildingCount: 1,
@@ -193,18 +193,18 @@ test('overview sections keep surplus outputs separate from buildings and power',
   const overview = buildPresentationOverviewSections(model);
 
   expect(overview.targetsAndExternalInputs).toEqual({
-    title: 'Targets & External Inputs',
+    title: '目标与外部输入',
     targets: model.targets,
     externalInputs: model.externalInputs,
   });
   expect(overview.buildingsAndPower).toEqual({
-    title: 'Buildings & Power',
+    title: '建筑与功耗',
     buildingSummary: model.buildingSummary,
     activePowerMW: 4,
     roundedPlacementPowerMW: 4,
   });
   expect(overview.surplusOutputs).toEqual({
-    title: 'Surplus Outputs',
+    title: '冗余产物',
     items: model.surplusOutputs,
   });
   expect(Object.keys(overview.buildingsAndPower)).toEqual([
@@ -234,7 +234,7 @@ test('presentation model exposes named recipe preference summaries from the requ
   expect(model.requestSummary).toEqual({
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
-    proliferatorPolicyLabel: 'Auto',
+    proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
@@ -244,7 +244,7 @@ test('presentation model exposes named recipe preference summaries from the requ
         recipeId: '1',
         recipeName: 'Ore to Plate',
         buildingName: 'Compact Smelter',
-        proliferatorPreferenceLabel: 'Speed Lv.1',
+        proliferatorPreferenceLabel: '加速 等级 1',
       },
     ],
     hasAdvancedOverrides: true,
@@ -280,5 +280,5 @@ test('presentation model detects global proliferator disable requests', () => {
     },
   });
 
-  expect(model.requestSummary?.proliferatorPolicyLabel).toBe('Disabled');
+  expect(model.requestSummary?.proliferatorPolicyLabel).toBe('禁用');
 });

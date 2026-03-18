@@ -1,4 +1,5 @@
 import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
+import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../i18n';
 import type { BalancePolicy, SolveObjective, SolveRequest } from '../solver';
 
 export type AdvancedSolveOverrides = Omit<
@@ -57,14 +58,15 @@ function isModeRecord(value: unknown): value is Record<string, 'none' | 'speed' 
 function readOptionalStringArray(
   source: Record<string, unknown>,
   key: keyof AdvancedSolveOverrides,
-  errors: string[]
+  errors: string[],
+  locale: AppLocale
 ): string[] | undefined {
   const value = source[key];
   if (value === undefined) {
     return undefined;
   }
   if (!isStringArray(value)) {
-    errors.push(`${String(key)} must be a string array when present.`);
+    errors.push(getLocaleBundle(locale).advancedOverrides.stringArray(String(key)));
     return undefined;
   }
   return value;
@@ -73,14 +75,15 @@ function readOptionalStringArray(
 function readOptionalStringRecord(
   source: Record<string, unknown>,
   key: keyof AdvancedSolveOverrides,
-  errors: string[]
+  errors: string[],
+  locale: AppLocale
 ): Record<string, string> | undefined {
   const value = source[key];
   if (value === undefined) {
     return undefined;
   }
   if (!isStringRecord(value)) {
-    errors.push(`${String(key)} must be an object whose values are strings.`);
+    errors.push(getLocaleBundle(locale).advancedOverrides.stringRecord(String(key)));
     return undefined;
   }
   return value;
@@ -89,14 +92,15 @@ function readOptionalStringRecord(
 function readOptionalNumberRecord(
   source: Record<string, unknown>,
   key: keyof AdvancedSolveOverrides,
-  errors: string[]
+  errors: string[],
+  locale: AppLocale
 ): Record<string, number> | undefined {
   const value = source[key];
   if (value === undefined) {
     return undefined;
   }
   if (!isNumberRecord(value)) {
-    errors.push(`${String(key)} must be an object whose values are finite numbers.`);
+    errors.push(getLocaleBundle(locale).advancedOverrides.numberRecord(String(key)));
     return undefined;
   }
   return value;
@@ -105,14 +109,15 @@ function readOptionalNumberRecord(
 function readOptionalModeRecord(
   source: Record<string, unknown>,
   key: keyof AdvancedSolveOverrides,
-  errors: string[]
+  errors: string[],
+  locale: AppLocale
 ): Record<string, 'none' | 'speed' | 'productivity'> | undefined {
   const value = source[key];
   if (value === undefined) {
     return undefined;
   }
   if (!isModeRecord(value)) {
-    errors.push(`${String(key)} must be an object whose values are one of none, speed, or productivity.`);
+    errors.push(getLocaleBundle(locale).advancedOverrides.modeRecord(String(key)));
     return undefined;
   }
   return value;
@@ -134,7 +139,12 @@ function mergeRecord<T extends string | number>(
   return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
-export function parseAdvancedSolveOverrides(text: string): ParseAdvancedOverridesResult {
+export function parseAdvancedSolveOverrides(
+  text: string,
+  locale: AppLocale = DEFAULT_APP_LOCALE
+): ParseAdvancedOverridesResult {
+  const bundle = getLocaleBundle(locale);
+
   if (!text.trim()) {
     return { value: {}, error: '' };
   }
@@ -145,27 +155,50 @@ export function parseAdvancedSolveOverrides(text: string): ParseAdvancedOverride
   } catch (error) {
     return {
       value: {},
-      error: error instanceof Error ? `Invalid JSON: ${error.message}` : 'Invalid JSON.',
+      error:
+        error instanceof Error
+          ? `${bundle.advancedOverrides.invalidJsonPrefix}${error.message}`
+          : bundle.advancedOverrides.invalidJsonFallback,
     };
   }
 
   if (!isRecord(parsed)) {
-    return { value: {}, error: 'Advanced overrides must be a JSON object.' };
+    return { value: {}, error: bundle.advancedOverrides.mustBeJsonObject };
   }
 
   const source = parsed as Record<string, unknown>;
   const errors: string[] = [];
   const value: AdvancedSolveOverrides = {
-    disabledRecipeIds: readOptionalStringArray(source, 'disabledRecipeIds', errors),
-    disabledBuildingIds: readOptionalStringArray(source, 'disabledBuildingIds', errors),
-    forcedRecipeByItem: readOptionalStringRecord(source, 'forcedRecipeByItem', errors),
-    preferredRecipeByItem: readOptionalStringRecord(source, 'preferredRecipeByItem', errors),
-    forcedBuildingByRecipe: readOptionalStringRecord(source, 'forcedBuildingByRecipe', errors),
-    preferredBuildingByRecipe: readOptionalStringRecord(source, 'preferredBuildingByRecipe', errors),
-    forcedProliferatorLevelByRecipe: readOptionalNumberRecord(source, 'forcedProliferatorLevelByRecipe', errors),
-    preferredProliferatorLevelByRecipe: readOptionalNumberRecord(source, 'preferredProliferatorLevelByRecipe', errors),
-    forcedProliferatorModeByRecipe: readOptionalModeRecord(source, 'forcedProliferatorModeByRecipe', errors),
-    preferredProliferatorModeByRecipe: readOptionalModeRecord(source, 'preferredProliferatorModeByRecipe', errors),
+    disabledRecipeIds: readOptionalStringArray(source, 'disabledRecipeIds', errors, locale),
+    disabledBuildingIds: readOptionalStringArray(source, 'disabledBuildingIds', errors, locale),
+    forcedRecipeByItem: readOptionalStringRecord(source, 'forcedRecipeByItem', errors, locale),
+    preferredRecipeByItem: readOptionalStringRecord(source, 'preferredRecipeByItem', errors, locale),
+    forcedBuildingByRecipe: readOptionalStringRecord(source, 'forcedBuildingByRecipe', errors, locale),
+    preferredBuildingByRecipe: readOptionalStringRecord(source, 'preferredBuildingByRecipe', errors, locale),
+    forcedProliferatorLevelByRecipe: readOptionalNumberRecord(
+      source,
+      'forcedProliferatorLevelByRecipe',
+      errors,
+      locale
+    ),
+    preferredProliferatorLevelByRecipe: readOptionalNumberRecord(
+      source,
+      'preferredProliferatorLevelByRecipe',
+      errors,
+      locale
+    ),
+    forcedProliferatorModeByRecipe: readOptionalModeRecord(
+      source,
+      'forcedProliferatorModeByRecipe',
+      errors,
+      locale
+    ),
+    preferredProliferatorModeByRecipe: readOptionalModeRecord(
+      source,
+      'preferredProliferatorModeByRecipe',
+      errors,
+      locale
+    ),
   };
 
   if (errors.length > 0) {

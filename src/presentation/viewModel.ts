@@ -1,4 +1,11 @@
 import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
+import {
+  DEFAULT_APP_LOCALE,
+  formatPreferredProliferatorLabel,
+  formatProliferatorLabel,
+  getLocaleBundle,
+  type AppLocale,
+} from '../i18n';
 import type { SolveRequest, SolveResult } from '../solver';
 
 export interface PresentationCatalogSummary {
@@ -100,20 +107,20 @@ export interface PresentationItemBalance {
 export interface PresentationOverviewSections {
   /** Targets plus the final external-input list shown beside them. */
   targetsAndExternalInputs: {
-    title: 'Targets & External Inputs';
+    title: string;
     targets: PresentationSolvedTarget[];
     externalInputs: PresentationItemRate[];
   };
   /** Building totals and power totals, without any unrelated result groups. */
   buildingsAndPower: {
-    title: 'Buildings & Power';
+    title: string;
     buildingSummary: PresentationBuildingSummary[];
     activePowerMW: number;
     roundedPlacementPowerMW: number;
   };
   /** Explicit surplus outputs shown as their own card. */
   surplusOutputs: {
-    title: 'Surplus Outputs';
+    title: string;
     items: PresentationItemRate[];
   };
 }
@@ -139,6 +146,7 @@ export interface BuildPresentationModelParams {
   datasetLabel?: string;
   datasetPath?: string;
   defaultConfigPath?: string;
+  locale?: AppLocale;
 }
 
 function getItemName(catalog: ResolvedCatalogModel, itemId: string): string {
@@ -172,56 +180,12 @@ function mapItemRates(
   }));
 }
 
-function formatProliferatorLabel(
-  proliferatorMode: SolveResult['recipePlans'][number]['proliferatorMode'],
-  proliferatorLevel: number
-): string {
-  if (proliferatorMode === 'none' || proliferatorLevel === 0) {
-    return 'None';
-  }
-
-  if (proliferatorMode === 'speed') {
-    return `Speed Lv.${proliferatorLevel}`;
-  }
-
-  return `Productivity Lv.${proliferatorLevel}`;
-}
-
-function formatPreferredProliferatorLabel(
-  proliferatorMode?: ProliferatorMode,
-  proliferatorLevel?: number
-): string | undefined {
-  if (proliferatorMode === undefined && proliferatorLevel === undefined) {
-    return undefined;
-  }
-
-  if (proliferatorMode === 'none') {
-    return 'None';
-  }
-
-  if (proliferatorMode === 'speed') {
-    return proliferatorLevel !== undefined
-      ? `Speed Lv.${proliferatorLevel}`
-      : 'Speed (Auto Level)';
-  }
-
-  if (proliferatorMode === 'productivity') {
-    return proliferatorLevel !== undefined
-      ? `Productivity Lv.${proliferatorLevel}`
-      : 'Productivity (Auto Level)';
-  }
-
-  if (proliferatorLevel !== undefined) {
-    return `Auto Mode Lv.${proliferatorLevel}`;
-  }
-
-  return undefined;
-}
-
 function inferGlobalProliferatorPolicyLabel(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest
+  request: SolveRequest,
+  locale: AppLocale
 ): string {
+  const bundle = getLocaleBundle(locale);
   const affectedRecipeIds = catalog.recipes
     .filter(
       recipe =>
@@ -231,7 +195,7 @@ function inferGlobalProliferatorPolicyLabel(
     .map(recipe => recipe.recipeId);
 
   if (affectedRecipeIds.length === 0) {
-    return 'Auto';
+    return bundle.common.auto;
   }
 
   const forcedModes = request.forcedProliferatorModeByRecipe ?? {};
@@ -242,7 +206,7 @@ function inferGlobalProliferatorPolicyLabel(
       (forcedLevels[recipeId] === undefined || forcedLevels[recipeId] === 0)
   );
 
-  return allDisabled ? 'Disabled' : 'Auto';
+  return allDisabled ? bundle.common.disabled : bundle.common.auto;
 }
 
 /**
@@ -252,22 +216,25 @@ function inferGlobalProliferatorPolicyLabel(
  * This keeps section membership stable and independently testable.
  */
 export function buildPresentationOverviewSections(
-  model: PresentationModel
+  model: PresentationModel,
+  locale: AppLocale = DEFAULT_APP_LOCALE
 ): PresentationOverviewSections {
+  const bundle = getLocaleBundle(locale);
+
   return {
     targetsAndExternalInputs: {
-      title: 'Targets & External Inputs',
+      title: bundle.overview.targetsAndExternalInputsTitle,
       targets: model.targets,
       externalInputs: model.externalInputs,
     },
     buildingsAndPower: {
-      title: 'Buildings & Power',
+      title: bundle.overview.buildingsAndPowerTitle,
       buildingSummary: model.buildingSummary,
       activePowerMW: model.powerSummary?.activePowerMW ?? 0,
       roundedPlacementPowerMW: model.powerSummary?.roundedPlacementPowerMW ?? 0,
     },
     surplusOutputs: {
-      title: 'Surplus Outputs',
+      title: bundle.overview.surplusOutputsTitle,
       items: model.surplusOutputs,
     },
   };
@@ -276,12 +243,20 @@ export function buildPresentationOverviewSections(
 export function buildPresentationModel(
   params: BuildPresentationModelParams
 ): PresentationModel {
-  const { catalog, request, result, datasetLabel, datasetPath, defaultConfigPath } = params;
+  const {
+    catalog,
+    request,
+    result,
+    datasetLabel,
+    datasetPath,
+    defaultConfigPath,
+    locale = DEFAULT_APP_LOCALE,
+  } = params;
   const requestSummary: PresentationRequestSummary | undefined = request
     ? {
         objective: request.objective,
         balancePolicy: request.balancePolicy,
-        proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request),
+        proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request, locale),
         targets: request.targets.map(target => ({
           itemId: target.itemId,
           itemName: getItemName(catalog, target.itemId),
@@ -320,7 +295,8 @@ export function buildPresentationModel(
               : undefined,
             proliferatorPreferenceLabel: formatPreferredProliferatorLabel(
               request.preferredProliferatorModeByRecipe?.[recipeId],
-              request.preferredProliferatorLevelByRecipe?.[recipeId]
+              request.preferredProliferatorLevelByRecipe?.[recipeId],
+              locale
             ),
           }))
           .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
@@ -390,7 +366,11 @@ export function buildPresentationModel(
       buildingName: getBuildingName(catalog, plan.buildingId),
       proliferatorLevel: plan.proliferatorLevel,
       proliferatorMode: plan.proliferatorMode,
-      proliferatorLabel: formatProliferatorLabel(plan.proliferatorMode, plan.proliferatorLevel),
+      proliferatorLabel: formatProliferatorLabel(
+        plan.proliferatorMode,
+        plan.proliferatorLevel,
+        locale
+      ),
       runsPerMin: plan.runsPerMin,
       exactBuildingCount: plan.exactBuildingCount,
       roundedUpBuildingCount: plan.roundedUpBuildingCount,

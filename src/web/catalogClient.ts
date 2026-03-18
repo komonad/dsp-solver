@@ -1,10 +1,9 @@
 import { resolveCatalogModel } from '../catalog/resolve';
 import type { CatalogDefaultConfigSpec, ResolvedCatalogModel, VanillaDatasetSpec } from '../catalog/spec';
+import type { DatasetPresetId } from '../i18n';
 
 export interface DatasetPresetDefinition {
-  id: string;
-  label: string;
-  description: string;
+  id: DatasetPresetId;
   datasetPath: string;
   defaultConfigPath?: string;
 }
@@ -12,36 +11,26 @@ export interface DatasetPresetDefinition {
 export const DATASET_PRESETS: DatasetPresetDefinition[] = [
   {
     id: 'vanilla',
-    label: 'Vanilla',
-    description: 'The full vanilla-compatible dataset and its companion defaults.',
     datasetPath: './Vanilla.json',
     defaultConfigPath: './Vanilla.defaults.json',
   },
   {
     id: 'demo-smelting',
-    label: 'Demo Smelting',
-    description: 'A tiny two-building smelting dataset for fast frontend checks.',
     datasetPath: './DemoSmelting.json',
     defaultConfigPath: './DemoSmelting.defaults.json',
   },
   {
     id: 'refinery-balance',
-    label: 'Refinery Balance',
-    description: 'The light-oil scenario that closes heavy oil through the paired refinery recipes.',
     datasetPath: './RefineryBalance.json',
     defaultConfigPath: './RefineryBalance.defaults.json',
   },
   {
     id: 'fullerene-loop',
-    label: 'Fullerene Loop',
-    description: 'The fullerene methane loop plus the fullersilver/fullerol export cycle.',
     datasetPath: './FullereneLoop.json',
     defaultConfigPath: './FullereneLoop.defaults.json',
   },
   {
     id: 'custom',
-    label: 'Custom Paths',
-    description: 'Load any dataset/default-config pair that is reachable from the current web root.',
     datasetPath: '',
     defaultConfigPath: '',
   },

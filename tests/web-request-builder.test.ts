@@ -108,12 +108,12 @@ test('parseAdvancedSolveOverrides accepts supported override fields', () => {
 test('parseAdvancedSolveOverrides rejects invalid payloads with a readable error', () => {
   expect(parseAdvancedSolveOverrides('[]')).toEqual({
     value: {},
-    error: 'Advanced overrides must be a JSON object.',
+    error: '高级覆盖必须是一个 JSON 对象。',
   });
 
   expect(parseAdvancedSolveOverrides('{')).toEqual({
     value: {},
-    error: expect.stringContaining('Invalid JSON:'),
+    error: expect.stringContaining('JSON 无效：'),
   });
 
   expect(
@@ -124,7 +124,7 @@ test('parseAdvancedSolveOverrides rejects invalid payloads with a readable error
   ).toEqual({
     value: {},
     error:
-      'disabledRecipeIds must be a string array when present. preferredProliferatorModeByRecipe must be an object whose values are one of none, speed, or productivity.',
+      'disabledRecipeIds 在提供时必须是字符串数组。 preferredProliferatorModeByRecipe 在提供时必须是值为 none、speed 或 productivity 的对象。',
   });
 });
 
