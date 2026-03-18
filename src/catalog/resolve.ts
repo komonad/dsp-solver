@@ -288,6 +288,7 @@ export function resolveCatalogModel(
       recipeId: recipe.ID.toString(),
       typeId: recipe.Type,
       name: recipe.Name,
+      icon: recipe.IconName,
       cycleTimeSec: recipe.TimeSpend / 60,
       timeSpend: recipe.TimeSpend,
       inputs: recipe.Items.map((itemId, index) => ({
@@ -321,6 +322,7 @@ export function resolveCatalogModel(
       buildingId: factoryId.toString(),
       typeId: item.Type,
       name: item.Name,
+      icon: item.IconName,
       category: deriveBuildingCategory(rule),
       speedMultiplier: deriveSpeedMultiplier(item, rule),
       workPowerMW: deriveWorkPowerMW(item, rule),

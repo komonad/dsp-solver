@@ -9,6 +9,13 @@ This repository is being rebuilt around a strict split between:
 
 The current goal is a linear-programming-based production solver for Dyson Sphere Program and its mods, with browser rendering that never invents business logic on its own.
 
+Recent web workbench additions:
+
+- automatic solve on any input change
+- persisted workbench state in the browser, plus a reset button
+- vanilla icon atlas support with deterministic fallback badges for datasets without icon assets
+- an in-browser dataset/default-config editor for session-local experimentation
+
 ## Current structure
 
 - [src/catalog](/D:/dsp-dev/dspcalc/src/catalog): dataset format, default config format, loading, and resolution into the internal catalog model
@@ -105,6 +112,7 @@ Bundled files currently copied into [dist-web](/D:/dsp-dev/dspcalc/dist-web) inc
 - [RefineryBalance.defaults.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.defaults.json)
 - [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json)
 - [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json)
+- [Vanilla.png](/D:/dsp-dev/dspcalc/data/icons/Vanilla.png)
 
 If you want to use a custom dataset in the browser, place that dataset JSON and its optional defaults JSON under the hosted web root and then point the UI at those relative paths.
 
@@ -113,3 +121,11 @@ If you want to use a custom dataset in the browser, place that dataset JSON and 
 - [data-format.md](/D:/dsp-dev/dspcalc/docs/data-format.md)
 - [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
 - [minimal-test-config.md](/D:/dsp-dev/dspcalc/docs/minimal-test-config.md)
+- [asset-and-frontend-research.md](/D:/dsp-dev/dspcalc/docs/asset-and-frontend-research.md)
+
+## Third-party assets
+
+The vanilla icon atlas currently shipped in the web bundle is sourced from the public `DSPCalculator/dsp-calc` repository.
+
+- upstream repo: [DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc)
+- local license copy: [dsp-calc.MulanPSL2.LICENSE](/D:/dsp-dev/dspcalc/third_party/dsp-calc.MulanPSL2.LICENSE)

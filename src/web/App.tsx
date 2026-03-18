@@ -14,8 +14,14 @@ import {
 } from '../i18n';
 import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective } from '../solver';
-import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
+import {
+  DATASET_PRESETS,
+  loadCatalogSourceFromUrl,
+  resolveCatalogSourceTexts,
+} from './catalogClient';
 import { computeWorkbenchSolve } from './autoSolve';
+import DatasetEditorPanel from './DatasetEditorPanel';
+import { EntityLabel } from './EntityIcon';
 import { computeLedgerSectionScrollTop } from './ledgerScroll';
 import {
   parseAdvancedSolveOverrides,
@@ -215,6 +221,11 @@ export default function App() {
   );
   const [catalog, setCatalog] = useState<ResolvedCatalogModel | null>(null);
   const [loadedSource, setLoadedSource] = useState<WorkbenchCacheSource | null>(null);
+  const [loadedDatasetText, setLoadedDatasetText] = useState('');
+  const [loadedDefaultConfigText, setLoadedDefaultConfigText] = useState('{}');
+  const [datasetEditorText, setDatasetEditorText] = useState('');
+  const [defaultConfigEditorText, setDefaultConfigEditorText] = useState('{}');
+  const [datasetEditorError, setDatasetEditorError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -259,6 +270,22 @@ export default function App() {
     setAdvancedOverridesText(editorState.advancedOverridesText);
   }
 
+  function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
+    return {
+      targets,
+      objective,
+      balancePolicy,
+      autoPromoteUnavailableItemsToRawInputs,
+      proliferatorPolicy,
+      rawInputItemIds,
+      disabledRawInputItemIds,
+      disabledRecipeIds,
+      disabledBuildingIds,
+      recipePreferences,
+      advancedOverridesText,
+    };
+  }
+
   async function loadCatalog(
     nextDatasetPath: string,
     nextDefaultConfigPath: string,
@@ -277,11 +304,13 @@ export default function App() {
       const trimmedDefaultConfigPath = nextDefaultConfigPath.trim();
       setIsLoading(true);
       setLoadError('');
+      setDatasetEditorError('');
       setCatalog(null);
-      const nextCatalog = await loadResolvedCatalogFromUrl(
+      const loaded = await loadCatalogSourceFromUrl(
         trimmedDatasetPath,
         trimmedDefaultConfigPath || undefined
       );
+      const nextCatalog = loaded.catalog;
       const nextSource: WorkbenchCacheSource = {
         presetId: nextPresetId,
         datasetPath: trimmedDatasetPath,
@@ -304,11 +333,17 @@ export default function App() {
 
       setCatalog(nextCatalog);
       setLoadedSource(nextSource);
+      setLoadedDatasetText(loaded.datasetText);
+      setLoadedDefaultConfigText(loaded.defaultConfigText);
+      setDatasetEditorText(loaded.datasetText);
+      setDefaultConfigEditorText(loaded.defaultConfigText);
       setCatalogLabel(nextLabel);
       applyWorkbenchEditorState(nextCatalog, nextEditorState);
     } catch (error) {
       setCatalog(null);
       setLoadedSource(null);
+      setLoadedDatasetText('');
+      setLoadedDefaultConfigText('{}');
       const detail = error instanceof Error ? error.message : String(error);
       setLoadError(`${bundle.datasetSource.loadFailedPrefix}${detail}`);
     } finally {
@@ -538,6 +573,47 @@ export default function App() {
 
     if (catalog) {
       applyWorkbenchEditorState(catalog, buildDefaultWorkbenchEditorState(catalog));
+    }
+  }
+
+  function resetDatasetEditorToLoadedSource() {
+    setDatasetEditorText(loadedDatasetText);
+    setDefaultConfigEditorText(loadedDefaultConfigText);
+    setDatasetEditorError('');
+  }
+
+  function applyDatasetEditorChanges() {
+    try {
+      const resolved = resolveCatalogSourceTexts(datasetEditorText, defaultConfigEditorText);
+      const nextCatalog = resolved.catalog;
+      const currentWorkbenchState = sanitizeWorkbenchEditorState(
+        nextCatalog,
+        buildCurrentWorkbenchEditorState()
+      );
+      const defaultWorkbenchState = buildDefaultWorkbenchEditorState(nextCatalog);
+
+      setCatalog(nextCatalog);
+      setLoadedSource({
+        presetId,
+        datasetPath,
+        defaultConfigPath,
+      });
+      setLoadedDatasetText(resolved.datasetText);
+      setLoadedDefaultConfigText(resolved.defaultConfigText);
+      setDatasetEditorText(resolved.datasetText);
+      setDefaultConfigEditorText(resolved.defaultConfigText);
+      setLoadError('');
+      setDatasetEditorError('');
+      applyWorkbenchEditorState(nextCatalog, {
+        ...defaultWorkbenchState,
+        ...currentWorkbenchState,
+        targets: currentWorkbenchState.targets.length
+          ? currentWorkbenchState.targets
+          : defaultWorkbenchState.targets,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      setDatasetEditorError(`${bundle.datasetSource.editorApplyFailedPrefix}${detail}`);
     }
   }
 
@@ -860,6 +936,22 @@ export default function App() {
                     <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
                   )}
                 </section>
+
+                <DatasetEditorPanel
+                  title={bundle.datasetSource.editorTitle}
+                  helpText={bundle.datasetSource.editorHelp}
+                  datasetLabel={bundle.datasetSource.editorDatasetLabel}
+                  defaultsLabel={bundle.datasetSource.editorDefaultsLabel}
+                  datasetText={datasetEditorText}
+                  defaultConfigText={defaultConfigEditorText}
+                  applyButtonLabel={bundle.datasetSource.editorApplyButton}
+                  resetButtonLabel={bundle.datasetSource.editorResetButton}
+                  errorText={datasetEditorError}
+                  onDatasetTextChange={setDatasetEditorText}
+                  onDefaultConfigTextChange={setDefaultConfigEditorText}
+                  onApply={applyDatasetEditorChanges}
+                  onReset={resetDatasetEditorToLoadedSource}
+                />
               </div>
             </article>
 
@@ -1297,7 +1389,12 @@ export default function App() {
                         <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
                           {requestSummary.targets.map(target => (
                             <div key={target.itemId}>
-                              {target.itemName}: {formatRate(target.ratePerMin, locale)}
+                              <EntityLabel
+                                label={target.itemName}
+                                iconKey={target.iconKey}
+                                size={18}
+                              />{' '}
+                              : {formatRate(target.ratePerMin, locale)}
                             </div>
                           ))}
                         </div>
@@ -1311,8 +1408,22 @@ export default function App() {
                           ) : (
                             requestSummary.preferredRecipeSettings.map(setting => (
                               <div key={setting.recipeId}>
-                                {setting.recipeName}
-                                {setting.buildingName ? ` | ${setting.buildingName}` : ''}
+                                <EntityLabel
+                                  label={setting.recipeName}
+                                  iconKey={setting.recipeIconKey}
+                                  size={18}
+                                />
+                                {setting.buildingName ? (
+                                  <>
+                                    {' '}
+                                    |{' '}
+                                    <EntityLabel
+                                      label={setting.buildingName}
+                                      iconKey={setting.buildingIconKey}
+                                      size={18}
+                                    />
+                                  </>
+                                ) : null}
                                 {setting.proliferatorPreferenceLabel
                                   ? ` | ${setting.proliferatorPreferenceLabel}`
                                   : ''}
@@ -1358,7 +1469,8 @@ export default function App() {
                           ) : (
                             model.solvedSummary?.netInputs.map(item => (
                               <div key={item.itemId}>
-                                {item.itemName}: {formatRate(item.ratePerMin, locale)}
+                                <EntityLabel label={item.itemName} iconKey={item.iconKey} size={18} />:{' '}
+                                {formatRate(item.ratePerMin, locale)}
                               </div>
                             ))
                           )}
@@ -1371,7 +1483,8 @@ export default function App() {
                           ) : (
                             model.solvedSummary?.netOutputs.map(item => (
                               <div key={item.itemId}>
-                                {item.itemName}: {formatRate(item.ratePerMin, locale)}
+                                <EntityLabel label={item.itemName} iconKey={item.iconKey} size={18} />:{' '}
+                                {formatRate(item.ratePerMin, locale)}
                               </div>
                             ))
                           )}
@@ -1413,9 +1526,20 @@ export default function App() {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                               <div>
-                                <div style={{ fontSize: 18, fontWeight: 700 }}>{plan.recipeName}</div>
+                                <div style={{ fontSize: 18, fontWeight: 700 }}>
+                                  <EntityLabel
+                                    label={plan.recipeName}
+                                    iconKey={plan.recipeIconKey}
+                                    size={22}
+                                  />
+                                </div>
                                 <div style={{ marginTop: 4, fontSize: 14, color: 'rgba(24, 51, 89, 0.72)' }}>
-                                  {plan.buildingName} | {plan.proliferatorLabel}
+                                  <EntityLabel
+                                    label={plan.buildingName}
+                                    iconKey={plan.buildingIconKey}
+                                    size={18}
+                                  />{' '}
+                                  | {plan.proliferatorLabel}
                                 </div>
                               </div>
                               <div style={{ textAlign: 'right' }}>
@@ -1432,7 +1556,12 @@ export default function App() {
                                 <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
                                   {plan.inputs.map(input => (
                                     <div key={input.itemId}>
-                                      {input.itemName}: {formatRate(input.ratePerMin, locale)}
+                                      <EntityLabel
+                                        label={input.itemName}
+                                        iconKey={input.iconKey}
+                                        size={18}
+                                      />{' '}
+                                      : {formatRate(input.ratePerMin, locale)}
                                     </div>
                                   ))}
                                 </div>
@@ -1442,7 +1571,12 @@ export default function App() {
                                 <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
                                   {plan.outputs.map(output => (
                                     <div key={output.itemId}>
-                                      {output.itemName}: {formatRate(output.ratePerMin, locale)}
+                                      <EntityLabel
+                                        label={output.itemName}
+                                        iconKey={output.iconKey}
+                                        size={18}
+                                      />{' '}
+                                      : {formatRate(output.ratePerMin, locale)}
                                     </div>
                                   ))}
                                 </div>
@@ -1481,7 +1615,13 @@ export default function App() {
                         <div style={{ marginTop: 12, display: 'grid', gap: 6, maxHeight: 260, overflow: 'auto' }}>
                           {model.itemBalance.map(entry => (
                             <div key={entry.itemId} style={{ paddingBottom: 6, borderBottom: '1px solid rgba(24, 51, 89, 0.08)' }}>
-                              <div style={{ fontWeight: 700 }}>{entry.itemName}</div>
+                              <div style={{ fontWeight: 700 }}>
+                                <EntityLabel
+                                  label={entry.itemName}
+                                  iconKey={entry.iconKey}
+                                  size={18}
+                                />
+                              </div>
                               <div style={{ fontSize: 13 }}>
                                 {bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)} / {bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)} / {bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}
                               </div>
@@ -1580,9 +1720,12 @@ export default function App() {
                                     >
                                       <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
                                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                                          <div style={{ fontWeight: 700, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.itemName}>
-                                            {entry.itemName}
-                                          </div>
+                                          <EntityLabel
+                                            label={entry.itemName}
+                                            iconKey={entry.iconKey}
+                                            size={20}
+                                            textStyle={{ fontWeight: 700 }}
+                                          />
                                           {entry.isRawInput ? (
                                             <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>
                                               {bundle.itemLedger.rawBadge}

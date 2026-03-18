@@ -36,6 +36,14 @@ export const DATASET_PRESETS: DatasetPresetDefinition[] = [
   },
 ];
 
+export interface LoadedCatalogSource {
+  datasetText: string;
+  defaultConfigText: string;
+  dataset: VanillaDatasetSpec;
+  defaultConfig: CatalogDefaultConfigSpec;
+  catalog: ResolvedCatalogModel;
+}
+
 function stripBom(text: string): string {
   return text.replace(/^\uFEFF/, '');
 }
@@ -50,14 +58,35 @@ async function fetchJsonText(url: string): Promise<string> {
   return stripBom(await response.text());
 }
 
+export function resolveCatalogSourceTexts(
+  datasetText: string,
+  defaultConfigText = '{}'
+): LoadedCatalogSource {
+  const dataset = JSON.parse(stripBom(datasetText)) as VanillaDatasetSpec;
+  const defaultConfig = JSON.parse(stripBom(defaultConfigText || '{}')) as CatalogDefaultConfigSpec;
+
+  return {
+    datasetText: stripBom(datasetText),
+    defaultConfigText: stripBom(defaultConfigText || '{}'),
+    dataset,
+    defaultConfig,
+    catalog: resolveCatalogModel(dataset, defaultConfig),
+  };
+}
+
+export async function loadCatalogSourceFromUrl(
+  datasetPath: string,
+  defaultConfigPath?: string
+): Promise<LoadedCatalogSource> {
+  const datasetText = await fetchJsonText(datasetPath);
+  const defaultConfigText = defaultConfigPath ? await fetchJsonText(defaultConfigPath) : '{}';
+
+  return resolveCatalogSourceTexts(datasetText, defaultConfigText);
+}
+
 export async function loadResolvedCatalogFromUrl(
   datasetPath: string,
   defaultConfigPath?: string
 ): Promise<ResolvedCatalogModel> {
-  const datasetText = await fetchJsonText(datasetPath);
-  const defaultConfigText = defaultConfigPath ? await fetchJsonText(defaultConfigPath) : '{}';
-  const dataset = JSON.parse(datasetText) as VanillaDatasetSpec;
-  const defaultConfig = JSON.parse(defaultConfigText) as CatalogDefaultConfigSpec;
-
-  return resolveCatalogModel(dataset, defaultConfig);
+  return (await loadCatalogSourceFromUrl(datasetPath, defaultConfigPath)).catalog;
 }

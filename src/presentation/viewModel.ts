@@ -25,18 +25,22 @@ export interface PresentationCatalogSummary {
 export interface PresentationNamedItem {
   itemId: string;
   itemName: string;
+  iconKey?: string;
 }
 
 export interface PresentationRequestTarget {
   itemId: string;
   itemName: string;
+  iconKey?: string;
   ratePerMin: number;
 }
 
 export interface PresentationRecipePreference {
   recipeId: string;
   recipeName: string;
+  recipeIconKey?: string;
   buildingName?: string;
+  buildingIconKey?: string;
   proliferatorPreferenceLabel?: string;
 }
 
@@ -55,6 +59,7 @@ export interface PresentationRequestSummary {
 export interface PresentationSolvedTarget {
   itemId: string;
   itemName: string;
+  iconKey?: string;
   requestedRatePerMin: number;
   actualRatePerMin: number;
 }
@@ -62,14 +67,17 @@ export interface PresentationSolvedTarget {
 export interface PresentationItemRate {
   itemId: string;
   itemName: string;
+  iconKey?: string;
   ratePerMin: number;
 }
 
 export interface PresentationRecipePlan {
   recipeId: string;
   recipeName: string;
+  recipeIconKey?: string;
   buildingId: string;
   buildingName: string;
+  buildingIconKey?: string;
   proliferatorLevel: number;
   proliferatorMode: SolveResult['recipePlans'][number]['proliferatorMode'];
   proliferatorLabel: string;
@@ -85,6 +93,7 @@ export interface PresentationRecipePlan {
 export interface PresentationBuildingSummary {
   buildingId: string;
   buildingName: string;
+  buildingIconKey?: string;
   category: string;
   exactCount: number;
   roundedUpCount: number;
@@ -95,6 +104,7 @@ export interface PresentationBuildingSummary {
 export interface PresentationItemBalance {
   itemId: string;
   itemName: string;
+  iconKey?: string;
   producedRatePerMin: number;
   consumedRatePerMin: number;
   netRatePerMin: number;
@@ -108,6 +118,7 @@ export type PresentationItemLedgerSectionKey =
 export interface PresentationItemLedgerEntry {
   itemId: string;
   itemName: string;
+  iconKey?: string;
   producedRatePerMin: number;
   consumedRatePerMin: number;
   netRatePerMin: number;
@@ -192,12 +203,24 @@ function getItemName(catalog: ResolvedCatalogModel, itemId: string): string {
   return catalog.itemMap.get(itemId)?.name ?? itemId;
 }
 
+function getItemIcon(catalog: ResolvedCatalogModel, itemId: string): string | undefined {
+  return catalog.itemMap.get(itemId)?.icon;
+}
+
 function getRecipeName(catalog: ResolvedCatalogModel, recipeId: string): string {
   return catalog.recipeMap.get(recipeId)?.name ?? recipeId;
 }
 
+function getRecipeIcon(catalog: ResolvedCatalogModel, recipeId: string): string | undefined {
+  return catalog.recipeMap.get(recipeId)?.icon;
+}
+
 function getBuildingName(catalog: ResolvedCatalogModel, buildingId: string): string {
   return catalog.buildingMap.get(buildingId)?.name ?? buildingId;
+}
+
+function getBuildingIcon(catalog: ResolvedCatalogModel, buildingId: string): string | undefined {
+  return catalog.buildingMap.get(buildingId)?.icon;
 }
 
 function sortByName<T extends { itemName: string }>(items: T[]): T[] {
@@ -215,6 +238,7 @@ function mapItemRates(
   return itemRates.map(itemRate => ({
     itemId: itemRate.itemId,
     itemName: getItemName(catalog, itemRate.itemId),
+    iconKey: getItemIcon(catalog, itemRate.itemId),
     ratePerMin: itemRate.ratePerMin,
   }));
 }
@@ -301,6 +325,7 @@ function buildPresentationItemLedgerSections(
     return {
       itemId: entry.itemId,
       itemName: getItemName(catalog, entry.itemId),
+      iconKey: getItemIcon(catalog, entry.itemId),
       producedRatePerMin: entry.producedRatePerMin,
       consumedRatePerMin: entry.consumedRatePerMin,
       netRatePerMin: entry.netRatePerMin,
@@ -357,6 +382,7 @@ function buildPresentationSolveSummary(
     netOutputsByItem.set(target.itemId, {
       itemId: target.itemId,
       itemName: getItemName(catalog, target.itemId),
+      iconKey: getItemIcon(catalog, target.itemId),
       ratePerMin: target.actualRatePerMin,
     });
   }
@@ -366,6 +392,7 @@ function buildPresentationSolveSummary(
     netOutputsByItem.set(surplus.itemId, {
       itemId: surplus.itemId,
       itemName: getItemName(catalog, surplus.itemId),
+      iconKey: getItemIcon(catalog, surplus.itemId),
       ratePerMin: (existing?.ratePerMin ?? 0) + surplus.ratePerMin,
     });
   }
@@ -463,12 +490,14 @@ export function buildPresentationModel(
         targets: request.targets.map(target => ({
           itemId: target.itemId,
           itemName: getItemName(catalog, target.itemId),
+          iconKey: getItemIcon(catalog, target.itemId),
           ratePerMin: target.ratePerMin,
         })),
         rawInputs: sortNamedItems(
           (request.rawInputItemIds ?? []).map(itemId => ({
             itemId,
             itemName: getItemName(catalog, itemId),
+            iconKey: getItemIcon(catalog, itemId),
           }))
         ),
         disabledRecipes: sortByName(
@@ -493,8 +522,12 @@ export function buildPresentationModel(
           .map(recipeId => ({
             recipeId,
             recipeName: getRecipeName(catalog, recipeId),
+            recipeIconKey: getRecipeIcon(catalog, recipeId),
             buildingName: request.preferredBuildingByRecipe?.[recipeId]
               ? getBuildingName(catalog, request.preferredBuildingByRecipe[recipeId])
+              : undefined,
+            buildingIconKey: request.preferredBuildingByRecipe?.[recipeId]
+              ? getBuildingIcon(catalog, request.preferredBuildingByRecipe[recipeId])
               : undefined,
             proliferatorPreferenceLabel: formatPreferredProliferatorLabel(
               request.preferredProliferatorModeByRecipe?.[recipeId],
@@ -562,14 +595,17 @@ export function buildPresentationModel(
     targets: result.targets.map(target => ({
       itemId: target.itemId,
       itemName: getItemName(catalog, target.itemId),
+      iconKey: getItemIcon(catalog, target.itemId),
       requestedRatePerMin: target.requestedRatePerMin,
       actualRatePerMin: target.actualRatePerMin,
     })),
     recipePlans: result.recipePlans.map(plan => ({
       recipeId: plan.recipeId,
       recipeName: getRecipeName(catalog, plan.recipeId),
+      recipeIconKey: getRecipeIcon(catalog, plan.recipeId),
       buildingId: plan.buildingId,
       buildingName: getBuildingName(catalog, plan.buildingId),
+      buildingIconKey: getBuildingIcon(catalog, plan.buildingId),
       proliferatorLevel: plan.proliferatorLevel,
       proliferatorMode: plan.proliferatorMode,
       proliferatorLabel: formatProliferatorLabel(
@@ -588,6 +624,7 @@ export function buildPresentationModel(
     buildingSummary: result.buildingSummary.map(summary => ({
       buildingId: summary.buildingId,
       buildingName: getBuildingName(catalog, summary.buildingId),
+      buildingIconKey: getBuildingIcon(catalog, summary.buildingId),
       category: catalog.buildingMap.get(summary.buildingId)?.category ?? 'factory',
       exactCount: summary.exactCount,
       roundedUpCount: summary.roundedUpCount,
@@ -600,6 +637,7 @@ export function buildPresentationModel(
     itemBalance: result.itemBalance.map(entry => ({
       itemId: entry.itemId,
       itemName: getItemName(catalog, entry.itemId),
+      iconKey: getItemIcon(catalog, entry.itemId),
       producedRatePerMin: entry.producedRatePerMin,
       consumedRatePerMin: entry.consumedRatePerMin,
       netRatePerMin: entry.netRatePerMin,

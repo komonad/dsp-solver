@@ -92,7 +92,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
     proliferatorPolicyLabel: '自动',
-    targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
     disabledBuildings: [],
@@ -101,8 +101,8 @@ test('presentation model carries frontend-visible names and totals from a solved
   });
   expect(model.status).toBe('optimal');
   expect(model.solvedSummary).toMatchObject({
-    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
-    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 60 }],
+    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     buildingTypeCount: 1,
     roundedBuildingCount: 1,
     recipeTypeCount: 1,
@@ -112,6 +112,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     {
       itemId: '1101',
       itemName: 'Demo Plate',
+      iconKey: 'demo-plate',
       requestedRatePerMin: 60,
       actualRatePerMin: 60,
     },
@@ -120,6 +121,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     {
       itemId: '1001',
       itemName: 'Demo Ore',
+      iconKey: 'demo-ore',
       ratePerMin: 60,
     },
   ]);
@@ -127,6 +129,7 @@ test('presentation model carries frontend-visible names and totals from a solved
   expect(model.buildingSummary[0]).toMatchObject({
     buildingId: '5002',
     buildingName: 'Turbo Smelter',
+    buildingIconKey: 'turbo-smelter',
     category: 'smelter',
     exactCount: 0.5,
     roundedUpCount: 1,
@@ -137,8 +140,10 @@ test('presentation model carries frontend-visible names and totals from a solved
   expect(model.recipePlans[0]).toMatchObject({
     recipeId: '1',
     recipeName: 'Ore to Plate',
+    recipeIconKey: 'demo-plate',
     buildingId: '5002',
     buildingName: 'Turbo Smelter',
+    buildingIconKey: 'turbo-smelter',
     proliferatorLabel: '无增产剂',
     runsPerMin: 60,
     exactBuildingCount: 0.5,
@@ -179,19 +184,20 @@ test('overview sections keep surplus outputs separate from buildings and power',
     status: 'optimal',
     diagnostics: { messages: [], unmetPreferences: [] },
     solvedSummary: {
-      netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
-      netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+      netInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 60 }],
+      netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
       buildingTypeCount: 1,
       roundedBuildingCount: 1,
       recipeTypeCount: 0,
       roundedPlacementPowerMW: 4,
     },
-    targets: [{ itemId: '1101', itemName: 'Demo Plate', requestedRatePerMin: 60, actualRatePerMin: 60 }],
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', requestedRatePerMin: 60, actualRatePerMin: 60 }],
     recipePlans: [],
     buildingSummary: [
       {
         buildingId: '5002',
         buildingName: 'Turbo Smelter',
+        buildingIconKey: 'turbo-smelter',
         category: 'smelter',
         exactCount: 0.5,
         roundedUpCount: 1,
@@ -203,8 +209,8 @@ test('overview sections keep surplus outputs separate from buildings and power',
       activePowerMW: 4,
       roundedPlacementPowerMW: 4,
     },
-    externalInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
-    surplusOutputs: [{ itemId: '1116', itemName: 'Heavy Oil', ratePerMin: 30 }],
+    externalInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 60 }],
+    surplusOutputs: [{ itemId: '1116', itemName: 'Heavy Oil', iconKey: undefined, ratePerMin: 30 }],
     itemBalance: [],
     itemLedgerSections: [],
   };
@@ -254,7 +260,7 @@ test('presentation model exposes named recipe preference summaries from the requ
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
     proliferatorPolicyLabel: '自动',
-    targets: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
     disabledRecipes: [],
     disabledBuildings: [],
@@ -262,7 +268,9 @@ test('presentation model exposes named recipe preference summaries from the requ
       {
         recipeId: '1',
         recipeName: 'Ore to Plate',
+        recipeIconKey: 'demo-plate',
         buildingName: 'Compact Smelter',
+        buildingIconKey: 'compact-smelter',
         proliferatorPreferenceLabel: '加速 等级 1',
       },
     ],
@@ -325,6 +333,7 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
         {
           itemId: '1001',
           itemName: 'Demo Ore',
+          iconKey: 'demo-ore',
           producedRatePerMin: 60,
           consumedRatePerMin: 60,
           netRatePerMin: 0,
@@ -345,6 +354,7 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
         {
           itemId: '1101',
           itemName: 'Demo Plate',
+          iconKey: 'demo-plate',
           producedRatePerMin: 60,
           consumedRatePerMin: 60,
           netRatePerMin: 0,
@@ -365,8 +375,8 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
     },
   ]);
   expect(model.solvedSummary).toMatchObject({
-    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
-    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 60 }],
+    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     buildingTypeCount: 1,
     roundedBuildingCount: 1,
     recipeTypeCount: 1,

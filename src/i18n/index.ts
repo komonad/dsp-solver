@@ -55,6 +55,13 @@ export interface LocaleBundle {
     waitingDescription: string;
     datasetPathRequired: string;
     loadFailedPrefix: string;
+    editorTitle: string;
+    editorApplyButton: string;
+    editorResetButton: string;
+    editorDatasetLabel: string;
+    editorDefaultsLabel: string;
+    editorHelp: string;
+    editorApplyFailedPrefix: string;
   };
   solveRequest: {
     title: string;
@@ -248,6 +255,13 @@ const zhCN: LocaleBundle = {
     waitingDescription: '先加载一个内置数据集，或者填写自定义数据集文件路径。',
     datasetPathRequired: '必须提供数据集路径。',
     loadFailedPrefix: '加载数据集失败：',
+    editorTitle: '内置数据集编辑器',
+    editorApplyButton: '应用为当前数据集',
+    editorResetButton: '重置为已加载内容',
+    editorDatasetLabel: '数据集 JSON',
+    editorDefaultsLabel: '默认配置 JSON',
+    editorHelp: '用于直接编辑 items / recipes / buildings 相关原始 JSON，并在浏览器内重新解析当前数据集。',
+    editorApplyFailedPrefix: '应用编辑失败：',
   },
   solveRequest: {
     title: '求解请求',

@@ -245,6 +245,8 @@ export interface ResolvedRecipeSpec {
   typeId: number;
   /** Display name. */
   name: string;
+  /** Optional icon resource key from the upstream dataset. */
+  icon?: string;
   /** Recipe duration in seconds, derived from TimeSpend using 60 ticks = 1 second. */
   cycleTimeSec: number;
   /** Original upstream duration in ticks. */
@@ -281,6 +283,8 @@ export interface ResolvedBuildingSpec {
   typeId: number;
   /** Display name. */
   name: string;
+  /** Optional icon resource key from the upstream dataset item entry. */
+  icon?: string;
   /** Resolved building category. */
   category: string;
   /** Effective building speed multiplier used by solver math. */
