@@ -198,40 +198,59 @@ Why:
 
 - These are top-level summaries and should stay visually independent.
 
-### 3. Detailed Plan
+### 3. Detailed Result Surfaces
 
 Show:
 
-- Recipe plans
+- Factory-centered plan view
+- Full item ledger
+- Single-item slice
 - Diagnostics
 - Item balance
 - JSON audit panels
 
 Why:
 
-- These are debugging and validation views, but still essential.
+- The solution needs both a global factory view and an item-centric inspection workflow.
 
-## Production Graph View
+## Factory Plan View And Item Ledger
 
-The current flat recipe-plan list is not enough. The main production view should become a product-grouped production graph.
+The current flat recipe-plan list is not enough.
+
+The result area should be split into three connected views:
+
+- a default factory-centered plan view
+- a full item ledger
+- a single-item slice panel
 
 ### Core Rules
 
-#### 1. Recipe order must follow graph traversal order
+#### 1. The default main view remains factory-centered
 
-The list should not be sorted alphabetically or by raw recipe ID.
+The default main result view should still be organized around selected recipe/building plans.
+
+Why:
+
+- This is the most direct way to inspect the chosen solution.
+- It matches how users verify building counts, power, and proliferator decisions.
+
+But the ordering still must follow graph structure rather than a flat alphabetical sort.
+
+#### 2. Factory plan order must follow graph traversal order
+
+The default plan list should not be sorted alphabetically or by raw recipe ID.
 
 Recommended rule:
 
 - Start from the requested target items.
 - Traverse upstream through the actually used plans.
-- Emit product groups in traversal order.
-- Within each group, keep producer plans close to the consumers that caused them to appear.
+- Emit plans in traversal order.
+- Keep directly related plans close together.
 
 Why:
 
 - This gives users locality.
-- Neighbouring rows stay related in the same part of the graph.
+- Neighboring rows stay related in the same part of the graph.
 - Large plans remain inspectable without mentally reconstructing the dependency graph from scratch.
 
 Recommended implementation:
@@ -243,110 +262,167 @@ Recommended implementation:
   - then by upstream appearance order
   - then by recipe/building ID as a final stable fallback
 
-#### 2. Recipe plans must be grouped by produced item
+#### 3. We need a full item ledger, not an intermediate-only list
 
-The primary view should group by product item, not by recipe.
+This list should contain every involved item in the solved logistics graph:
 
-That means:
+- net inputs
+- net outputs
+- intermediate items
 
-- Each group represents one item.
-- The group shows all plan entries that produce that item.
-- The same plan entry may appear in more than one group if it has multiple outputs.
+Recommended ordering:
 
-This duplication is correct and should be intentional.
+- first: items with positive net external input
+- second: requested outputs and other net outputs
+- third: all remaining intermediate items
 
-Why:
+For the remaining intermediate items, sort by throughput:
 
-- Users reason about “how this item is made”, not “what every recipe does globally”.
-- Multi-output recipes participate in multiple item decisions, so they need to be visible in multiple groups.
-
-Recommended group header content:
-
-- Item name
-- Requested/actual/net rate
-- Whether it is treated as raw input
-- Whether surplus exists
-- Short summary of active production strategy
-
-Recommended row content inside one group:
-
-- Recipe name
-- Building name
-- Proliferator label
-- Rate contribution for this group item
-- Full input/output list
-- Building count and power
-
-### 3. Product-level strategy controls must exist in the product group
-
-If the user wants to change how one item is produced, that interaction should be attached to that item’s group.
-
-Examples:
-
-- Mark this item as raw input
-- Prefer a specific recipe for this item
-- Force a specific recipe for this item
-- Inspect which recipes are currently producing this item
+- `max(totalProducedRatePerMin, totalConsumedRatePerMin)` descending
 
 Why:
 
-- The user intent is item-centric.
-- Putting these controls only in the left-side global form forces too much context switching.
+- Users need one place to inspect the full solved item ledger.
+- Inputs and outputs should stay visibly separated from pure transit items.
+- High-throughput intermediates matter more than tiny edge cases.
 
-Recommended interaction:
+Each item row should show:
 
-- Each product group header gets a compact “strategy” action area.
-- Clicking it opens an inline editor or side panel scoped to that item.
+- item name
+- total produced rate
+- total consumed rate
+- net rate
+- whether it is treated as raw input
+- whether it is a requested target
 
-Recommended controls in that item strategy editor:
+Rule:
 
-- `Treat as raw input`
-- `Preferred recipe`
-- `Forced recipe`
-- `Clear item overrides`
+- if `netRatePerMin === 0`, net can be visually muted or omitted
+- produced and consumed should always be shown
+
+#### 4. Any item in the ledger must support direct strategy edits
+
+The item ledger is not read-only.
+
+For every item, the UI should allow:
+
+- mark as raw input
+- unmark as raw input
+- open the item slice
 
 Optional later:
 
-- default building preference for recipes producing this item
-- default proliferator preference for recipes producing this item
+- preferred recipe
+- forced recipe
+
+This should be possible directly from the item row, without forcing the user back to the global request form.
+
+#### 5. We need a local slice for any single item
+
+The full item ledger is the global entry point.
+
+From any item row, the user should be able to open an item slice showing:
+
+- item summary
+- all producer plans
+- all consumer plans
+- full plan IO for each related plan
+- item-level strategy controls
+
+This slice should work for every item in the graph, including:
+
+- raw inputs
+- requested outputs
+- intermediate items
+
+#### 6. Plans may appear in multiple item slices
+
+This duplication is correct and intentional.
+
+Why:
+
+- Users reason about one item's local cross-section at a time.
+- Multi-output recipes legitimately participate in multiple item slices.
+
+Recommended item-slice header content:
+
+- item name
+- produced rate
+- consumed rate
+- net rate
+- whether it is treated as raw input
+- whether it is a requested target
+- short summary of active item-level strategy
+
+Recommended related-plan row content:
+
+- recipe name
+- building name
+- proliferator label
+- contribution rate for this item
+- full input/output list
+- building count and power
 
 ## Presentation Model Changes Needed
 
-To support the production graph view, the presentation layer should stop exposing only a flat `recipePlans` array for the main UI.
+To support this interaction model, the presentation layer should stop exposing only a flat `recipePlans` array for the main UI.
 
-Add a higher-level structure such as:
+Add higher-level structures such as:
 
-- `productionGroups[]`
-- each group keyed by `itemId`
-- each group contains:
-  - item summary
-  - item-level strategy state derived from request
-  - ordered producer entries
+- `factoryPlanSections[]`
+- `itemLedger[]`
+- `itemSlicesById`
 
-Each producer entry should include:
+`itemLedger[]` should contain:
+
+- `itemId`
+- `itemName`
+- `producedRatePerMin`
+- `consumedRatePerMin`
+- `netRatePerMin`
+- `isRawInput`
+- `isTarget`
+- `sortBucket`
+- `throughputRatePerMin`
+
+`itemSlicesById[itemId]` should contain:
+
+- item summary
+- item-level strategy state derived from request
+- ordered producer entries
+- ordered consumer entries
+
+Each related plan entry should include:
 
 - `planKey`
 - `recipeId`
 - `buildingId`
-- `proliferator label`
-- `contributedOutputRatePerMin` for the current group item
+- `proliferatorLabel`
+- `contributedProducedRatePerMin`
+- `contributedConsumedRatePerMin`
 - full plan inputs/outputs
 
 Important:
 
-- This grouping must be built in `src/presentation`, not inside React.
-- Duplication of multi-output plans across groups is acceptable.
+- This structure must be built in `src/presentation`, not inside React.
+- Duplication of multi-output plans across item slices is acceptable.
 - The ordering algorithm must be deterministic and separately unit tested.
 
 ## Recommended Next UI Refactor
 
-When splitting the current page, add one more layer:
+When splitting the current page, add these result panels:
 
 - `ResultOverviewPanel`
-- `ProductionGraphPanel`
+- `FactoryPlanPanel`
+- `ItemLedgerPanel`
+- `ItemSlicePanel`
 - `DiagnosticsPanel`
 
-`ProductionGraphPanel` should become the main interaction surface for item-level strategy editing.
+`FactoryPlanPanel` is the default main result view.
+
+`ItemLedgerPanel` is the global item index and the main entry point for item-level edits.
+
+`ItemSlicePanel` is the local analysis surface for one selected item.
 
 ## Next Engineering Steps
 
@@ -379,13 +455,15 @@ When splitting the current page, add one more layer:
 ### Step 6
 
 - Add presentation tests for:
-  - target-rooted production group ordering
-  - multi-output plan duplication across item groups
-  - item-level strategy summaries in group headers
+  - target-rooted factory plan ordering
+  - item-ledger bucket ordering
+  - item-ledger throughput ordering for intermediates
+  - multi-output plan duplication across item slices
+  - item-level strategy summaries in item ledger and item slice
 
 ### Step 7
 
-- Add UI interactions for item-level strategy editing directly from product groups.
+- Add UI interactions for item-level strategy editing directly from the item ledger and item slice.
 
 ## Testing Rules
 
