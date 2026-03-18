@@ -100,6 +100,14 @@ test('presentation model carries frontend-visible names and totals from a solved
     hasAdvancedOverrides: false,
   });
   expect(model.status).toBe('optimal');
+  expect(model.solvedSummary).toMatchObject({
+    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
+    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    buildingTypeCount: 1,
+    roundedBuildingCount: 1,
+    recipeTypeCount: 1,
+  });
+  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(4, 6);
   expect(model.targets).toEqual([
     {
       itemId: '1101',
@@ -149,6 +157,7 @@ test('presentation model still exposes catalog summary before solving', () => {
   });
 
   expect(model.status).toBeNull();
+  expect(model.solvedSummary).toBeNull();
   expect(model.targets).toEqual([]);
   expect(model.externalInputs).toEqual([]);
   expect(model.recipePlans).toEqual([]);
@@ -169,6 +178,14 @@ test('overview sections keep surplus outputs separate from buildings and power',
     },
     status: 'optimal',
     diagnostics: { messages: [], unmetPreferences: [] },
+    solvedSummary: {
+      netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
+      netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+      buildingTypeCount: 1,
+      roundedBuildingCount: 1,
+      recipeTypeCount: 0,
+      roundedPlacementPowerMW: 4,
+    },
     targets: [{ itemId: '1101', itemName: 'Demo Plate', requestedRatePerMin: 60, actualRatePerMin: 60 }],
     recipePlans: [],
     buildingSummary: [
@@ -347,4 +364,12 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
       items: [],
     },
   ]);
+  expect(model.solvedSummary).toMatchObject({
+    netInputs: [{ itemId: '1001', itemName: 'Demo Ore', ratePerMin: 60 }],
+    netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', ratePerMin: 60 }],
+    buildingTypeCount: 1,
+    roundedBuildingCount: 1,
+    recipeTypeCount: 1,
+  });
+  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(4, 6);
 });

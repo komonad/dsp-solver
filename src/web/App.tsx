@@ -12,7 +12,7 @@ import {
   getDatasetPresetText,
   getLocaleBundle,
 } from '../i18n';
-import { buildPresentationModel, buildPresentationOverviewSections } from '../presentation';
+import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective } from '../solver';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
 import { computeWorkbenchSolve } from './autoSolve';
@@ -80,16 +80,10 @@ const subtleButtonStyle: React.CSSProperties = {
   color: '#183359',
 };
 
-const resultTopGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 20,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-};
-
 const resultBodyGridStyle: React.CSSProperties = {
   display: 'grid',
   gap: 20,
-  gridTemplateColumns: 'minmax(0, 3fr) minmax(280px, 1fr)',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 320px)',
   alignItems: 'start',
 };
 
@@ -121,6 +115,13 @@ const collapsibleSectionStyle: React.CSSProperties = {
 const summaryStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontWeight: 700,
+};
+
+const sectionHeadingStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 13,
+  fontWeight: 700,
+  letterSpacing: '0.08em',
 };
 
 function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
@@ -355,11 +356,7 @@ export default function App() {
         : null,
     [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]
   );
-
-  const overviewSections = useMemo(
-    () => (model ? buildPresentationOverviewSections(model, locale) : null),
-    [model, locale]
-  );
+  const requestSummary = model?.requestSummary;
 
   function onPresetChange(nextPresetId: DatasetPresetId) {
     setPresetId(nextPresetId);
@@ -583,10 +580,60 @@ export default function App() {
 
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
                   {getDatasetPresetText(
-                    (DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom'),
+                    DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
                     locale
                   ).description}
                 </div>
+
+                <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
+                  <h3 style={sectionHeadingStyle}>{bundle.summary.catalogTitle}</h3>
+                  {model ? (
+                    <>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 12,
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        }}
+                      >
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.datasetLabel}</div>
+                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+                            {model.catalogSummary.datasetLabel ?? bundle.common.custom}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.itemsLabel}</div>
+                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+                            {model.catalogSummary.itemCount}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.recipesLabel}</div>
+                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+                            {model.catalogSummary.recipeCount}
+                          </div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>
+                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
+                            {model.catalogSummary.buildingCount}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)', lineHeight: 1.6 }}>
+                        <div>
+                          {bundle.summary.datasetPathLabel}: {model.catalogSummary.datasetPath ?? bundle.common.notSet}
+                        </div>
+                        <div>
+                          {bundle.summary.defaultsPathLabel}: {model.catalogSummary.defaultConfigPath ?? bundle.common.none}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
+                  )}
+                </section>
               </div>
             </article>
 
@@ -969,6 +1016,71 @@ export default function App() {
                 <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
                   {bundle.solveRequest.autoSolveHint}
                 </div>
+
+                <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
+                  <h3 style={sectionHeadingStyle}>{bundle.summary.solveSnapshotTitle}</h3>
+                  {solveError ? <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div> : null}
+                  {requestSummary ? (
+                    <>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gap: 10,
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        }}
+                      >
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.objectiveLabel}</div>
+                          <div style={{ marginTop: 6 }}>{formatSolveObjective(requestSummary.objective, locale)}</div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.balanceLabel}</div>
+                          <div style={{ marginTop: 6 }}>{formatBalancePolicy(requestSummary.balancePolicy, locale)}</div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.sprayLabel}</div>
+                          <div style={{ marginTop: 6 }}>{requestSummary.proliferatorPolicyLabel}</div>
+                        </div>
+                        <div>
+                          <div style={sectionHeadingStyle}>{bundle.summary.statusLabel}</div>
+                          <div style={{ marginTop: 6 }}>{formatSolveStatus(model?.status ?? null, locale)}</div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div style={sectionHeadingStyle}>{bundle.summary.targetsLabel}</div>
+                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                          {requestSummary.targets.map(target => (
+                            <div key={target.itemId}>
+                              {target.itemName}: {formatRate(target.ratePerMin, locale)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <details>
+                        <summary style={summaryStyle}>{bundle.summary.recipePreferencesLabel}</summary>
+                        <div style={{ marginTop: 10, display: 'grid', gap: 6, fontSize: 13 }}>
+                          {requestSummary.preferredRecipeSettings.length === 0 ? (
+                            <div>{bundle.common.none}</div>
+                          ) : (
+                            requestSummary.preferredRecipeSettings.map(setting => (
+                              <div key={setting.recipeId}>
+                                {setting.recipeName}
+                                {setting.buildingName ? ` | ${setting.buildingName}` : ''}
+                                {setting.proliferatorPreferenceLabel
+                                  ? ` | ${setting.proliferatorPreferenceLabel}`
+                                  : ''}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </details>
+                    </>
+                  ) : (
+                    <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
+                  )}
+                </section>
               </div>
             </article>
           </div>
@@ -982,193 +1094,67 @@ export default function App() {
             ) : null}
 
             {model ? (
-              <>
-                <section style={resultTopGridStyle}>
-                <article style={cardStyle}>
-                  <h2 style={{ marginTop: 0 }}>{bundle.summary.catalogTitle}</h2>
-                  <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.datasetLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.datasetLabel ?? bundle.common.custom}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.itemsLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.itemCount}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.recipesLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.recipeCount}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.buildingsLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.buildingCount}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.rawDefaultsLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.rawItemCount}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.targetableLabel}</div>
-                      <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>{model.catalogSummary.targetableItemCount}</div>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: 14, fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>
-                    <div>{bundle.summary.datasetPathLabel}: {model.catalogSummary.datasetPath ?? bundle.common.notSet}</div>
-                    <div>{bundle.summary.defaultsPathLabel}: {model.catalogSummary.defaultConfigPath ?? bundle.common.none}</div>
-                  </div>
-                </article>
-
-                <article style={cardStyle}>
-                  <h2 style={{ marginTop: 0 }}>{bundle.summary.solveSnapshotTitle}</h2>
-                  {solveError ? <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div> : null}
-                  {model.requestSummary ? (
-                    <div style={{ display: 'grid', gap: 12 }}>
-                      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.objectiveLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatSolveObjective(model.requestSummary.objective, locale)}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.balanceLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatBalancePolicy(model.requestSummary.balancePolicy, locale)}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.sprayLabel}</div>
-                          <div style={{ marginTop: 6 }}>{model.requestSummary.proliferatorPolicyLabel}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.statusLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatSolveStatus(model.status, locale)}</div>
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.targetsLabel}</div>
-                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                          {model.requestSummary.targets.map(target => (
-                            <div key={target.itemId}>
-                              {target.itemName}: {formatRate(target.ratePerMin, locale)}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.rawOverridesLabel}</div>
-                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                          {model.requestSummary.rawInputs.length === 0
-                            ? bundle.common.none
-                            : model.requestSummary.rawInputs.map(item => <div key={item.itemId}>{item.itemName}</div>)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.disabledRecipesLabel}</div>
-                          <div style={{ marginTop: 6 }}>{model.requestSummary.disabledRecipes.length}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.disabledBuildingsLabel}</div>
-                          <div style={{ marginTop: 6 }}>{model.requestSummary.disabledBuildings.length}</div>
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.summary.advancedOverridesLabel}</div>
-                          <div style={{ marginTop: 6 }}>{model.requestSummary.hasAdvancedOverrides ? bundle.common.yes : bundle.common.no}</div>
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
-                          {bundle.summary.recipePreferencesLabel}
-                        </div>
-                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                          {model.requestSummary.preferredRecipeSettings.length === 0 ? (
-                            <div>{bundle.common.none}</div>
-                          ) : (
-                            model.requestSummary.preferredRecipeSettings.map(setting => (
-                              <div key={setting.recipeId}>
-                                {setting.recipeName}
-                                {setting.buildingName ? ` | ${setting.buildingName}` : ''}
-                                {setting.proliferatorPreferenceLabel
-                                  ? ` | ${setting.proliferatorPreferenceLabel}`
-                                  : ''}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
-                  )}
-                </article>
-                </section>
-
-                {model.status ? (
-                  <section style={resultBodyGridStyle}>
-                    <div style={resultMainColumnStyle}>
+              model.status ? (
+                <section style={resultBodyGridStyle}>
+                  <div style={resultMainColumnStyle}>
+                    <article style={cardStyle}>
+                      <h2 style={{ marginTop: 0 }}>{bundle.overview.summaryTitle}</h2>
                       <div
                         style={{
                           display: 'grid',
-                          gap: 20,
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                          gap: 16,
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
                         }}
                       >
-                    <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>{overviewSections?.targetsAndExternalInputs.title}</h2>
-                      <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {overviewSections?.targetsAndExternalInputs.targets.map(target => (
-                            <div key={target.itemId} style={{ border: '1px solid rgba(24, 51, 89, 0.12)', borderRadius: 14, padding: 12 }}>
-                              <div style={{ fontWeight: 700 }}>{target.itemName}</div>
-                              <div style={{ marginTop: 4 }}>{bundle.overview.requestLabel}: {formatRate(target.requestedRatePerMin, locale)}</div>
-                              <div style={{ marginTop: 2 }}>{bundle.overview.actualLabel}: {formatRate(target.actualRatePerMin, locale)}</div>
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ display: 'grid', gap: 8 }}>
-                          {(overviewSections?.targetsAndExternalInputs.externalInputs.length ?? 0) === 0 ? (
-                            <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.overview.noExternalInputs}</div>
+                          <div style={sectionHeadingStyle}>{bundle.itemLedger.netInputsTitle}</div>
+                          {(model.solvedSummary?.netInputs.length ?? 0) === 0 ? (
+                            <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
                           ) : (
-                            overviewSections?.targetsAndExternalInputs.externalInputs.map(item => (
+                            model.solvedSummary?.netInputs.map(item => (
                               <div key={item.itemId}>
                                 {item.itemName}: {formatRate(item.ratePerMin, locale)}
                               </div>
                             ))
                           )}
                         </div>
-                      </div>
-                    </article>
 
-                    <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>{overviewSections?.buildingsAndPower.title}</h2>
-                      <div style={{ display: 'grid', gap: 18, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                         <div style={{ display: 'grid', gap: 8 }}>
-                          {overviewSections?.buildingsAndPower.buildingSummary.map(summary => (
-                            <div key={summary.buildingId} style={{ border: '1px solid rgba(24, 51, 89, 0.12)', borderRadius: 14, padding: 12 }}>
-                              <div style={{ fontWeight: 700 }}>{summary.buildingName}</div>
-                              <div style={{ marginTop: 4 }}>{bundle.overview.exactLabel}: {summary.exactCount.toFixed(2)}</div>
-                              <div style={{ marginTop: 2 }}>{bundle.overview.roundedLabel}: {summary.roundedUpCount}</div>
-                              <div style={{ marginTop: 2 }}>{bundle.overview.powerLabel}: {formatPower(summary.activePowerMW, locale)}</div>
-                            </div>
-                          ))}
+                          <div style={sectionHeadingStyle}>{bundle.itemLedger.netOutputsTitle}</div>
+                          {(model.solvedSummary?.netOutputs.length ?? 0) === 0 ? (
+                            <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
+                          ) : (
+                            model.solvedSummary?.netOutputs.map(item => (
+                              <div key={item.itemId}>
+                                {item.itemName}: {formatRate(item.ratePerMin, locale)}
+                              </div>
+                            ))
+                          )}
                         </div>
-                        <div style={{ display: 'grid', gap: 8 }}>
-                          <div>{bundle.overview.activeLabel}: {formatPower(overviewSections?.buildingsAndPower.activePowerMW ?? 0, locale)}</div>
-                          <div>{bundle.overview.roundedPlacementLabel}: {formatPower(overviewSections?.buildingsAndPower.roundedPlacementPowerMW ?? 0, locale)}</div>
-                        </div>
-                      </div>
-                    </article>
-                      </div>
 
-                    <article style={cardStyle}>
-                      <h2 style={{ marginTop: 0 }}>{overviewSections?.surplusOutputs.title}</h2>
-                      <div style={{ display: 'grid', gap: 8 }}>
-                        {(overviewSections?.surplusOutputs.items.length ?? 0) === 0 ? (
-                          <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
-                        ) : (
-                          overviewSections?.surplusOutputs.items.map(item => (
-                            <div key={item.itemId}>
-                              {item.itemName}: {formatRate(item.ratePerMin, locale)}
-                            </div>
-                          ))
-                        )}
+                        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+                          <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>
+                          <div style={{ fontSize: 20, fontWeight: 700 }}>{model.solvedSummary?.buildingTypeCount ?? 0}</div>
+                          <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>
+                            {bundle.overview.roundedLabel} {model.solvedSummary?.roundedBuildingCount ?? 0}
+                          </div>
+                        </div>
+
+                        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+                          <div style={sectionHeadingStyle}>{bundle.overview.powerLabel}</div>
+                          <div style={{ fontSize: 20, fontWeight: 700 }}>
+                            {formatPower(model.solvedSummary?.roundedPlacementPowerMW ?? 0, locale)}
+                          </div>
+                          <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>
+                            {bundle.overview.roundedPlacementLabel}
+                          </div>
+                        </div>
+
+                        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+                          <div style={sectionHeadingStyle}>{bundle.summary.recipesLabel}</div>
+                          <div style={{ fontSize: 20, fontWeight: 700 }}>{model.solvedSummary?.recipeTypeCount ?? 0}</div>
+                          <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>{bundle.recipePlans.title}</div>
+                        </div>
                       </div>
                     </article>
 
@@ -1358,8 +1344,7 @@ export default function App() {
                       {bundle.ready.description}
                     </p>
                   </article>
-                )}
-              </>
+                )
             ) : (
               <article style={cardStyle}>
                 <h2 style={{ marginTop: 0 }}>{bundle.datasetSource.waitingTitle}</h2>

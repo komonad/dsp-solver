@@ -126,6 +126,15 @@ export interface PresentationItemLedgerSection {
   items: PresentationItemLedgerEntry[];
 }
 
+export interface PresentationSolveSummary {
+  netInputs: PresentationItemRate[];
+  netOutputs: PresentationItemRate[];
+  buildingTypeCount: number;
+  roundedBuildingCount: number;
+  recipeTypeCount: number;
+  roundedPlacementPowerMW: number;
+}
+
 /**
  * Frontend-facing grouping for the top-level solved summary cards.
  *
@@ -158,6 +167,7 @@ export interface PresentationModel {
   requestSummary?: PresentationRequestSummary;
   status: SolveResult['status'] | null;
   diagnostics: SolveResult['diagnostics'] | null;
+  solvedSummary: PresentationSolveSummary | null;
   targets: PresentationSolvedTarget[];
   recipePlans: PresentationRecipePlan[];
   buildingSummary: PresentationBuildingSummary[];
@@ -332,6 +342,42 @@ function buildPresentationItemLedgerSections(
   ];
 }
 
+function buildPresentationSolveSummary(
+  result: SolveResult,
+  catalog: ResolvedCatalogModel
+): PresentationSolveSummary {
+  const netOutputsByItem = new Map<string, PresentationItemRate>();
+
+  for (const target of result.targets) {
+    netOutputsByItem.set(target.itemId, {
+      itemId: target.itemId,
+      itemName: getItemName(catalog, target.itemId),
+      ratePerMin: target.actualRatePerMin,
+    });
+  }
+
+  for (const surplus of result.surplusOutputs) {
+    const existing = netOutputsByItem.get(surplus.itemId);
+    netOutputsByItem.set(surplus.itemId, {
+      itemId: surplus.itemId,
+      itemName: getItemName(catalog, surplus.itemId),
+      ratePerMin: (existing?.ratePerMin ?? 0) + surplus.ratePerMin,
+    });
+  }
+
+  return {
+    netInputs: sortByName(mapItemRates(catalog, result.externalInputs)),
+    netOutputs: sortByName(Array.from(netOutputsByItem.values())),
+    buildingTypeCount: result.buildingSummary.length,
+    roundedBuildingCount: result.buildingSummary.reduce(
+      (sum, entry) => sum + entry.roundedUpCount,
+      0
+    ),
+    recipeTypeCount: new Set(result.recipePlans.map(plan => plan.recipeId)).size,
+    roundedPlacementPowerMW: result.powerSummary.roundedPlacementPowerMW,
+  };
+}
+
 function inferGlobalProliferatorPolicyLabel(
   catalog: ResolvedCatalogModel,
   request: SolveRequest,
@@ -480,6 +526,7 @@ export function buildPresentationModel(
       requestSummary,
       status: null,
       diagnostics: null,
+      solvedSummary: null,
       targets: [],
       recipePlans: [],
       buildingSummary: [],
@@ -506,6 +553,7 @@ export function buildPresentationModel(
     requestSummary,
     status: result.status,
     diagnostics: result.diagnostics,
+    solvedSummary: buildPresentationSolveSummary(result, catalog),
     targets: result.targets.map(target => ({
       itemId: target.itemId,
       itemName: getItemName(catalog, target.itemId),

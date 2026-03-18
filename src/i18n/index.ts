@@ -106,6 +106,7 @@ export interface LocaleBundle {
     loadDatasetToStart: string;
   };
   overview: {
+    summaryTitle: string;
     targetsAndExternalInputsTitle: string;
     buildingsAndPowerTitle: string;
     surplusOutputsTitle: string;
@@ -304,6 +305,7 @@ const zhCN: LocaleBundle = {
     loadDatasetToStart: '先加载数据集，再开始构造求解请求。',
   },
   overview: {
+    summaryTitle: '方案总览',
     targetsAndExternalInputsTitle: '目标与外部输入',
     buildingsAndPowerTitle: '建筑与功耗',
     surplusOutputsTitle: '冗余产物',
