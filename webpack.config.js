@@ -41,7 +41,7 @@ module.exports = {
           from: 'data',
           to: '.',
           globOptions: {
-            ignore: ['**/.DS_Store', '**/legacy/**'],
+            ignore: ['**/.DS_Store'],
           },
         },
       ],

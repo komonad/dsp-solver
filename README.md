@@ -15,16 +15,15 @@ The current goal is a linear-programming-based production solver for Dyson Spher
 - [src/solver](/D:/dsp-dev/dspcalc/src/solver): solver request/result types
 - [src/presentation](/D:/dsp-dev/dspcalc/src/presentation): pure presentation-facing view models
 - [src/web](/D:/dsp-dev/dspcalc/src/web): current web entry
-- [src/legacy](/D:/dsp-dev/dspcalc/src/legacy): historical reference only
 
 ## Data files
 
 - [Vanilla.json](/D:/dsp-dev/dspcalc/data/Vanilla.json): raw dataset in the external vanilla-compatible format
 - [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json): optional default configuration for that dataset
-- [LegacyRefinery.json](/D:/dsp-dev/dspcalc/data/LegacyRefinery.json): refinery balancing scenario from the legacy test config
-- [LegacyRefinery.defaults.json](/D:/dsp-dev/dspcalc/data/LegacyRefinery.defaults.json): defaults for the refinery scenario
-- [LegacyCycle.json](/D:/dsp-dev/dspcalc/data/LegacyCycle.json): fullerol/fullersilver loop scenario from the legacy test config
-- [LegacyCycle.defaults.json](/D:/dsp-dev/dspcalc/data/LegacyCycle.defaults.json): defaults for the cycle scenario
+- [RefineryBalance.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.json): refinery balancing scenario
+- [RefineryBalance.defaults.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.defaults.json): defaults for the refinery scenario
+- [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json): fullerene methane loop plus the fullersilver/fullerol cycle
+- [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json): defaults for the fullerene loop scenario
 
 Minimal examples used only for tests live under [tests/fixtures](/D:/dsp-dev/dspcalc/tests/fixtures).
 
@@ -102,10 +101,10 @@ Bundled files currently copied into [dist-web](/D:/dsp-dev/dspcalc/dist-web) inc
 - [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json)
 - [DemoSmelting.json](/D:/dsp-dev/dspcalc/data/DemoSmelting.json)
 - [DemoSmelting.defaults.json](/D:/dsp-dev/dspcalc/data/DemoSmelting.defaults.json)
-- [LegacyRefinery.json](/D:/dsp-dev/dspcalc/data/LegacyRefinery.json)
-- [LegacyRefinery.defaults.json](/D:/dsp-dev/dspcalc/data/LegacyRefinery.defaults.json)
-- [LegacyCycle.json](/D:/dsp-dev/dspcalc/data/LegacyCycle.json)
-- [LegacyCycle.defaults.json](/D:/dsp-dev/dspcalc/data/LegacyCycle.defaults.json)
+- [RefineryBalance.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.json)
+- [RefineryBalance.defaults.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.defaults.json)
+- [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json)
+- [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json)
 
 If you want to use a custom dataset in the browser, place that dataset JSON and its optional defaults JSON under the hosted web root and then point the UI at those relative paths.
 

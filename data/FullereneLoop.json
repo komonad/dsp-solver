@@ -96,27 +96,27 @@
       "ID": 90001,
       "Type": 1,
       "Factories": [2309, 2313, 2314],
-      "Name": "Gas Cloud Separation",
-      "Items": [10001],
-      "ItemCounts": [1],
-      "Results": [11003, 11004],
+      "Name": "Fullerene Synthesis",
+      "Items": [10001, 11001, 11002],
+      "ItemCounts": [1, 1, 3],
+      "Results": [11004, 11003],
       "ResultCounts": [1, 1],
       "TimeSpend": 60,
       "Proliferator": 0,
-      "IconName": "gas-separation"
+      "IconName": "fullerene-synthesis"
     },
     {
       "ID": 90002,
       "Type": 1,
       "Factories": [2309, 2313, 2314],
-      "Name": "Methane Cracking",
+      "Name": "Methane Reforming",
       "Items": [11003],
       "ItemCounts": [1],
       "Results": [11001, 11002],
-      "ResultCounts": [1, 1],
+      "ResultCounts": [1, 3],
       "TimeSpend": 60,
       "Proliferator": 0,
-      "IconName": "methane-cracking"
+      "IconName": "methane-reforming"
     },
     {
       "ID": 90003,

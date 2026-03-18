@@ -143,8 +143,8 @@ test('resolveCatalogModel still returns a valid fallback model without default c
 
 test.each([
   {
-    datasetPath: './data/LegacyRefinery.json',
-    defaultsPath: './data/LegacyRefinery.defaults.json',
+    datasetPath: './data/RefineryBalance.json',
+    defaultsPath: './data/RefineryBalance.defaults.json',
     expectedRecipeCount: 2,
     expectedBuildingCount: 1,
     expectedRecommendedSolve: {
@@ -153,13 +153,13 @@ test.each([
     },
   },
   {
-    datasetPath: './data/LegacyCycle.json',
-    defaultsPath: './data/LegacyCycle.defaults.json',
+    datasetPath: './data/FullereneLoop.json',
+    defaultsPath: './data/FullereneLoop.defaults.json',
     expectedRecipeCount: 4,
     expectedBuildingCount: 3,
     expectedRecommendedSolve: {
       objective: 'min_external_input',
-      balancePolicy: 'allow_surplus',
+      balancePolicy: 'force_balance',
     },
   },
 ])(

@@ -25,7 +25,7 @@
   ],
   "recommendedSolve": {
     "objective": "min_external_input",
-    "balancePolicy": "allow_surplus"
+    "balancePolicy": "force_balance"
   },
   "recommendedRawItemIds": [10001, 10002, 12001]
 }
