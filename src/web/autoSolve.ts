@@ -19,6 +19,7 @@ export interface ComputeWorkbenchSolveParams {
   objective: SolveObjective;
   balancePolicy: BalancePolicy;
   proliferatorPolicy: WorkbenchProliferatorPolicy;
+  autoPromoteUnavailableItemsToRawInputs: boolean;
   rawInputItemIds: string[];
   disabledRawInputItemIds?: string[];
   disabledRecipeIds: string[];
@@ -48,6 +49,7 @@ export function computeWorkbenchSolve(
     objective,
     balancePolicy,
     proliferatorPolicy,
+    autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,
     disabledRecipeIds,
@@ -81,6 +83,7 @@ export function computeWorkbenchSolve(
     targets,
     objective,
     balancePolicy,
+    autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,
     advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),

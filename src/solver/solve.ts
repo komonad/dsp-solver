@@ -32,6 +32,12 @@ interface CompiledOptionContext {
   building: ResolvedBuildingSpec;
 }
 
+interface CollectRecipesResult {
+  recipes: ResolvedRecipeSpec[];
+  messages: string[];
+  autoPromotedRawInputItemIds: string[];
+}
+
 function aggregateTargetRates(request: SolveRequest): Map<string, number> {
   const targetRates = new Map<string, number>();
 
@@ -249,22 +255,121 @@ function buildRecipeOutputIndex(
   return recipesByOutputItem;
 }
 
+function compileRecipeOptions(
+  catalog: ResolvedCatalogModel,
+  recipe: ResolvedRecipeSpec,
+  request: SolveRequest,
+  disabledBuildingIds: Set<string>,
+  messages?: string[]
+): CompiledOptionContext[] {
+  let allowedBuildingIds = recipe.allowedBuildingIds.filter(
+    buildingId => !disabledBuildingIds.has(buildingId)
+  );
+
+  const forcedBuildingId = request.forcedBuildingByRecipe?.[recipe.recipeId];
+  if (forcedBuildingId) {
+    if (!allowedBuildingIds.includes(forcedBuildingId)) {
+      messages?.push(
+        `Forced building ${forcedBuildingId} is not allowed for recipe ${recipe.recipeId}.`
+      );
+      return [];
+    }
+    allowedBuildingIds = [forcedBuildingId];
+  }
+
+  if (allowedBuildingIds.length === 0) {
+    messages?.push(`Recipe ${recipe.recipeId} has no available buildings after filtering.`);
+    return [];
+  }
+
+  const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
+  const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
+  const allowedModes = new Set(recipe.supportsProliferatorModes);
+
+  if (forcedMode && !allowedModes.has(forcedMode)) {
+    messages?.push(
+      `Forced proliferator mode ${forcedMode} is not supported by recipe ${recipe.recipeId}.`
+    );
+    return [];
+  }
+
+  if (forcedLevel !== undefined && forcedLevel > recipe.maxProliferatorLevel) {
+    messages?.push(
+      `Forced proliferator level ${forcedLevel} exceeds max level for recipe ${recipe.recipeId}.`
+    );
+    return [];
+  }
+
+  const compiledOptions: CompiledOptionContext[] = [];
+
+  for (const buildingId of allowedBuildingIds) {
+    const building = catalog.buildingMap.get(buildingId);
+    if (!building) {
+      messages?.push(`Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`);
+      continue;
+    }
+
+    const optionCandidates: CompiledOption[] = [];
+    optionCandidates.push(buildNoneVariant(recipe, building));
+
+    for (const level of catalog.proliferatorLevels) {
+      if (level.level === 0 || level.level > recipe.maxProliferatorLevel) {
+        continue;
+      }
+
+      if (allowedModes.has('speed')) {
+        optionCandidates.push(buildProliferatorVariant(recipe, building, level, 'speed'));
+      }
+
+      if (allowedModes.has('productivity')) {
+        optionCandidates.push(
+          buildProliferatorVariant(recipe, building, level, 'productivity')
+        );
+      }
+    }
+
+    const allowedCandidates = optionCandidates.filter(option =>
+      isOptionAllowedByForce(option, recipe, request)
+    );
+
+    if (allowedCandidates.length === 0) {
+      messages?.push(
+        `Recipe ${recipe.recipeId} has no available proliferator variants after filtering.`
+      );
+      continue;
+    }
+
+    for (const option of allowedCandidates) {
+      compiledOptions.push({
+        option,
+        recipe,
+        building,
+      });
+    }
+  }
+
+  return compiledOptions;
+}
+
 function collectUpstreamRecipes(
   catalog: ResolvedCatalogModel,
   targetItemIds: string[],
   rawInputItemIds: Set<string>,
   disabledRecipeIds: Set<string>,
+  disabledBuildingIds: Set<string>,
+  request: SolveRequest,
   forcedRecipeByItem: Record<string, string>
-): { recipes: ResolvedRecipeSpec[]; messages: string[] } {
+): CollectRecipesResult {
   const messages: string[] = [];
   const recipesByOutputItem = buildRecipeOutputIndex(catalog, disabledRecipeIds);
   const visitedItems = new Set<string>();
   const selectedRecipeIds = new Set<string>();
+  const autoPromotedRawInputIds = new Set<string>();
   const queue = [...targetItemIds];
 
   while (queue.length > 0) {
     const itemId = queue.shift()!;
-    if (visitedItems.has(itemId) || rawInputItemIds.has(itemId)) {
+    if (visitedItems.has(itemId) || rawInputItemIds.has(itemId) || autoPromotedRawInputIds.has(itemId)) {
       continue;
     }
     visitedItems.add(itemId);
@@ -289,7 +394,22 @@ function collectUpstreamRecipes(
       continue;
     }
 
-    for (const recipe of producers) {
+    const feasibleProducers = producers.filter(
+      recipe =>
+        compileRecipeOptions(catalog, recipe, request, disabledBuildingIds).length > 0
+    );
+
+    if (feasibleProducers.length === 0) {
+      if (request.autoPromoteUnavailableItemsToRawInputs) {
+        autoPromotedRawInputIds.add(itemId);
+        messages.push(
+          `Unavailable item ${itemId} (${catalog.itemMap.get(itemId)?.name ?? itemId}) was treated as an external/raw input.`
+        );
+      }
+      continue;
+    }
+
+    for (const recipe of feasibleProducers) {
       if (selectedRecipeIds.has(recipe.recipeId)) {
         continue;
       }
@@ -307,6 +427,9 @@ function collectUpstreamRecipes(
   return {
     recipes: Array.from(selectedRecipeIds, recipeId => catalog.recipeMap.get(recipeId)!).filter(Boolean),
     messages,
+    autoPromotedRawInputItemIds: Array.from(autoPromotedRawInputIds).sort((left, right) =>
+      left.localeCompare(right)
+    ),
   };
 }
 
@@ -486,82 +609,9 @@ function compileOptions(
   const compiledOptions: CompiledOptionContext[] = [];
 
   for (const recipe of recipes) {
-    let allowedBuildingIds = recipe.allowedBuildingIds.filter(
-      buildingId => !disabledBuildingIds.has(buildingId)
+    compiledOptions.push(
+      ...compileRecipeOptions(catalog, recipe, request, disabledBuildingIds, messages)
     );
-
-    const forcedBuildingId = request.forcedBuildingByRecipe?.[recipe.recipeId];
-    if (forcedBuildingId) {
-      if (!allowedBuildingIds.includes(forcedBuildingId)) {
-        messages.push(
-          `Forced building ${forcedBuildingId} is not allowed for recipe ${recipe.recipeId}.`
-        );
-        continue;
-      }
-      allowedBuildingIds = [forcedBuildingId];
-    }
-
-    if (allowedBuildingIds.length === 0) {
-      messages.push(`Recipe ${recipe.recipeId} has no available buildings after filtering.`);
-      continue;
-    }
-
-    const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
-    const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
-    const allowedModes = new Set(recipe.supportsProliferatorModes);
-
-    if (forcedMode && !allowedModes.has(forcedMode)) {
-      messages.push(`Forced proliferator mode ${forcedMode} is not supported by recipe ${recipe.recipeId}.`);
-      continue;
-    }
-
-    if (forcedLevel !== undefined && forcedLevel > recipe.maxProliferatorLevel) {
-      messages.push(`Forced proliferator level ${forcedLevel} exceeds max level for recipe ${recipe.recipeId}.`);
-      continue;
-    }
-
-    for (const buildingId of allowedBuildingIds) {
-      const building = catalog.buildingMap.get(buildingId);
-      if (!building) {
-        messages.push(`Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`);
-        continue;
-      }
-
-      const optionCandidates: CompiledOption[] = [];
-      const noneVariant = buildNoneVariant(recipe, building);
-      optionCandidates.push(noneVariant);
-
-      for (const level of catalog.proliferatorLevels) {
-        if (level.level === 0 || level.level > recipe.maxProliferatorLevel) {
-          continue;
-        }
-
-        if (allowedModes.has('speed')) {
-          optionCandidates.push(buildProliferatorVariant(recipe, building, level, 'speed'));
-        }
-
-        if (allowedModes.has('productivity')) {
-          optionCandidates.push(buildProliferatorVariant(recipe, building, level, 'productivity'));
-        }
-      }
-
-      const allowedCandidates = optionCandidates.filter(option =>
-        isOptionAllowedByForce(option, recipe, request)
-      );
-
-      if (allowedCandidates.length === 0) {
-        messages.push(`Recipe ${recipe.recipeId} has no available proliferator variants after filtering.`);
-        continue;
-      }
-
-      for (const option of allowedCandidates) {
-        compiledOptions.push({
-          option,
-          recipe,
-          building,
-        });
-      }
-    }
   }
 
   return {
@@ -731,8 +781,15 @@ function buildResultFromSolution(params: {
   targetRateMap: Map<string, number>;
   compiledOptions: CompiledOptionContext[];
   solutionVariables: Map<string, number>;
+  resolvedRawInputItemIds: string[];
 }): SolveResult {
-  const { request, targetRateMap, compiledOptions, solutionVariables } = params;
+  const {
+    request,
+    targetRateMap,
+    compiledOptions,
+    solutionVariables,
+    resolvedRawInputItemIds,
+  } = params;
   const optionById = new Map(compiledOptions.map(entry => [entry.option.optionId, entry]));
   const recipePlans: RecipePlan[] = [];
   const externalInputMap = new Map<string, number>();
@@ -867,6 +924,7 @@ function buildResultFromSolution(params: {
       messages: [],
       unmetPreferences: buildUnmetPreferences(request, recipePlans),
     },
+    resolvedRawInputItemIds,
     targets,
     recipePlans,
     buildingSummary,
@@ -895,6 +953,7 @@ export function solveCatalogRequest(
         messages: validation.messages,
         unmetPreferences: [],
       },
+      resolvedRawInputItemIds: [],
       targets: [],
       recipePlans: [],
       buildingSummary: [],
@@ -922,8 +981,13 @@ export function solveCatalogRequest(
     Array.from(targetRateMap.keys()),
     rawInputItemIds,
     disabledRecipeIds,
+    disabledBuildingIds,
+    request,
     request.forcedRecipeByItem ?? {}
   );
+  for (const itemId of collected.autoPromotedRawInputItemIds) {
+    rawInputItemIds.add(itemId);
+  }
   const compiled = compileOptions(catalog, collected.recipes, request, disabledBuildingIds);
   const diagnostics = [...collected.messages, ...compiled.messages];
 
@@ -938,6 +1002,9 @@ export function solveCatalogRequest(
         messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
         unmetPreferences: [],
       },
+      resolvedRawInputItemIds: Array.from(rawInputItemIds).sort((left, right) =>
+        left.localeCompare(right)
+      ),
       targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
         itemId,
         requestedRatePerMin,
@@ -960,6 +1027,9 @@ export function solveCatalogRequest(
     targetRateMap,
     compiledOptions: compiled.options,
     solutionVariables: new Map<string, number>(solution.variables),
+    resolvedRawInputItemIds: Array.from(rawInputItemIds).sort((left, right) =>
+      left.localeCompare(right)
+    ),
   });
 
   return {

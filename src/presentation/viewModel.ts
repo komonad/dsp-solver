@@ -221,8 +221,13 @@ function mapItemRates(
 
 function buildEffectiveRawInputSet(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest | undefined
+  request: SolveRequest | undefined,
+  result: SolveResult | undefined
 ): Set<string> {
+  if (result) {
+    return new Set(result.resolvedRawInputItemIds);
+  }
+
   const rawInputIds = new Set<string>(catalog.rawItemIds);
 
   for (const itemId of request?.disabledRawInputItemIds ?? []) {
@@ -277,7 +282,7 @@ function buildPresentationItemLedgerSections(
   locale: AppLocale
 ): PresentationItemLedgerSection[] {
   const bundle = getLocaleBundle(locale);
-  const effectiveRawInputIds = buildEffectiveRawInputSet(catalog, request);
+  const effectiveRawInputIds = buildEffectiveRawInputSet(catalog, request, result);
   const targetRateByItem = new Map(
     result.targets.map(target => [target.itemId, target.requestedRatePerMin])
   );

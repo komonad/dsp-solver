@@ -157,6 +157,8 @@ export default function App() {
   const [targets, setTargets] = useState<EditableTarget[]>([]);
   const [objective, setObjective] = useState<SolveObjective>('min_buildings');
   const [balancePolicy, setBalancePolicy] = useState<BalancePolicy>('force_balance');
+  const [autoPromoteUnavailableItemsToRawInputs, setAutoPromoteUnavailableItemsToRawInputs] =
+    useState(false);
   const [proliferatorPolicy, setProliferatorPolicy] =
     useState<WorkbenchProliferatorPolicy>('auto');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
@@ -190,6 +192,7 @@ export default function App() {
       setTargets(nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : []);
       setObjective(nextCatalog.recommendedSolve.objective ?? 'min_buildings');
       setBalancePolicy(nextCatalog.recommendedSolve.balancePolicy ?? 'force_balance');
+      setAutoPromoteUnavailableItemsToRawInputs(false);
       setProliferatorPolicy('auto');
       setRawInputItemIds([]);
       setDisabledRawInputItemIds([]);
@@ -313,6 +316,7 @@ export default function App() {
       objective,
       balancePolicy,
       proliferatorPolicy,
+      autoPromoteUnavailableItemsToRawInputs,
       rawInputItemIds,
       disabledRawInputItemIds,
       disabledRecipeIds,
@@ -323,6 +327,7 @@ export default function App() {
     });
   }, [
     advancedOverridesText,
+    autoPromoteUnavailableItemsToRawInputs,
     balancePolicy,
     catalog,
     disabledRawInputItemIds,
@@ -724,6 +729,25 @@ export default function App() {
                     <option value="disable_all">{bundle.solveRequest.proliferatorPolicyOptions.disable_all}</option>
                   </select>
                 </div>
+
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: 700,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={autoPromoteUnavailableItemsToRawInputs}
+                    onChange={event =>
+                      setAutoPromoteUnavailableItemsToRawInputs(event.target.checked)
+                    }
+                  />
+                  <span>{bundle.solveRequest.autoPromoteUnavailableItemsLabel}</span>
+                </label>
 
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>

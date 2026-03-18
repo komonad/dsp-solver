@@ -115,6 +115,73 @@ function buildTieBreakerDefaults(): CatalogDefaultConfigSpec {
   };
 }
 
+function buildUnavailableUpstreamDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1201, Type: 2, Name: 'Core', IconName: 'core', GridIndex: 2 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Assembler',
+        IconName: 'assembler',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+      {
+        ID: 5009,
+        Type: 6,
+        Name: 'Exclusive Plant',
+        IconName: 'exclusive',
+        GridIndex: 5,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5009],
+        Name: 'Ore to Core',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1201],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'core',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Core to Plate',
+        Items: [1201],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+    ],
+  };
+}
+
+function buildUnavailableUpstreamDefaults(): CatalogDefaultConfigSpec {
+  return {
+    buildingRules: [
+      { ID: 5001, Category: 'assembler' },
+      { ID: 5009, Category: 'special' },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  };
+}
+
 test('solver chooses speed proliferator variant for min_buildings', () => {
   const catalog = resolveCatalogModel(buildSingleRecipeDataset([5001]), buildVanillaLikeProliferatorDefaults());
   const result = solveCatalogRequest(catalog, {
@@ -410,6 +477,43 @@ test('disabled recipes can make an otherwise simple request infeasible', () => {
   });
 
   expect(result.status).toBe('infeasible');
+});
+
+test('unavailable upstream items can be auto-promoted to raw inputs', () => {
+  const catalog = resolveCatalogModel(
+    buildUnavailableUpstreamDataset(),
+    buildUnavailableUpstreamDefaults()
+  );
+
+  const strictResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    disabledBuildingIds: ['5009'],
+  });
+
+  expect(strictResult.status).toBe('infeasible');
+
+  const fallbackResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    disabledBuildingIds: ['5009'],
+    autoPromoteUnavailableItemsToRawInputs: true,
+  });
+
+  expect(fallbackResult.status).toBe('optimal');
+  expect(fallbackResult.resolvedRawInputItemIds).toEqual(['1001', '1201']);
+  expect(fallbackResult.externalInputs).toEqual([{ itemId: '1201', ratePerMin: 60 }]);
+  expect(fallbackResult.recipePlans).toHaveLength(1);
+  expect(fallbackResult.recipePlans[0]).toMatchObject({
+    recipeId: '2',
+    buildingId: '5001',
+    runsPerMin: 60,
+  });
+  expect(fallbackResult.diagnostics.messages).toContain(
+    'Unavailable item 1201 (Core) was treated as an external/raw input.'
+  );
 });
 
 test('disabledRawInputItemIds can cancel a dataset default raw item', () => {

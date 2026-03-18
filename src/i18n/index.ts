@@ -61,6 +61,7 @@ export interface LocaleBundle {
     objectiveOptions: Record<SolveObjective, string>;
     balancePolicyOptions: Record<BalancePolicy, string>;
     proliferatorPolicyOptions: Record<WorkbenchProliferatorPolicyLabel, string>;
+    autoPromoteUnavailableItemsLabel: string;
     rawOverridesLabel: string;
     markAsRaw: string;
     noRawOverrides: string;
@@ -259,6 +260,7 @@ const zhCN: LocaleBundle = {
       auto: '自动使用增产剂',
       disable_all: '禁用增产剂',
     },
+    autoPromoteUnavailableItemsLabel: '不可生产物品自动视为原矿',
     rawOverridesLabel: '原矿输入',
     markAsRaw: '标记为原矿',
     noRawOverrides: '当前没有请求级原矿覆盖。',

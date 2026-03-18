@@ -116,6 +116,8 @@ export interface SolveResult {
   status: SolveStatus;
   /** Warnings, validation issues, and unmet soft preferences. */
   diagnostics: SolveDiagnostics;
+  /** Final set of items treated as raw/external inputs during this solve. */
+  resolvedRawInputItemIds: string[];
   /** Echo of requested targets and achieved rates. */
   targets: SolvedTarget[];
   /** Detailed selected recipe/building/proliferator variants. */

@@ -43,6 +43,13 @@ export interface SolveRequest {
   objective: SolveObjective;
   /** Material-balance policy applied to non-target items. */
   balancePolicy: BalancePolicy;
+  /**
+   * When enabled, items that are required by the active dependency graph but
+   * have no feasible producing option after the current recipe/building/
+   * proliferator filters are automatically treated as external/raw inputs for
+   * this solve only.
+   */
+  autoPromoteUnavailableItemsToRawInputs?: boolean;
   /** Additional items that this request should treat as external/raw inputs. */
   rawInputItemIds?: string[];
   /**
