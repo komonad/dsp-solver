@@ -16,6 +16,7 @@ import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective } from '../solver';
 import { DATASET_PRESETS, loadResolvedCatalogFromUrl } from './catalogClient';
 import { computeWorkbenchSolve } from './autoSolve';
+import { computeLedgerSectionScrollTop } from './ledgerScroll';
 import {
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
@@ -554,8 +555,20 @@ export default function App() {
   }
 
   function scrollItemLedgerToSection(sectionKey: string) {
-    itemLedgerSectionRefs.current[sectionKey]?.scrollIntoView({
-      block: 'start',
+    const container = itemLedgerScrollRef.current;
+    const section = itemLedgerSectionRefs.current[sectionKey];
+    if (!container || !section) {
+      return;
+    }
+
+    const nextTop = computeLedgerSectionScrollTop({
+      currentScrollTop: container.scrollTop,
+      containerTop: container.getBoundingClientRect().top,
+      sectionTop: section.getBoundingClientRect().top,
+    });
+
+    container.scrollTo({
+      top: nextTop,
       behavior: 'smooth',
     });
   }
