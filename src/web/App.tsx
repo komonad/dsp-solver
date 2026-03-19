@@ -188,6 +188,18 @@ function pickDefaultRecipePreference(catalog: ResolvedCatalogModel): string {
   return catalog.recipes[0]?.recipeId ?? '';
 }
 
+function pickSuggestedTargetItemId(
+  catalog: ResolvedCatalogModel,
+  itemOptions: Array<{ itemId: string }>,
+  existingTargets: EditableTarget[]
+): string {
+  return (
+    itemOptions.find(item => !existingTargets.some(target => target.itemId === item.itemId))
+      ?.itemId ??
+    pickDefaultTarget(catalog)
+  );
+}
+
 function sortModeOptions(modes: ProliferatorMode[]): ProliferatorMode[] {
   const order: ProliferatorMode[] = ['none', 'speed', 'productivity'];
   return order.filter(mode => modes.includes(mode));
@@ -266,6 +278,8 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   const [targets, setTargets] = useState<EditableTarget[]>([]);
+  const [targetDraftItemId, setTargetDraftItemId] = useState('');
+  const [targetDraftRatePerMin, setTargetDraftRatePerMin] = useState(60);
   const [objective, setObjective] = useState<SolveObjective>('min_buildings');
   const [balancePolicy, setBalancePolicy] = useState<BalancePolicy>('force_balance');
   const [autoPromoteUnavailableItemsToRawInputs, setAutoPromoteUnavailableItemsToRawInputs] =
@@ -292,6 +306,10 @@ export default function App() {
     editorState: WorkbenchEditorState
   ) {
     setTargets(editorState.targets);
+    setTargetDraftItemId(
+      pickSuggestedTargetItemId(nextCatalog, nextCatalog.items.filter(item => item.kind !== 'utility'), editorState.targets)
+    );
+    setTargetDraftRatePerMin(60);
     setObjective(editorState.objective);
     setBalancePolicy(editorState.balancePolicy);
     setAutoPromoteUnavailableItemsToRawInputs(
@@ -437,6 +455,18 @@ export default function App() {
         .sort((left, right) => left.name.localeCompare(right.name)) ?? [],
     [catalog]
   );
+
+  useEffect(() => {
+    if (!catalog) {
+      setTargetDraftItemId('');
+      return;
+    }
+
+    const suggestedItemId = pickSuggestedTargetItemId(catalog, itemOptions, targets);
+    if (!targetDraftItemId || !itemOptions.some(item => item.itemId === targetDraftItemId)) {
+      setTargetDraftItemId(suggestedItemId);
+    }
+  }, [catalog, itemOptions, targetDraftItemId, targets]);
 
   const recipeOptions = useMemo(
     () => catalog?.recipes.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
@@ -611,6 +641,7 @@ export default function App() {
   const lastRequest = autoSolveState.request;
   const result = autoSolveState.result;
   const solveError = autoSolveState.error;
+  const hasTargets = targets.length > 0;
 
   const model = useMemo(
     () =>
@@ -739,15 +770,22 @@ export default function App() {
     });
   }
 
-  function addTarget() {
+  function addTarget(nextTarget?: EditableTarget) {
     if (!catalog) {
       return;
     }
-    const nextItemId =
-      itemOptions.find(item => !targets.some(target => target.itemId === item.itemId))?.itemId ??
-      pickDefaultTarget(catalog);
+
+    const nextItemId = nextTarget?.itemId ?? targetDraftItemId;
+    const nextRatePerMin = nextTarget?.ratePerMin ?? targetDraftRatePerMin;
     if (nextItemId) {
-      setTargets(current => [...current, { itemId: nextItemId, ratePerMin: 60 }]);
+      setTargets(current => [...current, { itemId: nextItemId, ratePerMin: nextRatePerMin }]);
+      const followingItemId = pickSuggestedTargetItemId(
+        catalog,
+        itemOptions,
+        [...targets, { itemId: nextItemId, ratePerMin: nextRatePerMin }]
+      );
+      setTargetDraftItemId(followingItemId);
+      setTargetDraftRatePerMin(60);
     }
   }
 
@@ -760,7 +798,15 @@ export default function App() {
   }
 
   function removeTarget(index: number) {
-    setTargets(current => current.filter((_, targetIndex) => targetIndex !== index));
+    setTargets(current => {
+      const removedTarget = current[index];
+      const nextTargets = current.filter((_, targetIndex) => targetIndex !== index);
+      if (removedTarget && nextTargets.length === 0) {
+        setTargetDraftItemId(removedTarget.itemId);
+        setTargetDraftRatePerMin(removedTarget.ratePerMin);
+      }
+      return nextTargets;
+    });
   }
 
   function markItemAsRawInput(itemId: string) {
@@ -1233,16 +1279,74 @@ export default function App() {
                         type="button"
                         onClick={() => removeTarget(index)}
                         style={subtleButtonStyle}
-                        disabled={targets.length <= 1}
+                        disabled={!catalog}
                       >
                         {bundle.solveRequest.removeTarget}
                       </button>
                     </div>
                   ))}
 
-                  <button type="button" onClick={addTarget} style={subtleButtonStyle} disabled={!catalog}>
-                    {bundle.solveRequest.addTarget}
-                  </button>
+                  {targets.length === 0 ? (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gap: 10,
+                        gridTemplateColumns: 'minmax(0, 1fr) 120px auto',
+                        alignItems: 'end',
+                        padding: 14,
+                        borderRadius: 16,
+                        border: '1px dashed rgba(24, 51, 89, 0.18)',
+                        background: 'rgba(24, 51, 89, 0.03)',
+                      }}
+                    >
+                      <select
+                        value={targetDraftItemId}
+                        onChange={event => setTargetDraftItemId(event.target.value)}
+                        style={inputStyle}
+                        disabled={!catalog}
+                      >
+                        {itemOptions.map(item => (
+                          <option key={item.itemId} value={item.itemId}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+
+                      <input
+                        type="number"
+                        min={0}
+                        step="1"
+                        value={targetDraftRatePerMin}
+                        onChange={event =>
+                          setTargetDraftRatePerMin(Number(event.target.value) || 0)
+                        }
+                        style={inputStyle}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addTarget({
+                            itemId: targetDraftItemId,
+                            ratePerMin: targetDraftRatePerMin,
+                          })
+                        }
+                        style={subtleButtonStyle}
+                        disabled={!catalog || !targetDraftItemId}
+                      >
+                        {bundle.solveRequest.addTarget}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => addTarget()}
+                      style={subtleButtonStyle}
+                      disabled={!catalog}
+                    >
+                      {bundle.solveRequest.addTarget}
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
@@ -1590,7 +1694,9 @@ export default function App() {
 
                 <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
                   <h3 style={sectionHeadingStyle}>{bundle.summary.solveSnapshotTitle}</h3>
-                  {solveError ? <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div> : null}
+                  {solveError && hasTargets ? (
+                    <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div>
+                  ) : null}
                   {requestSummary ? (
                     <>
                       <div
