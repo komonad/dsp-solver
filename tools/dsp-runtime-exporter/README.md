@@ -144,6 +144,25 @@ That status file records:
 - `message`
 - `exception` on failure
 
+The exporter also writes a metadata sidecar file:
+
+```text
+<OutputDirectory>\CurrentGame.metadata.json
+```
+
+That metadata file records:
+
+- `datasetName`
+- `datasetDescription`
+- `sourceProfile`
+- `modSummary`
+- `notes`
+- `itemCount`
+- `recipeCount`
+- `exportedAtUtc`
+- `exportedBy`
+- `exporterVersion`
+
 ## Output format
 
 The exported JSON uses the current canonical raw dataset shape:
