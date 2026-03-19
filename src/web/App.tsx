@@ -1249,8 +1249,9 @@ export default function App() {
       const selectedMode = override?.forcedProliferatorMode ?? '';
       const selectedLevel =
         selectedMode === 'none'
-          ? '0'
-          : typeof override?.forcedProliferatorLevel === 'number'
+          ? ''
+          : typeof override?.forcedProliferatorLevel === 'number' &&
+              override.forcedProliferatorLevel > 0
             ? String(override.forcedProliferatorLevel)
             : '';
       const levelSelectDisabled =

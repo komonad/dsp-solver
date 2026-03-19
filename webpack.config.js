@@ -47,7 +47,7 @@ module.exports = {
       ],
     }),
   ],
-  mode: 'development',
+  mode: 'production',
   cache: false,
   devtool: 'source-map',
 };
