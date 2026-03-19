@@ -24,6 +24,13 @@ export interface EditableRecipePreference {
   preferredProliferatorLevel: '' | number;
 }
 
+export interface EditableRecipeStrategyOverride {
+  recipeId: string;
+  forcedBuildingId: string;
+  forcedProliferatorMode: '' | ProliferatorMode;
+  forcedProliferatorLevel: '' | number;
+}
+
 export type WorkbenchProliferatorPolicy = 'auto' | 'disable_all';
 
 export interface BuildWorkbenchRequestParams {
@@ -262,6 +269,54 @@ export function buildPreferredRecipeOverrides(
     preferredProliferatorModeByRecipe:
       Object.keys(preferredProliferatorModeByRecipe).length > 0
         ? preferredProliferatorModeByRecipe
+        : undefined,
+  };
+}
+
+export function buildForcedRecipeStrategyOverrides(
+  overrides: EditableRecipeStrategyOverride[]
+): Pick<
+  AdvancedSolveOverrides,
+  | 'forcedBuildingByRecipe'
+  | 'forcedProliferatorLevelByRecipe'
+  | 'forcedProliferatorModeByRecipe'
+> {
+  const forcedBuildingByRecipe: Record<string, string> = {};
+  const forcedProliferatorLevelByRecipe: Record<string, number> = {};
+  const forcedProliferatorModeByRecipe: Record<string, ProliferatorMode> = {};
+
+  overrides.forEach(override => {
+    if (!override.recipeId) {
+      return;
+    }
+
+    if (override.forcedBuildingId) {
+      forcedBuildingByRecipe[override.recipeId] = override.forcedBuildingId;
+    }
+
+    if (override.forcedProliferatorMode) {
+      forcedProliferatorModeByRecipe[override.recipeId] = override.forcedProliferatorMode;
+    }
+
+    if (
+      typeof override.forcedProliferatorLevel === 'number' &&
+      Number.isFinite(override.forcedProliferatorLevel) &&
+      override.forcedProliferatorLevel >= 0
+    ) {
+      forcedProliferatorLevelByRecipe[override.recipeId] = override.forcedProliferatorLevel;
+    }
+  });
+
+  return {
+    forcedBuildingByRecipe:
+      Object.keys(forcedBuildingByRecipe).length > 0 ? forcedBuildingByRecipe : undefined,
+    forcedProliferatorLevelByRecipe:
+      Object.keys(forcedProliferatorLevelByRecipe).length > 0
+        ? forcedProliferatorLevelByRecipe
+        : undefined,
+    forcedProliferatorModeByRecipe:
+      Object.keys(forcedProliferatorModeByRecipe).length > 0
+        ? forcedProliferatorModeByRecipe
         : undefined,
   };
 }

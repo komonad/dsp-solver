@@ -3,6 +3,7 @@ import type { DatasetPresetId } from '../i18n';
 import type { BalancePolicy, SolveObjective } from '../solver';
 import type {
   EditableRecipePreference,
+  EditableRecipeStrategyOverride,
   EditableTarget,
   WorkbenchProliferatorPolicy,
 } from './requestBuilder';
@@ -27,6 +28,7 @@ export interface WorkbenchEditorState {
   disabledBuildingIds: string[];
   preferredRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
+  recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
 }
 
@@ -312,6 +314,57 @@ export function sanitizeWorkbenchEditorState(
         .filter((entry): entry is EditableRecipePreference => Boolean(entry))
     : [];
 
+  const recipeStrategyOverrides = Array.isArray(state.recipeStrategyOverrides)
+    ? state.recipeStrategyOverrides
+        .map(override => {
+          if (!override || typeof override.recipeId !== 'string') {
+            return null;
+          }
+
+          const recipe = catalog.recipeMap.get(override.recipeId);
+          if (!recipe) {
+            return null;
+          }
+
+          const forcedBuildingId =
+            typeof override.forcedBuildingId === 'string' &&
+            recipe.allowedBuildingIds.includes(override.forcedBuildingId)
+              ? override.forcedBuildingId
+              : '';
+
+          const forcedProliferatorMode =
+            override.forcedProliferatorMode &&
+            recipe.supportsProliferatorModes.includes(override.forcedProliferatorMode)
+              ? override.forcedProliferatorMode
+              : '';
+
+          let forcedProliferatorLevel: '' | number = '';
+          if (forcedProliferatorMode === 'none') {
+            forcedProliferatorLevel = 0;
+          } else if (
+            typeof override.forcedProliferatorLevel === 'number' &&
+            Number.isFinite(override.forcedProliferatorLevel) &&
+            override.forcedProliferatorLevel >= 0 &&
+            override.forcedProliferatorLevel <= recipe.maxProliferatorLevel &&
+            forcedProliferatorMode
+          ) {
+            forcedProliferatorLevel = override.forcedProliferatorLevel;
+          }
+
+          if (!forcedBuildingId && !forcedProliferatorMode && forcedProliferatorLevel === '') {
+            return null;
+          }
+
+          return {
+            recipeId: recipe.recipeId,
+            forcedBuildingId,
+            forcedProliferatorMode,
+            forcedProliferatorLevel,
+          };
+        })
+        .filter((entry): entry is EditableRecipeStrategyOverride => Boolean(entry))
+    : [];
+
   return {
     targets,
     objective: isSolveObjective(state.objective) ? state.objective : 'min_buildings',
@@ -337,6 +390,7 @@ export function sanitizeWorkbenchEditorState(
     ),
     preferredRecipeByItem,
     recipePreferences,
+    recipeStrategyOverrides,
     advancedOverridesText:
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',
   };

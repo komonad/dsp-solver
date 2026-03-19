@@ -3,12 +3,14 @@ import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../i18n';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
 import { solveCatalogRequest } from '../solver/solve';
 import {
+  buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,
   buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
   mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
+  type EditableRecipeStrategyOverride,
   type EditableTarget,
   type WorkbenchProliferatorPolicy,
 } from './requestBuilder';
@@ -26,6 +28,7 @@ export interface ComputeWorkbenchSolveParams {
   disabledBuildingIds: string[];
   preferredRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
+  recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
   locale?: AppLocale;
 }
@@ -57,6 +60,7 @@ export function computeWorkbenchSolve(
     disabledBuildingIds,
     preferredRecipeByItem,
     recipePreferences,
+    recipeStrategyOverrides,
     advancedOverridesText,
     locale = DEFAULT_APP_LOCALE,
   } = params;
@@ -72,14 +76,17 @@ export function computeWorkbenchSolve(
   }
 
   const uiOverrides = mergeAdvancedSolveOverrides(
-    {
-      disabledRecipeIds,
-      disabledBuildingIds,
-      preferredRecipeByItem,
-    },
     mergeAdvancedSolveOverrides(
-      buildPreferredRecipeOverrides(recipePreferences),
-      buildGlobalProliferatorOverrides(catalog, proliferatorPolicy)
+      {
+        disabledRecipeIds,
+        disabledBuildingIds,
+        preferredRecipeByItem,
+      },
+      buildPreferredRecipeOverrides(recipePreferences)
+    ),
+    mergeAdvancedSolveOverrides(
+      buildGlobalProliferatorOverrides(catalog, proliferatorPolicy),
+      buildForcedRecipeStrategyOverrides(recipeStrategyOverrides)
     )
   );
   const request = buildWorkbenchRequest({

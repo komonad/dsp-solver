@@ -74,6 +74,7 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
     disabledBuildingIds: [],
     preferredRecipeByItem: {},
     recipePreferences: [],
+    recipeStrategyOverrides: [],
     advancedOverridesText: '',
   });
 
@@ -103,6 +104,7 @@ test('computeWorkbenchSolve surfaces advanced-override parse errors without emit
     disabledBuildingIds: [],
     preferredRecipeByItem: {},
     recipePreferences: [],
+    recipeStrategyOverrides: [],
     advancedOverridesText: '{',
   });
 
@@ -125,6 +127,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
     disabledBuildingIds: [],
     preferredRecipeByItem: {},
     recipePreferences: [],
+    recipeStrategyOverrides: [],
     advancedOverridesText: '',
   });
 
@@ -152,6 +155,7 @@ test('computeWorkbenchSolve applies preferredRecipeByItem strongly enough to cha
     disabledBuildingIds: [],
     preferredRecipeByItem: { '1101': '2' },
     recipePreferences: [],
+    recipeStrategyOverrides: [],
     advancedOverridesText: '',
   });
 
@@ -159,4 +163,34 @@ test('computeWorkbenchSolve applies preferredRecipeByItem strongly enough to cha
   expect(autoSolve.request?.preferredRecipeByItem).toEqual({ '1101': '2' });
   expect(autoSolve.result?.status).toBe('optimal');
   expect(autoSolve.result?.recipePlans[0].recipeId).toBe('2');
+});
+
+test('computeWorkbenchSolve emits forced per-recipe strategy overrides from card controls', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const autoSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [
+      {
+        recipeId: '1',
+        forcedBuildingId: '5001',
+        forcedProliferatorMode: '',
+        forcedProliferatorLevel: '',
+      },
+    ],
+    advancedOverridesText: '',
+  });
+
+  expect(autoSolve.error).toBe('');
+  expect(autoSolve.request?.forcedBuildingByRecipe).toEqual({ '1': '5001' });
+  expect(autoSolve.result?.status).toBe('optimal');
 });

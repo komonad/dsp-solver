@@ -1,14 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
   Alert,
-  AppBar,
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
   Button,
   Card,
@@ -16,17 +11,15 @@ import {
   Chip,
   Container,
   Divider,
-  FormControl,
   FormControlLabel,
   IconButton,
-  InputLabel,
   MenuItem,
   Paper,
   Select,
+  Snackbar,
   Stack,
   Switch,
   TextField,
-  Toolbar,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -56,11 +49,13 @@ import { EntityLabel, EntityLabelButton } from './EntityIcon';
 import ItemSliceOverlayHost from './ItemSliceOverlayHost';
 import { openItemSliceOverlay } from './itemSliceStore';
 import { computeLedgerSectionScrollTop } from './ledgerScroll';
+import { tryApplyRecipeStrategyOverride } from './recipeStrategy';
 import StructuredDatasetEditor from './StructuredDatasetEditor';
 import { buildRecipeFlowDisplay } from './recipeDisplay';
 import {
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
+  type EditableRecipeStrategyOverride,
   type EditableTarget,
   type WorkbenchProliferatorPolicy,
 } from './requestBuilder';
@@ -262,6 +257,7 @@ function buildDefaultWorkbenchEditorState(
     disabledBuildingIds: catalog.recommendedDisabledBuildingIds,
     preferredRecipeByItem: {},
     recipePreferences: [],
+    recipeStrategyOverrides: [],
     advancedOverridesText: '',
   };
 }
@@ -325,8 +321,12 @@ export default function App() {
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
   const [preferredRecipeByItem, setPreferredRecipeByItem] = useState<Record<string, string>>({});
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
+  const [recipeStrategyOverrides, setRecipeStrategyOverrides] = useState<
+    EditableRecipeStrategyOverride[]
+  >([]);
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
+  const [recipeStrategyWarning, setRecipeStrategyWarning] = useState('');
   const itemLedgerScrollRef = useRef<HTMLDivElement | null>(null);
   const itemLedgerSectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -353,8 +353,10 @@ export default function App() {
     setDisabledBuildingDraftId('');
     setPreferredRecipeByItem(editorState.preferredRecipeByItem);
     setRecipePreferences(editorState.recipePreferences);
+    setRecipeStrategyOverrides(editorState.recipeStrategyOverrides);
     setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
     setAdvancedOverridesText(editorState.advancedOverridesText);
+    setRecipeStrategyWarning('');
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -370,6 +372,7 @@ export default function App() {
       disabledBuildingIds,
       preferredRecipeByItem,
       recipePreferences,
+      recipeStrategyOverrides,
       advancedOverridesText,
     };
   }
@@ -578,6 +581,7 @@ export default function App() {
       disabledBuildingIds,
       preferredRecipeByItem,
       recipePreferences,
+      recipeStrategyOverrides,
       advancedOverridesText,
     });
   }, [
@@ -594,6 +598,7 @@ export default function App() {
     proliferatorPolicy,
     rawInputItemIds,
     recipePreferences,
+    recipeStrategyOverrides,
     targets,
   ]);
 
@@ -640,6 +645,7 @@ export default function App() {
       disabledBuildingIds,
       preferredRecipeByItem,
       recipePreferences,
+      recipeStrategyOverrides,
       advancedOverridesText,
       locale,
     });
@@ -658,6 +664,7 @@ export default function App() {
     proliferatorPolicy,
     rawInputItemIds,
     recipePreferences,
+    recipeStrategyOverrides,
     targets,
   ]);
 
@@ -944,6 +951,67 @@ export default function App() {
       .sort((left, right) => left - right);
   }
 
+  const recipeStrategyOverrideMap = useMemo(
+    () => new Map(recipeStrategyOverrides.map(override => [override.recipeId, override])),
+    [recipeStrategyOverrides]
+  );
+
+  const applyRecipeStrategyPatch = useCallback(
+    function applyRecipeStrategyPatch(
+      recipeId: string,
+      patch: Partial<EditableRecipeStrategyOverride>
+    ) {
+      if (!catalog) {
+        return;
+      }
+
+      const nextResult = tryApplyRecipeStrategyOverride({
+        catalog,
+        targets,
+        objective,
+        balancePolicy,
+        proliferatorPolicy,
+        autoPromoteUnavailableItemsToRawInputs,
+        rawInputItemIds,
+        disabledRawInputItemIds,
+        disabledRecipeIds,
+        disabledBuildingIds,
+        preferredRecipeByItem,
+        recipePreferences,
+        recipeStrategyOverrides,
+        advancedOverridesText,
+        recipeId,
+        patch,
+        locale,
+      });
+
+      if (!nextResult.accepted) {
+        setRecipeStrategyWarning(nextResult.message);
+        return;
+      }
+
+      setRecipeStrategyOverrides(nextResult.nextOverrides);
+      setRecipeStrategyWarning('');
+    },
+    [
+      advancedOverridesText,
+      autoPromoteUnavailableItemsToRawInputs,
+      balancePolicy,
+      catalog,
+      disabledBuildingIds,
+      disabledRawInputItemIds,
+      disabledRecipeIds,
+      locale,
+      objective,
+      preferredRecipeByItem,
+      proliferatorPolicy,
+      rawInputItemIds,
+      recipePreferences,
+      recipeStrategyOverrides,
+      targets,
+    ]
+  );
+
   const preferredRecipeOptionsByItem = useMemo(() => {
     const next: Record<
       string,
@@ -1132,6 +1200,19 @@ export default function App() {
 
     return model.recipePlans.map(plan => {
       const { visibleInputs, auxiliaryProliferatorInput } = buildRecipeFlowDisplay(catalog, plan);
+      const override = recipeStrategyOverrideMap.get(plan.recipeId);
+      const buildingChoices = getRecipeBuildingOptions(plan.recipeId);
+      const modeChoices = getRecipeModeOptions(plan.recipeId);
+      const levelChoices = getRecipeLevelOptions(plan.recipeId);
+      const selectedMode = override?.forcedProliferatorMode ?? '';
+      const selectedLevel =
+        selectedMode === 'none'
+          ? '0'
+          : typeof override?.forcedProliferatorLevel === 'number'
+            ? String(override.forcedProliferatorLevel)
+            : '';
+      const levelSelectDisabled =
+        levelChoices.length === 0 || selectedMode === '' || selectedMode === 'none';
 
       return (
         <Card
@@ -1151,7 +1232,7 @@ export default function App() {
           <CardContent
             sx={{
               display: 'grid',
-              gap: 1.25,
+              gap: 1.5,
               p: 2,
               borderRadius: '18px',
               '&:last-child': { pb: 2 },
@@ -1177,7 +1258,11 @@ export default function App() {
                   width: '100%',
                 }}
               >
-                <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  sx={{ minWidth: 0, flex: '1 1 220px' }}
+                >
                   <EntityLabel
                     label={plan.recipeName}
                     iconKey={plan.recipeIconKey}
@@ -1198,19 +1283,13 @@ export default function App() {
                     alignItems: 'center',
                   }}
                 >
-                  <Typography
-                    variant="caption"
-                    sx={{ display: 'inline-flex', alignItems: 'center' }}
-                  >
+                  <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center' }}>
                     <EntityLabel
-                      label={plan.buildingName}
+                      label={`${bundle.summary.buildingsLabel} ${plan.buildingName} X ${plan.exactBuildingCount.toFixed(2)}`}
                       iconKey={plan.buildingIconKey}
                       atlasIds={iconAtlasIds}
                       size={16}
                     />
-                  </Typography>
-                  <Typography variant="caption">
-                    {bundle.summary.buildingsLabel} X {plan.exactBuildingCount.toFixed(2)}
                   </Typography>
                   <Typography variant="caption">{plan.proliferatorLabel}</Typography>
                   <Typography variant="caption">
@@ -1220,6 +1299,145 @@ export default function App() {
                     {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
                   </Typography>
                 </Stack>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1,
+                flexWrap: 'wrap',
+                alignItems: 'center',
+              }}
+            >
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                  建筑
+                </Typography>
+                <Select
+                  size="small"
+                  displayEmpty
+                  value={override?.forcedBuildingId ?? ''}
+                  onChange={event =>
+                    applyRecipeStrategyPatch(plan.recipeId, {
+                      forcedBuildingId: String(event.target.value),
+                    })
+                  }
+                  sx={{
+                    ...compactSelectFieldSx,
+                    minWidth: 128,
+                    '& .MuiSelect-select': {
+                      py: 0.75,
+                      pr: '28px !important',
+                      fontSize: 13,
+                    },
+                  }}
+                  renderValue={selected =>
+                    selected
+                      ? renderSelectOption(
+                          {
+                            label:
+                              buildingChoices.find(building => building.buildingId === selected)?.name ??
+                              String(selected),
+                            iconKey: buildingChoices.find(building => building.buildingId === selected)
+                              ?.icon,
+                          },
+                          16
+                        )
+                      : bundle.common.auto
+                  }
+                >
+                  <MenuItem value="">{bundle.common.auto}</MenuItem>
+                  {buildingChoices.map(building => (
+                    <MenuItem key={building.buildingId} value={building.buildingId}>
+                      {renderSelectOption({ label: building.name, iconKey: building.icon }, 16)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                  增产
+                </Typography>
+                <Select
+                  size="small"
+                  displayEmpty
+                  value={selectedMode}
+                  onChange={event => {
+                    const nextMode = event.target.value as '' | ProliferatorMode;
+                    applyRecipeStrategyPatch(plan.recipeId, {
+                      forcedProliferatorMode: nextMode,
+                      forcedProliferatorLevel:
+                        nextMode === 'none'
+                          ? 0
+                          : nextMode
+                            ? override?.forcedProliferatorLevel ?? ''
+                            : '',
+                    });
+                  }}
+                  sx={{
+                    ...compactSelectFieldSx,
+                    minWidth: 118,
+                    '& .MuiSelect-select': {
+                      py: 0.75,
+                      pr: '28px !important',
+                      fontSize: 13,
+                    },
+                  }}
+                  renderValue={selected =>
+                    selected
+                      ? formatProliferatorMode(selected as ProliferatorMode, locale)
+                      : bundle.common.auto
+                  }
+                >
+                  <MenuItem value="">{bundle.common.auto}</MenuItem>
+                  {modeChoices.map(mode => (
+                    <MenuItem key={mode} value={mode}>
+                      {formatProliferatorMode(mode, locale)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+
+              <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                  等级
+                </Typography>
+                <Select
+                  size="small"
+                  displayEmpty
+                  value={selectedLevel}
+                  disabled={levelSelectDisabled}
+                  onChange={event =>
+                    applyRecipeStrategyPatch(plan.recipeId, {
+                      forcedProliferatorLevel: event.target.value
+                        ? Number(event.target.value)
+                        : '',
+                    })
+                  }
+                  sx={{
+                    ...compactSelectFieldSx,
+                    minWidth: 88,
+                    '& .MuiSelect-select': {
+                      py: 0.75,
+                      pr: '28px !important',
+                      fontSize: 13,
+                    },
+                  }}
+                  renderValue={selected =>
+                    selected
+                      ? `${bundle.solveRequest.levelPrefix} ${selected}`
+                      : bundle.common.auto
+                  }
+                >
+                  <MenuItem value="">{bundle.common.auto}</MenuItem>
+                  {levelChoices.map(level => (
+                    <MenuItem key={level} value={String(level)}>
+                      {`${bundle.solveRequest.levelPrefix} ${level}`}
+                    </MenuItem>
+                  ))}
+                </Select>
               </Box>
             </Box>
 
@@ -1295,7 +1513,19 @@ export default function App() {
         </Card>
       );
     });
-  }, [bundle.overview.requestLabel, bundle.recipePlans.powerLabel, bundle.summary.buildingsLabel, catalog, iconAtlasIds, locale, model]);
+  }, [
+    applyRecipeStrategyPatch,
+    bundle.common.auto,
+    bundle.overview.requestLabel,
+    bundle.recipePlans.powerLabel,
+    bundle.solveRequest.levelPrefix,
+    bundle.summary.buildingsLabel,
+    catalog,
+    iconAtlasIds,
+    locale,
+    model,
+    recipeStrategyOverrideMap,
+  ]);
 
   const itemLedgerSectionNodes = useMemo(() => {
     if (!model) {
@@ -1398,31 +1628,12 @@ export default function App() {
           'radial-gradient(circle at top left, rgba(244, 194, 102, 0.24), transparent 35%), linear-gradient(135deg, #f5efe2 0%, #dce7ef 48%, #f7f8fb 100%)',
       }}
     >
-      <AppBar
-        position="sticky"
-        color="transparent"
-        elevation={0}
-        sx={{
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: 'rgba(247, 249, 252, 0.78)',
-          backdropFilter: 'blur(18px)',
-        }}
-      >
-        <Toolbar sx={{ py: 2, alignItems: 'flex-start' }}>
-          <Box sx={{ display: 'grid', gap: 0.75 }}>
-            <Typography variant="overline" color="text.secondary">
-              {bundle.page.eyebrow}
-            </Typography>
-            <Typography variant="h4">{pageTitle}</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 920 }}>
-              {pageDescription}
-            </Typography>
-          </Box>
-        </Toolbar>
-      </AppBar>
-
       <Container maxWidth={false} sx={{ maxWidth: 1560, py: 3, display: 'grid', gap: 3 }}>
+        <Box sx={{ px: 0.5 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            DSP 产线求解工作台
+          </Typography>
+        </Box>
         <section style={{ display: 'grid', gap: 20 }}>
           <Paper
             sx={{
@@ -1452,16 +1663,8 @@ export default function App() {
                   alignItems: 'start',
                 }}
               >
-            <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
-              <Box sx={{ display: 'grid', gap: 0.5 }}>
-                <Typography variant="h6">{bundle.datasetSource.title}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {getDatasetPresetText(
-                    DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
-                    locale
-                  ).description}
-                </Typography>
-              </Box>
+            <article style={{ ...cardStyle, display: 'grid', gap: 10 }}>
+              <Typography variant="h6">{bundle.datasetSource.title}</Typography>
 
               <Box
                 sx={{
@@ -1572,11 +1775,6 @@ export default function App() {
                   <Chip size="small" label={bundle.summary.loadDatasetToStart} />
                 )}
               </Stack>
-
-              <Typography variant="caption" color="text.secondary">
-                {bundle.datasetSource.autoCacheHint}
-              </Typography>
-
               <DatasetEditorPanel
                 title={bundle.datasetSource.editorTitle}
                 helpText={bundle.datasetSource.editorHelp}
@@ -1614,12 +1812,7 @@ export default function App() {
             </article>
 
             <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
-              <Box sx={{ display: 'grid', gap: 0.25 }}>
-                <Typography variant="h6">{bundle.solveRequest.title}</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {bundle.solveRequest.autoSolveHint}
-                </Typography>
-              </Box>
+              <Typography variant="h6">{bundle.solveRequest.title}</Typography>
               <div style={{ display: 'grid', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {targets.map((target, index) => (
@@ -1628,7 +1821,7 @@ export default function App() {
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px' },
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 96px' },
                         alignItems: 'start',
                       }}
                     >
@@ -1666,13 +1859,13 @@ export default function App() {
                   ))}
 
                   <Box
-                    sx={{
-                      display: 'grid',
-                      gap: 1,
-                      gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
-                      alignItems: 'start',
-                      p: 1.75,
-                      borderRadius: '16px',
+                  sx={{
+                    display: 'grid',
+                    gap: 1,
+                    gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 96px auto' },
+                    alignItems: 'start',
+                    p: 1.75,
+                    borderRadius: '16px',
                       border: '1px dashed',
                       borderColor: 'divider',
                       backgroundColor: 'rgba(22, 54, 89, 0.03)',
@@ -1728,7 +1921,7 @@ export default function App() {
                   sx={{
                     display: 'grid',
                     gap: 1,
-                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(180px, 220px))' },
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(160px, 200px))' },
                   }}
                 >
                   <TextField
@@ -1790,7 +1983,7 @@ export default function App() {
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
                         alignItems: 'start',
                       }}
                     >
@@ -1845,7 +2038,7 @@ export default function App() {
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
                         alignItems: 'start',
                       }}
                     >
@@ -1903,7 +2096,7 @@ export default function App() {
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
                         alignItems: 'start',
                       }}
                     >
@@ -2363,7 +2556,14 @@ export default function App() {
                       </div>
                     </article>
 
-                    <article style={cardStyle}>
+                    <article
+                      style={{
+                        ...cardStyle,
+                        width: '100%',
+                        maxWidth: 1040,
+                        justifySelf: 'center',
+                      }}
+                    >
                       <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
                       <div style={{ display: 'grid', gap: 12 }}>{recipePlanNodes}</div>
                     </article>
@@ -2418,7 +2618,7 @@ export default function App() {
                     </article>
                     </div>
 
-                    <aside style={{ ...resultSideColumnStyle, top: 96, height: 'calc(100vh - 112px)', maxHeight: 'calc(100vh - 112px)' }}>
+                    <aside style={resultSideColumnStyle}>
                       <article
                         style={{
                           ...cardStyle,
@@ -2503,6 +2703,21 @@ export default function App() {
         onClearPreferredRecipe={clearPreferredRecipeForItem}
         onLocateInLedger={locateItemInLedger}
       />
+      <Snackbar
+        open={Boolean(recipeStrategyWarning)}
+        autoHideDuration={3600}
+        onClose={() => setRecipeStrategyWarning('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="warning"
+          variant="filled"
+          onClose={() => setRecipeStrategyWarning('')}
+          sx={{ width: '100%' }}
+        >
+          {recipeStrategyWarning}
+        </Alert>
+      </Snackbar>
       </Container>
     </Box>
   );

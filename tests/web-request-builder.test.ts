@@ -1,4 +1,5 @@
 import {
+  buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,
   buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
@@ -150,6 +151,29 @@ test('buildPreferredRecipeOverrides converts editable rows into request maps', (
     preferredBuildingByRecipe: { '1': '5001' },
     preferredProliferatorModeByRecipe: { '1': 'speed' },
     preferredProliferatorLevelByRecipe: { '1': 1 },
+  });
+});
+
+test('buildForcedRecipeStrategyOverrides converts per-recipe hard overrides into request maps', () => {
+  const overrides = buildForcedRecipeStrategyOverrides([
+    {
+      recipeId: '1',
+      forcedBuildingId: '5001',
+      forcedProliferatorMode: 'speed',
+      forcedProliferatorLevel: 1,
+    },
+    {
+      recipeId: '2',
+      forcedBuildingId: '',
+      forcedProliferatorMode: '',
+      forcedProliferatorLevel: '',
+    },
+  ]);
+
+  expect(overrides).toEqual({
+    forcedBuildingByRecipe: { '1': '5001' },
+    forcedProliferatorModeByRecipe: { '1': 'speed' },
+    forcedProliferatorLevelByRecipe: { '1': 1 },
   });
 });
 
