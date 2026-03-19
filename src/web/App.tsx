@@ -43,7 +43,6 @@ import {
   getDatasetPresetText,
   getLocaleBundle,
 } from '../i18n';
-import { getWorkbenchExtraBundle } from '../i18n/workbenchExtra';
 import { buildPresentationModel } from '../presentation';
 import type { BalancePolicy, SolveObjective } from '../solver';
 import {
@@ -54,7 +53,8 @@ import {
 import { computeWorkbenchSolve } from './autoSolve';
 import DatasetEditorPanel from './DatasetEditorPanel';
 import { EntityLabel, EntityLabelButton } from './EntityIcon';
-import ItemSlicePanel from './ItemSlicePanel';
+import ItemSliceOverlayHost from './ItemSliceOverlayHost';
+import { openItemSliceOverlay } from './itemSliceStore';
 import { computeLedgerSectionScrollTop } from './ledgerScroll';
 import StructuredDatasetEditor from './StructuredDatasetEditor';
 import { buildRecipeFlowDisplay } from './recipeDisplay';
@@ -179,17 +179,6 @@ const resultSideColumnStyle: React.CSSProperties = {
   gap: 20,
 };
 
-const itemSliceOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 96,
-  right: 24,
-  bottom: 24,
-  width: 'min(560px, calc(100vw - 32px))',
-  maxWidth: 'calc(100vw - 32px)',
-  zIndex: 1200,
-  transition: 'opacity 120ms ease, transform 120ms ease',
-};
-
 const compactLedgerButtonStyle: React.CSSProperties = {
   ...subtleButtonStyle,
   minHeight: 34,
@@ -279,8 +268,7 @@ function buildDefaultWorkbenchEditorState(
 
 export default function App() {
   const locale = DEFAULT_APP_LOCALE;
-  const bundle = getLocaleBundle(locale);
-  const workbenchExtra = getWorkbenchExtraBundle(locale);
+  const bundle = useMemo(() => getLocaleBundle(locale), [locale]);
   const pageTitle = 'DSP 产线求解工作台';
   const pageDescription =
     '切换数据集、编辑求解请求并直接查看当前浏览器实际展示的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
@@ -339,8 +327,6 @@ export default function App() {
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
-  const [selectedItemId, setSelectedItemId] = useState('');
-  const [isItemSliceOpen, setIsItemSliceOpen] = useState(false);
   const itemLedgerScrollRef = useRef<HTMLDivElement | null>(null);
   const itemLedgerSectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
@@ -369,12 +355,6 @@ export default function App() {
     setRecipePreferences(editorState.recipePreferences);
     setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
     setAdvancedOverridesText(editorState.advancedOverridesText);
-    setSelectedItemId(
-      editorState.targets[0]?.itemId ??
-        nextCatalog.items.find(item => item.kind !== 'utility')?.itemId ??
-        ''
-    );
-    setIsItemSliceOpen(false);
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -781,20 +761,22 @@ export default function App() {
     }
   }
 
-  function scrollItemLedgerToTop() {
+  const scrollItemLedgerToTop = useCallback(function scrollItemLedgerToTop() {
     itemLedgerScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-  }
+  }, []);
 
-  function scrollItemLedgerToBottom() {
+  const scrollItemLedgerToBottom = useCallback(function scrollItemLedgerToBottom() {
     const container = itemLedgerScrollRef.current;
     if (!container) {
       return;
     }
 
     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-  }
+  }, []);
 
-  function scrollItemLedgerToSection(sectionKey: string) {
+  const scrollItemLedgerToSection = useCallback(function scrollItemLedgerToSection(
+    sectionKey: string
+  ) {
     const container = itemLedgerScrollRef.current;
     const section = itemLedgerSectionRefs.current[sectionKey];
     if (!container || !section) {
@@ -811,7 +793,7 @@ export default function App() {
       top: nextTop,
       behavior: 'smooth',
     });
-  }
+  }, []);
 
   function addTarget(nextTarget?: EditableTarget) {
     if (!catalog) {
@@ -962,37 +944,6 @@ export default function App() {
       .sort((left, right) => left - right);
   }
 
-  useEffect(() => {
-    if (!catalog) {
-      setSelectedItemId('');
-      setIsItemSliceOpen(false);
-      return;
-    }
-
-    const validItemIds = new Set(model ? Object.keys(model.itemSlicesById) : []);
-    if (selectedItemId && validItemIds.has(selectedItemId)) {
-      return;
-    }
-
-    const fallbackItemId =
-      targets[0]?.itemId ??
-      model?.targets[0]?.itemId ??
-      model?.itemLedgerSections[0]?.items[0]?.itemId ??
-      catalog.items.find(item => item.kind !== 'utility')?.itemId ??
-      '';
-
-    setSelectedItemId(fallbackItemId);
-  }, [catalog, model, selectedItemId, targets]);
-
-  const selectedItemSlice =
-    selectedItemId && model ? model.itemSlicesById[selectedItemId] : undefined;
-
-  useEffect(() => {
-    if (isItemSliceOpen && !selectedItemSlice) {
-      setIsItemSliceOpen(false);
-    }
-  }, [isItemSliceOpen, selectedItemSlice]);
-
   const preferredRecipeOptionsByItem = useMemo(() => {
     const next: Record<
       string,
@@ -1026,13 +977,6 @@ export default function App() {
 
     return next;
   }, [catalog]);
-
-  const selectedItemPreferredRecipeOptions = useMemo(() => {
-    if (!selectedItemSlice) {
-      return [];
-    }
-    return preferredRecipeOptionsByItem[selectedItemSlice.itemId] ?? [];
-  }, [preferredRecipeOptionsByItem, selectedItemSlice]);
 
   const updatePreferredRecipeForItem = useCallback(function updatePreferredRecipeForItem(
     itemId: string,
@@ -1071,14 +1015,8 @@ export default function App() {
       return;
     }
 
-    setSelectedItemId(itemId);
     scrollItemLedgerToSection(targetSection.key);
   }, [model]);
-
-  const openItemSlice = useCallback(function openItemSlice(itemId: string) {
-    setSelectedItemId(itemId);
-    setIsItemSliceOpen(true);
-  }, []);
 
   function renderClickableItemLabel(item: {
     itemId: string;
@@ -1092,7 +1030,7 @@ export default function App() {
         atlasIds={iconAtlasIds}
         size={18}
         gap={8}
-        onClick={() => openItemSlice(item.itemId)}
+        onClick={() => openItemSliceOverlay(item.itemId)}
       />
     );
   }
@@ -1121,7 +1059,7 @@ export default function App() {
           gap={6}
           textStyle={{ fontSize: 13, fontWeight: 600 }}
           buttonStyle={{ display: 'inline-flex', alignItems: 'center' }}
-          onClick={() => openItemSlice(item.itemId)}
+          onClick={() => openItemSliceOverlay(item.itemId)}
         />
         <Typography
           variant="caption"
@@ -1186,6 +1124,262 @@ export default function App() {
       />
     );
   }
+
+  const recipePlanNodes = useMemo(() => {
+    if (!catalog || !model) {
+      return null;
+    }
+
+    return model.recipePlans.map(plan => {
+      const { visibleInputs, auxiliaryProliferatorInput } = buildRecipeFlowDisplay(catalog, plan);
+
+      return (
+        <Card
+          key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
+          sx={{
+            borderRadius: '20px',
+            border: '1px solid',
+            borderColor: 'divider',
+            boxShadow: 'none',
+            backgroundColor: 'rgba(255,255,255,0.68)',
+            overflow: 'hidden',
+          }}
+        >
+          <CardContent
+            sx={{
+              display: 'grid',
+              gap: 1.25,
+              p: 2,
+              borderRadius: '18px',
+              '&:last-child': { pb: 2 },
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: 1.25,
+                flexWrap: 'wrap',
+                alignItems: 'flex-start',
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 1,
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  minWidth: 0,
+                  width: '100%',
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
+                  <EntityLabel
+                    label={plan.recipeName}
+                    iconKey={plan.recipeIconKey}
+                    atlasIds={iconAtlasIds}
+                    size={20}
+                    gap={8}
+                    textStyle={{ fontWeight: 700 }}
+                  />
+                </Typography>
+                <Stack
+                  direction="row"
+                  useFlexGap
+                  flexWrap="wrap"
+                  gap={0.75}
+                  sx={{
+                    color: 'text.secondary',
+                    justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <EntityLabel
+                      label={plan.buildingName}
+                      iconKey={plan.buildingIconKey}
+                      atlasIds={iconAtlasIds}
+                      size={16}
+                    />
+                  </Typography>
+                  <Typography variant="caption">
+                    {bundle.summary.buildingsLabel} X {plan.exactBuildingCount.toFixed(2)}
+                  </Typography>
+                  <Typography variant="caption">{plan.proliferatorLabel}</Typography>
+                  <Typography variant="caption">
+                    {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
+                  </Typography>
+                </Stack>
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: 'wrap',
+                borderRadius: '16px',
+                px: 1.25,
+                py: 1,
+                backgroundColor: 'rgba(22, 54, 89, 0.035)',
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  flexWrap: 'wrap',
+                  flex: '1 1 260px',
+                  minWidth: 0,
+                }}
+              >
+                {renderFlowRateSequence(visibleInputs)}
+              </Box>
+              <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
+                  flexWrap: 'wrap',
+                  flex: '1 1 220px',
+                  minWidth: 0,
+                }}
+              >
+                {renderFlowRateSequence(plan.outputs)}
+                {auxiliaryProliferatorInput ? (
+                  <Box
+                    component="span"
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.5,
+                      whiteSpace: 'nowrap',
+                      color: 'text.secondary',
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span>（</span>
+                    <EntityLabelButton
+                      label={auxiliaryProliferatorInput.itemName}
+                      iconKey={auxiliaryProliferatorInput.iconKey}
+                      atlasIds={iconAtlasIds}
+                      size={16}
+                      gap={6}
+                      textStyle={{ fontSize: 12, fontWeight: 600 }}
+                      buttonStyle={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                      }}
+                      onClick={() => openItemSliceOverlay(auxiliaryProliferatorInput.itemId)}
+                    />
+                    <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}）</span>
+                  </Box>
+                ) : null}
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      );
+    });
+  }, [bundle.overview.requestLabel, bundle.recipePlans.powerLabel, bundle.summary.buildingsLabel, catalog, iconAtlasIds, locale, model]);
+
+  const itemLedgerSectionNodes = useMemo(() => {
+    if (!model) {
+      return null;
+    }
+
+    return model.itemLedgerSections.map(section => (
+      <section
+        key={section.key}
+        ref={node => {
+          itemLedgerSectionRefs.current[section.key] = node;
+        }}
+        style={{ display: 'grid', gap: 8 }}
+      >
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(24, 51, 89, 0.72)' }}>
+          {section.title}
+        </div>
+        {section.items.length === 0 ? (
+          <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.itemLedger.noItems}</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 0, borderTop: '1px solid rgba(24, 51, 89, 0.10)' }}>
+            {section.items.map(entry => (
+              <div
+                key={entry.itemId}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(0, 1fr) auto',
+                  gap: 10,
+                  alignItems: 'center',
+                  padding: '10px 0',
+                  borderBottom: '1px solid rgba(24, 51, 89, 0.10)',
+                }}
+              >
+                <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <EntityLabelButton
+                      label={entry.itemName}
+                      iconKey={entry.iconKey}
+                      atlasIds={iconAtlasIds}
+                      size={20}
+                      textStyle={{ fontWeight: 700 }}
+                      onClick={() => openItemSliceOverlay(entry.itemId)}
+                    />
+                    {entry.isRawInput ? (
+                      <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>
+                        {bundle.itemLedger.rawBadge}
+                      </span>
+                    ) : null}
+                    {entry.isTarget ? (
+                      <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(212, 120, 48, 0.14)', fontSize: 11, fontWeight: 700 }}>
+                        {bundle.itemLedger.targetBadge}
+                      </span>
+                    ) : null}
+                    {entry.isSurplusOutput ? (
+                      <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(56, 143, 122, 0.14)', fontSize: 11, fontWeight: 700 }}>
+                        {bundle.itemLedger.surplusBadge}
+                      </span>
+                    ) : null}
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'rgba(24, 51, 89, 0.78)' }}>
+                    <span>{bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)}</span>
+                    <span>{bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)}</span>
+                    {Math.abs(entry.netRatePerMin) > 1e-8 ? (
+                      <span>{bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}</span>
+                    ) : null}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    entry.isRawInput
+                      ? unmarkItemAsRawInput(entry.itemId)
+                      : markItemAsRawInput(entry.itemId)
+                  }
+                  style={compactLedgerButtonStyle}
+                >
+                  {entry.isRawInput
+                    ? bundle.itemLedger.unmarkRawButton
+                    : bundle.itemLedger.markRawButton}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    ));
+  }, [bundle.diagnostics.consumedLabel, bundle.diagnostics.netLabel, bundle.diagnostics.producedLabel, bundle.itemLedger.markRawButton, bundle.itemLedger.noItems, bundle.itemLedger.rawBadge, bundle.itemLedger.surplusBadge, bundle.itemLedger.targetBadge, bundle.itemLedger.unmarkRawButton, iconAtlasIds, locale, markItemAsRawInput, model, unmarkItemAsRawInput]);
 
   const isCustomPreset = presetId === 'custom';
 
@@ -2165,173 +2359,7 @@ export default function App() {
 
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
-                      <div style={{ display: 'grid', gap: 12 }}>
-                        {model.recipePlans.map(plan => {
-                          const { visibleInputs, auxiliaryProliferatorInput } =
-                            buildRecipeFlowDisplay(catalog, plan);
-
-                          return (
-                            <Card
-                              key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
-                              sx={{
-                                borderRadius: '20px',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                boxShadow: 'none',
-                                backgroundColor: 'rgba(255,255,255,0.68)',
-                                overflow: 'hidden',
-                              }}
-                            >
-                              <CardContent
-                                sx={{
-                                  display: 'grid',
-                                  gap: 1.25,
-                                  p: 2,
-                                  borderRadius: '18px',
-                                  '&:last-child': { pb: 2 },
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    gap: 1.25,
-                                    flexWrap: 'wrap',
-                                    alignItems: 'flex-start',
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      gap: 1,
-                                      flexWrap: 'wrap',
-                                      alignItems: 'center',
-                                      minWidth: 0,
-                                      width: '100%',
-                                    }}
-                                  >
-                                    <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
-                                      <EntityLabel
-                                        label={plan.recipeName}
-                                        iconKey={plan.recipeIconKey}
-                                        atlasIds={iconAtlasIds}
-                                        size={20}
-                                        gap={8}
-                                        textStyle={{ fontWeight: 700 }}
-                                      />
-                                    </Typography>
-                                    <Stack
-                                      direction="row"
-                                      useFlexGap
-                                      flexWrap="wrap"
-                                      gap={0.75}
-                                      sx={{
-                                        color: 'text.secondary',
-                                        justifyContent: { xs: 'flex-start', md: 'flex-end' },
-                                        alignItems: 'center',
-                                      }}
-                                    >
-                                      <Typography
-                                        variant="caption"
-                                        sx={{ display: 'inline-flex', alignItems: 'center' }}
-                                      >
-                                        <EntityLabel
-                                          label={plan.buildingName}
-                                          iconKey={plan.buildingIconKey}
-                                          atlasIds={iconAtlasIds}
-                                          size={16}
-                                        />
-                                      </Typography>
-                                      <Typography variant="caption">
-                                        {bundle.summary.buildingsLabel} X {plan.exactBuildingCount.toFixed(2)}
-                                      </Typography>
-                                      <Typography variant="caption">{plan.proliferatorLabel}</Typography>
-                                      <Typography variant="caption">
-                                        {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
-                                      </Typography>
-                                      <Typography variant="caption" color="text.secondary">
-                                        {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
-                                      </Typography>
-                                    </Stack>
-                                  </Box>
-                                </Box>
-
-                                <Box
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1,
-                                    flexWrap: 'wrap',
-                                    borderRadius: '16px',
-                                    px: 1.25,
-                                    py: 1,
-                                    backgroundColor: 'rgba(22, 54, 89, 0.035)',
-                                  }}
-                                >
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 0.5,
-                                      flexWrap: 'wrap',
-                                      flex: '1 1 260px',
-                                      minWidth: 0,
-                                    }}
-                                  >
-                                    {renderFlowRateSequence(visibleInputs)}
-                                  </Box>
-                                  <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 0.5,
-                                      flexWrap: 'wrap',
-                                      flex: '1 1 220px',
-                                      minWidth: 0,
-                                    }}
-                                  >
-                                    {renderFlowRateSequence(plan.outputs)}
-                                    {auxiliaryProliferatorInput ? (
-                                      <Box
-                                        component="span"
-                                        sx={{
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: 0.5,
-                                          whiteSpace: 'nowrap',
-                                          color: 'text.secondary',
-                                          fontSize: 12,
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        <span>（</span>
-                                        <EntityLabelButton
-                                          label={auxiliaryProliferatorInput.itemName}
-                                          iconKey={auxiliaryProliferatorInput.iconKey}
-                                          atlasIds={iconAtlasIds}
-                                          size={16}
-                                          gap={6}
-                                          textStyle={{ fontSize: 12, fontWeight: 600 }}
-                                          buttonStyle={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                          }}
-                                          onClick={() =>
-                                            openItemSlice(auxiliaryProliferatorInput.itemId)
-                                          }
-                                        />
-                                        <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}）</span>
-                                      </Box>
-                                    ) : null}
-                                  </Box>
-                                </Box>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
+                      <div style={{ display: 'grid', gap: 12 }}>{recipePlanNodes}</div>
                     </article>
 
                     <article style={cardStyle}>
@@ -2434,86 +2462,7 @@ export default function App() {
                             scrollPaddingBottom: 24,
                           }}
                         >
-                          {model.itemLedgerSections.map(section => (
-                            <section
-                              key={section.key}
-                              ref={node => {
-                                itemLedgerSectionRefs.current[section.key] = node;
-                              }}
-                              style={{ display: 'grid', gap: 8 }}
-                            >
-                              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(24, 51, 89, 0.72)' }}>
-                                {section.title}
-                              </div>
-                              {section.items.length === 0 ? (
-                                <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.itemLedger.noItems}</div>
-                              ) : (
-                                <div style={{ display: 'grid', gap: 0, borderTop: '1px solid rgba(24, 51, 89, 0.10)' }}>
-                                  {section.items.map(entry => (
-                                    <div
-                                      key={entry.itemId}
-                                      style={{
-                                        display: 'grid',
-                                        gridTemplateColumns: 'minmax(0, 1fr) auto',
-                                        gap: 10,
-                                        alignItems: 'center',
-                                        padding: '10px 0',
-                                        borderBottom: '1px solid rgba(24, 51, 89, 0.10)',
-                                      }}
-                                    >
-                                      <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                                          <EntityLabelButton
-                                            label={entry.itemName}
-                                            iconKey={entry.iconKey}
-                                            atlasIds={iconAtlasIds}
-                                            size={20}
-                                            textStyle={{ fontWeight: 700 }}
-                                            onClick={() => openItemSlice(entry.itemId)}
-                                          />
-                                          {entry.isRawInput ? (
-                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(24, 51, 89, 0.10)', fontSize: 11, fontWeight: 700 }}>
-                                              {bundle.itemLedger.rawBadge}
-                                            </span>
-                                          ) : null}
-                                          {entry.isTarget ? (
-                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(212, 120, 48, 0.14)', fontSize: 11, fontWeight: 700 }}>
-                                              {bundle.itemLedger.targetBadge}
-                                            </span>
-                                          ) : null}
-                                          {entry.isSurplusOutput ? (
-                                            <span style={{ padding: '2px 6px', borderRadius: 999, background: 'rgba(56, 143, 122, 0.14)', fontSize: 11, fontWeight: 700 }}>
-                                              {bundle.itemLedger.surplusBadge}
-                                            </span>
-                                          ) : null}
-                                        </div>
-                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'rgba(24, 51, 89, 0.78)' }}>
-                                          <span>{bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)}</span>
-                                          <span>{bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)}</span>
-                                          {Math.abs(entry.netRatePerMin) > 1e-8 ? (
-                                            <span>{bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}</span>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          entry.isRawInput
-                                            ? unmarkItemAsRawInput(entry.itemId)
-                                            : markItemAsRawInput(entry.itemId)
-                                        }
-                                        style={compactLedgerButtonStyle}
-                                      >
-                                        {entry.isRawInput
-                                          ? bundle.itemLedger.unmarkRawButton
-                                          : bundle.itemLedger.markRawButton}
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </section>
-                          ))}
+                          {itemLedgerSectionNodes}
                         </div>
                       </article>
                     </aside>
@@ -2536,76 +2485,18 @@ export default function App() {
             )}
           </div>
         </section>
-      {selectedItemSlice ? (
-        <Box
-          role="dialog"
-          aria-label={workbenchExtra.itemSlice.title}
-          aria-hidden={!isItemSliceOpen}
-          sx={{
-            ...itemSliceOverlayStyle,
-            opacity: isItemSliceOpen ? 1 : 0,
-            transform: isItemSliceOpen ? 'translateX(0)' : 'translateX(18px)',
-            pointerEvents: isItemSliceOpen ? 'auto' : 'none',
-          }}
-        >
-          <Paper
-            elevation={0}
-            sx={{
-              height: '100%',
-              display: 'grid',
-              gridTemplateRows: 'auto minmax(0, 1fr)',
-              backgroundColor: 'rgba(248, 251, 253, 0.95)',
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: '24px',
-              overflow: 'hidden',
-              boxShadow: '0 22px 64px rgba(24, 51, 89, 0.18)',
-            }}
-          >
-            <Box
-              sx={{
-                px: 3,
-                py: 2,
-                display: 'flex',
-                justifyContent: 'space-between',
-                gap: 2,
-                alignItems: 'center',
-                borderBottom: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="h6">{workbenchExtra.itemSlice.title}</Typography>
-              <Button variant="outlined" onClick={() => setIsItemSliceOpen(false)}>
-                {workbenchExtra.itemSlice.closeButton}
-              </Button>
-            </Box>
-            <Box
-              sx={{
-                p: 3,
-                display: 'grid',
-                gap: 2,
-                overflow: 'auto',
-                minHeight: 0,
-                overscrollBehavior: 'contain',
-              }}
-            >
-              <ItemSlicePanel
-                locale={locale}
-                atlasIds={iconAtlasIds}
-                slice={selectedItemSlice}
-                preferredRecipeId={preferredRecipeByItem[selectedItemSlice.itemId]}
-                preferredRecipeOptions={selectedItemPreferredRecipeOptions}
-                onSelectItem={openItemSlice}
-                onMarkRaw={markItemAsRawInput}
-                onUnmarkRaw={unmarkItemAsRawInput}
-                onPreferredRecipeChange={updatePreferredRecipeForItem}
-                onClearPreferredRecipe={clearPreferredRecipeForItem}
-                onLocateInLedger={locateItemInLedger}
-              />
-            </Box>
-          </Paper>
-        </Box>
-      ) : null}
+      <ItemSliceOverlayHost
+        locale={locale}
+        atlasIds={iconAtlasIds}
+        itemSlicesById={model?.itemSlicesById ?? {}}
+        preferredRecipeByItem={preferredRecipeByItem}
+        preferredRecipeOptionsByItem={preferredRecipeOptionsByItem}
+        onMarkRaw={markItemAsRawInput}
+        onUnmarkRaw={unmarkItemAsRawInput}
+        onPreferredRecipeChange={updatePreferredRecipeForItem}
+        onClearPreferredRecipe={clearPreferredRecipeForItem}
+        onLocateInLedger={locateItemInLedger}
+      />
       </Container>
     </Box>
   );
