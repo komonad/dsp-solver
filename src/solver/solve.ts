@@ -16,6 +16,7 @@ import type {
   RecipePlan,
   SolveResult,
 } from './result';
+import { recordSolverPerf } from './perf';
 
 const EPSILON = 1e-8;
 const PREFERENCE_EPSILON = 1e-6;
@@ -49,6 +50,16 @@ interface CachedRecipeOptionCompilation {
   options: CompiledOptionContext[];
   messages: string[];
 }
+
+interface CatalogSolveCache {
+  anyRecipeOutputIndex: Map<string, ResolvedRecipeSpec[]>;
+  recipeOutputIndexByDisabledSetKey: Map<string, Map<string, ResolvedRecipeSpec[]>>;
+  staticRecipeOptionCompilations: Map<string, CachedRecipeOptionCompilation>;
+  solvedRequestResults: Map<string, SolveResult>;
+}
+
+const MAX_SOLVED_REQUEST_CACHE_SIZE = 48;
+const catalogSolveCaches = new WeakMap<ResolvedCatalogModel, CatalogSolveCache>();
 
 function aggregateTargetRates(request: SolveRequest): Map<string, number> {
   const targetRates = new Map<string, number>();
@@ -271,6 +282,156 @@ function buildSetKey(values: Iterable<string>): string {
   return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right)).join('|');
 }
 
+function stableSerialize(value: unknown): string {
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map(entry => stableSerialize(entry)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const objectValue = value as Record<string, unknown>;
+    return `{${Object.keys(objectValue)
+      .sort((left, right) => left.localeCompare(right))
+      .map(key => `${JSON.stringify(key)}:${stableSerialize(objectValue[key])}`)
+      .join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function getCatalogSolveCache(catalog: ResolvedCatalogModel): CatalogSolveCache {
+  const cached = catalogSolveCaches.get(catalog);
+  if (cached) {
+    return cached;
+  }
+
+  const anyRecipeOutputIndex = buildRecipeOutputIndex(catalog, new Set<string>());
+  const nextCache: CatalogSolveCache = {
+    anyRecipeOutputIndex,
+    recipeOutputIndexByDisabledSetKey: new Map<string, Map<string, ResolvedRecipeSpec[]>>([
+      ['', anyRecipeOutputIndex],
+    ]),
+    staticRecipeOptionCompilations: new Map<string, CachedRecipeOptionCompilation>(),
+    solvedRequestResults: new Map<string, SolveResult>(),
+  };
+  catalogSolveCaches.set(catalog, nextCache);
+  return nextCache;
+}
+
+function getRecipeOutputIndexForDisabledRecipes(
+  catalog: ResolvedCatalogModel,
+  disabledRecipeIds: Set<string>
+): Map<string, ResolvedRecipeSpec[]> {
+  const cache = getCatalogSolveCache(catalog);
+  const disabledSetKey = buildSetKey(disabledRecipeIds);
+  const cached = cache.recipeOutputIndexByDisabledSetKey.get(disabledSetKey);
+  if (cached) {
+    return cached;
+  }
+
+  const built = buildRecipeOutputIndex(catalog, disabledRecipeIds);
+  cache.recipeOutputIndexByDisabledSetKey.set(disabledSetKey, built);
+  return built;
+}
+
+function getStaticRecipeOptionCompilation(
+  catalog: ResolvedCatalogModel,
+  recipe: ResolvedRecipeSpec
+): CachedRecipeOptionCompilation {
+  const cache = getCatalogSolveCache(catalog);
+  const cached = cache.staticRecipeOptionCompilations.get(recipe.recipeId);
+  if (cached) {
+    return cached;
+  }
+
+  const messages: string[] = [];
+  const options: CompiledOptionContext[] = [];
+
+  for (const buildingId of recipe.allowedBuildingIds) {
+    const building = catalog.buildingMap.get(buildingId);
+    if (!building) {
+      messages.push(`Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`);
+      continue;
+    }
+
+    options.push({
+      option: buildNoneVariant(recipe, building),
+      recipe,
+      building,
+    });
+
+    for (const level of catalog.proliferatorLevels) {
+      if (level.level === 0 || level.level > recipe.maxProliferatorLevel) {
+        continue;
+      }
+
+      if (recipe.supportsProliferatorModes.includes('speed')) {
+        options.push({
+          option: buildProliferatorVariant(recipe, building, level, 'speed'),
+          recipe,
+          building,
+        });
+      }
+
+      if (recipe.supportsProliferatorModes.includes('productivity')) {
+        options.push({
+          option: buildProliferatorVariant(recipe, building, level, 'productivity'),
+          recipe,
+          building,
+        });
+      }
+    }
+  }
+
+  const compilation = { options, messages };
+  cache.staticRecipeOptionCompilations.set(recipe.recipeId, compilation);
+  return compilation;
+}
+
+function getSolvedRequestCacheKey(request: SolveRequest): string {
+  return stableSerialize(request);
+}
+
+function getCachedSolvedRequestResult(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest
+): SolveResult | null {
+  const cache = getCatalogSolveCache(catalog);
+  const requestKey = getSolvedRequestCacheKey(request);
+  const cached = cache.solvedRequestResults.get(requestKey);
+  if (!cached) {
+    return null;
+  }
+
+  cache.solvedRequestResults.delete(requestKey);
+  cache.solvedRequestResults.set(requestKey, cached);
+  return cached;
+}
+
+function setCachedSolvedRequestResult(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  result: SolveResult
+): void {
+  const cache = getCatalogSolveCache(catalog);
+  const requestKey = getSolvedRequestCacheKey(request);
+  if (cache.solvedRequestResults.has(requestKey)) {
+    cache.solvedRequestResults.delete(requestKey);
+  }
+  cache.solvedRequestResults.set(requestKey, result);
+
+  while (cache.solvedRequestResults.size > MAX_SOLVED_REQUEST_CACHE_SIZE) {
+    const oldestKey = cache.solvedRequestResults.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+    cache.solvedRequestResults.delete(oldestKey);
+  }
+}
+
 function collectResolvableAuxiliaryItemIds(
   compiledOptions: CompiledOptionContext[],
   recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>
@@ -300,6 +461,9 @@ function compileRecipeOptions(
   disabledBuildingIds: Set<string>,
   messages?: string[]
 ): CompiledOptionContext[] {
+  const staticCompilation = getStaticRecipeOptionCompilation(catalog, recipe);
+  messages?.push(...staticCompilation.messages);
+
   let allowedBuildingIds = recipe.allowedBuildingIds.filter(
     buildingId => !disabledBuildingIds.has(buildingId)
   );
@@ -338,52 +502,16 @@ function compileRecipeOptions(
     return [];
   }
 
-  const compiledOptions: CompiledOptionContext[] = [];
+  const allowedBuildingIdSet = new Set(allowedBuildingIds);
+  const compiledOptions = staticCompilation.options.filter(
+    ({ option }) =>
+      allowedBuildingIdSet.has(option.buildingId) && isOptionAllowedByForce(option, recipe, request)
+  );
 
-  for (const buildingId of allowedBuildingIds) {
-    const building = catalog.buildingMap.get(buildingId);
-    if (!building) {
-      messages?.push(`Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`);
-      continue;
-    }
-
-    const optionCandidates: CompiledOption[] = [];
-    optionCandidates.push(buildNoneVariant(recipe, building));
-
-    for (const level of catalog.proliferatorLevels) {
-      if (level.level === 0 || level.level > recipe.maxProliferatorLevel) {
-        continue;
-      }
-
-      if (allowedModes.has('speed')) {
-        optionCandidates.push(buildProliferatorVariant(recipe, building, level, 'speed'));
-      }
-
-      if (allowedModes.has('productivity')) {
-        optionCandidates.push(
-          buildProliferatorVariant(recipe, building, level, 'productivity')
-        );
-      }
-    }
-
-    const allowedCandidates = optionCandidates.filter(option =>
-      isOptionAllowedByForce(option, recipe, request)
+  if (compiledOptions.length === 0) {
+    messages?.push(
+      `Recipe ${recipe.recipeId} has no available proliferator variants after filtering.`
     );
-
-    if (allowedCandidates.length === 0) {
-      messages?.push(
-        `Recipe ${recipe.recipeId} has no available proliferator variants after filtering.`
-      );
-      continue;
-    }
-
-    for (const option of allowedCandidates) {
-      compiledOptions.push({
-        option,
-        recipe,
-        building,
-      });
-    }
   }
 
   return compiledOptions;
@@ -474,8 +602,9 @@ function compileSolveGraph(
   disabledRecipeIds: Set<string>,
   disabledBuildingIds: Set<string>
 ): CompiledSolveGraph {
-  const availableRecipeOutputIndex = buildRecipeOutputIndex(catalog, disabledRecipeIds);
-  const anyRecipeOutputIndex = buildRecipeOutputIndex(catalog, new Set<string>());
+  const catalogSolveCache = getCatalogSolveCache(catalog);
+  const availableRecipeOutputIndex = getRecipeOutputIndexForDisabledRecipes(catalog, disabledRecipeIds);
+  const anyRecipeOutputIndex = catalogSolveCache.anyRecipeOutputIndex;
   const diagnostics = new Set<string>();
   const recipeOptionCache = new Map<string, CachedRecipeOptionCompilation>();
   const getCompiledRecipeOptions = (recipe: ResolvedRecipeSpec): CompiledOptionContext[] => {
@@ -1073,6 +1202,10 @@ function solveCatalogRequestValidated(
   catalog: ResolvedCatalogModel,
   request: SolveRequest
 ): SolveResult {
+  const solveStartedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
   const targetRateMap = aggregateTargetRates(request);
   const disabledRawInputItemIds = new Set(request.disabledRawInputItemIds ?? []);
   const rawInputItemIds = new Set<string>(
@@ -1090,18 +1223,62 @@ function solveCatalogRequestValidated(
     disabledRecipeIds,
     disabledBuildingIds
   );
+  const graphFinishedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  recordSolverPerf({
+    phase: 'graph',
+    durationMs: graphFinishedAt - solveStartedAt,
+    recipeCount: compiledGraph.recipes.length,
+    optionCount: compiledGraph.options.length,
+    recordedAt: Date.now(),
+  });
   const resolvedRawInputItemIds = new Set(compiledGraph.resolvedRawInputItemIds);
   const externalItemIds = collectExternalItemIds(
     resolvedRawInputItemIds,
     compiledGraph.options,
-    buildRecipeOutputIndex(catalog, new Set<string>())
+    getCatalogSolveCache(catalog).anyRecipeOutputIndex
   );
   const diagnostics = [...compiledGraph.messages];
 
   const model = buildModel(request, compiledGraph.options, targetRateMap, externalItemIds);
+  const modelFinishedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  recordSolverPerf({
+    phase: 'model',
+    durationMs: modelFinishedAt - graphFinishedAt,
+    constraintCount: Object.keys(model.constraints).length,
+    variableCount: Object.keys(model.variables).length,
+    recordedAt: Date.now(),
+  });
   const solution = solveLinearProgram(model);
+  const lpFinishedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  recordSolverPerf({
+    phase: 'lp',
+    durationMs: lpFinishedAt - modelFinishedAt,
+    constraintCount: Object.keys(model.constraints).length,
+    variableCount: Object.keys(model.variables).length,
+    status: solution.status,
+    recordedAt: Date.now(),
+  });
 
   if (solution.status !== 'optimal') {
+    recordSolverPerf({
+      phase: 'total',
+      durationMs: lpFinishedAt - solveStartedAt,
+      recipeCount: compiledGraph.recipes.length,
+      optionCount: compiledGraph.options.length,
+      constraintCount: Object.keys(model.constraints).length,
+      variableCount: Object.keys(model.variables).length,
+      status: solution.status,
+      recordedAt: Date.now(),
+    });
     return {
       status: 'infeasible',
       diagnostics: {
@@ -1137,6 +1314,26 @@ function solveCatalogRequestValidated(
       left.localeCompare(right)
     ),
   });
+  const resultFinishedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  recordSolverPerf({
+    phase: 'result',
+    durationMs: resultFinishedAt - lpFinishedAt,
+    recipeCount: result.recipePlans.length,
+    recordedAt: Date.now(),
+  });
+  recordSolverPerf({
+    phase: 'total',
+    durationMs: resultFinishedAt - solveStartedAt,
+    recipeCount: compiledGraph.recipes.length,
+    optionCount: compiledGraph.options.length,
+    constraintCount: Object.keys(model.constraints).length,
+    variableCount: Object.keys(model.variables).length,
+    status: result.status,
+    recordedAt: Date.now(),
+  });
 
   return {
     ...result,
@@ -1145,6 +1342,20 @@ function solveCatalogRequestValidated(
       unmetPreferences: result.diagnostics.unmetPreferences,
     },
   };
+}
+
+function solveCatalogRequestValidatedCached(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest
+): SolveResult {
+  const cached = getCachedSolvedRequestResult(catalog, request);
+  if (cached) {
+    return cached;
+  }
+
+  const result = solveCatalogRequestValidated(catalog, request);
+  setCachedSolvedRequestResult(catalog, request, result);
+  return result;
 }
 
 export function solveCatalogRequest(
@@ -1175,7 +1386,7 @@ export function solveCatalogRequest(
 
   const preferredRecipeByItem = request.preferredRecipeByItem ?? {};
   if (Object.keys(preferredRecipeByItem).length === 0) {
-    return solveCatalogRequestValidated(catalog, request);
+    return solveCatalogRequestValidatedCached(catalog, request);
   }
 
   const strictPreferredRequest: SolveRequest = {
@@ -1185,12 +1396,12 @@ export function solveCatalogRequest(
       ...(request.forcedRecipeByItem ?? {}),
     },
   };
-  const strictPreferredResult = solveCatalogRequestValidated(catalog, strictPreferredRequest);
+  const strictPreferredResult = solveCatalogRequestValidatedCached(catalog, strictPreferredRequest);
   if (strictPreferredResult.status === 'optimal') {
     return strictPreferredResult;
   }
 
-  const fallbackResult = solveCatalogRequestValidated(catalog, request);
+  const fallbackResult = solveCatalogRequestValidatedCached(catalog, request);
   if (fallbackResult.status !== 'optimal') {
     return fallbackResult;
   }
