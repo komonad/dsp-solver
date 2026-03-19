@@ -1,4 +1,35 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import {
+  Alert,
+  AppBar,
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  DialogContent,
+  Divider,
+  Drawer,
+  FormControl,
+  FormControlLabel,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Stack,
+  Switch,
+  TextField,
+  Toolbar,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import type { ProliferatorMode, ResolvedCatalogModel, ResolvedRecipeSpec } from '../catalog';
 import {
   DEFAULT_APP_LOCALE,
@@ -241,6 +272,9 @@ export default function App() {
   const locale = DEFAULT_APP_LOCALE;
   const bundle = getLocaleBundle(locale);
   const workbenchExtra = getWorkbenchExtraBundle(locale);
+  const pageTitle = 'DSP 产线求解工作台';
+  const pageDescription =
+    '切换数据集、编辑求解请求并直接查看当前浏览器实际展示的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
   const browserStorage = useMemo(() => getBrowserStorage(), []);
   const initialCachedSource = useMemo(
     () => readActiveWorkbenchCacheSource(browserStorage),
@@ -1045,108 +1079,122 @@ export default function App() {
   }
 
   return (
-    <main style={pageStyle}>
-      <div style={shellStyle}>
-        <section style={{ display: 'grid', gap: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.page.eyebrow}</div>
-          <h1 style={{ margin: 0, fontSize: 'clamp(2.2rem, 4vw, 4rem)', lineHeight: 1.02 }}>
-            {bundle.page.title}
-          </h1>
-          <p style={{ margin: 0, maxWidth: 880, fontSize: 18, lineHeight: 1.65, color: 'rgba(24, 51, 89, 0.82)' }}>
-            {bundle.page.description}
-          </p>
-        </section>
+    <Box
+      component="main"
+      sx={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at top left, rgba(244, 194, 102, 0.24), transparent 35%), linear-gradient(135deg, #f5efe2 0%, #dce7ef 48%, #f7f8fb 100%)',
+      }}
+    >
+      <AppBar
+        position="sticky"
+        color="transparent"
+        elevation={0}
+        sx={{
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'rgba(247, 249, 252, 0.78)',
+          backdropFilter: 'blur(18px)',
+        }}
+      >
+        <Toolbar sx={{ py: 2, alignItems: 'flex-start' }}>
+          <Box sx={{ display: 'grid', gap: 0.75 }}>
+            <Typography variant="overline" color="text.secondary">
+              {bundle.page.eyebrow}
+            </Typography>
+            <Typography variant="h4">{pageTitle}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 920 }}>
+              {pageDescription}
+            </Typography>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-        <section
-          style={{
-            display: 'grid',
-            gap: 20,
-            gridTemplateColumns: 'minmax(300px, 380px) minmax(0, 1fr)',
-            alignItems: 'start',
-          }}
-        >
-          <div style={{ display: 'grid', gap: 20 }}>
-            <article style={cardStyle}>
-              <h2 style={{ marginTop: 0 }}>{bundle.datasetSource.title}</h2>
-              <div style={{ display: 'grid', gap: 12 }}>
-                <select
-                  value={presetId}
-                  onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
-                  style={inputStyle}
-                >
-                  {DATASET_PRESETS.map(preset => (
-                    <option key={preset.id} value={preset.id}>
-                      {getDatasetPresetText(preset.id, locale).label}
-                    </option>
-                  ))}
-                </select>
+      <Container maxWidth={false} sx={{ maxWidth: 1560, py: 3, display: 'grid', gap: 3 }}>
+        <section style={{ display: 'grid', gap: 20 }}>
+          <Paper
+            sx={{
+              p: { xs: 2, md: 3 },
+              borderRadius: 5,
+              display: 'grid',
+              gap: 3,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 3,
+                gridTemplateColumns: { xs: '1fr', xl: 'minmax(320px, 420px) minmax(0, 1fr)' },
+                alignItems: 'start',
+              }}
+            >
+              <div style={{ display: 'grid', gap: 20 }}>
+            <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
+              <Typography variant="h6">{bundle.datasetSource.title}</Typography>
+              <TextField
+                select
+                fullWidth
+                label={bundle.summary.datasetLabel}
+                value={presetId}
+                onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
+              >
+                {DATASET_PRESETS.map(preset => (
+                  <MenuItem key={preset.id} value={preset.id}>
+                    {getDatasetPresetText(preset.id, locale).label}
+                  </MenuItem>
+                ))}
+              </TextField>
 
-                <input
-                  value={datasetPath}
-                  onChange={event => {
-                    setPresetId('custom');
-                    setCatalogLabel(getDatasetPresetText('custom', locale).label);
-                    setDatasetPath(event.target.value);
-                  }}
-                  placeholder={bundle.datasetSource.datasetPathPlaceholder}
-                  style={inputStyle}
-                />
+              <TextField
+                fullWidth
+                label={bundle.summary.datasetPathLabel}
+                value={datasetPath}
+                onChange={event => {
+                  setPresetId('custom');
+                  setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                  setDatasetPath(event.target.value);
+                }}
+                placeholder={bundle.datasetSource.datasetPathPlaceholder}
+              />
 
-                <input
-                  value={defaultConfigPath}
-                  onChange={event => {
-                    setPresetId('custom');
-                    setCatalogLabel(getDatasetPresetText('custom', locale).label);
-                    setDefaultConfigPath(event.target.value);
-                  }}
-                  placeholder={bundle.datasetSource.defaultsPathPlaceholder}
-                  style={inputStyle}
-                />
+              <TextField
+                fullWidth
+                label={bundle.summary.defaultsPathLabel}
+                value={defaultConfigPath}
+                onChange={event => {
+                  setPresetId('custom');
+                  setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                  setDefaultConfigPath(event.target.value);
+                }}
+                placeholder={bundle.datasetSource.defaultsPathPlaceholder}
+              />
 
-                <button
-                  type="button"
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+                <Button
+                  variant="contained"
                   onClick={() =>
                     void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId)
                   }
-                  style={buttonStyle}
                   disabled={isLoading}
                 >
                   {isLoading ? bundle.datasetSource.loadingButton : bundle.datasetSource.loadButton}
-                </button>
+                </Button>
+                <Button variant="outlined" onClick={clearCachedWorkbenchState}>
+                  {bundle.datasetSource.clearCacheButton}
+                </Button>
+              </Stack>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 10,
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      lineHeight: 1.5,
-                      color: 'rgba(24, 51, 89, 0.66)',
-                    }}
-                  >
-                    {bundle.datasetSource.autoCacheHint}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={clearCachedWorkbenchState}
-                    style={subtleButtonStyle}
-                  >
-                    {bundle.datasetSource.clearCacheButton}
-                  </button>
-                </div>
+              <Typography variant="caption" color="text.secondary">
+                {bundle.datasetSource.autoCacheHint}
+              </Typography>
 
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
-                  {getDatasetPresetText(
-                    DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
-                    locale
-                  ).description}
-                </div>
+              <Typography variant="body2" color="text.secondary">
+                {getDatasetPresetText(
+                  DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
+                  locale
+                ).description}
+              </Typography>
 
                 <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
                   <h3 style={sectionHeadingStyle}>{bundle.summary.catalogTitle}</h3>
@@ -1232,298 +1280,328 @@ export default function App() {
                     onSourceTextsChange={updateDatasetEditorTexts}
                   />
                 </DatasetEditorPanel>
-              </div>
             </article>
 
-            <article style={cardStyle}>
-              <h2 style={{ marginTop: 0 }}>{bundle.solveRequest.title}</h2>
+            <article style={{ ...cardStyle, display: 'grid', gap: 16 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  flexWrap: 'wrap',
+                  alignItems: 'flex-start',
+                }}
+              >
+                <Box>
+                  <Typography variant="h6">{bundle.solveRequest.title}</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                    {bundle.solveRequest.autoSolveHint}
+                  </Typography>
+                </Box>
+                <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                  <Chip
+                    variant="outlined"
+                    label={`${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`}
+                  />
+                  <Chip
+                    variant="outlined"
+                    label={`${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`}
+                  />
+                  <Chip
+                    variant="outlined"
+                    label={`${bundle.summary.sprayLabel}: ${
+                      requestSummary?.proliferatorPolicyLabel ?? bundle.common.notSet
+                    }`}
+                  />
+                  <Chip
+                    variant="outlined"
+                    color={model?.status === 'optimal' ? 'success' : 'default'}
+                    label={`${bundle.summary.statusLabel}: ${formatSolveStatus(
+                      model?.status ?? null,
+                      locale
+                    )}`}
+                  />
+                </Stack>
+              </Box>
               <div style={{ display: 'grid', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {targets.map((target, index) => (
-                    <div
+                    <Box
                       key={`${target.itemId}-${index}`}
-                      style={{
+                      sx={{
                         display: 'grid',
-                        gap: 10,
-                        gridTemplateColumns: 'minmax(0, 1fr) 120px auto',
-                        alignItems: 'end',
+                        gap: 1.25,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 140px auto' },
+                        alignItems: 'start',
                       }}
                     >
-                      <select
+                      <TextField
+                        select
+                        fullWidth
+                        label={bundle.summary.targetsLabel}
                         value={target.itemId}
                         onChange={event => updateTarget(index, { itemId: event.target.value })}
-                        style={inputStyle}
                         disabled={!catalog}
                       >
                         {itemOptions.map(item => (
-                          <option key={item.itemId} value={item.itemId}>
+                          <MenuItem key={item.itemId} value={item.itemId}>
                             {item.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
+                      </TextField>
 
-                      <input
+                      <TextField
                         type="number"
-                        min={0}
-                        step="1"
+                        fullWidth
+                        label={bundle.overview.requestLabel}
                         value={target.ratePerMin}
+                        inputProps={{ min: 0, step: 1 }}
                         onChange={event =>
                           updateTarget(index, {
                             ratePerMin: Number(event.target.value) || 0,
                           })
                         }
-                        style={inputStyle}
                       />
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="outlined"
+                        color="inherit"
                         onClick={() => removeTarget(index)}
-                        style={subtleButtonStyle}
                         disabled={!catalog}
+                        sx={{ minHeight: 56 }}
                       >
                         {bundle.solveRequest.removeTarget}
-                      </button>
-                    </div>
+                      </Button>
+                    </Box>
                   ))}
 
                   {targets.length === 0 ? (
-                    <div
-                      style={{
+                    <Box
+                      sx={{
                         display: 'grid',
-                        gap: 10,
-                        gridTemplateColumns: 'minmax(0, 1fr) 120px auto',
-                        alignItems: 'end',
-                        padding: 14,
-                        borderRadius: 16,
-                        border: '1px dashed rgba(24, 51, 89, 0.18)',
-                        background: 'rgba(24, 51, 89, 0.03)',
+                        gap: 1.25,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 140px auto' },
+                        alignItems: 'start',
+                        p: 1.75,
+                        borderRadius: 4,
+                        border: '1px dashed',
+                        borderColor: 'divider',
+                        backgroundColor: 'rgba(22, 54, 89, 0.03)',
                       }}
                     >
-                      <select
+                      <TextField
+                        select
+                        fullWidth
+                        label={bundle.summary.targetsLabel}
                         value={targetDraftItemId}
                         onChange={event => setTargetDraftItemId(event.target.value)}
-                        style={inputStyle}
                         disabled={!catalog}
                       >
                         {itemOptions.map(item => (
-                          <option key={item.itemId} value={item.itemId}>
+                          <MenuItem key={item.itemId} value={item.itemId}>
                             {item.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
+                      </TextField>
 
-                      <input
+                      <TextField
                         type="number"
-                        min={0}
-                        step="1"
+                        fullWidth
+                        label={bundle.overview.requestLabel}
                         value={targetDraftRatePerMin}
+                        inputProps={{ min: 0, step: 1 }}
                         onChange={event =>
                           setTargetDraftRatePerMin(Number(event.target.value) || 0)
                         }
-                        style={inputStyle}
                       />
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="contained"
                         onClick={() =>
                           addTarget({
                             itemId: targetDraftItemId,
                             ratePerMin: targetDraftRatePerMin,
                           })
                         }
-                        style={subtleButtonStyle}
                         disabled={!catalog || !targetDraftItemId}
+                        sx={{ minHeight: 56 }}
                       >
                         {bundle.solveRequest.addTarget}
-                      </button>
-                    </div>
+                      </Button>
+                    </Box>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => addTarget()}
-                      style={subtleButtonStyle}
-                      disabled={!catalog}
-                    >
+                    <Button variant="outlined" onClick={() => addTarget()} disabled={!catalog}>
                       {bundle.solveRequest.addTarget}
-                    </button>
+                    </Button>
                   )}
                 </div>
 
-                <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                  <select
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 1.5,
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+                  }}
+                >
+                  <TextField
+                    select
+                    fullWidth
+                    label={bundle.summary.objectiveLabel}
                     value={objective}
                     onChange={event => setObjective(event.target.value as SolveObjective)}
-                    style={inputStyle}
                   >
-                    <option value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</option>
-                    <option value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</option>
-                    <option value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</option>
-                  </select>
+                    <MenuItem value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</MenuItem>
+                    <MenuItem value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</MenuItem>
+                    <MenuItem value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</MenuItem>
+                  </TextField>
 
-                  <select
+                  <TextField
+                    select
+                    fullWidth
+                    label={bundle.summary.balanceLabel}
                     value={balancePolicy}
                     onChange={event => setBalancePolicy(event.target.value as BalancePolicy)}
-                    style={inputStyle}
                   >
-                    <option value="force_balance">{bundle.solveRequest.balancePolicyOptions.force_balance}</option>
-                    <option value="allow_surplus">{bundle.solveRequest.balancePolicyOptions.allow_surplus}</option>
-                  </select>
+                    <MenuItem value="force_balance">{bundle.solveRequest.balancePolicyOptions.force_balance}</MenuItem>
+                    <MenuItem value="allow_surplus">{bundle.solveRequest.balancePolicyOptions.allow_surplus}</MenuItem>
+                  </TextField>
 
-                  <select
+                  <TextField
+                    select
+                    fullWidth
+                    label={bundle.summary.sprayLabel}
                     value={proliferatorPolicy}
                     onChange={event =>
                       setProliferatorPolicy(event.target.value as WorkbenchProliferatorPolicy)
                     }
-                    style={inputStyle}
                   >
-                    <option value="auto">{bundle.solveRequest.proliferatorPolicyOptions.auto}</option>
-                    <option value="disable_all">{bundle.solveRequest.proliferatorPolicyOptions.disable_all}</option>
-                  </select>
-                </div>
+                    <MenuItem value="auto">{bundle.solveRequest.proliferatorPolicyOptions.auto}</MenuItem>
+                    <MenuItem value="disable_all">{bundle.solveRequest.proliferatorPolicyOptions.disable_all}</MenuItem>
+                  </TextField>
+                </Box>
 
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    fontSize: 14,
-                    fontWeight: 700,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={autoPromoteUnavailableItemsToRawInputs}
-                    onChange={event =>
-                      setAutoPromoteUnavailableItemsToRawInputs(event.target.checked)
-                    }
-                  />
-                  <span>{bundle.solveRequest.autoPromoteUnavailableItemsLabel}</span>
-                </label>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={autoPromoteUnavailableItemsToRawInputs}
+                      onChange={event =>
+                        setAutoPromoteUnavailableItemsToRawInputs(event.target.checked)
+                      }
+                    />
+                  }
+                  label={bundle.solveRequest.autoPromoteUnavailableItemsLabel}
+                />
 
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                      <select
+                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                      <TextField
+                        select
+                        fullWidth
+                        label={bundle.solveRequest.disabledRecipesLabel}
                         value={disabledRecipeDraftId}
                         onChange={event => setDisabledRecipeDraftId(event.target.value)}
-                        style={inputStyle}
                         disabled={!catalog || disableRecipeOptions.length === 0}
                       >
                         {disableRecipeOptions.map(recipe => (
-                          <option key={recipe.recipeId} value={recipe.recipeId}>
+                          <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
                             {recipe.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
+                      </TextField>
 
-                      <button type="button" onClick={addDisabledRecipe} style={subtleButtonStyle} disabled={!disabledRecipeDraftId}>
+                      <Button variant="outlined" onClick={addDisabledRecipe} disabled={!disabledRecipeDraftId}>
                         {bundle.solveRequest.disableButton}
-                      </button>
-                    </div>
+                      </Button>
+                    </Box>
 
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
                       {disabledRecipeIds.length === 0 ? (
-                        <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledRecipes}</span>
+                        <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noDisabledRecipes}</Typography>
                       ) : (
                         disabledRecipeIds.map(recipeId => (
-                          <button
+                          <Chip
                             key={recipeId}
-                            type="button"
-                            onClick={() => removeDisabledRecipe(recipeId)}
-                            style={{
-                              borderRadius: 999,
-                              border: '1px solid rgba(24, 51, 89, 0.16)',
-                              background: 'rgba(24, 51, 89, 0.06)',
-                              color: '#183359',
-                              padding: '6px 12px',
-                              fontSize: 13,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
-                          </button>
+                            label={(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
+                            onDelete={() => removeDisabledRecipe(recipeId)}
+                          />
                         ))
                       )}
-                    </div>
+                    </Stack>
                   </div>
                 </details>
 
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.disabledBuildingsLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                      <select
+                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                      <TextField
+                        select
+                        fullWidth
+                        label={bundle.solveRequest.disabledBuildingsLabel}
                         value={disabledBuildingDraftId}
                         onChange={event => setDisabledBuildingDraftId(event.target.value)}
-                        style={inputStyle}
                         disabled={!catalog || disableBuildingOptions.length === 0}
                       >
                         {disableBuildingOptions.map(building => (
-                          <option key={building.buildingId} value={building.buildingId}>
+                          <MenuItem key={building.buildingId} value={building.buildingId}>
                             {building.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
+                      </TextField>
 
-                      <button type="button" onClick={addDisabledBuilding} style={subtleButtonStyle} disabled={!disabledBuildingDraftId}>
+                      <Button variant="outlined" onClick={addDisabledBuilding} disabled={!disabledBuildingDraftId}>
                         {bundle.solveRequest.disableButton}
-                      </button>
-                    </div>
+                      </Button>
+                    </Box>
 
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
                       {disabledBuildingIds.length === 0 ? (
-                        <span style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noDisabledBuildings}</span>
+                        <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noDisabledBuildings}</Typography>
                       ) : (
                         disabledBuildingIds.map(buildingId => (
-                          <button
+                          <Chip
                             key={buildingId}
-                            type="button"
-                            onClick={() => removeDisabledBuilding(buildingId)}
-                            style={{
-                              borderRadius: 999,
-                              border: '1px solid rgba(24, 51, 89, 0.16)',
-                              background: 'rgba(24, 51, 89, 0.06)',
-                              color: '#183359',
-                              padding: '6px 12px',
-                              fontSize: 13,
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ` ${bundle.common.removeSuffix}`}
-                          </button>
+                            label={
+                              (catalog?.buildingMap.get(buildingId)?.name ?? buildingId) +
+                              ` ${bundle.common.removeSuffix}`
+                            }
+                            onDelete={() => removeDisabledBuilding(buildingId)}
+                          />
                         ))
                       )}
-                    </div>
+                    </Stack>
                   </div>
                 </details>
 
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.recipePreferencesLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
-                      <select
+                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                      <TextField
+                        select
+                        fullWidth
+                        label={bundle.solveRequest.recipePreferencesLabel}
                         value={recipePreferenceDraftId}
                         onChange={event => setRecipePreferenceDraftId(event.target.value)}
-                        style={inputStyle}
                         disabled={!catalog || recipePreferenceOptions.length === 0}
                       >
                         {recipePreferenceOptions.map(recipe => (
-                          <option key={recipe.recipeId} value={recipe.recipeId}>
+                          <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
                             {recipe.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
+                      </TextField>
 
-                      <button
-                        type="button"
+                      <Button
+                        variant="outlined"
                         onClick={addRecipePreference}
-                        style={subtleButtonStyle}
                         disabled={!recipePreferenceDraftId}
                       >
                         {bundle.solveRequest.addPreference}
-                      </button>
-                    </div>
+                      </Button>
+                    </Box>
 
                     <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13, lineHeight: 1.5 }}>
                       {bundle.solveRequest.recipePreferencesHelp}
@@ -1555,59 +1633,62 @@ export default function App() {
                                 gap: 12,
                               }}
                             >
-                              <div
-                                style={{
+                              <Box
+                                sx={{
                                   display: 'flex',
                                   justifyContent: 'space-between',
-                                  gap: 12,
+                                  gap: 1.5,
                                   alignItems: 'center',
                                   flexWrap: 'wrap',
                                 }}
                               >
-                                <div style={{ fontWeight: 700 }}>{recipe?.name ?? preference.recipeId}</div>
-                                <button
-                                  type="button"
+                                <Typography fontWeight={700}>{recipe?.name ?? preference.recipeId}</Typography>
+                                <Button
+                                  variant="outlined"
+                                  color="inherit"
                                   onClick={() => removeRecipePreference(preference.recipeId)}
-                                  style={subtleButtonStyle}
                                 >
                                   {bundle.solveRequest.removeTarget}
-                                </button>
-                              </div>
+                                </Button>
+                              </Box>
 
-                              <div
-                                style={{
+                              <Box
+                                sx={{
                                   display: 'grid',
-                                  gap: 10,
+                                  gap: 1.25,
                                   gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                                 }}
                               >
-                                <div style={{ display: 'grid', gap: 6 }}>
-                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                                  <Typography variant="overline" color="text.secondary">
                                     {bundle.solveRequest.preferredBuildingLabel}
-                                  </div>
-                                  <select
+                                  </Typography>
+                                  <TextField
+                                    select
+                                    fullWidth
                                     value={preference.preferredBuildingId}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
                                         preferredBuildingId: event.target.value,
                                       })
                                     }
-                                    style={inputStyle}
                                   >
-                                    <option value="">{bundle.common.auto}</option>
+                                    <MenuItem value="">{bundle.common.auto}</MenuItem>
                                     {buildingChoices.map(building => (
-                                      <option key={building.buildingId} value={building.buildingId}>
+                                      <MenuItem key={building.buildingId} value={building.buildingId}>
                                         {building.name}
-                                      </option>
+                                      </MenuItem>
                                     ))}
-                                  </select>
-                                </div>
+                                  </TextField>
+                                </Box>
 
-                                <div style={{ display: 'grid', gap: 6 }}>
-                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                                  <Typography variant="overline" color="text.secondary">
                                     {bundle.solveRequest.preferredSprayModeLabel}
-                                  </div>
-                                  <select
+                                  </Typography>
+                                  <TextField
+                                    select
+                                    fullWidth
                                     value={preference.preferredProliferatorMode}
                                     onChange={event => {
                                       const nextMode = event.target.value as '' | ProliferatorMode;
@@ -1619,23 +1700,24 @@ export default function App() {
                                             : preference.preferredProliferatorLevel,
                                       });
                                     }}
-                                    style={inputStyle}
                                     disabled={proliferatorPolicy === 'disable_all'}
                                   >
-                                    <option value="">{bundle.common.auto}</option>
+                                    <MenuItem value="">{bundle.common.auto}</MenuItem>
                                     {modeChoices.map(mode => (
-                                      <option key={mode} value={mode}>
+                                      <MenuItem key={mode} value={mode}>
                                         {formatProliferatorMode(mode, locale)}
-                                      </option>
+                                      </MenuItem>
                                     ))}
-                                  </select>
-                                </div>
+                                  </TextField>
+                                </Box>
 
-                                <div style={{ display: 'grid', gap: 6 }}>
-                                  <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>
+                                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                                  <Typography variant="overline" color="text.secondary">
                                     {bundle.solveRequest.preferredSprayLevelLabel}
-                                  </div>
-                                  <select
+                                  </Typography>
+                                  <TextField
+                                    select
+                                    fullWidth
                                     value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
@@ -1644,18 +1726,17 @@ export default function App() {
                                           : '',
                                       })
                                     }
-                                    style={inputStyle}
                                     disabled={levelSelectDisabled}
                                   >
-                                    <option value="">{bundle.common.auto}</option>
+                                    <MenuItem value="">{bundle.common.auto}</MenuItem>
                                     {levelChoices.map(level => (
-                                      <option key={level} value={String(level)}>
+                                      <MenuItem key={level} value={String(level)}>
                                         {`${bundle.solveRequest.levelPrefix} ${level}`}
-                                      </option>
+                                      </MenuItem>
                                     ))}
-                                  </select>
-                                </div>
-                              </div>
+                                  </TextField>
+                                </Box>
+                              </Box>
                             </div>
                           );
                         })}
@@ -1777,7 +1858,9 @@ export default function App() {
                 </section>
               </div>
             </article>
-          </div>
+              </div>
+            </Box>
+          </Paper>
 
           <div style={{ display: 'grid', gap: 20 }}>
             {loadError ? (
@@ -1973,7 +2056,7 @@ export default function App() {
                     </article>
                     </div>
 
-                    <aside style={resultSideColumnStyle}>
+                    <aside style={{ ...resultSideColumnStyle, top: 96, height: 'calc(100vh - 112px)', maxHeight: 'calc(100vh - 112px)' }}>
                       <article
                         style={{
                           ...cardStyle,
@@ -1988,39 +2071,40 @@ export default function App() {
                         }}
                       >
                         <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
-                        <div style={{ display: 'grid', gap: 8 }}>
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <Stack spacing={1}>
+                          <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
                             {model.itemLedgerSections.map(section => (
-                              <button
+                              <Button
                                 key={`jump-${section.key}`}
-                                type="button"
                                 onClick={() => scrollItemLedgerToSection(section.key)}
-                                style={compactLedgerButtonStyle}
+                                variant="outlined"
+                                size="small"
+                                color="inherit"
                               >
                                 {section.title}
-                              </button>
+                              </Button>
                             ))}
-                          </div>
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={scrollItemLedgerToTop}
-                              style={compactLedgerButtonStyle}
-                            >
+                          </Stack>
+                          <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                            <Button onClick={scrollItemLedgerToTop} variant="outlined" size="small" color="inherit">
                               {bundle.itemLedger.jumpToTopButton}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={scrollItemLedgerToBottom}
-                              style={compactLedgerButtonStyle}
-                            >
+                            </Button>
+                            <Button onClick={scrollItemLedgerToBottom} variant="outlined" size="small" color="inherit">
                               {bundle.itemLedger.jumpToBottomButton}
-                            </button>
-                          </div>
-                        </div>
+                            </Button>
+                          </Stack>
+                        </Stack>
                         <div
                           ref={itemLedgerScrollRef}
-                          style={{ display: 'grid', gap: 16, overflow: 'auto', minHeight: 0, paddingRight: 4 }}
+                          style={{
+                            display: 'grid',
+                            gap: 16,
+                            overflow: 'auto',
+                            minHeight: 0,
+                            paddingRight: 4,
+                            paddingBottom: 24,
+                            scrollPaddingBottom: 24,
+                          }}
                         >
                           {model.itemLedgerSections.map(section => (
                             <section
@@ -2124,31 +2208,34 @@ export default function App() {
             )}
           </div>
         </section>
-      </div>
-      {isItemSliceOpen && selectedItemSlice ? (
-        <div
-          style={modalBackdropStyle}
-          onClick={() => setIsItemSliceOpen(false)}
-        >
-          <div
-            style={modalPanelStyle}
-            onClick={event => event.stopPropagation()}
-          >
-            <div
-              style={{
+      <Drawer
+        anchor="right"
+        open={Boolean(isItemSliceOpen && selectedItemSlice)}
+        onClose={() => setIsItemSliceOpen(false)}
+        PaperProps={{
+          sx: {
+            width: 'min(560px, 100vw)',
+            backgroundColor: 'rgba(248, 251, 253, 0.95)',
+            borderLeft: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        {selectedItemSlice ? (
+          <DialogContent sx={{ p: 3, display: 'grid', gap: 2, overflow: 'auto' }}>
+            <Box
+              sx={{
                 display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: 12,
+                justifyContent: 'space-between',
+                gap: 2,
+                alignItems: 'center',
               }}
             >
-              <button
-                type="button"
-                onClick={() => setIsItemSliceOpen(false)}
-                style={subtleButtonStyle}
-              >
+              <Typography variant="h6">{workbenchExtra.itemSlice.title}</Typography>
+              <Button variant="outlined" onClick={() => setIsItemSliceOpen(false)}>
                 {workbenchExtra.itemSlice.closeButton}
-              </button>
-            </div>
+              </Button>
+            </Box>
             <ItemSlicePanel
               locale={locale}
               atlasIds={iconAtlasIds}
@@ -2162,9 +2249,10 @@ export default function App() {
               onClearPreferredRecipe={clearPreferredRecipeForItem}
               onLocateInLedger={locateItemInLedger}
             />
-          </div>
-        </div>
-      ) : null}
-    </main>
+          </DialogContent>
+        ) : null}
+      </Drawer>
+      </Container>
+    </Box>
   );
 }
