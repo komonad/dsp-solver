@@ -1415,7 +1415,10 @@ export default function App() {
                         nextMode === 'none'
                           ? 0
                           : nextMode
-                            ? override?.forcedProliferatorLevel ?? ''
+                            ? typeof override?.forcedProliferatorLevel === 'number' &&
+                                override.forcedProliferatorLevel > 0
+                              ? override.forcedProliferatorLevel
+                              : ''
                             : '',
                     });
                   }}

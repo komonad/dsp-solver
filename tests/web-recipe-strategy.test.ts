@@ -179,3 +179,64 @@ test('tryApplyRecipeStrategyOverride rejects an override that makes the request 
   expect(result.nextOverrides).toEqual(currentOverrides);
   expect(result.message.length).toBeGreaterThan(0);
 });
+
+test('tryApplyRecipeStrategyOverride does not carry level 0 from none into speed mode', () => {
+  const catalog = buildStrategyDemoCatalog();
+  const currentOverrides: EditableRecipeStrategyOverride[] = [
+    {
+      recipeId: '1',
+      forcedBuildingId: '5001',
+      forcedProliferatorMode: 'none',
+      forcedProliferatorLevel: 0,
+    },
+  ];
+  const currentSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: ['5002'],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: currentOverrides,
+    advancedOverridesText: '',
+  });
+
+  const result = tryApplyRecipeStrategyOverride({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: ['5002'],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: currentOverrides,
+    currentResolvedRawInputItemIds: currentSolve.result?.resolvedRawInputItemIds ?? [],
+    advancedOverridesText: '',
+    recipeId: '1',
+    patch: {
+      forcedProliferatorMode: 'speed',
+      forcedProliferatorLevel: 0,
+    },
+  });
+
+  expect(result.accepted).toBe(true);
+  expect(result.nextOverrides).toEqual([
+    {
+      recipeId: '1',
+      forcedBuildingId: '5001',
+      forcedProliferatorMode: 'speed',
+      forcedProliferatorLevel: '',
+    },
+  ]);
+});
