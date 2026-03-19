@@ -7,3 +7,6 @@ dist-web/
 .DS_Store
 coverage/
 .env
+.codex-research/
+tools/**/bin/
+tools/**/obj/

@@ -25,6 +25,7 @@ Recent web workbench additions:
 - [src/solver](/D:/dsp-dev/dspcalc/src/solver): solver request/result types
 - [src/presentation](/D:/dsp-dev/dspcalc/src/presentation): pure presentation-facing view models
 - [src/web](/D:/dsp-dev/dspcalc/src/web): current web entry
+- [tools/dsp-runtime-exporter](/D:/dsp-dev/dspcalc/tools/dsp-runtime-exporter): minimal BepInEx mod for exporting runtime-loaded items and recipes
 
 ## Data files
 
@@ -127,6 +128,7 @@ If you want to use a custom dataset in the browser, place that dataset JSON and 
 - [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
 - [minimal-test-config.md](/D:/dsp-dev/dspcalc/docs/minimal-test-config.md)
 - [asset-and-frontend-research.md](/D:/dsp-dev/dspcalc/docs/asset-and-frontend-research.md)
+- [runtime-exporter.md](/D:/dsp-dev/dspcalc/docs/runtime-exporter.md)
 
 ## Third-party assets
 

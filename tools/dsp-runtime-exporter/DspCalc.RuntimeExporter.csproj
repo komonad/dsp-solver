@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>DspCalc.RuntimeExporter</AssemblyName>
+    <RootNamespace>DspCalc.RuntimeExporter</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DSPGameDir Condition="'$(DSPGameDir)' == '' and '$(DSP_GAME_DIR)' != ''">$(DSP_GAME_DIR)</DSPGameDir>
+    <DSPManagedDir Condition="'$(DSPManagedDir)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\DSPGAME_Data\Managed</DSPManagedDir>
+    <BepInExCoreDir Condition="'$(BepInExCoreDir)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\BepInEx\core</BepInExCoreDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(BepInExCoreDir)' != '' and Exists('$(BepInExCoreDir)\\BepInEx.dll')">
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DSPManagedDir)' != '' and Exists('$(DSPManagedDir)\\UnityEngine.CoreModule.dll')">
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(DSPManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(DSPManagedDir)' != '' and Exists('$(DSPManagedDir)\\UnityEngine.InputLegacyModule.dll')">
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(DSPManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
+    <Error
+      Condition="'$(DSPManagedDir)' == ''"
+      Text="DSPManagedDir is not set. Pass -p:DSPGameDir=&quot;C:\Path\To\DSPGAME&quot; or -p:DSPManagedDir=&quot;C:\Path\To\DSPGAME_Data\Managed&quot;." />
+    <Error
+      Condition="'$(BepInExCoreDir)' == ''"
+      Text="BepInExCoreDir is not set. Pass -p:DSPGameDir=&quot;C:\Path\To\DSPGAME&quot; or -p:BepInExCoreDir=&quot;C:\Path\To\BepInEx\core&quot;." />
+    <Error
+      Condition="!Exists('$(DSPManagedDir)\\UnityEngine.CoreModule.dll')"
+      Text="UnityEngine.CoreModule.dll was not found under $(DSPManagedDir)." />
+    <Error
+      Condition="!Exists('$(BepInExCoreDir)\\BepInEx.dll')"
+      Text="BepInEx.dll was not found under $(BepInExCoreDir)." />
+  </Target>
+</Project>
