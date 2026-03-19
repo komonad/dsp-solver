@@ -10,7 +10,7 @@ namespace DspCalc.RuntimeExporter;
 [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
 public sealed class ExporterPlugin : BaseUnityPlugin
 {
-    public const string PluginGuid = "com.dspcalc.runtime-exporter";
+    public const string PluginGuid = "com.comonad.dspcalc.runtime-exporter";
     public const string PluginName = "DspCalc Runtime Exporter";
     public const string PluginVersion = "0.1.0";
 
@@ -82,7 +82,8 @@ public sealed class ExporterPlugin : BaseUnityPlugin
             }
 
             string baseDirectory = outputDirectory?.Value ?? Path.Combine(Paths.ConfigPath, "dspcalc-exporter");
-            string fileStem = string.IsNullOrWhiteSpace(outputFileStem?.Value) ? "CurrentGame" : outputFileStem.Value.Trim();
+            string configuredFileStem = outputFileStem?.Value ?? string.Empty;
+            string fileStem = string.IsNullOrWhiteSpace(configuredFileStem) ? "CurrentGame" : configuredFileStem.Trim();
             string outputPath = Path.Combine(baseDirectory, $"{fileStem}.json");
             string writtenPath = GameDataExporter.ExportToFile(outputPath, Logger);
             Logger.LogInfo($"Export completed ({reason}): {writtenPath}");

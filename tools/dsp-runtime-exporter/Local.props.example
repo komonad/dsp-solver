@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <DSPManagedPath>C:\Program Files (x86)\Steam\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed\</DSPManagedPath>
+    <BepInExDllPath>C:\Users\Comonad\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\new1\BepInEx\core\BepInEx.dll</BepInExDllPath>
+    <ProfileRoot>C:\Users\Comonad\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\new1</ProfileRoot>
+  </PropertyGroup>
+</Project>

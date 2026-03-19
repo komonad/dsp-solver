@@ -130,6 +130,11 @@ If you want to use a custom dataset in the browser, place that dataset JSON and 
 - [asset-and-frontend-research.md](/D:/dsp-dev/dspcalc/docs/asset-and-frontend-research.md)
 - [runtime-exporter.md](/D:/dsp-dev/dspcalc/docs/runtime-exporter.md)
 
+The runtime exporter plugin GUID is `com.comonad.dspcalc.runtime-exporter`, and
+its build path convention now follows
+[MinimalDSPModTemplate](/D:/dsp-dev/MinimalDSPModTemplate) through a local
+`Local.props` file.
+
 ## Third-party assets
 
 The vanilla icon atlas currently shipped in the web bundle is sourced from the public `DSPCalculator/dsp-calc` repository.

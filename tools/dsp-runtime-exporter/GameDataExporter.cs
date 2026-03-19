@@ -180,7 +180,7 @@ internal static class GameDataExporter
             string? value = ReflectionHelpers.GetString(proto, candidate);
             if (!string.IsNullOrWhiteSpace(value))
             {
-                return NormalizeIconName(value);
+                return NormalizeIconName(value!);
             }
         }
 
@@ -191,7 +191,7 @@ internal static class GameDataExporter
             string? spriteName = ReflectionHelpers.GetString(sprite, "name");
             if (!string.IsNullOrWhiteSpace(spriteName))
             {
-                return NormalizeIconName(spriteName);
+                return NormalizeIconName(spriteName!);
             }
         }
 

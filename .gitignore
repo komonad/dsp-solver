@@ -10,3 +10,4 @@ coverage/
 .codex-research/
 tools/**/bin/
 tools/**/obj/
+tools/**/Local.props

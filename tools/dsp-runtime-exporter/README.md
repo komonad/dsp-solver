@@ -29,20 +29,38 @@ LDBTool/CommonAPI. This exporter reads the loaded runtime data instead.
 You need a local Dyson Sphere Program install plus BepInEx already installed
 into that game directory.
 
-The project expects either:
+The recommended setup matches `D:\dsp-dev\MinimalDSPModTemplate`:
+
+- copy `Local.props.example` to `Local.props`
+- fill in `DSPManagedPath`
+- fill in `BepInExDllPath`
+- optionally fill in `ProfileRoot` if you want `DeployToProfile`
+
+This is intentionally lighter than the template itself. Public DSP mods use a
+mix of approaches: some check in `Libraries\*.dll`, some use local path files,
+and larger projects can use package-based game libs. For this exporter the
+local-path file is the smallest reasonable choice.
+
+Command-line overrides still work. The project accepts either:
 
 - `-p:DSPGameDir="C:\Games\Dyson Sphere Program"`
 
 or both:
 
-- `-p:DSPManagedDir="C:\Games\Dyson Sphere Program\DSPGAME_Data\Managed"`
-- `-p:BepInExCoreDir="C:\Games\Dyson Sphere Program\BepInEx\core"`
+- `-p:DSPManagedPath="C:\Games\Dyson Sphere Program\DSPGAME_Data\Managed"`
+- `-p:BepInExDllPath="C:\Games\Dyson Sphere Program\BepInEx\core\BepInEx.dll"`
 
 ## Build
 
 ```powershell
 dotnet restore tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj
-dotnet build tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj -c Release -p:DSPGameDir="C:\Games\Dyson Sphere Program"
+dotnet build tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj -c Release
+```
+
+If you prefer the local helper script:
+
+```powershell
+tools\dsp-runtime-exporter\scripts\build.cmd
 ```
 
 ## Install
@@ -51,6 +69,12 @@ Copy the built DLL into a BepInEx plugins folder, for example:
 
 ```text
 <DSPGameDir>\BepInEx\plugins\DspCalc.RuntimeExporter\DspCalc.RuntimeExporter.dll
+```
+
+Or deploy directly to your configured profile:
+
+```powershell
+dotnet msbuild tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj /t:DeployToProfile /p:Configuration=Debug
 ```
 
 ## Use
@@ -86,3 +110,4 @@ Optional fields are emitted only when they can be read reliably at runtime.
 - It does not depend on a particular external data-extraction mod.
 - It does not currently export icon atlases. Missing icons can use the web
   fallback path until atlas export is added later.
+- Plugin GUID: `com.comonad.dspcalc.runtime-exporter`

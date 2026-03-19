@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="Local.props" Condition="Exists('Local.props')" />
+
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
+    <OutputType>Library</OutputType>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -9,47 +12,73 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <DSPGameDir Condition="'$(DSPGameDir)' == '' and '$(DSP_GAME_DIR)' != ''">$(DSP_GAME_DIR)</DSPGameDir>
-    <DSPManagedDir Condition="'$(DSPManagedDir)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\DSPGAME_Data\Managed</DSPManagedDir>
-    <BepInExCoreDir Condition="'$(BepInExCoreDir)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\BepInEx\core</BepInExCoreDir>
+    <DSPManagedPath Condition="'$(DSPManagedPath)' == '' and '$(DSPManagedDir)' != ''">$(DSPManagedDir)\</DSPManagedPath>
+    <DSPManagedPath Condition="'$(DSPManagedPath)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\DSPGAME_Data\Managed\</DSPManagedPath>
+    <BepInExDllPath Condition="'$(BepInExDllPath)' == '' and '$(BepInExCoreDir)' != ''">$(BepInExCoreDir)\BepInEx.dll</BepInExDllPath>
+    <BepInExDllPath Condition="'$(BepInExDllPath)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\BepInEx\core\BepInEx.dll</BepInExDllPath>
+    <ProfileRoot Condition=" '$(ProfileRoot)' == '' ">$(AppData)\r2modmanPlus-local\DysonSphereProgram\profiles\dspcalc-exporter-test</ProfileRoot>
+    <DeployPluginDir>$(ProfileRoot)\BepInEx\plugins\DspCalc.RuntimeExporter</DeployPluginDir>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(BepInExCoreDir)' != '' and Exists('$(BepInExCoreDir)\\BepInEx.dll')">
+  <ItemGroup>
     <Reference Include="BepInEx">
-      <HintPath>$(BepInExCoreDir)\BepInEx.dll</HintPath>
+      <HintPath>$(BepInExDllPath)</HintPath>
       <Private>false</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(DSPManagedDir)' != '' and Exists('$(DSPManagedDir)\\UnityEngine.CoreModule.dll')">
+    <Reference Include="UnityEngine">
+      <HintPath>$(DSPManagedPath)UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(DSPManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(DSPManagedPath)UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(DSPManagedDir)' != '' and Exists('$(DSPManagedDir)\\UnityEngine.InputLegacyModule.dll')">
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>$(DSPManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>$(DSPManagedPath)UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
-  <Target Name="ValidateGameReferences" BeforeTargets="ResolveReferences">
+  <Target Name="ValidateLocalProps" BeforeTargets="PrepareForBuild">
     <Error
-      Condition="'$(DSPManagedDir)' == ''"
-      Text="DSPManagedDir is not set. Pass -p:DSPGameDir=&quot;C:\Path\To\DSPGAME&quot; or -p:DSPManagedDir=&quot;C:\Path\To\DSPGAME_Data\Managed&quot;." />
+      Condition="!Exists('$(ProjectDir)Local.props') and '$(DSPManagedPath)' == '' and '$(BepInExDllPath)' == ''"
+      Text="Missing Local.props. Copy Local.props.example and fill in your local paths first, or pass DSPManagedPath/BepInExDllPath on the command line." />
     <Error
-      Condition="'$(BepInExCoreDir)' == ''"
-      Text="BepInExCoreDir is not set. Pass -p:DSPGameDir=&quot;C:\Path\To\DSPGAME&quot; or -p:BepInExCoreDir=&quot;C:\Path\To\BepInEx\core&quot;." />
+      Condition="'$(DSPManagedPath)' == ''"
+      Text="DSPManagedPath is missing. Define it in Local.props or pass -p:DSPManagedPath=&quot;C:\Path\To\DSPGAME_Data\Managed&quot;." />
     <Error
-      Condition="!Exists('$(DSPManagedDir)\\UnityEngine.CoreModule.dll')"
-      Text="UnityEngine.CoreModule.dll was not found under $(DSPManagedDir)." />
+      Condition="'$(BepInExDllPath)' == ''"
+      Text="BepInExDllPath is missing. Define it in Local.props or pass -p:BepInExDllPath=&quot;C:\Path\To\BepInEx\core\BepInEx.dll&quot;." />
+  </Target>
+
+  <Target Name="ValidateReferencePaths" BeforeTargets="ResolveAssemblyReferences">
     <Error
-      Condition="!Exists('$(BepInExCoreDir)\\BepInEx.dll')"
-      Text="BepInEx.dll was not found under $(BepInExCoreDir)." />
+      Condition="!Exists('$(BepInExDllPath)')"
+      Text="Missing BepInEx.dll at BepInExDllPath: $(BepInExDllPath)" />
+    <Error
+      Condition="!Exists('$(DSPManagedPath)UnityEngine.dll')"
+      Text="Missing UnityEngine.dll under DSPManagedPath: $(DSPManagedPath)" />
+    <Error
+      Condition="!Exists('$(DSPManagedPath)UnityEngine.CoreModule.dll')"
+      Text="Missing UnityEngine.CoreModule.dll under DSPManagedPath: $(DSPManagedPath)" />
+    <Error
+      Condition="!Exists('$(DSPManagedPath)UnityEngine.InputLegacyModule.dll')"
+      Text="Missing UnityEngine.InputLegacyModule.dll under DSPManagedPath: $(DSPManagedPath)" />
+  </Target>
+
+  <Target Name="DeployToProfile" DependsOnTargets="Build">
+    <MakeDir Directories="$(DeployPluginDir)" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFiles="$(DeployPluginDir)\$(TargetFileName)"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
+          DestinationFiles="$(DeployPluginDir)\$(TargetName).pdb"
+          Condition="Exists('$(TargetDir)$(TargetName).pdb')"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Deployed to $(DeployPluginDir)" />
   </Target>
 </Project>

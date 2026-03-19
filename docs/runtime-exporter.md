@@ -40,6 +40,23 @@ It does not yet export:
 
 Those can be added later without changing the canonical dataset shape.
 
+## Build path convention
+
+The exporter now follows the same local-path pattern as
+[MinimalDSPModTemplate](/D:/dsp-dev/MinimalDSPModTemplate):
+
+- copy [Local.props.example](/D:/dsp-dev/dspcalc/tools/dsp-runtime-exporter/Local.props.example)
+  to `Local.props`
+- fill in `DSPManagedPath`
+- fill in `BepInExDllPath`
+- optionally fill in `ProfileRoot` to enable `DeployToProfile`
+
+This does not copy the template's full setup pipeline. Public DSP mods use
+multiple build styles, so the exporter keeps only the minimal local-path
+configuration that it actually needs.
+
+The plugin GUID is `com.comonad.dspcalc.runtime-exporter`.
+
 ## Output
 
 The exporter writes a JSON file matching the current raw dataset schema:
