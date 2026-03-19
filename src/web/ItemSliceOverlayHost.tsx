@@ -172,6 +172,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
           borderRadius: '24px',
           overflow: 'hidden',
           boxShadow: '0 22px 64px rgba(24, 51, 89, 0.18)',
+          contain: 'layout paint style',
         }}
       >
         <Box
@@ -199,6 +200,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             overflow: 'auto',
             minHeight: 0,
             overscrollBehavior: 'contain',
+            contain: 'layout paint style',
           }}
         >
           <ItemSlicePanel

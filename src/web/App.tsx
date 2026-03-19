@@ -1143,6 +1143,9 @@ export default function App() {
             boxShadow: 'none',
             backgroundColor: 'rgba(255,255,255,0.68)',
             overflow: 'hidden',
+            contentVisibility: 'auto',
+            containIntrinsicSize: '152px 480px',
+            contain: 'layout paint style',
           }}
         >
           <CardContent
@@ -1324,6 +1327,9 @@ export default function App() {
                   alignItems: 'center',
                   padding: '10px 0',
                   borderBottom: '1px solid rgba(24, 51, 89, 0.10)',
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: '56px 280px',
+                  contain: 'layout paint style',
                 }}
               >
                 <div style={{ display: 'grid', gap: 4, minWidth: 0 }}>

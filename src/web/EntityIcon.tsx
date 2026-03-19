@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   getIconFallbackColor,
   getIconFallbackText,
@@ -22,9 +22,50 @@ export interface EntityLabelButtonProps extends EntityLabelProps {
   buttonStyle?: React.CSSProperties;
 }
 
-export function EntityIcon(props: EntityIconProps) {
+function areStringArraysEqual(left?: string[], right?: string[]): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right || left.length !== right.length) {
+    return false;
+  }
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areFlatStyleObjectsEqual(
+  left?: React.CSSProperties,
+  right?: React.CSSProperties
+): boolean {
+  if (left === right) {
+    return true;
+  }
+  if (!left || !right) {
+    return false;
+  }
+  const leftKeys = Object.keys(left);
+  const rightKeys = Object.keys(right);
+  if (leftKeys.length !== rightKeys.length) {
+    return false;
+  }
+  for (const key of leftKeys) {
+    if (left[key as keyof React.CSSProperties] !== right[key as keyof React.CSSProperties]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function EntityIconImpl(props: EntityIconProps) {
   const { label, iconKey, atlasIds, size = 22 } = props;
-  const resolvedIcon = getResolvedIconSprite(iconKey, atlasIds);
+  const resolvedIcon = useMemo(
+    () => getResolvedIconSprite(iconKey, atlasIds),
+    [iconKey, atlasIds]
+  );
   const sprite = resolvedIcon?.sprite;
   const atlasSrc = resolvedIcon?.src;
 
@@ -74,7 +115,16 @@ export function EntityIcon(props: EntityIconProps) {
   );
 }
 
-export function EntityLabel(props: EntityLabelProps) {
+export const EntityIcon = React.memo(
+  EntityIconImpl,
+  (left, right) =>
+    left.label === right.label &&
+    left.iconKey === right.iconKey &&
+    left.size === right.size &&
+    areStringArraysEqual(left.atlasIds, right.atlasIds)
+);
+
+function EntityLabelImpl(props: EntityLabelProps) {
   const { label, iconKey, atlasIds, size = 22, gap = 8, textStyle } = props;
 
   return (
@@ -104,7 +154,18 @@ export function EntityLabel(props: EntityLabelProps) {
   );
 }
 
-export function EntityLabelButton(props: EntityLabelButtonProps) {
+export const EntityLabel = React.memo(
+  EntityLabelImpl,
+  (left, right) =>
+    left.label === right.label &&
+    left.iconKey === right.iconKey &&
+    left.size === right.size &&
+    left.gap === right.gap &&
+    areStringArraysEqual(left.atlasIds, right.atlasIds) &&
+    areFlatStyleObjectsEqual(left.textStyle, right.textStyle)
+);
+
+function EntityLabelButtonImpl(props: EntityLabelButtonProps) {
   const { onClick, buttonStyle, ...labelProps } = props;
 
   return (
@@ -129,3 +190,16 @@ export function EntityLabelButton(props: EntityLabelButtonProps) {
     </button>
   );
 }
+
+export const EntityLabelButton = React.memo(
+  EntityLabelButtonImpl,
+  (left, right) =>
+    left.label === right.label &&
+    left.iconKey === right.iconKey &&
+    left.size === right.size &&
+    left.gap === right.gap &&
+    left.onClick === right.onClick &&
+    areStringArraysEqual(left.atlasIds, right.atlasIds) &&
+    areFlatStyleObjectsEqual(left.textStyle, right.textStyle) &&
+    areFlatStyleObjectsEqual(left.buttonStyle, right.buttonStyle)
+);
