@@ -59,6 +59,7 @@ import { EntityLabel, EntityLabelButton } from './EntityIcon';
 import ItemSlicePanel from './ItemSlicePanel';
 import { computeLedgerSectionScrollTop } from './ledgerScroll';
 import StructuredDatasetEditor from './StructuredDatasetEditor';
+import { buildRecipeFlowDisplay } from './recipeDisplay';
 import {
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
@@ -1004,27 +1005,6 @@ export default function App() {
       setIsItemSliceOpen(false);
     }
   }, [isItemSliceOpen, selectedItemSlice]);
-
-  useEffect(() => {
-    if (!isItemSliceOpen || typeof window === 'undefined') {
-      return;
-    }
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        setIsItemSliceOpen(false);
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isItemSliceOpen]);
 
   const selectedItemPreferredRecipeOptions = useMemo(() => {
     if (!catalog || !selectedItemSlice) {
@@ -2166,135 +2146,164 @@ export default function App() {
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
                       <div style={{ display: 'grid', gap: 12 }}>
-                        {model.recipePlans.map(plan => (
-                          <Card
-                            key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
-                            sx={{
-                              borderRadius: '20px',
-                              border: '1px solid',
-                              borderColor: 'divider',
-                              boxShadow: 'none',
-                              backgroundColor: 'rgba(255,255,255,0.68)',
-                              overflow: 'hidden',
-                            }}
-                          >
-                            <CardContent
+                        {model.recipePlans.map(plan => {
+                          const { visibleInputs, auxiliaryProliferatorInput } =
+                            buildRecipeFlowDisplay(catalog, plan);
+
+                          return (
+                            <Card
+                              key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
                               sx={{
-                                display: 'grid',
-                                gap: 1.25,
-                                p: 2,
-                                borderRadius: '18px',
-                                '&:last-child': { pb: 2 },
+                                borderRadius: '20px',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                boxShadow: 'none',
+                                backgroundColor: 'rgba(255,255,255,0.68)',
+                                overflow: 'hidden',
                               }}
                             >
-                              <Box
+                              <CardContent
                                 sx={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
+                                  display: 'grid',
                                   gap: 1.25,
-                                  flexWrap: 'wrap',
-                                  alignItems: 'flex-start',
+                                  p: 2,
+                                  borderRadius: '18px',
+                                  '&:last-child': { pb: 2 },
                                 }}
                               >
                                 <Box
                                   sx={{
                                     display: 'flex',
                                     justifyContent: 'space-between',
-                                    gap: 1,
+                                    gap: 1.25,
                                     flexWrap: 'wrap',
-                                    alignItems: 'center',
-                                    minWidth: 0,
-                                    width: '100%',
+                                    alignItems: 'flex-start',
                                   }}
                                 >
-                                  <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
-                                    <EntityLabel
-                                      label={plan.recipeName}
-                                      iconKey={plan.recipeIconKey}
-                                      atlasIds={iconAtlasIds}
-                                      size={20}
-                                      gap={8}
-                                      textStyle={{ fontWeight: 700 }}
-                                    />
-                                  </Typography>
-                                  <Stack
-                                    direction="row"
-                                    useFlexGap
-                                    flexWrap="wrap"
-                                    gap={0.75}
+                                  <Box
                                     sx={{
-                                      color: 'text.secondary',
-                                      justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      gap: 1,
+                                      flexWrap: 'wrap',
                                       alignItems: 'center',
+                                      minWidth: 0,
+                                      width: '100%',
                                     }}
                                   >
-                                    <Typography
-                                      variant="caption"
-                                      sx={{ display: 'inline-flex', alignItems: 'center' }}
-                                    >
+                                    <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
                                       <EntityLabel
-                                        label={plan.buildingName}
-                                        iconKey={plan.buildingIconKey}
+                                        label={plan.recipeName}
+                                        iconKey={plan.recipeIconKey}
                                         atlasIds={iconAtlasIds}
-                                        size={16}
+                                        size={20}
+                                        gap={8}
+                                        textStyle={{ fontWeight: 700 }}
                                       />
                                     </Typography>
-                                    <Typography variant="caption">{plan.proliferatorLabel}</Typography>
-                                    <Typography variant="caption">
-                                      {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {bundle.summary.buildingsLabel} {plan.exactBuildingCount.toFixed(2)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
-                                      {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
-                                    </Typography>
-                                  </Stack>
+                                    <Stack
+                                      direction="row"
+                                      useFlexGap
+                                      flexWrap="wrap"
+                                      gap={0.75}
+                                      sx={{
+                                        color: 'text.secondary',
+                                        justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                                        alignItems: 'center',
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        sx={{ display: 'inline-flex', alignItems: 'center' }}
+                                      >
+                                        <EntityLabel
+                                          label={plan.buildingName}
+                                          iconKey={plan.buildingIconKey}
+                                          atlasIds={iconAtlasIds}
+                                          size={16}
+                                        />
+                                      </Typography>
+                                      <Typography variant="caption">
+                                        {bundle.summary.buildingsLabel} X {plan.exactBuildingCount.toFixed(2)}
+                                      </Typography>
+                                      <Typography variant="caption">{plan.proliferatorLabel}</Typography>
+                                      <Typography variant="caption">
+                                        {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
+                                      </Typography>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
+                                      </Typography>
+                                    </Stack>
+                                  </Box>
                                 </Box>
-                              </Box>
 
-                              <Box
-                                sx={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1,
-                                  flexWrap: 'wrap',
-                                  borderRadius: '16px',
-                                  px: 1.25,
-                                  py: 1,
-                                  backgroundColor: 'rgba(22, 54, 89, 0.035)',
-                                }}
-                              >
                                 <Box
                                   sx={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: 0.5,
+                                    gap: 1,
                                     flexWrap: 'wrap',
-                                    flex: '1 1 260px',
-                                    minWidth: 0,
+                                    borderRadius: '16px',
+                                    px: 1.25,
+                                    py: 1,
+                                    backgroundColor: 'rgba(22, 54, 89, 0.035)',
                                   }}
                                 >
-                                  {renderFlowRateSequence(plan.inputs)}
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      flexWrap: 'wrap',
+                                      flex: '1 1 260px',
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    {renderFlowRateSequence(visibleInputs)}
+                                  </Box>
+                                  <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      flexWrap: 'wrap',
+                                      flex: '1 1 220px',
+                                      minWidth: 0,
+                                    }}
+                                  >
+                                    {renderFlowRateSequence(plan.outputs)}
+                                    {auxiliaryProliferatorInput ? (
+                                      <Box
+                                        component="span"
+                                        sx={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: 0.5,
+                                          whiteSpace: 'nowrap',
+                                          color: 'text.secondary',
+                                          fontSize: 12,
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        <span>（</span>
+                                        <EntityLabel
+                                          label={auxiliaryProliferatorInput.itemName}
+                                          iconKey={auxiliaryProliferatorInput.iconKey}
+                                          atlasIds={iconAtlasIds}
+                                          size={16}
+                                          gap={6}
+                                          textStyle={{ fontSize: 12, fontWeight: 600 }}
+                                        />
+                                        <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}）</span>
+                                      </Box>
+                                    ) : null}
+                                  </Box>
                                 </Box>
-                                <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
-                                <Box
-                                  sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 0.5,
-                                    flexWrap: 'wrap',
-                                    flex: '1 1 220px',
-                                    minWidth: 0,
-                                  }}
-                                >
-                                  {renderFlowRateSequence(plan.outputs)}
-                                </Box>
-                              </Box>
-
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     </article>
 
@@ -2502,19 +2511,36 @@ export default function App() {
         </section>
       <Drawer
         anchor="right"
+        hideBackdrop
         open={Boolean(isItemSliceOpen && selectedItemSlice)}
         onClose={() => setIsItemSliceOpen(false)}
+        ModalProps={{
+          disableScrollLock: true,
+          keepMounted: true,
+        }}
         PaperProps={{
           sx: {
             width: 'min(560px, 100vw)',
             backgroundColor: 'rgba(248, 251, 253, 0.95)',
             borderLeft: '1px solid',
             borderColor: 'divider',
+            borderTopLeftRadius: '24px',
+            borderBottomLeftRadius: '24px',
+            overflow: 'hidden',
           },
         }}
       >
         {selectedItemSlice ? (
-          <DialogContent sx={{ p: 3, display: 'grid', gap: 2, overflow: 'auto' }}>
+          <DialogContent
+            sx={{
+              p: 3,
+              display: 'grid',
+              gap: 2,
+              overflow: 'auto',
+              minHeight: 0,
+              overscrollBehavior: 'contain',
+            }}
+          >
             <Box
               sx={{
                 display: 'flex',

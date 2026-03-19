@@ -98,7 +98,7 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
     return (
       <Stack spacing={2}>
         <Typography variant="h6">{bundle.itemSlice.title}</Typography>
-        <Card sx={{ borderRadius: 4 }}>
+        <Card sx={{ borderRadius: '18px', overflow: 'hidden' }}>
           <Box sx={{ p: 2.5, backgroundColor: 'rgba(22, 54, 89, 0.03)' }}>
             <Typography variant="subtitle1" fontWeight={700}>
               {bundle.itemSlice.emptyTitle}
@@ -180,7 +180,7 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
             value: formatRate(slice.surplusRatePerMin, locale),
           },
         ].map(entry => (
-          <Card key={entry.label} sx={{ borderRadius: 4 }}>
+          <Card key={entry.label} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
             <Box sx={{ p: 1.75 }}>
               <Typography variant="overline" color="text.secondary">
                 {entry.label}
@@ -193,7 +193,7 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
         ))}
       </Box>
 
-      <Card sx={{ borderRadius: 4 }}>
+      <Card sx={{ borderRadius: '18px', overflow: 'hidden' }}>
         <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
           <Typography variant="overline" color="text.secondary">
             {bundle.itemSlice.preferredRecipeLabel}
@@ -250,7 +250,7 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
           slice.producerPlans.map(plan => (
             <Card
               key={`producer-${slice.itemId}-${plan.recipeId}-${plan.buildingId}-${plan.proliferatorLabel}`}
-              sx={{ borderRadius: 4 }}
+              sx={{ borderRadius: '18px', overflow: 'hidden' }}
             >
               <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
                 <Box>
@@ -306,7 +306,7 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
           slice.consumerPlans.map(plan => (
             <Card
               key={`consumer-${slice.itemId}-${plan.recipeId}-${plan.buildingId}-${plan.proliferatorLabel}`}
-              sx={{ borderRadius: 4 }}
+              sx={{ borderRadius: '18px', overflow: 'hidden' }}
             >
               <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
                 <Box>
