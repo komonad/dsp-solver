@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -15,9 +15,7 @@ import {
   CardContent,
   Chip,
   Container,
-  DialogContent,
   Divider,
-  Drawer,
   FormControl,
   FormControlLabel,
   IconButton,
@@ -181,26 +179,15 @@ const resultSideColumnStyle: React.CSSProperties = {
   gap: 20,
 };
 
-const modalBackdropStyle: React.CSSProperties = {
+const itemSliceOverlayStyle: React.CSSProperties = {
   position: 'fixed',
-  inset: 0,
-  background: 'rgba(15, 24, 41, 0.38)',
-  display: 'flex',
-  justifyContent: 'flex-end',
-  alignItems: 'flex-start',
-  padding: 24,
-  zIndex: 1000,
-};
-
-const modalPanelStyle: React.CSSProperties = {
-  width: 'min(520px, calc(100vw - 48px))',
-  maxHeight: 'calc(100vh - 48px)',
-  overflow: 'auto',
-  background: 'rgba(255,255,255,0.96)',
-  border: '1px solid rgba(18, 45, 77, 0.12)',
-  borderRadius: 22,
-  padding: 20,
-  boxShadow: '0 24px 80px rgba(24, 51, 89, 0.24)',
+  top: 96,
+  right: 24,
+  bottom: 24,
+  width: 'min(560px, calc(100vw - 32px))',
+  maxWidth: 'calc(100vw - 32px)',
+  zIndex: 1200,
+  transition: 'opacity 120ms ease, transform 120ms ease',
 };
 
 const compactLedgerButtonStyle: React.CSSProperties = {
@@ -865,7 +852,7 @@ export default function App() {
     });
   }
 
-  function markItemAsRawInput(itemId: string) {
+  const markItemAsRawInput = useCallback(function markItemAsRawInput(itemId: string) {
     if (!itemId) {
       return;
     }
@@ -875,9 +862,9 @@ export default function App() {
     if (!isDatasetRawItem) {
       setRawInputItemIds(current => (current.includes(itemId) ? current : [...current, itemId]));
     }
-  }
+  }, [catalog]);
 
-  function unmarkItemAsRawInput(itemId: string) {
+  const unmarkItemAsRawInput = useCallback(function unmarkItemAsRawInput(itemId: string) {
     if (!itemId) {
       return;
     }
@@ -889,7 +876,7 @@ export default function App() {
         current.includes(itemId) ? current : [...current, itemId]
       );
     }
-  }
+  }, [catalog]);
 
   function addDisabledRecipe() {
     if (!disabledRecipeDraftId || disabledRecipeIds.includes(disabledRecipeDraftId)) {
@@ -1006,22 +993,51 @@ export default function App() {
     }
   }, [isItemSliceOpen, selectedItemSlice]);
 
-  const selectedItemPreferredRecipeOptions = useMemo(() => {
-    if (!catalog || !selectedItemSlice) {
-      return [];
+  const preferredRecipeOptionsByItem = useMemo(() => {
+    const next: Record<
+      string,
+      Array<{
+        recipeId: string;
+        recipeName: string;
+        recipeIconKey?: string;
+      }>
+    > = {};
+
+    if (!catalog) {
+      return next;
     }
 
-    return catalog.recipes
-      .filter(recipe => recipe.outputs.some(output => output.itemId === selectedItemSlice.itemId))
-      .sort((left, right) => left.name.localeCompare(right.name))
-      .map(recipe => ({
-        recipeId: recipe.recipeId,
-        recipeName: recipe.name,
-        recipeIconKey: recipe.icon,
-      }));
-  }, [catalog, selectedItemSlice]);
+    for (const recipe of catalog.recipes) {
+      for (const output of recipe.outputs) {
+        if (!next[output.itemId]) {
+          next[output.itemId] = [];
+        }
+        next[output.itemId].push({
+          recipeId: recipe.recipeId,
+          recipeName: recipe.name,
+          recipeIconKey: recipe.icon,
+        });
+      }
+    }
 
-  function updatePreferredRecipeForItem(itemId: string, recipeId: string) {
+    for (const itemId of Object.keys(next)) {
+      next[itemId].sort((left, right) => left.recipeName.localeCompare(right.recipeName));
+    }
+
+    return next;
+  }, [catalog]);
+
+  const selectedItemPreferredRecipeOptions = useMemo(() => {
+    if (!selectedItemSlice) {
+      return [];
+    }
+    return preferredRecipeOptionsByItem[selectedItemSlice.itemId] ?? [];
+  }, [preferredRecipeOptionsByItem, selectedItemSlice]);
+
+  const updatePreferredRecipeForItem = useCallback(function updatePreferredRecipeForItem(
+    itemId: string,
+    recipeId: string
+  ) {
     setPreferredRecipeByItem(current => {
       const next = { ...current };
       if (!recipeId) {
@@ -1031,9 +1047,11 @@ export default function App() {
       }
       return next;
     });
-  }
+  }, []);
 
-  function clearPreferredRecipeForItem(itemId: string) {
+  const clearPreferredRecipeForItem = useCallback(function clearPreferredRecipeForItem(
+    itemId: string
+  ) {
     setPreferredRecipeByItem(current => {
       if (!current[itemId]) {
         return current;
@@ -1042,9 +1060,9 @@ export default function App() {
       delete next[itemId];
       return next;
     });
-  }
+  }, []);
 
-  function locateItemInLedger(itemId: string) {
+  const locateItemInLedger = useCallback(function locateItemInLedger(itemId: string) {
     const targetSection =
       model?.itemLedgerSections.find(section => section.items.some(item => item.itemId === itemId)) ??
       null;
@@ -1055,12 +1073,12 @@ export default function App() {
 
     setSelectedItemId(itemId);
     scrollItemLedgerToSection(targetSection.key);
-  }
+  }, [model]);
 
-  function openItemSlice(itemId: string) {
+  const openItemSlice = useCallback(function openItemSlice(itemId: string) {
     setSelectedItemId(itemId);
     setIsItemSliceOpen(true);
-  }
+  }, []);
 
   function renderClickableItemLabel(item: {
     itemId: string;
@@ -2518,44 +2536,42 @@ export default function App() {
             )}
           </div>
         </section>
-      <Drawer
-        anchor="right"
-        hideBackdrop
-        open={Boolean(isItemSliceOpen && selectedItemSlice)}
-        onClose={() => setIsItemSliceOpen(false)}
-        ModalProps={{
-          disableScrollLock: true,
-          keepMounted: true,
-        }}
-        PaperProps={{
-          sx: {
-            width: 'min(560px, 100vw)',
-            backgroundColor: 'rgba(248, 251, 253, 0.95)',
-            borderLeft: '1px solid',
-            borderColor: 'divider',
-            borderTopLeftRadius: '24px',
-            borderBottomLeftRadius: '24px',
-            overflow: 'hidden',
-          },
-        }}
-      >
-        {selectedItemSlice ? (
-          <DialogContent
+      {selectedItemSlice ? (
+        <Box
+          role="dialog"
+          aria-label={workbenchExtra.itemSlice.title}
+          aria-hidden={!isItemSliceOpen}
+          sx={{
+            ...itemSliceOverlayStyle,
+            opacity: isItemSliceOpen ? 1 : 0,
+            transform: isItemSliceOpen ? 'translateX(0)' : 'translateX(18px)',
+            pointerEvents: isItemSliceOpen ? 'auto' : 'none',
+          }}
+        >
+          <Paper
+            elevation={0}
             sx={{
-              p: 3,
+              height: '100%',
               display: 'grid',
-              gap: 2,
-              overflow: 'auto',
-              minHeight: 0,
-              overscrollBehavior: 'contain',
+              gridTemplateRows: 'auto minmax(0, 1fr)',
+              backgroundColor: 'rgba(248, 251, 253, 0.95)',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: '24px',
+              overflow: 'hidden',
+              boxShadow: '0 22px 64px rgba(24, 51, 89, 0.18)',
             }}
           >
             <Box
               sx={{
+                px: 3,
+                py: 2,
                 display: 'flex',
                 justifyContent: 'space-between',
                 gap: 2,
                 alignItems: 'center',
+                borderBottom: '1px solid',
+                borderColor: 'divider',
               }}
             >
               <Typography variant="h6">{workbenchExtra.itemSlice.title}</Typography>
@@ -2563,22 +2579,33 @@ export default function App() {
                 {workbenchExtra.itemSlice.closeButton}
               </Button>
             </Box>
-            <ItemSlicePanel
-              locale={locale}
-              atlasIds={iconAtlasIds}
-              slice={selectedItemSlice}
-              preferredRecipeId={preferredRecipeByItem[selectedItemSlice.itemId]}
-              preferredRecipeOptions={selectedItemPreferredRecipeOptions}
-              onSelectItem={openItemSlice}
-              onMarkRaw={markItemAsRawInput}
-              onUnmarkRaw={unmarkItemAsRawInput}
-              onPreferredRecipeChange={updatePreferredRecipeForItem}
-              onClearPreferredRecipe={clearPreferredRecipeForItem}
-              onLocateInLedger={locateItemInLedger}
-            />
-          </DialogContent>
-        ) : null}
-      </Drawer>
+            <Box
+              sx={{
+                p: 3,
+                display: 'grid',
+                gap: 2,
+                overflow: 'auto',
+                minHeight: 0,
+                overscrollBehavior: 'contain',
+              }}
+            >
+              <ItemSlicePanel
+                locale={locale}
+                atlasIds={iconAtlasIds}
+                slice={selectedItemSlice}
+                preferredRecipeId={preferredRecipeByItem[selectedItemSlice.itemId]}
+                preferredRecipeOptions={selectedItemPreferredRecipeOptions}
+                onSelectItem={openItemSlice}
+                onMarkRaw={markItemAsRawInput}
+                onUnmarkRaw={unmarkItemAsRawInput}
+                onPreferredRecipeChange={updatePreferredRecipeForItem}
+                onClearPreferredRecipe={clearPreferredRecipeForItem}
+                onLocateInLedger={locateItemInLedger}
+              />
+            </Box>
+          </Paper>
+        </Box>
+      ) : null}
       </Container>
     </Box>
   );

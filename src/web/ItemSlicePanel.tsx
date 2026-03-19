@@ -77,7 +77,7 @@ function buildPlanCardTitle(recipeName: string, buildingName: string) {
   return `${recipeName} / ${buildingName}`;
 }
 
-export default function ItemSlicePanel(props: ItemSlicePanelProps) {
+function ItemSlicePanel(props: ItemSlicePanelProps) {
   const {
     locale,
     atlasIds,
@@ -358,3 +358,5 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
     </Stack>
   );
 }
+
+export default React.memo(ItemSlicePanel);
