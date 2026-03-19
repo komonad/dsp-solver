@@ -135,6 +135,13 @@ its build path convention now follows
 [MinimalDSPModTemplate](/D:/dsp-dev/MinimalDSPModTemplate) through a local
 `Local.props` file.
 
+The runtime exporter also supports:
+
+- exporting item PNG icons next to the dataset
+- validating exported item icons with tolerant missing-icon handling
+- building an offline item atlas PNG/JSON pair from the exported PNG files
+- validating the generated atlas against the export manifest
+
 ## Third-party assets
 
 The vanilla icon atlas currently shipped in the web bundle is sourced from the public `DSPCalculator/dsp-calc` repository.

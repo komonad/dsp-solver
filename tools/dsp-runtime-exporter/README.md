@@ -181,6 +181,32 @@ and a manifest file:
 <OutputDirectory>\CurrentGame.icons.manifest.json
 ```
 
+## Build an item icon atlas
+
+Once item icons have been exported, you can build a web atlas from them:
+
+```powershell
+tools\dsp-runtime-exporter\scripts\build-atlas.cmd "C:\Path\To\CurrentGame.json"
+```
+
+This writes:
+
+```text
+<OutputDirectory>\CurrentGame.items.atlas.png
+<OutputDirectory>\CurrentGame.items.atlas.json
+```
+
+Default behavior:
+
+- missing icon files are tolerated as `warning`
+- broken source files or invalid atlas output are `error`
+
+If you want missing icon files to fail too:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\dsp-runtime-exporter\scripts\build-atlas.ps1 "C:\Path\To\CurrentGame.json" -StrictMissing
+```
+
 ## Validate an export
 
 You can validate the exported dataset and item icon files with a tolerance for
@@ -207,6 +233,20 @@ If you want missing coverage to fail validation too:
 node tools\dsp-runtime-exporter\scripts\validate-export.mjs "C:\Path\To\CurrentGame.json" --strict-missing
 ```
 
+## Validate an atlas build
+
+You can also validate the generated atlas files:
+
+```powershell
+tools\dsp-runtime-exporter\scripts\validate-atlas.cmd "C:\Path\To\CurrentGame.json"
+```
+
+If you want missing atlas coverage to fail too:
+
+```powershell
+node tools\dsp-runtime-exporter\scripts\validate-atlas.mjs "C:\Path\To\CurrentGame.json" --strict-missing
+```
+
 ## Output format
 
 The exported JSON uses the current canonical raw dataset shape:
@@ -223,6 +263,6 @@ Optional fields are emitted only when they can be read reliably at runtime.
 
 - The exporter uses runtime reflection on `LDB.items` and `LDB.recipes`.
 - It does not depend on a particular external data-extraction mod.
-- It does not currently export icon atlases. Missing icons can use the web
-  fallback path until atlas export is added later.
+- It exports single item PNG icons first, and atlas generation is handled by
+  the offline scripts above.
 - Plugin GUID: `com.comonad.dspcalc.runtime-exporter`

@@ -31,14 +31,16 @@ The first version exports:
 
 - `items`
 - `recipes`
+- item icon PNG files
 
-It does not yet export:
+It does not yet export directly from the game:
 
 - icon atlases
 - dataset defaults
 - a separate raw debug dump
 
-Those can be added later without changing the canonical dataset shape.
+Icon atlases are built offline from the exported PNG files, so the canonical
+dataset shape still does not need to change.
 
 ## Build path convention
 
@@ -65,3 +67,17 @@ The exporter writes a JSON file matching the current raw dataset schema:
 
 That means the main project can consume the exported file directly through the
 existing loader and resolver pipeline.
+
+It also writes:
+
+- `CurrentGame.icons/items/*.png`
+- `CurrentGame.icons.manifest.json`
+
+Then the offline tooling under
+[tools/dsp-runtime-exporter/scripts](/D:/dsp-dev/dspcalc/tools/dsp-runtime-exporter/scripts)
+can build:
+
+- `CurrentGame.items.atlas.png`
+- `CurrentGame.items.atlas.json`
+
+and validate both the export and the atlas with tolerant defaults.
