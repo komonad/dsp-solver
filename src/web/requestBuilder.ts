@@ -31,7 +31,7 @@ export interface EditableRecipeStrategyOverride {
   forcedProliferatorLevel: '' | number;
 }
 
-export type WorkbenchProliferatorPolicy = 'auto' | 'disable_all';
+export type WorkbenchProliferatorPolicy = 'auto' | ProliferatorMode;
 
 export interface BuildWorkbenchRequestParams {
   targets: EditableTarget[];
@@ -323,7 +323,8 @@ export function buildForcedRecipeStrategyOverrides(
 
 export function buildGlobalProliferatorOverrides(
   catalog: ResolvedCatalogModel,
-  policy: WorkbenchProliferatorPolicy
+  policy: WorkbenchProliferatorPolicy,
+  level?: '' | number
 ): Pick<
   AdvancedSolveOverrides,
   'forcedProliferatorModeByRecipe' | 'forcedProliferatorLevelByRecipe'
@@ -332,20 +333,45 @@ export function buildGlobalProliferatorOverrides(
     return {};
   }
 
-  const affectedRecipeIds = catalog.recipes
+  const affectedRecipes = catalog.recipes.filter(
+    recipe =>
+      recipe.maxProliferatorLevel > 0 ||
+      recipe.supportsProliferatorModes.some(mode => mode !== 'none')
+  );
+
+  if (policy === 'none') {
+    const affectedRecipeIds = affectedRecipes.map(recipe => recipe.recipeId);
+    return {
+      forcedProliferatorModeByRecipe: Object.fromEntries(
+        affectedRecipeIds.map(recipeId => [recipeId, 'none'])
+      ),
+      forcedProliferatorLevelByRecipe: Object.fromEntries(
+        affectedRecipeIds.map(recipeId => [recipeId, 0])
+      ),
+    };
+  }
+
+  if (typeof level !== 'number' || !Number.isFinite(level) || level <= 0) {
+    return {};
+  }
+
+  const compatibleRecipeIds = affectedRecipes
     .filter(
       recipe =>
-        recipe.maxProliferatorLevel > 0 ||
-        recipe.supportsProliferatorModes.some(mode => mode !== 'none')
+        recipe.supportsProliferatorModes.includes(policy) && recipe.maxProliferatorLevel >= level
     )
     .map(recipe => recipe.recipeId);
 
+  if (compatibleRecipeIds.length === 0) {
+    return {};
+  }
+
   return {
     forcedProliferatorModeByRecipe: Object.fromEntries(
-      affectedRecipeIds.map(recipeId => [recipeId, 'none'])
+      compatibleRecipeIds.map(recipeId => [recipeId, policy])
     ),
     forcedProliferatorLevelByRecipe: Object.fromEntries(
-      affectedRecipeIds.map(recipeId => [recipeId, 0])
+      compatibleRecipeIds.map(recipeId => [recipeId, level])
     ),
   };
 }

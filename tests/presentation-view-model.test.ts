@@ -311,7 +311,7 @@ test('presentation model detects global proliferator disable requests', () => {
     },
   });
 
-  expect(model.requestSummary?.proliferatorPolicyLabel).toBe('禁用');
+  expect(model.requestSummary?.proliferatorPolicyLabel).toBe('无增产剂');
 });
 
 test('presentation model groups the item ledger into net inputs, outputs, and intermediates', () => {

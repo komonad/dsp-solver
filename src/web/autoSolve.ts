@@ -22,6 +22,7 @@ export interface ComputeWorkbenchSolveParams {
   objective: SolveObjective;
   balancePolicy: BalancePolicy;
   proliferatorPolicy: WorkbenchProliferatorPolicy;
+  globalProliferatorLevel?: '' | number;
   autoPromoteUnavailableItemsToRawInputs: boolean;
   rawInputItemIds: string[];
   disabledRawInputItemIds?: string[];
@@ -54,6 +55,7 @@ export function computeWorkbenchSolve(
     objective,
     balancePolicy,
     proliferatorPolicy,
+    globalProliferatorLevel,
     autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,
@@ -101,7 +103,7 @@ export function computeWorkbenchSolve(
       buildPreferredRecipeOverrides(recipePreferences)
     ),
     mergeAdvancedSolveOverrides(
-      buildGlobalProliferatorOverrides(catalog, proliferatorPolicy),
+      buildGlobalProliferatorOverrides(catalog, proliferatorPolicy, globalProliferatorLevel),
       buildForcedRecipeStrategyOverrides(recipeStrategyOverrides)
     )
   );

@@ -3,6 +3,7 @@ import {
   DEFAULT_APP_LOCALE,
   formatPreferredProliferatorLabel,
   formatProliferatorLabel,
+  formatWorkbenchProliferatorPolicy,
   getLocaleBundle,
   type AppLocale,
 } from '../i18n';
@@ -589,27 +590,62 @@ function inferGlobalProliferatorPolicyLabel(
   locale: AppLocale
 ): string {
   const bundle = getLocaleBundle(locale);
-  const affectedRecipeIds = catalog.recipes
-    .filter(
-      recipe =>
-        recipe.maxProliferatorLevel > 0 ||
-        recipe.supportsProliferatorModes.some(mode => mode !== 'none')
-    )
-    .map(recipe => recipe.recipeId);
+  const affectedRecipes = catalog.recipes.filter(
+    recipe =>
+      recipe.maxProliferatorLevel > 0 ||
+      recipe.supportsProliferatorModes.some(mode => mode !== 'none')
+  );
 
-  if (affectedRecipeIds.length === 0) {
+  if (affectedRecipes.length === 0) {
     return bundle.common.auto;
   }
 
   const forcedModes = request.forcedProliferatorModeByRecipe ?? {};
   const forcedLevels = request.forcedProliferatorLevelByRecipe ?? {};
-  const allDisabled = affectedRecipeIds.every(
-    recipeId =>
-      forcedModes[recipeId] === 'none' &&
-      (forcedLevels[recipeId] === undefined || forcedLevels[recipeId] === 0)
+  const allDisabled = affectedRecipes.every(
+    recipe =>
+      forcedModes[recipe.recipeId] === 'none' &&
+      (forcedLevels[recipe.recipeId] === undefined || forcedLevels[recipe.recipeId] === 0)
   );
+  if (allDisabled) {
+    return formatWorkbenchProliferatorPolicy('none', locale);
+  }
 
-  return allDisabled ? bundle.common.disabled : bundle.common.auto;
+  const nonNoneForcedModes = new Set<ProliferatorMode>();
+  const nonNoneForcedLevels = new Set<number>();
+  let hasNonNoneForcedRecipe = false;
+
+  for (const recipe of affectedRecipes) {
+    const forcedMode = forcedModes[recipe.recipeId];
+    if (!forcedMode || forcedMode === 'none') {
+      continue;
+    }
+
+    const forcedLevel = forcedLevels[recipe.recipeId];
+    if (
+      typeof forcedLevel === 'number' &&
+      Number.isFinite(forcedLevel) &&
+      forcedLevel > 0
+    ) {
+      hasNonNoneForcedRecipe = true;
+      nonNoneForcedModes.add(forcedMode);
+      nonNoneForcedLevels.add(forcedLevel);
+    }
+  }
+
+  if (
+    hasNonNoneForcedRecipe &&
+    nonNoneForcedModes.size === 1 &&
+    nonNoneForcedLevels.size === 1
+  ) {
+    return formatProliferatorLabel(
+      Array.from(nonNoneForcedModes)[0],
+      Array.from(nonNoneForcedLevels)[0],
+      locale
+    );
+  }
+
+  return bundle.common.auto;
 }
 
 /**

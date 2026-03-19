@@ -212,10 +212,20 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
 
 test('buildGlobalProliferatorOverrides disables all configurable recipes when requested', () => {
   const catalog = buildProliferatorDemoCatalog();
-  const overrides = buildGlobalProliferatorOverrides(catalog, 'disable_all');
+  const overrides = buildGlobalProliferatorOverrides(catalog, 'none');
 
   expect(overrides).toEqual({
     forcedProliferatorModeByRecipe: { '1': 'none' },
     forcedProliferatorLevelByRecipe: { '1': 0 },
+  });
+});
+
+test('buildGlobalProliferatorOverrides applies a global mode and level to compatible recipes only', () => {
+  const catalog = buildProliferatorDemoCatalog();
+  const overrides = buildGlobalProliferatorOverrides(catalog, 'speed', 1);
+
+  expect(overrides).toEqual({
+    forcedProliferatorModeByRecipe: { '1': 'speed' },
+    forcedProliferatorLevelByRecipe: { '1': 1 },
   });
 });

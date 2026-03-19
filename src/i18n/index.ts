@@ -8,7 +8,7 @@ export type DatasetPresetId =
   | 'refinery-balance'
   | 'fullerene-loop'
   | 'custom';
-export type WorkbenchProliferatorPolicyLabel = 'auto' | 'disable_all';
+export type WorkbenchProliferatorPolicyLabel = 'auto' | 'none' | 'speed' | 'productivity';
 
 export const DEFAULT_APP_LOCALE: AppLocale = 'zh-CN';
 
@@ -222,7 +222,9 @@ const zhCN: LocaleBundle = {
     },
     workbenchProliferatorPolicy: {
       auto: '自动使用增产剂',
-      disable_all: '禁用增产剂',
+      none: '无增产剂',
+      speed: '加速',
+      productivity: '增产',
     },
   },
   datasetPresets: {
@@ -301,7 +303,9 @@ const zhCN: LocaleBundle = {
     },
     proliferatorPolicyOptions: {
       auto: '自动使用增产剂',
-      disable_all: '禁用增产剂',
+      none: '无增产剂',
+      speed: '加速',
+      productivity: '增产',
     },
     autoPromoteUnavailableItemsLabel: '不可生产物品自动视为原矿',
     rawOverridesLabel: '原矿输入',

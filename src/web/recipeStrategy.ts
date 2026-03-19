@@ -15,6 +15,7 @@ export interface TryApplyRecipeStrategyOverrideParams {
   objective: SolveObjective;
   balancePolicy: BalancePolicy;
   proliferatorPolicy: WorkbenchProliferatorPolicy;
+  globalProliferatorLevel?: '' | number;
   autoPromoteUnavailableItemsToRawInputs: boolean;
   rawInputItemIds: string[];
   disabledRawInputItemIds: string[];
@@ -113,6 +114,7 @@ export function tryApplyRecipeStrategyOverride(
     objective,
     balancePolicy,
     proliferatorPolicy,
+    globalProliferatorLevel,
     autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,
@@ -140,6 +142,7 @@ export function tryApplyRecipeStrategyOverride(
     objective,
     balancePolicy,
     proliferatorPolicy,
+    globalProliferatorLevel,
     autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,

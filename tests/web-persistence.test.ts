@@ -215,7 +215,8 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     objective: 'min_power',
     balancePolicy: 'allow_surplus',
     autoPromoteUnavailableItemsToRawInputs: true,
-    proliferatorPolicy: 'disable_all',
+    proliferatorPolicy: 'none',
+    globalProliferatorLevel: '',
     rawInputItemIds: ['1001'],
     disabledRawInputItemIds: ['1001'],
     disabledRecipeIds: ['1'],
@@ -232,4 +233,49 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     recipeStrategyOverrides: [],
     advancedOverridesText: '{}',
   });
+});
+
+test('sanitizeWorkbenchEditorState preserves a valid global proliferator level', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), {
+    ...buildDemoDefaults(),
+    proliferatorLevels: [
+      {
+        Level: 1,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+      {
+        Level: 2,
+        SprayCount: 28,
+        SpeedMultiplier: 1.5,
+        ProductivityMultiplier: 1.2,
+        PowerMultiplier: 1.7,
+      },
+    ],
+    recipeModifierRules: [
+      { Code: 0, Kind: 'proliferator', SupportedModes: ['none', 'speed', 'productivity'], MaxLevel: 2 },
+    ],
+  });
+
+  const sanitized = sanitizeWorkbenchEditorState(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'speed',
+    globalProliferatorLevel: 2,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    advancedOverridesText: '',
+  });
+
+  expect(sanitized.proliferatorPolicy).toBe('speed');
+  expect(sanitized.globalProliferatorLevel).toBe(2);
 });

@@ -230,6 +230,19 @@ function sortModeOptions(modes: ProliferatorMode[]): ProliferatorMode[] {
   return order.filter(mode => modes.includes(mode));
 }
 
+function pickDefaultGlobalProliferatorLevel(catalog: ResolvedCatalogModel | null): '' | number {
+  if (!catalog) {
+    return '';
+  }
+
+  const levels = catalog.proliferatorLevels
+    .map(level => level.level)
+    .filter(level => level > 0)
+    .sort((left, right) => right - left);
+
+  return levels[0] ?? '';
+}
+
 function getBrowserStorage(): Storage | undefined {
   if (typeof window === 'undefined') {
     return undefined;
@@ -252,6 +265,7 @@ function buildDefaultWorkbenchEditorState(
     balancePolicy: catalog.recommendedSolve.balancePolicy ?? 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
     proliferatorPolicy: 'auto',
+    globalProliferatorLevel: '',
     rawInputItemIds: [],
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
@@ -314,6 +328,7 @@ export default function App() {
     useState(false);
   const [proliferatorPolicy, setProliferatorPolicy] =
     useState<WorkbenchProliferatorPolicy>('auto');
+  const [globalProliferatorLevel, setGlobalProliferatorLevel] = useState<'' | number>('');
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
   const [disabledRawInputItemIds, setDisabledRawInputItemIds] = useState<string[]>([]);
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
@@ -346,6 +361,7 @@ export default function App() {
       editorState.autoPromoteUnavailableItemsToRawInputs
     );
     setProliferatorPolicy(editorState.proliferatorPolicy);
+    setGlobalProliferatorLevel(editorState.globalProliferatorLevel ?? '');
     setRawInputItemIds(editorState.rawInputItemIds);
     setDisabledRawInputItemIds(editorState.disabledRawInputItemIds);
     setDisabledRecipeIds(editorState.disabledRecipeIds);
@@ -367,6 +383,7 @@ export default function App() {
       balancePolicy,
       autoPromoteUnavailableItemsToRawInputs,
       proliferatorPolicy,
+      globalProliferatorLevel,
       rawInputItemIds,
       disabledRawInputItemIds,
       disabledRecipeIds,
@@ -576,6 +593,7 @@ export default function App() {
       balancePolicy,
       autoPromoteUnavailableItemsToRawInputs,
       proliferatorPolicy,
+      globalProliferatorLevel,
       rawInputItemIds,
       disabledRawInputItemIds,
       disabledRecipeIds,
@@ -597,6 +615,7 @@ export default function App() {
     objective,
     preferredRecipeByItem,
     proliferatorPolicy,
+    globalProliferatorLevel,
     rawInputItemIds,
     recipePreferences,
     recipeStrategyOverrides,
@@ -631,6 +650,7 @@ export default function App() {
       objective,
       balancePolicy,
       proliferatorPolicy,
+      globalProliferatorLevel,
       autoPromoteUnavailableItemsToRawInputs,
       rawInputItemIds,
       disabledRawInputItemIds,
@@ -656,6 +676,7 @@ export default function App() {
       objective,
       preferredRecipeByItem,
       proliferatorPolicy,
+      globalProliferatorLevel,
       rawInputItemIds,
       recipePreferences,
       recipeStrategyOverrides,
@@ -679,6 +700,7 @@ export default function App() {
       objective: deferredSolveInputs.objective,
       balancePolicy: deferredSolveInputs.balancePolicy,
       proliferatorPolicy: deferredSolveInputs.proliferatorPolicy,
+      globalProliferatorLevel: deferredSolveInputs.globalProliferatorLevel,
       autoPromoteUnavailableItemsToRawInputs:
         deferredSolveInputs.autoPromoteUnavailableItemsToRawInputs,
       rawInputItemIds: deferredSolveInputs.rawInputItemIds,
@@ -1011,6 +1033,7 @@ export default function App() {
         objective,
         balancePolicy,
         proliferatorPolicy,
+        globalProliferatorLevel,
         autoPromoteUnavailableItemsToRawInputs,
         rawInputItemIds,
         disabledRawInputItemIds,
@@ -1046,6 +1069,7 @@ export default function App() {
       objective,
       preferredRecipeByItem,
       proliferatorPolicy,
+      globalProliferatorLevel,
       rawInputItemIds,
       result,
       recipePreferences,
@@ -1087,6 +1111,21 @@ export default function App() {
 
     return next;
   }, [catalog]);
+
+  const globalProliferatorLevelOptions = useMemo(
+    () =>
+      catalog
+        ? catalog.proliferatorLevels
+            .map(level => level.level)
+            .filter(level => level > 0)
+            .sort((left, right) => left - right)
+        : [],
+    [catalog]
+  );
+  const globalProliferatorLevelDisabled =
+    proliferatorPolicy === 'auto' ||
+    proliferatorPolicy === 'none' ||
+    globalProliferatorLevelOptions.length === 0;
 
   const updatePreferredRecipeForItem = useCallback(function updatePreferredRecipeForItem(
     itemId: string,
@@ -1967,7 +2006,7 @@ export default function App() {
                   sx={{
                     display: 'grid',
                     gap: 1,
-                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(160px, 200px))' },
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(150px, 188px))' },
                   }}
                 >
                   <TextField
@@ -2001,12 +2040,43 @@ export default function App() {
                     sx={compactSelectFieldSx}
                     label={bundle.summary.sprayLabel}
                     value={proliferatorPolicy}
-                    onChange={event =>
-                      setProliferatorPolicy(event.target.value as WorkbenchProliferatorPolicy)
-                    }
+                    onChange={event => {
+                      const nextPolicy = event.target.value as WorkbenchProliferatorPolicy;
+                      setProliferatorPolicy(nextPolicy);
+                      setGlobalProliferatorLevel(current =>
+                        nextPolicy === 'auto' || nextPolicy === 'none'
+                          ? ''
+                          : typeof current === 'number' && current > 0
+                            ? current
+                            : pickDefaultGlobalProliferatorLevel(catalog)
+                      );
+                    }}
                   >
                     <MenuItem value="auto">{bundle.solveRequest.proliferatorPolicyOptions.auto}</MenuItem>
-                    <MenuItem value="disable_all">{bundle.solveRequest.proliferatorPolicyOptions.disable_all}</MenuItem>
+                    <MenuItem value="none">{bundle.solveRequest.proliferatorPolicyOptions.none}</MenuItem>
+                    <MenuItem value="speed">{bundle.solveRequest.proliferatorPolicyOptions.speed}</MenuItem>
+                    <MenuItem value="productivity">{bundle.solveRequest.proliferatorPolicyOptions.productivity}</MenuItem>
+                  </TextField>
+
+                  <TextField
+                    select
+                    size="small"
+                    sx={compactSelectFieldSx}
+                    label={bundle.solveRequest.preferredSprayLevelLabel}
+                    value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
+                    disabled={globalProliferatorLevelDisabled}
+                    onChange={event =>
+                      setGlobalProliferatorLevel(
+                        event.target.value ? Number(event.target.value) : ''
+                      )
+                    }
+                  >
+                    <MenuItem value="">{bundle.common.auto}</MenuItem>
+                    {globalProliferatorLevelOptions.map(level => (
+                      <MenuItem key={level} value={String(level)}>
+                        {`${bundle.solveRequest.levelPrefix} ${level}`}
+                      </MenuItem>
+                    ))}
                   </TextField>
                 </Box>
 
@@ -2188,7 +2258,7 @@ export default function App() {
                           const modeChoices = getRecipeModeOptions(preference.recipeId);
                           const levelChoices = getRecipeLevelOptions(preference.recipeId);
                           const levelSelectDisabled =
-                            proliferatorPolicy === 'disable_all' ||
+                            proliferatorPolicy === 'none' ||
                             levelChoices.length === 0 ||
                             preference.preferredProliferatorMode === 'none';
 
@@ -2276,7 +2346,7 @@ export default function App() {
                                             : preference.preferredProliferatorLevel,
                                       });
                                     }}
-                                    disabled={proliferatorPolicy === 'disable_all'}
+                                    disabled={proliferatorPolicy === 'none'}
                                   >
                                     <MenuItem value="">{bundle.common.auto}</MenuItem>
                                     {modeChoices.map(mode => (

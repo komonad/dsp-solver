@@ -22,6 +22,7 @@ export interface WorkbenchEditorState {
   balancePolicy: BalancePolicy;
   autoPromoteUnavailableItemsToRawInputs: boolean;
   proliferatorPolicy: WorkbenchProliferatorPolicy;
+  globalProliferatorLevel?: '' | number;
   rawInputItemIds: string[];
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
@@ -31,6 +32,13 @@ export interface WorkbenchEditorState {
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
 }
+
+type SanitizableWorkbenchEditorState = Omit<
+  WorkbenchEditorState,
+  'proliferatorPolicy'
+> & {
+  proliferatorPolicy?: WorkbenchProliferatorPolicy | 'disable_all';
+};
 
 export interface WorkbenchDatasetDraft {
   datasetText: string;
@@ -69,7 +77,7 @@ function isBalancePolicy(value: unknown): value is BalancePolicy {
 }
 
 function isWorkbenchProliferatorPolicy(value: unknown): value is WorkbenchProliferatorPolicy {
-  return value === 'auto' || value === 'disable_all';
+  return value === 'auto' || value === 'none' || value === 'speed' || value === 'productivity';
 }
 
 function sanitizeStringArray(value: unknown): string[] {
@@ -239,7 +247,7 @@ export function clearWorkbenchCache(storage?: MinimalStorage): void {
 
 export function sanitizeWorkbenchEditorState(
   catalog: ResolvedCatalogModel,
-  state: WorkbenchEditorState
+  state: SanitizableWorkbenchEditorState
 ): WorkbenchEditorState {
   const validItemIds = new Set(catalog.items.map(item => item.itemId));
   const validRecipeIds = new Set(catalog.recipes.map(recipe => recipe.recipeId));
@@ -365,6 +373,8 @@ export function sanitizeWorkbenchEditorState(
         .filter((entry): entry is EditableRecipeStrategyOverride => Boolean(entry))
     : [];
 
+  const proliferatorPolicyValue = state.proliferatorPolicy;
+
   return {
     targets,
     objective: isSolveObjective(state.objective) ? state.objective : 'min_buildings',
@@ -373,9 +383,19 @@ export function sanitizeWorkbenchEditorState(
       typeof state.autoPromoteUnavailableItemsToRawInputs === 'boolean'
         ? state.autoPromoteUnavailableItemsToRawInputs
         : true,
-    proliferatorPolicy: isWorkbenchProliferatorPolicy(state.proliferatorPolicy)
-      ? state.proliferatorPolicy
-      : 'auto',
+    proliferatorPolicy:
+      proliferatorPolicyValue === 'disable_all'
+        ? 'none'
+        : isWorkbenchProliferatorPolicy(proliferatorPolicyValue)
+          ? proliferatorPolicyValue
+          : 'auto',
+    globalProliferatorLevel:
+      typeof state.globalProliferatorLevel === 'number' &&
+      Number.isFinite(state.globalProliferatorLevel) &&
+      state.globalProliferatorLevel > 0 &&
+      catalog.proliferatorLevelMap.has(state.globalProliferatorLevel)
+        ? state.globalProliferatorLevel
+        : '',
     rawInputItemIds: sanitizeStringArray(state.rawInputItemIds).filter(itemId =>
       validItemIds.has(itemId)
     ),
