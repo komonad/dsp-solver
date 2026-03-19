@@ -1,4 +1,4 @@
-import { resolveCatalogSourceTexts } from '../src/web/catalogClient';
+import { resolveCatalogSourceTexts } from '../src/web/catalog/catalogClient';
 
 test('resolveCatalogSourceTexts parses dataset/default texts and resolves a catalog', () => {
   const resolved = resolveCatalogSourceTexts(

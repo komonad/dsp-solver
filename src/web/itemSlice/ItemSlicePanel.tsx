@@ -12,10 +12,10 @@ import {
   Typography,
 } from '@mui/material';
 import React from 'react';
-import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../i18n';
-import { getWorkbenchExtraBundle } from '../i18n/workbenchExtra';
-import type { PresentationItemRate, PresentationItemSlice } from '../presentation';
-import { EntityLabel, EntityLabelButton } from './EntityIcon';
+import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../i18n';
+import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
+import type { PresentationItemRate, PresentationItemSlice } from '../../presentation';
+import { EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
 
 interface ItemSlicePanelProps {
   locale: AppLocale;

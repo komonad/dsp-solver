@@ -1,7 +1,7 @@
-import type { EditableRecipeStrategyOverride } from '../src/web/requestBuilder';
+import type { EditableRecipeStrategyOverride } from '../src/web/workbench/requestBuilder';
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
-import { computeWorkbenchSolve } from '../src/web/autoSolve';
-import { tryApplyRecipeStrategyOverride } from '../src/web/recipeStrategy';
+import { computeWorkbenchSolve } from '../src/web/workbench/autoSolve';
+import { tryApplyRecipeStrategyOverride } from '../src/web/workbench/recipeStrategy';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;

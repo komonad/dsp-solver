@@ -1,6 +1,6 @@
-import type { ResolvedCatalogModel } from '../catalog';
-import type { DatasetPresetId } from '../i18n';
-import type { BalancePolicy, SolveObjective } from '../solver';
+import type { ResolvedCatalogModel } from '../../catalog';
+import type { DatasetPresetId } from '../../i18n';
+import type { BalancePolicy, SolveObjective } from '../../solver';
 import type {
   EditableRecipePreference,
   EditableRecipeStrategyOverride,

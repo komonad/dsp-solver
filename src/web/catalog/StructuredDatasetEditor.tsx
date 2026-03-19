@@ -4,7 +4,7 @@ import type {
   CatalogDefaultConfigSpec,
   VanillaItemRecord,
   VanillaRecipeRecord,
-} from '../catalog';
+} from '../../catalog';
 import {
   buildEditableBuildingEntries,
   createEditableBuildingRule,

@@ -1,6 +1,6 @@
-import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
-import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../i18n';
-import type { BalancePolicy, SolveObjective, SolveRequest } from '../solver';
+import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
+import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
+import type { BalancePolicy, SolveObjective, SolveRequest } from '../../solver';
 
 export type AdvancedSolveOverrides = Omit<
   SolveRequest,

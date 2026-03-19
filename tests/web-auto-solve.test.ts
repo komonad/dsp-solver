@@ -1,6 +1,6 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { getLocaleBundle } from '../src/i18n';
-import { computeWorkbenchSolve } from '../src/web/autoSolve';
+import { computeWorkbenchSolve } from '../src/web/workbench/autoSolve';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;

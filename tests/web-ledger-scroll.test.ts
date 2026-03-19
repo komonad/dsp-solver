@@ -1,4 +1,4 @@
-import { computeLedgerSectionScrollTop } from '../src/web/ledgerScroll';
+import { computeLedgerSectionScrollTop } from '../src/web/shared/ledgerScroll';
 
 test('computeLedgerSectionScrollTop returns a container-local scroll offset', () => {
   expect(

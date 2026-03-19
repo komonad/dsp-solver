@@ -1,5 +1,5 @@
-import type { ResolvedCatalogModel } from '../catalog';
-import type { PresentationItemRate, PresentationRecipePlan } from '../presentation';
+import type { ResolvedCatalogModel } from '../../catalog';
+import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
 
 export interface RecipeFlowDisplay {
   visibleInputs: PresentationItemRate[];

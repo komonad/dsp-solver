@@ -5,7 +5,7 @@ import {
   buildWorkbenchRequest,
   mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
-} from '../src/web/requestBuilder';
+} from '../src/web/workbench/requestBuilder';
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 
 function workEnergyForMW(megawatts: number): number {

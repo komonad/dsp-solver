@@ -1,6 +1,6 @@
 import { resolveCatalogModel } from '../src/catalog';
 import type { PresentationRecipePlan } from '../src/presentation';
-import { buildRecipeFlowDisplay } from '../src/web/recipeDisplay';
+import { buildRecipeFlowDisplay } from '../src/web/shared/recipeDisplay';
 
 describe('buildRecipeFlowDisplay', () => {
   const catalog = resolveCatalogModel({

@@ -1,6 +1,6 @@
-import vanillaAtlas from './iconAtlas/vanillaAtlas.json';
-import genesisBookAtlas from './iconAtlas/GenesisBook.json';
-import moreMegaStructureAtlas from './iconAtlas/MoreMegaStructure.json';
+import vanillaAtlas from '../iconAtlas/vanillaAtlas.json';
+import genesisBookAtlas from '../iconAtlas/GenesisBook.json';
+import moreMegaStructureAtlas from '../iconAtlas/MoreMegaStructure.json';
 
 export interface IconSpriteDefinition {
   x: number;

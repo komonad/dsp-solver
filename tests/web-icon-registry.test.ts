@@ -3,7 +3,7 @@ import {
   getIconFallbackText,
   getResolvedIconSprite,
   getIconSprite,
-} from '../src/web/iconRegistry';
+} from '../src/web/shared/iconRegistry';
 
 test('vanilla icon atlas resolves known icon keys', () => {
   expect(getIconSprite('iron-plate')).toEqual({

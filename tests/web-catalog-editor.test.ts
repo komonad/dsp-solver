@@ -8,7 +8,7 @@ import {
   upsertEditableBuildingRule,
   upsertEditableItem,
   upsertEditableRecipe,
-} from '../src/web/catalogEditor';
+} from '../src/web/catalog/catalogEditor';
 
 test('catalog editor can parse and round-trip dataset/default config text', () => {
   const source = parseEditableCatalogSource(

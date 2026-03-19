@@ -42,23 +42,23 @@ import {
   DATASET_PRESETS,
   loadCatalogSourceFromUrl,
   resolveCatalogSourceTexts,
-} from './catalogClient';
-import { computeWorkbenchSolve } from './autoSolve';
-import DatasetEditorPanel from './DatasetEditorPanel';
-import { EntityLabel, EntityLabelButton } from './EntityIcon';
-import ItemSliceOverlayHost from './ItemSliceOverlayHost';
-import { openItemSliceOverlay } from './itemSliceStore';
-import { computeLedgerSectionScrollTop } from './ledgerScroll';
-import { tryApplyRecipeStrategyOverride } from './recipeStrategy';
-import StructuredDatasetEditor from './StructuredDatasetEditor';
-import { buildRecipeFlowDisplay } from './recipeDisplay';
+} from './catalog/catalogClient';
+import { computeWorkbenchSolve } from './workbench/autoSolve';
+import DatasetEditorPanel from './catalog/DatasetEditorPanel';
+import { EntityLabel, EntityLabelButton } from './shared/EntityIcon';
+import ItemSliceOverlayHost from './itemSlice/ItemSliceOverlayHost';
+import { openItemSliceOverlay } from './itemSlice/itemSliceStore';
+import { computeLedgerSectionScrollTop } from './shared/ledgerScroll';
+import { tryApplyRecipeStrategyOverride } from './workbench/recipeStrategy';
+import StructuredDatasetEditor from './catalog/StructuredDatasetEditor';
+import { buildRecipeFlowDisplay } from './shared/recipeDisplay';
 import {
   parseAdvancedSolveOverrides,
   type EditableRecipePreference,
   type EditableRecipeStrategyOverride,
   type EditableTarget,
   type WorkbenchProliferatorPolicy,
-} from './requestBuilder';
+} from './workbench/requestBuilder';
 import {
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
@@ -70,8 +70,8 @@ import {
   writeWorkbenchEditorState,
   type WorkbenchCacheSource,
   type WorkbenchEditorState,
-} from './persistence';
-import { recordWorkbenchPerf } from './workbenchPerf';
+} from './workbench/persistence';
+import { recordWorkbenchPerf } from './workbench/workbenchPerf';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',

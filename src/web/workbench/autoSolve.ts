@@ -1,7 +1,7 @@
-import type { ResolvedCatalogModel } from '../catalog';
-import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../i18n';
-import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../solver';
-import { solveCatalogRequest } from '../solver/solve';
+import type { ResolvedCatalogModel } from '../../catalog';
+import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
+import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
+import { solveCatalogRequest } from '../../solver/solve';
 import {
   buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,

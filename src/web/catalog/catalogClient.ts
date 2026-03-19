@@ -1,6 +1,6 @@
-import { resolveCatalogModel } from '../catalog/resolve';
-import type { CatalogDefaultConfigSpec, ResolvedCatalogModel, VanillaDatasetSpec } from '../catalog/spec';
-import type { DatasetPresetId } from '../i18n';
+import { resolveCatalogModel } from '../../catalog/resolve';
+import type { CatalogDefaultConfigSpec, ResolvedCatalogModel, VanillaDatasetSpec } from '../../catalog/spec';
+import type { DatasetPresetId } from '../../i18n';
 
 export interface DatasetPresetDefinition {
   id: DatasetPresetId;

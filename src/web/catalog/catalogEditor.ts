@@ -4,7 +4,7 @@ import type {
   VanillaDatasetSpec,
   VanillaItemRecord,
   VanillaRecipeRecord,
-} from '../catalog';
+} from '../../catalog';
 
 export interface EditableCatalogSource {
   dataset: VanillaDatasetSpec;

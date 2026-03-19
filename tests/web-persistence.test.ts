@@ -12,7 +12,7 @@ import {
   type WorkbenchCacheSource,
   type WorkbenchDatasetDraft,
   type WorkbenchEditorState,
-} from '../src/web/persistence';
+} from '../src/web/workbench/persistence';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;

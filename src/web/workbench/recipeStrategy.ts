@@ -1,6 +1,6 @@
-import type { ProliferatorMode, ResolvedCatalogModel } from '../catalog';
-import { DEFAULT_APP_LOCALE, type AppLocale } from '../i18n';
-import type { BalancePolicy, SolveObjective } from '../solver';
+import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
+import { DEFAULT_APP_LOCALE, type AppLocale } from '../../i18n';
+import type { BalancePolicy, SolveObjective } from '../../solver';
 import { computeWorkbenchSolve } from './autoSolve';
 import type {
   EditableRecipePreference,

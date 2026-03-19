@@ -1,8 +1,8 @@
 import { Box, Button, Paper, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
-import type { AppLocale } from '../i18n';
-import { getWorkbenchExtraBundle } from '../i18n/workbenchExtra';
-import type { PresentationItemSlice } from '../presentation';
+import type { AppLocale } from '../../i18n';
+import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
+import type { PresentationItemSlice } from '../../presentation';
 import ItemSlicePanel from './ItemSlicePanel';
 import { recordItemSlicePerf } from './itemSlicePerf';
 import {
