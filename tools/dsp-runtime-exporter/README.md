@@ -77,6 +77,27 @@ Or deploy directly to your configured profile:
 dotnet msbuild tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj /t:DeployToProfile /p:Configuration=Debug
 ```
 
+## Build a zip for r2modman
+
+The project can also produce a Thunderstore-style zip that r2modman can import
+from a local file:
+
+```powershell
+dotnet msbuild tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj /t:Package /p:Configuration=Release
+```
+
+or:
+
+```powershell
+tools\dsp-runtime-exporter\scripts\package.cmd
+```
+
+This writes:
+
+```text
+tools\dsp-runtime-exporter\dist\DspCalc.RuntimeExporter.zip
+```
+
 ## Use
 
 1. Launch the game with your target mods enabled.

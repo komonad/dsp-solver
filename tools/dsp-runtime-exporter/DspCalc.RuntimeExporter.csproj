@@ -18,6 +18,8 @@
     <BepInExDllPath Condition="'$(BepInExDllPath)' == '' and '$(DSPGameDir)' != ''">$(DSPGameDir)\BepInEx\core\BepInEx.dll</BepInExDllPath>
     <ProfileRoot Condition=" '$(ProfileRoot)' == '' ">$(AppData)\r2modmanPlus-local\DysonSphereProgram\profiles\dspcalc-exporter-test</ProfileRoot>
     <DeployPluginDir>$(ProfileRoot)\BepInEx\plugins\DspCalc.RuntimeExporter</DeployPluginDir>
+    <PackageRoot>$(ProjectDir)package\BepInEx\plugins\DspCalc.RuntimeExporter</PackageRoot>
+    <PackageZip>$(ProjectDir)dist\DspCalc.RuntimeExporter.zip</PackageZip>
   </PropertyGroup>
 
   <ItemGroup>
@@ -72,13 +74,47 @@
 
   <Target Name="DeployToProfile" DependsOnTargets="Build">
     <MakeDir Directories="$(DeployPluginDir)" />
-    <Copy SourceFiles="$(TargetPath)"
-          DestinationFiles="$(DeployPluginDir)\$(TargetFileName)"
-          SkipUnchangedFiles="true" />
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb"
-          DestinationFiles="$(DeployPluginDir)\$(TargetName).pdb"
-          Condition="Exists('$(TargetDir)$(TargetName).pdb')"
+    <ItemGroup>
+      <ProfileDeployFile Include="$(TargetPath)">
+        <TargetPath>$(DeployPluginDir)\$(TargetFileName)</TargetPath>
+      </ProfileDeployFile>
+      <ProfileDeployFile Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')">
+        <TargetPath>$(DeployPluginDir)\$(TargetName).pdb</TargetPath>
+      </ProfileDeployFile>
+      <ProfileDeployFile Include="$(TargetDir)Newtonsoft.Json.dll" Condition="Exists('$(TargetDir)Newtonsoft.Json.dll')">
+        <TargetPath>$(DeployPluginDir)\Newtonsoft.Json.dll</TargetPath>
+      </ProfileDeployFile>
+    </ItemGroup>
+    <Copy SourceFiles="@(ProfileDeployFile)"
+          DestinationFiles="@(ProfileDeployFile->'%(TargetPath)')"
           SkipUnchangedFiles="true" />
     <Message Importance="high" Text="Deployed to $(DeployPluginDir)" />
+  </Target>
+
+  <Target Name="Package" DependsOnTargets="Build">
+    <RemoveDir Directories="$(ProjectDir)package" Condition="Exists('$(ProjectDir)package')" />
+    <MakeDir Directories="$(PackageRoot);$(ProjectDir)dist" />
+    <ItemGroup>
+      <PackageFile Include="$(TargetPath)">
+        <TargetPath>$(PackageRoot)\$(TargetFileName)</TargetPath>
+      </PackageFile>
+      <PackageFile Include="$(TargetDir)Newtonsoft.Json.dll" Condition="Exists('$(TargetDir)Newtonsoft.Json.dll')">
+        <TargetPath>$(PackageRoot)\Newtonsoft.Json.dll</TargetPath>
+      </PackageFile>
+      <PackageFile Include="$(ProjectDir)manifest.json">
+        <TargetPath>$(ProjectDir)package\manifest.json</TargetPath>
+      </PackageFile>
+      <PackageFile Include="$(ProjectDir)README.md">
+        <TargetPath>$(ProjectDir)package\README.md</TargetPath>
+      </PackageFile>
+      <PackageFile Include="$(ProjectDir)icon.png">
+        <TargetPath>$(ProjectDir)package\icon.png</TargetPath>
+      </PackageFile>
+    </ItemGroup>
+    <Copy SourceFiles="@(PackageFile)"
+          DestinationFiles="@(PackageFile->'%(TargetPath)')"
+          SkipUnchangedFiles="true" />
+    <Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Path '$(ProjectDir)package\\*' -DestinationPath '$(PackageZip)' -Force&quot;" />
+    <Message Importance="high" Text="Package created at $(PackageZip)" />
   </Target>
 </Project>

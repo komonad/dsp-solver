@@ -1,0 +1,9 @@
+{
+  "name": "DspCalcRuntimeExporter",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/Comonad/dspcalc",
+  "description": "Exports the current runtime-loaded Dyson Sphere Program items and recipes into dspcalc's dataset format.",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
