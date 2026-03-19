@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import EastRoundedIcon from '@mui/icons-material/EastRounded';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {
@@ -1078,6 +1079,68 @@ export default function App() {
     );
   }
 
+  function renderFlowRateToken(item: {
+    itemId: string;
+    itemName: string;
+    iconKey?: string;
+    ratePerMin: number;
+  }) {
+    return (
+      <Box
+        key={`${item.itemId}:${item.ratePerMin}`}
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 0.75,
+          px: 1,
+          py: 0.75,
+          borderRadius: 999,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'rgba(22, 54, 89, 0.03)',
+          minWidth: 0,
+        }}
+      >
+        {renderClickableItemLabel(item)}
+        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          {formatRate(item.ratePerMin, locale)}
+        </Typography>
+      </Box>
+    );
+  }
+
+  function renderFlowRateSequence(
+    items: Array<{
+      itemId: string;
+      itemName: string;
+      iconKey?: string;
+      ratePerMin: number;
+    }>
+  ) {
+    if (items.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          {bundle.common.none}
+        </Typography>
+      );
+    }
+
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+        {items.map((item, index) => (
+          <React.Fragment key={`${item.itemId}:${index}`}>
+            {index > 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+                +
+              </Typography>
+            ) : null}
+            {renderFlowRateToken(item)}
+          </React.Fragment>
+        ))}
+      </Box>
+    );
+  }
+
   return (
     <Box
       component="main"
@@ -1129,7 +1192,17 @@ export default function App() {
                 alignItems: 'start',
               }}
             >
-              <div style={{ display: 'grid', gap: 20 }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 2.5,
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    lg: 'minmax(300px, 340px) minmax(0, 1fr) minmax(240px, 280px)',
+                  },
+                  alignItems: 'start',
+                }}
+              >
             <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
               <Typography variant="h6">{bundle.datasetSource.title}</Typography>
               <TextField
@@ -1197,52 +1270,35 @@ export default function App() {
               </Typography>
 
                 <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
-                  <h3 style={sectionHeadingStyle}>{bundle.summary.catalogTitle}</h3>
+                  <Typography variant="overline" color="text.secondary">
+                    {bundle.summary.catalogTitle}
+                  </Typography>
                   {model ? (
                     <>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: 12,
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                        }}
-                      >
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.datasetLabel}</div>
-                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
-                            {model.catalogSummary.datasetLabel ?? bundle.common.custom}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.itemsLabel}</div>
-                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
-                            {model.catalogSummary.itemCount}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.recipesLabel}</div>
-                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
-                            {model.catalogSummary.recipeCount}
-                          </div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>
-                          <div style={{ marginTop: 6, fontSize: 18, fontWeight: 700 }}>
-                            {model.catalogSummary.buildingCount}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)', lineHeight: 1.6 }}>
-                        <div>
+                      <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                        <Chip
+                          size="small"
+                          label={`${bundle.summary.datasetLabel} ${
+                            model.catalogSummary.datasetLabel ?? bundle.common.custom
+                          }`}
+                        />
+                        <Chip size="small" label={`${bundle.summary.itemsLabel} ${model.catalogSummary.itemCount}`} />
+                        <Chip size="small" label={`${bundle.summary.recipesLabel} ${model.catalogSummary.recipeCount}`} />
+                        <Chip size="small" label={`${bundle.summary.buildingsLabel} ${model.catalogSummary.buildingCount}`} />
+                      </Stack>
+                      <Stack spacing={0.5}>
+                        <Typography variant="caption" color="text.secondary">
                           {bundle.summary.datasetPathLabel}: {model.catalogSummary.datasetPath ?? bundle.common.notSet}
-                        </div>
-                        <div>
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
                           {bundle.summary.defaultsPathLabel}: {model.catalogSummary.defaultConfigPath ?? bundle.common.none}
-                        </div>
-                      </div>
+                        </Typography>
+                      </Stack>
                     </>
                   ) : (
-                    <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
+                    <Typography variant="body2" color="text.secondary">
+                      {bundle.summary.loadDatasetToStart}
+                    </Typography>
                   )}
                 </section>
 
@@ -1769,96 +1825,91 @@ export default function App() {
                   </div>
                 </details>
 
-                <div style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(24, 51, 89, 0.72)' }}>
-                  {bundle.solveRequest.autoSolveHint}
-                </div>
-
-                <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
-                  <h3 style={sectionHeadingStyle}>{bundle.summary.solveSnapshotTitle}</h3>
-                  {solveError && hasTargets ? (
-                    <div style={{ color: '#8e2020', fontWeight: 700 }}>{solveError}</div>
-                  ) : null}
-                  {requestSummary ? (
-                    <>
-                      <div
-                        style={{
-                          display: 'grid',
-                          gap: 10,
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                        }}
-                      >
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.objectiveLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatSolveObjective(requestSummary.objective, locale)}</div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.balanceLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatBalancePolicy(requestSummary.balancePolicy, locale)}</div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.sprayLabel}</div>
-                          <div style={{ marginTop: 6 }}>{requestSummary.proliferatorPolicyLabel}</div>
-                        </div>
-                        <div>
-                          <div style={sectionHeadingStyle}>{bundle.summary.statusLabel}</div>
-                          <div style={{ marginTop: 6 }}>{formatSolveStatus(model?.status ?? null, locale)}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div style={sectionHeadingStyle}>{bundle.summary.targetsLabel}</div>
-                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
-                          {requestSummary.targets.map(target => (
-                            <div key={target.itemId}>
-                              {renderClickableItemLabel(target)}{' '}
-                              : {formatRate(target.ratePerMin, locale)}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <details>
-                        <summary style={summaryStyle}>{bundle.summary.recipePreferencesLabel}</summary>
-                        <div style={{ marginTop: 10, display: 'grid', gap: 6, fontSize: 13 }}>
-                          {requestSummary.preferredRecipeSettings.length === 0 ? (
-                            <div>{bundle.common.none}</div>
-                          ) : (
-                            requestSummary.preferredRecipeSettings.map(setting => (
-                              <div key={setting.recipeId}>
-                                <EntityLabel
-                                  label={setting.recipeName}
-                                  iconKey={setting.recipeIconKey}
-                                  atlasIds={iconAtlasIds}
-                                  size={18}
-                                />
-                                {setting.buildingName ? (
-                                  <>
-                                    {' '}
-                                    |{' '}
-                                    <EntityLabel
-                                      label={setting.buildingName}
-                                      iconKey={setting.buildingIconKey}
-                                      atlasIds={iconAtlasIds}
-                                      size={18}
-                                    />
-                                  </>
-                                ) : null}
-                                {setting.proliferatorPreferenceLabel
-                                  ? ` | ${setting.proliferatorPreferenceLabel}`
-                                  : ''}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </details>
-                    </>
-                  ) : (
-                    <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.summary.loadDatasetToStart}</div>
-                  )}
-                </section>
+                {solveError && hasTargets ? (
+                  <Alert severity="error">{solveError}</Alert>
+                ) : null}
               </div>
             </article>
-              </div>
+            <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
+              <Typography variant="h6">{bundle.summary.solveSnapshotTitle}</Typography>
+              {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
+              {requestSummary ? (
+                <>
+                  <Stack spacing={1}>
+                    <Typography variant="overline" color="text.secondary">
+                      {bundle.summary.targetsLabel}
+                    </Typography>
+                    {requestSummary.targets.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {bundle.common.none}
+                      </Typography>
+                    ) : (
+                      requestSummary.targets.map(target => (
+                        <Typography key={target.itemId} variant="body2">
+                          {renderClickableItemLabel(target)}: {formatRate(target.ratePerMin, locale)}
+                        </Typography>
+                      ))
+                    )}
+                  </Stack>
+
+                  <Divider />
+
+                  <Stack spacing={1}>
+                    <Typography variant="overline" color="text.secondary">
+                      {bundle.summary.statusLabel}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      color={model?.status === 'optimal' ? 'success' : 'default'}
+                      label={formatSolveStatus(model?.status ?? null, locale)}
+                      sx={{ width: 'fit-content' }}
+                    />
+                  </Stack>
+
+                  <Stack spacing={1}>
+                    <Typography variant="overline" color="text.secondary">
+                      {bundle.summary.recipePreferencesLabel}
+                    </Typography>
+                    {requestSummary.preferredRecipeSettings.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {bundle.common.none}
+                      </Typography>
+                    ) : (
+                      requestSummary.preferredRecipeSettings.map(setting => (
+                        <Typography key={setting.recipeId} variant="body2">
+                          <EntityLabel
+                            label={setting.recipeName}
+                            iconKey={setting.recipeIconKey}
+                            atlasIds={iconAtlasIds}
+                            size={18}
+                          />
+                          {setting.buildingName ? (
+                            <>
+                              {' '}
+                              |{' '}
+                              <EntityLabel
+                                label={setting.buildingName}
+                                iconKey={setting.buildingIconKey}
+                                atlasIds={iconAtlasIds}
+                                size={18}
+                              />
+                            </>
+                          ) : null}
+                          {setting.proliferatorPreferenceLabel
+                            ? ` | ${setting.proliferatorPreferenceLabel}`
+                            : ''}
+                        </Typography>
+                      ))
+                    )}
+                  </Stack>
+                </>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  {bundle.summary.loadDatasetToStart}
+                </Typography>
+              )}
+            </article>
+              </Box>
             </Box>
           </Paper>
 
@@ -1941,67 +1992,118 @@ export default function App() {
                       <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
                       <div style={{ display: 'grid', gap: 12 }}>
                         {model.recipePlans.map(plan => (
-                          <div
+                          <Card
                             key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
-                            style={{ border: '1px solid rgba(24, 51, 89, 0.12)', borderRadius: 16, padding: 16, display: 'grid', gap: 10 }}
+                            sx={{
+                              borderRadius: 4,
+                              border: '1px solid',
+                              borderColor: 'divider',
+                            }}
                           >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                              <div>
-                                <div style={{ fontSize: 18, fontWeight: 700 }}>
-                                  <EntityLabel
-                                    label={plan.recipeName}
-                                    iconKey={plan.recipeIconKey}
-                                    atlasIds={iconAtlasIds}
-                                    size={22}
-                                  />
-                                </div>
-                                <div style={{ marginTop: 4, fontSize: 14, color: 'rgba(24, 51, 89, 0.72)' }}>
-                                  <EntityLabel
-                                    label={plan.buildingName}
-                                    iconKey={plan.buildingIconKey}
-                                    atlasIds={iconAtlasIds}
-                                    size={18}
-                                  />{' '}
-                                  | {plan.proliferatorLabel}
-                                </div>
-                              </div>
-                              <div style={{ textAlign: 'right' }}>
-                                <div>{formatRate(plan.runsPerMin, locale)}</div>
-                                <div style={{ marginTop: 4, fontSize: 14 }}>
-                                  {bundle.recipePlans.exactLabel} {plan.exactBuildingCount.toFixed(2)} / {bundle.recipePlans.roundedLabel} {plan.roundedUpBuildingCount}
-                                </div>
-                              </div>
-                            </div>
+                            <CardContent sx={{ display: 'grid', gap: 1.5 }}>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  gap: 1.5,
+                                  flexWrap: 'wrap',
+                                }}
+                              >
+                                <Box>
+                                  <Typography variant="subtitle1" fontWeight={700}>
+                                    <EntityLabel
+                                      label={plan.recipeName}
+                                      iconKey={plan.recipeIconKey}
+                                      atlasIds={iconAtlasIds}
+                                      size={22}
+                                    />
+                                  </Typography>
+                                  <Stack
+                                    direction="row"
+                                    useFlexGap
+                                    flexWrap="wrap"
+                                    gap={1}
+                                    sx={{ mt: 0.75, color: 'text.secondary' }}
+                                  >
+                                    <Typography variant="caption">
+                                      <EntityLabel
+                                        label={plan.buildingName}
+                                        iconKey={plan.buildingIconKey}
+                                        atlasIds={iconAtlasIds}
+                                        size={16}
+                                      />
+                                    </Typography>
+                                    <Typography variant="caption">{plan.proliferatorLabel}</Typography>
+                                    <Typography variant="caption">{formatRate(plan.runsPerMin, locale)}</Typography>
+                                  </Stack>
+                                </Box>
+                                <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
+                                  <Typography variant="subtitle1" fontWeight={700}>
+                                    {bundle.recipePlans.roundedLabel} {plan.roundedUpBuildingCount}
+                                  </Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {bundle.recipePlans.exactLabel} {plan.exactBuildingCount.toFixed(2)} / {formatPower(plan.activePowerMW, locale)}
+                                  </Typography>
+                                </Box>
+                              </Box>
 
-                            <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.recipePlans.inputsLabel}</div>
-                                <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                                  {plan.inputs.map(input => (
-                                    <div key={input.itemId}>
-                                      {renderClickableItemLabel(input)}{' '}
-                                      : {formatRate(input.ratePerMin, locale)}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.recipePlans.outputsLabel}</div>
-                                <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
-                                  {plan.outputs.map(output => (
-                                    <div key={output.itemId}>
-                                      {renderClickableItemLabel(output)}{' '}
-                                      : {formatRate(output.ratePerMin, locale)}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.08em' }}>{bundle.recipePlans.powerLabel}</div>
-                                <div style={{ marginTop: 8 }}>{formatPower(plan.activePowerMW, locale)}</div>
-                              </div>
-                            </div>
-                          </div>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.25,
+                                  flexWrap: 'wrap',
+                                  borderRadius: 4,
+                                  px: 1.5,
+                                  py: 1.25,
+                                  backgroundColor: 'rgba(22, 54, 89, 0.03)',
+                                }}
+                              >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', flex: '1 1 280px', minWidth: 0 }}>
+                                  {renderFlowRateSequence(plan.inputs)}
+                                </Box>
+                                <EastRoundedIcon sx={{ color: 'text.secondary' }} />
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', flex: '1 1 280px', minWidth: 0 }}>
+                                  {renderFlowRateSequence(plan.outputs)}
+                                </Box>
+                              </Box>
+
+                              <Box
+                                sx={{
+                                  display: 'grid',
+                                  gap: 1,
+                                  gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
+                                }}
+                              >
+                                <Box>
+                                  <Typography variant="overline" color="text.secondary">
+                                    {bundle.recipePlans.inputsLabel}
+                                  </Typography>
+                                  <Typography variant="body2">{plan.inputs.length}</Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="overline" color="text.secondary">
+                                    {bundle.recipePlans.outputsLabel}
+                                  </Typography>
+                                  <Typography variant="body2">{plan.outputs.length}</Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="overline" color="text.secondary">
+                                    {bundle.recipePlans.powerLabel}
+                                  </Typography>
+                                  <Typography variant="body2">{formatPower(plan.activePowerMW, locale)}</Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="overline" color="text.secondary">
+                                    {bundle.summary.buildingsLabel}
+                                  </Typography>
+                                  <Typography variant="body2">
+                                    {plan.exactBuildingCount.toFixed(2)} / {plan.roundedUpBuildingCount}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </CardContent>
+                          </Card>
                         ))}
                       </div>
                     </article>
