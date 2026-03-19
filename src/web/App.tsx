@@ -97,9 +97,9 @@ const shellStyle: React.CSSProperties = {
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.76)',
   border: '1px solid rgba(18, 45, 77, 0.12)',
-  borderRadius: 22,
-  padding: 20,
-  boxShadow: '0 24px 80px rgba(24, 51, 89, 0.12)',
+  borderRadius: 20,
+  padding: 16,
+  boxShadow: '0 10px 26px rgba(24, 51, 89, 0.07)',
 };
 
 const inputStyle: React.CSSProperties = {
@@ -1091,18 +1091,23 @@ export default function App() {
         sx={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: 0.75,
-          px: 1,
-          py: 0.75,
-          borderRadius: 999,
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: 'rgba(22, 54, 89, 0.03)',
+          gap: 0.5,
           minWidth: 0,
         }}
       >
-        {renderClickableItemLabel(item)}
-        <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+        <EntityLabel
+          label={item.itemName}
+          iconKey={item.iconKey}
+          atlasIds={iconAtlasIds}
+          size={18}
+          gap={6}
+          textStyle={{ fontSize: 13, fontWeight: 600 }}
+        />
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}
+        >
           {formatRate(item.ratePerMin, locale)}
         </Typography>
       </Box>
@@ -1126,11 +1131,19 @@ export default function App() {
     }
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          flexWrap: 'wrap',
+          minWidth: 0,
+        }}
+      >
         {items.map((item, index) => (
           <React.Fragment key={`${item.itemId}:${index}`}>
             {index > 0 ? (
-              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                 +
               </Typography>
             ) : null}
@@ -1140,6 +1153,21 @@ export default function App() {
       </Box>
     );
   }
+
+  function renderSelectOption(option: { label: string; iconKey?: string }, size = 18) {
+    return (
+      <EntityLabel
+        label={option.label}
+        iconKey={option.iconKey}
+        atlasIds={iconAtlasIds}
+        size={size}
+        gap={8}
+        textStyle={{ fontSize: 14 }}
+      />
+    );
+  }
+
+  const isCustomPreset = presetId === 'custom';
 
   return (
     <Box
@@ -1178,206 +1206,193 @@ export default function App() {
         <section style={{ display: 'grid', gap: 20 }}>
           <Paper
             sx={{
-              p: { xs: 2, md: 3 },
-              borderRadius: 5,
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 7,
               display: 'grid',
-              gap: 3,
+              gap: 2.5,
             }}
           >
             <Box
               sx={{
                 display: 'grid',
-                gap: 3,
-                gridTemplateColumns: { xs: '1fr', xl: 'minmax(320px, 420px) minmax(0, 1fr)' },
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr' },
                 alignItems: 'start',
               }}
             >
               <Box
                 sx={{
                   display: 'grid',
-                  gap: 2.5,
+                  gap: 2,
                   gridTemplateColumns: {
                     xs: '1fr',
-                    lg: 'minmax(300px, 340px) minmax(0, 1fr) minmax(240px, 280px)',
+                    lg: 'minmax(260px, 300px) minmax(0, 1fr) minmax(230px, 260px)',
                   },
                   alignItems: 'start',
                 }}
               >
             <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
-              <Typography variant="h6">{bundle.datasetSource.title}</Typography>
-              <TextField
-                select
-                fullWidth
-                label={bundle.summary.datasetLabel}
-                value={presetId}
-                onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
+              <Box sx={{ display: 'grid', gap: 0.5 }}>
+                <Typography variant="h6">{bundle.datasetSource.title}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {getDatasetPresetText(
+                    DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
+                    locale
+                  ).description}
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) auto auto' },
+                  alignItems: 'start',
+                }}
               >
-                {DATASET_PRESETS.map(preset => (
-                  <MenuItem key={preset.id} value={preset.id}>
-                    {getDatasetPresetText(preset.id, locale).label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  label={bundle.summary.datasetLabel}
+                  value={presetId}
+                  onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
+                >
+                  {DATASET_PRESETS.map(preset => (
+                    <MenuItem key={preset.id} value={preset.id}>
+                      {getDatasetPresetText(preset.id, locale).label}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-              <TextField
-                fullWidth
-                label={bundle.summary.datasetPathLabel}
-                value={datasetPath}
-                onChange={event => {
-                  setPresetId('custom');
-                  setCatalogLabel(getDatasetPresetText('custom', locale).label);
-                  setDatasetPath(event.target.value);
-                }}
-                placeholder={bundle.datasetSource.datasetPathPlaceholder}
-              />
-
-              <TextField
-                fullWidth
-                label={bundle.summary.defaultsPathLabel}
-                value={defaultConfigPath}
-                onChange={event => {
-                  setPresetId('custom');
-                  setCatalogLabel(getDatasetPresetText('custom', locale).label);
-                  setDefaultConfigPath(event.target.value);
-                }}
-                placeholder={bundle.datasetSource.defaultsPathPlaceholder}
-              />
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                 <Button
+                  size="small"
                   variant="contained"
-                  onClick={() =>
-                    void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId)
-                  }
+                  onClick={() => void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId)}
                   disabled={isLoading}
+                  sx={{ minHeight: 40, px: 1.75 }}
                 >
                   {isLoading ? bundle.datasetSource.loadingButton : bundle.datasetSource.loadButton}
                 </Button>
-                <Button variant="outlined" onClick={clearCachedWorkbenchState}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={clearCachedWorkbenchState}
+                  sx={{ minHeight: 40, px: 1.75 }}
+                >
                   {bundle.datasetSource.clearCacheButton}
                 </Button>
+              </Box>
+
+              {isCustomPreset ? (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 1,
+                    gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' },
+                  }}
+                >
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={bundle.summary.datasetPathLabel}
+                    value={datasetPath}
+                    onChange={event => {
+                      setPresetId('custom');
+                      setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                      setDatasetPath(event.target.value);
+                    }}
+                    placeholder={bundle.datasetSource.datasetPathPlaceholder}
+                  />
+
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label={bundle.summary.defaultsPathLabel}
+                    value={defaultConfigPath}
+                    onChange={event => {
+                      setPresetId('custom');
+                      setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                      setDefaultConfigPath(event.target.value);
+                    }}
+                    placeholder={bundle.datasetSource.defaultsPathPlaceholder}
+                  />
+                </Box>
+              ) : (
+                <Stack spacing={0.35}>
+                  <Typography variant="caption" color="text.secondary">
+                    {bundle.summary.datasetPathLabel}: {datasetPath || bundle.common.notSet}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {bundle.summary.defaultsPathLabel}: {defaultConfigPath || bundle.common.none}
+                  </Typography>
+                </Stack>
+              )}
+
+              <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
+                {model ? (
+                  <>
+                    <Chip
+                      size="small"
+                      label={`${bundle.summary.datasetLabel} ${
+                        model.catalogSummary.datasetLabel ?? bundle.common.custom
+                      }`}
+                    />
+                    <Chip size="small" label={`${bundle.summary.itemsLabel} ${model.catalogSummary.itemCount}`} />
+                    <Chip size="small" label={`${bundle.summary.recipesLabel} ${model.catalogSummary.recipeCount}`} />
+                    <Chip size="small" label={`${bundle.summary.buildingsLabel} ${model.catalogSummary.buildingCount}`} />
+                  </>
+                ) : (
+                  <Chip size="small" label={bundle.summary.loadDatasetToStart} />
+                )}
               </Stack>
 
               <Typography variant="caption" color="text.secondary">
                 {bundle.datasetSource.autoCacheHint}
               </Typography>
 
-              <Typography variant="body2" color="text.secondary">
-                {getDatasetPresetText(
-                  DATASET_PRESETS.find(preset => preset.id === presetId)?.id ?? 'custom',
-                  locale
-                ).description}
-              </Typography>
-
-                <section style={{ ...collapsibleSectionStyle, display: 'grid', gap: 12 }}>
-                  <Typography variant="overline" color="text.secondary">
-                    {bundle.summary.catalogTitle}
-                  </Typography>
-                  {model ? (
-                    <>
-                      <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-                        <Chip
-                          size="small"
-                          label={`${bundle.summary.datasetLabel} ${
-                            model.catalogSummary.datasetLabel ?? bundle.common.custom
-                          }`}
-                        />
-                        <Chip size="small" label={`${bundle.summary.itemsLabel} ${model.catalogSummary.itemCount}`} />
-                        <Chip size="small" label={`${bundle.summary.recipesLabel} ${model.catalogSummary.recipeCount}`} />
-                        <Chip size="small" label={`${bundle.summary.buildingsLabel} ${model.catalogSummary.buildingCount}`} />
-                      </Stack>
-                      <Stack spacing={0.5}>
-                        <Typography variant="caption" color="text.secondary">
-                          {bundle.summary.datasetPathLabel}: {model.catalogSummary.datasetPath ?? bundle.common.notSet}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {bundle.summary.defaultsPathLabel}: {model.catalogSummary.defaultConfigPath ?? bundle.common.none}
-                        </Typography>
-                      </Stack>
-                    </>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      {bundle.summary.loadDatasetToStart}
-                    </Typography>
-                  )}
-                </section>
-
-                <DatasetEditorPanel
-                  title={bundle.datasetSource.editorTitle}
-                  helpText={bundle.datasetSource.editorHelp}
-                  datasetLabel={bundle.datasetSource.editorDatasetLabel}
-                  defaultsLabel={bundle.datasetSource.editorDefaultsLabel}
+              <DatasetEditorPanel
+                title={bundle.datasetSource.editorTitle}
+                helpText={bundle.datasetSource.editorHelp}
+                datasetLabel={bundle.datasetSource.editorDatasetLabel}
+                defaultsLabel={bundle.datasetSource.editorDefaultsLabel}
+                datasetText={datasetEditorText}
+                defaultConfigText={defaultConfigEditorText}
+                applyButtonLabel={bundle.datasetSource.editorApplyButton}
+                resetButtonLabel={bundle.datasetSource.editorResetButton}
+                errorText={datasetEditorError}
+                onDatasetTextChange={setDatasetEditorText}
+                onDefaultConfigTextChange={setDefaultConfigEditorText}
+                onApply={applyDatasetEditorChanges}
+                onReset={resetDatasetEditorToLoadedSource}
+              >
+                <StructuredDatasetEditor
+                  title={bundle.datasetSource.structuredEditorTitle}
+                  helpText={bundle.datasetSource.structuredEditorHelp}
+                  unavailableText={bundle.datasetSource.structuredEditorUnavailable}
+                  tabs={{
+                    items: bundle.datasetSource.structuredEditorTabs.items,
+                    recipes: bundle.datasetSource.structuredEditorTabs.recipes,
+                    buildingRules: bundle.datasetSource.structuredEditorTabs.buildingRules,
+                    defaults: bundle.datasetSource.structuredEditorTabs.defaults,
+                  }}
+                  actions={{
+                    add: bundle.datasetSource.structuredEditorAddButton,
+                    remove: bundle.datasetSource.structuredEditorRemoveButton,
+                  }}
                   datasetText={datasetEditorText}
                   defaultConfigText={defaultConfigEditorText}
-                  applyButtonLabel={bundle.datasetSource.editorApplyButton}
-                  resetButtonLabel={bundle.datasetSource.editorResetButton}
-                  errorText={datasetEditorError}
-                  onDatasetTextChange={setDatasetEditorText}
-                  onDefaultConfigTextChange={setDefaultConfigEditorText}
-                  onApply={applyDatasetEditorChanges}
-                  onReset={resetDatasetEditorToLoadedSource}
-                >
-                  <StructuredDatasetEditor
-                    title={bundle.datasetSource.structuredEditorTitle}
-                    helpText={bundle.datasetSource.structuredEditorHelp}
-                    unavailableText={bundle.datasetSource.structuredEditorUnavailable}
-                    tabs={{
-                      items: bundle.datasetSource.structuredEditorTabs.items,
-                      recipes: bundle.datasetSource.structuredEditorTabs.recipes,
-                      buildingRules: bundle.datasetSource.structuredEditorTabs.buildingRules,
-                      defaults: bundle.datasetSource.structuredEditorTabs.defaults,
-                    }}
-                    actions={{
-                      add: bundle.datasetSource.structuredEditorAddButton,
-                      remove: bundle.datasetSource.structuredEditorRemoveButton,
-                    }}
-                    datasetText={datasetEditorText}
-                    defaultConfigText={defaultConfigEditorText}
-                    onSourceTextsChange={updateDatasetEditorTexts}
-                  />
-                </DatasetEditorPanel>
+                  onSourceTextsChange={updateDatasetEditorTexts}
+                />
+              </DatasetEditorPanel>
             </article>
 
-            <article style={{ ...cardStyle, display: 'grid', gap: 16 }}>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: 2,
-                  flexWrap: 'wrap',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <Box>
-                  <Typography variant="h6">{bundle.solveRequest.title}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    {bundle.solveRequest.autoSolveHint}
-                  </Typography>
-                </Box>
-                <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-                  <Chip
-                    variant="outlined"
-                    label={`${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`}
-                  />
-                  <Chip
-                    variant="outlined"
-                    label={`${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`}
-                  />
-                  <Chip
-                    variant="outlined"
-                    label={`${bundle.summary.sprayLabel}: ${
-                      requestSummary?.proliferatorPolicyLabel ?? bundle.common.notSet
-                    }`}
-                  />
-                  <Chip
-                    variant="outlined"
-                    color={model?.status === 'optimal' ? 'success' : 'default'}
-                    label={`${bundle.summary.statusLabel}: ${formatSolveStatus(
-                      model?.status ?? null,
-                      locale
-                    )}`}
-                  />
-                </Stack>
+            <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
+              <Box sx={{ display: 'grid', gap: 0.25 }}>
+                <Typography variant="h6">{bundle.solveRequest.title}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {bundle.solveRequest.autoSolveHint}
+                </Typography>
               </Box>
               <div style={{ display: 'grid', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
@@ -1386,14 +1401,15 @@ export default function App() {
                       key={`${target.itemId}-${index}`}
                       sx={{
                         display: 'grid',
-                        gap: 1.25,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 140px auto' },
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
                         alignItems: 'start',
                       }}
                     >
                       <TextField
                         select
                         fullWidth
+                        size="small"
                         label={bundle.summary.targetsLabel}
                         value={target.itemId}
                         onChange={event => updateTarget(index, { itemId: event.target.value })}
@@ -1401,7 +1417,7 @@ export default function App() {
                       >
                         {itemOptions.map(item => (
                           <MenuItem key={item.itemId} value={item.itemId}>
-                            {item.name}
+                            {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -1409,6 +1425,7 @@ export default function App() {
                       <TextField
                         type="number"
                         fullWidth
+                        size="small"
                         label={bundle.overview.requestLabel}
                         value={target.ratePerMin}
                         inputProps={{ min: 0, step: 1 }}
@@ -1422,9 +1439,10 @@ export default function App() {
                       <Button
                         variant="outlined"
                         color="inherit"
+                        size="small"
                         onClick={() => removeTarget(index)}
                         disabled={!catalog}
-                        sx={{ minHeight: 56 }}
+                        sx={{ minHeight: 40, px: 1.5 }}
                       >
                         {bundle.solveRequest.removeTarget}
                       </Button>
@@ -1435,8 +1453,8 @@ export default function App() {
                     <Box
                       sx={{
                         display: 'grid',
-                        gap: 1.25,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 140px auto' },
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
                         alignItems: 'start',
                         p: 1.75,
                         borderRadius: 4,
@@ -1448,6 +1466,7 @@ export default function App() {
                       <TextField
                         select
                         fullWidth
+                        size="small"
                         label={bundle.summary.targetsLabel}
                         value={targetDraftItemId}
                         onChange={event => setTargetDraftItemId(event.target.value)}
@@ -1455,7 +1474,7 @@ export default function App() {
                       >
                         {itemOptions.map(item => (
                           <MenuItem key={item.itemId} value={item.itemId}>
-                            {item.name}
+                            {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
                           </MenuItem>
                         ))}
                       </TextField>
@@ -1463,6 +1482,7 @@ export default function App() {
                       <TextField
                         type="number"
                         fullWidth
+                        size="small"
                         label={bundle.overview.requestLabel}
                         value={targetDraftRatePerMin}
                         inputProps={{ min: 0, step: 1 }}
@@ -1473,6 +1493,7 @@ export default function App() {
 
                       <Button
                         variant="contained"
+                        size="small"
                         onClick={() =>
                           addTarget({
                             itemId: targetDraftItemId,
@@ -1480,13 +1501,13 @@ export default function App() {
                           })
                         }
                         disabled={!catalog || !targetDraftItemId}
-                        sx={{ minHeight: 56 }}
+                        sx={{ minHeight: 40, px: 1.5 }}
                       >
                         {bundle.solveRequest.addTarget}
                       </Button>
                     </Box>
                   ) : (
-                    <Button variant="outlined" onClick={() => addTarget()} disabled={!catalog}>
+                    <Button variant="outlined" size="small" onClick={() => addTarget()} disabled={!catalog}>
                       {bundle.solveRequest.addTarget}
                     </Button>
                   )}
@@ -1495,13 +1516,13 @@ export default function App() {
                 <Box
                   sx={{
                     display: 'grid',
-                    gap: 1.5,
-                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+                    gap: 1,
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(180px, 220px))' },
                   }}
                 >
                   <TextField
                     select
-                    fullWidth
+                    size="small"
                     label={bundle.summary.objectiveLabel}
                     value={objective}
                     onChange={event => setObjective(event.target.value as SolveObjective)}
@@ -1513,7 +1534,7 @@ export default function App() {
 
                   <TextField
                     select
-                    fullWidth
+                    size="small"
                     label={bundle.summary.balanceLabel}
                     value={balancePolicy}
                     onChange={event => setBalancePolicy(event.target.value as BalancePolicy)}
@@ -1524,7 +1545,7 @@ export default function App() {
 
                   <TextField
                     select
-                    fullWidth
+                    size="small"
                     label={bundle.summary.sprayLabel}
                     value={proliferatorPolicy}
                     onChange={event =>
@@ -1551,10 +1572,18 @@ export default function App() {
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        alignItems: 'start',
+                      }}
+                    >
                       <TextField
                         select
                         fullWidth
+                        size="small"
                         label={bundle.solveRequest.disabledRecipesLabel}
                         value={disabledRecipeDraftId}
                         onChange={event => setDisabledRecipeDraftId(event.target.value)}
@@ -1562,12 +1591,18 @@ export default function App() {
                       >
                         {disableRecipeOptions.map(recipe => (
                           <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
-                            {recipe.name}
+                            {renderSelectOption({ label: recipe.name, iconKey: recipe.icon }, 18)}
                           </MenuItem>
                         ))}
                       </TextField>
 
-                      <Button variant="outlined" onClick={addDisabledRecipe} disabled={!disabledRecipeDraftId}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={addDisabledRecipe}
+                        disabled={!disabledRecipeDraftId}
+                        sx={{ minHeight: 40, px: 1.5 }}
+                      >
                         {bundle.solveRequest.disableButton}
                       </Button>
                     </Box>
@@ -1591,10 +1626,18 @@ export default function App() {
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.disabledBuildingsLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        alignItems: 'start',
+                      }}
+                    >
                       <TextField
                         select
                         fullWidth
+                        size="small"
                         label={bundle.solveRequest.disabledBuildingsLabel}
                         value={disabledBuildingDraftId}
                         onChange={event => setDisabledBuildingDraftId(event.target.value)}
@@ -1602,12 +1645,18 @@ export default function App() {
                       >
                         {disableBuildingOptions.map(building => (
                           <MenuItem key={building.buildingId} value={building.buildingId}>
-                            {building.name}
+                            {renderSelectOption({ label: building.name, iconKey: building.icon }, 18)}
                           </MenuItem>
                         ))}
                       </TextField>
 
-                      <Button variant="outlined" onClick={addDisabledBuilding} disabled={!disabledBuildingDraftId}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={addDisabledBuilding}
+                        disabled={!disabledBuildingDraftId}
+                        sx={{ minHeight: 40, px: 1.5 }}
+                      >
                         {bundle.solveRequest.disableButton}
                       </Button>
                     </Box>
@@ -1634,10 +1683,18 @@ export default function App() {
                 <details style={collapsibleSectionStyle}>
                   <summary style={summaryStyle}>{bundle.solveRequest.recipePreferencesLabel}</summary>
                   <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-                    <Box sx={{ display: 'grid', gap: 1.25, gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' } }}>
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gap: 1,
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 320px) auto' },
+                        alignItems: 'start',
+                      }}
+                    >
                       <TextField
                         select
                         fullWidth
+                        size="small"
                         label={bundle.solveRequest.recipePreferencesLabel}
                         value={recipePreferenceDraftId}
                         onChange={event => setRecipePreferenceDraftId(event.target.value)}
@@ -1645,15 +1702,17 @@ export default function App() {
                       >
                         {recipePreferenceOptions.map(recipe => (
                           <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
-                            {recipe.name}
+                            {renderSelectOption({ label: recipe.name, iconKey: recipe.icon }, 18)}
                           </MenuItem>
                         ))}
                       </TextField>
 
                       <Button
                         variant="outlined"
+                        size="small"
                         onClick={addRecipePreference}
                         disabled={!recipePreferenceDraftId}
+                        sx={{ minHeight: 40, px: 1.5 }}
                       >
                         {bundle.solveRequest.addPreference}
                       </Button>
@@ -1681,12 +1740,12 @@ export default function App() {
                             <div
                               key={preference.recipeId}
                               style={{
-                                borderRadius: 16,
+                                borderRadius: 14,
                                 border: '1px solid rgba(24, 51, 89, 0.12)',
                                 background: 'rgba(255,255,255,0.6)',
-                                padding: 14,
+                                padding: 12,
                                 display: 'grid',
-                                gap: 12,
+                                gap: 10,
                               }}
                             >
                               <Box
@@ -1702,6 +1761,7 @@ export default function App() {
                                 <Button
                                   variant="outlined"
                                   color="inherit"
+                                  size="small"
                                   onClick={() => removeRecipePreference(preference.recipeId)}
                                 >
                                   {bundle.solveRequest.removeTarget}
@@ -1711,8 +1771,8 @@ export default function App() {
                               <Box
                                 sx={{
                                   display: 'grid',
-                                  gap: 1.25,
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                                  gap: 1,
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
                                 }}
                               >
                                 <Box sx={{ display: 'grid', gap: 0.75 }}>
@@ -1722,6 +1782,7 @@ export default function App() {
                                   <TextField
                                     select
                                     fullWidth
+                                    size="small"
                                     value={preference.preferredBuildingId}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
@@ -1732,7 +1793,7 @@ export default function App() {
                                     <MenuItem value="">{bundle.common.auto}</MenuItem>
                                     {buildingChoices.map(building => (
                                       <MenuItem key={building.buildingId} value={building.buildingId}>
-                                        {building.name}
+                                        {renderSelectOption({ label: building.name, iconKey: building.icon }, 18)}
                                       </MenuItem>
                                     ))}
                                   </TextField>
@@ -1745,6 +1806,7 @@ export default function App() {
                                   <TextField
                                     select
                                     fullWidth
+                                    size="small"
                                     value={preference.preferredProliferatorMode}
                                     onChange={event => {
                                       const nextMode = event.target.value as '' | ProliferatorMode;
@@ -1774,6 +1836,7 @@ export default function App() {
                                   <TextField
                                     select
                                     fullWidth
+                                    size="small"
                                     value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
@@ -1825,9 +1888,6 @@ export default function App() {
                   </div>
                 </details>
 
-                {solveError && hasTargets ? (
-                  <Alert severity="error">{solveError}</Alert>
-                ) : null}
               </div>
             </article>
             <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
@@ -1835,6 +1895,43 @@ export default function App() {
               {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
               {requestSummary ? (
                 <>
+                  <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${bundle.summary.objectiveLabel}: ${formatSolveObjective(
+                        objective,
+                        locale
+                      )}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${bundle.summary.balanceLabel}: ${formatBalancePolicy(
+                        balancePolicy,
+                        locale
+                      )}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${bundle.summary.sprayLabel}: ${
+                        requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet
+                      }`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      color={model?.status === 'optimal' ? 'success' : 'default'}
+                      label={`${bundle.summary.statusLabel}: ${formatSolveStatus(
+                        model?.status ?? null,
+                        locale
+                      )}`}
+                    />
+                  </Stack>
+
+                  <Divider />
+
                   <Stack spacing={1}>
                     <Typography variant="overline" color="text.secondary">
                       {bundle.summary.targetsLabel}
@@ -1850,20 +1947,6 @@ export default function App() {
                         </Typography>
                       ))
                     )}
-                  </Stack>
-
-                  <Divider />
-
-                  <Stack spacing={1}>
-                    <Typography variant="overline" color="text.secondary">
-                      {bundle.summary.statusLabel}
-                    </Typography>
-                    <Chip
-                      size="small"
-                      color={model?.status === 'optimal' ? 'success' : 'default'}
-                      label={formatSolveStatus(model?.status ?? null, locale)}
-                      sx={{ width: 'fit-content' }}
-                    />
                   </Stack>
 
                   <Stack spacing={1}>
@@ -1995,37 +2078,41 @@ export default function App() {
                           <Card
                             key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
                             sx={{
-                              borderRadius: 4,
+                              borderRadius: 5,
                               border: '1px solid',
                               borderColor: 'divider',
+                              boxShadow: 'none',
+                              backgroundColor: 'rgba(255,255,255,0.68)',
                             }}
                           >
-                            <CardContent sx={{ display: 'grid', gap: 1.5 }}>
+                            <CardContent sx={{ display: 'grid', gap: 1.25, p: 2, '&:last-child': { pb: 2 } }}>
                               <Box
                                 sx={{
                                   display: 'flex',
                                   justifyContent: 'space-between',
-                                  gap: 1.5,
+                                  gap: 1.25,
                                   flexWrap: 'wrap',
                                 }}
                               >
-                                <Box>
-                                  <Typography variant="subtitle1" fontWeight={700}>
+                                <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+                                  <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
                                     <EntityLabel
                                       label={plan.recipeName}
                                       iconKey={plan.recipeIconKey}
                                       atlasIds={iconAtlasIds}
-                                      size={22}
+                                      size={20}
+                                      gap={8}
+                                      textStyle={{ fontWeight: 700 }}
                                     />
                                   </Typography>
                                   <Stack
                                     direction="row"
                                     useFlexGap
                                     flexWrap="wrap"
-                                    gap={1}
-                                    sx={{ mt: 0.75, color: 'text.secondary' }}
+                                    gap={0.75}
+                                    sx={{ color: 'text.secondary' }}
                                   >
-                                    <Typography variant="caption">
+                                    <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center' }}>
                                       <EntityLabel
                                         label={plan.buildingName}
                                         iconKey={plan.buildingIconKey}
@@ -2034,15 +2121,26 @@ export default function App() {
                                       />
                                     </Typography>
                                     <Typography variant="caption">{plan.proliferatorLabel}</Typography>
-                                    <Typography variant="caption">{formatRate(plan.runsPerMin, locale)}</Typography>
+                                    <Typography variant="caption">
+                                      {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
+                                    </Typography>
                                   </Stack>
                                 </Box>
-                                <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-                                  <Typography variant="subtitle1" fontWeight={700}>
-                                    {bundle.recipePlans.roundedLabel} {plan.roundedUpBuildingCount}
-                                  </Typography>
+                                <Box
+                                  sx={{
+                                    display: 'grid',
+                                    gap: 0.25,
+                                    textAlign: { xs: 'left', md: 'right' },
+                                    justifyItems: { xs: 'start', md: 'end' },
+                                  }}
+                                >
+                                  <Chip
+                                    size="small"
+                                    label={`${bundle.recipePlans.roundedLabel} ${plan.roundedUpBuildingCount}`}
+                                    sx={{ borderRadius: 999 }}
+                                  />
                                   <Typography variant="caption" color="text.secondary">
-                                    {bundle.recipePlans.exactLabel} {plan.exactBuildingCount.toFixed(2)} / {formatPower(plan.activePowerMW, locale)}
+                                    {bundle.recipePlans.exactLabel} {plan.exactBuildingCount.toFixed(2)}
                                   </Typography>
                                 </Box>
                               </Box>
@@ -2051,57 +2149,68 @@ export default function App() {
                                 sx={{
                                   display: 'flex',
                                   alignItems: 'center',
-                                  gap: 1.25,
+                                  gap: 1,
                                   flexWrap: 'wrap',
-                                  borderRadius: 4,
-                                  px: 1.5,
-                                  py: 1.25,
-                                  backgroundColor: 'rgba(22, 54, 89, 0.03)',
+                                  borderRadius: 3.5,
+                                  px: 1.25,
+                                  py: 1,
+                                  backgroundColor: 'rgba(22, 54, 89, 0.035)',
                                 }}
                               >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', flex: '1 1 280px', minWidth: 0 }}>
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    flexWrap: 'wrap',
+                                    flex: '1 1 260px',
+                                    minWidth: 0,
+                                  }}
+                                >
                                   {renderFlowRateSequence(plan.inputs)}
                                 </Box>
-                                <EastRoundedIcon sx={{ color: 'text.secondary' }} />
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', flex: '1 1 280px', minWidth: 0 }}>
+                                <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.5,
+                                    flexWrap: 'wrap',
+                                    flex: '1 1 220px',
+                                    minWidth: 0,
+                                  }}
+                                >
                                   {renderFlowRateSequence(plan.outputs)}
                                 </Box>
                               </Box>
 
-                              <Box
-                                sx={{
-                                  display: 'grid',
-                                  gap: 1,
-                                  gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(0, 1fr))' },
-                                }}
-                              >
-                                <Box>
-                                  <Typography variant="overline" color="text.secondary">
-                                    {bundle.recipePlans.inputsLabel}
-                                  </Typography>
-                                  <Typography variant="body2">{plan.inputs.length}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography variant="overline" color="text.secondary">
-                                    {bundle.recipePlans.outputsLabel}
-                                  </Typography>
-                                  <Typography variant="body2">{plan.outputs.length}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography variant="overline" color="text.secondary">
-                                    {bundle.recipePlans.powerLabel}
-                                  </Typography>
-                                  <Typography variant="body2">{formatPower(plan.activePowerMW, locale)}</Typography>
-                                </Box>
-                                <Box>
-                                  <Typography variant="overline" color="text.secondary">
-                                    {bundle.summary.buildingsLabel}
-                                  </Typography>
-                                  <Typography variant="body2">
-                                    {plan.exactBuildingCount.toFixed(2)} / {plan.roundedUpBuildingCount}
-                                  </Typography>
-                                </Box>
-                              </Box>
+                              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={`${bundle.recipePlans.powerLabel} ${formatPower(
+                                    plan.activePowerMW,
+                                    locale
+                                  )}`}
+                                />
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={`${bundle.summary.buildingsLabel} ${plan.exactBuildingCount.toFixed(
+                                    2
+                                  )} / ${plan.roundedUpBuildingCount}`}
+                                />
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={`${bundle.recipePlans.inputsLabel} ${plan.inputs.length}`}
+                                />
+                                <Chip
+                                  size="small"
+                                  variant="outlined"
+                                  label={`${bundle.recipePlans.outputsLabel} ${plan.outputs.length}`}
+                                />
+                              </Stack>
                             </CardContent>
                           </Card>
                         ))}
