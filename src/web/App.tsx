@@ -1095,13 +1095,15 @@ export default function App() {
           minWidth: 0,
         }}
       >
-        <EntityLabel
+        <EntityLabelButton
           label={item.itemName}
           iconKey={item.iconKey}
           atlasIds={iconAtlasIds}
           size={18}
           gap={6}
           textStyle={{ fontSize: 13, fontWeight: 600 }}
+          buttonStyle={{ display: 'inline-flex', alignItems: 'center' }}
+          onClick={() => openItemSlice(item.itemId)}
         />
         <Typography
           variant="caption"
@@ -2287,13 +2289,20 @@ export default function App() {
                                         }}
                                       >
                                         <span>（</span>
-                                        <EntityLabel
+                                        <EntityLabelButton
                                           label={auxiliaryProliferatorInput.itemName}
                                           iconKey={auxiliaryProliferatorInput.iconKey}
                                           atlasIds={iconAtlasIds}
                                           size={16}
                                           gap={6}
                                           textStyle={{ fontSize: 12, fontWeight: 600 }}
+                                          buttonStyle={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                          }}
+                                          onClick={() =>
+                                            openItemSlice(auxiliaryProliferatorInput.itemId)
+                                          }
                                         />
                                         <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}）</span>
                                       </Box>

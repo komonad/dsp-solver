@@ -15,7 +15,7 @@ import React from 'react';
 import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../i18n';
 import { getWorkbenchExtraBundle } from '../i18n/workbenchExtra';
 import type { PresentationItemRate, PresentationItemSlice } from '../presentation';
-import { EntityLabel } from './EntityIcon';
+import { EntityLabel, EntityLabelButton } from './EntityIcon';
 
 interface ItemSlicePanelProps {
   locale: AppLocale;
@@ -120,13 +120,15 @@ export default function ItemSlicePanel(props: ItemSlicePanelProps) {
             {bundle.itemSlice.title}
           </Typography>
           <Box sx={{ mt: 0.5 }}>
-            <EntityLabel
+            <EntityLabelButton
               label={slice.itemName}
               iconKey={slice.iconKey}
               atlasIds={atlasIds}
               size={26}
               gap={10}
               textStyle={{ fontSize: 22, fontWeight: 700 }}
+              buttonStyle={{ display: 'inline-flex', alignItems: 'center' }}
+              onClick={() => onSelectItem(slice.itemId)}
             />
           </Box>
         </Box>
