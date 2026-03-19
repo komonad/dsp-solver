@@ -2059,7 +2059,7 @@ export default function App() {
                         style={{
                           display: 'grid',
                           gap: 16,
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
                         }}
                       >
                         <div style={{ display: 'grid', gap: 8 }}>
@@ -2090,11 +2090,58 @@ export default function App() {
                           )}
                         </div>
 
-                        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+                        <div
+                          style={{
+                            border: '1px solid rgba(24, 51, 89, 0.10)',
+                            borderRadius: 16,
+                            padding: 14,
+                            display: 'grid',
+                            gap: 10,
+                            alignContent: 'start',
+                            gridColumn: 'span 2',
+                          }}
+                        >
                           <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>
-                          <div style={{ fontSize: 20, fontWeight: 700 }}>{model.solvedSummary?.buildingTypeCount ?? 0}</div>
-                          <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>
-                            {bundle.overview.roundedLabel} {model.solvedSummary?.roundedBuildingCount ?? 0}
+                          {model.buildingSummary.length === 0 ? (
+                            <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
+                          ) : (
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              {model.buildingSummary.map(summary => (
+                                <div
+                                  key={summary.buildingId}
+                                  style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'minmax(0, 1fr) auto',
+                                    gap: 10,
+                                    alignItems: 'center',
+                                  }}
+                                >
+                                  <div style={{ minWidth: 0 }}>
+                                    <EntityLabel
+                                      label={summary.buildingName}
+                                      iconKey={summary.buildingIconKey}
+                                      atlasIds={iconAtlasIds}
+                                      size={18}
+                                      gap={8}
+                                      textStyle={{ fontWeight: 600 }}
+                                    />
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      color: 'rgba(24, 51, 89, 0.78)',
+                                      whiteSpace: 'nowrap',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {summary.exactCount.toFixed(2)} / {summary.roundedUpCount}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.62)' }}>
+                            {bundle.recipePlans.exactLabel} / {bundle.overview.roundedLabel}
                           </div>
                         </div>
 
@@ -2146,9 +2193,20 @@ export default function App() {
                                   justifyContent: 'space-between',
                                   gap: 1.25,
                                   flexWrap: 'wrap',
+                                  alignItems: 'flex-start',
                                 }}
                               >
-                                <Box sx={{ display: 'grid', gap: 0.5, minWidth: 0 }}>
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    gap: 1,
+                                    flexWrap: 'wrap',
+                                    alignItems: 'center',
+                                    minWidth: 0,
+                                    width: '100%',
+                                  }}
+                                >
                                   <Typography variant="subtitle1" fontWeight={700} sx={{ minWidth: 0 }}>
                                     <EntityLabel
                                       label={plan.recipeName}
@@ -2164,9 +2222,16 @@ export default function App() {
                                     useFlexGap
                                     flexWrap="wrap"
                                     gap={0.75}
-                                    sx={{ color: 'text.secondary' }}
+                                    sx={{
+                                      color: 'text.secondary',
+                                      justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                                      alignItems: 'center',
+                                    }}
                                   >
-                                    <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{ display: 'inline-flex', alignItems: 'center' }}
+                                    >
                                       <EntityLabel
                                         label={plan.buildingName}
                                         iconKey={plan.buildingIconKey}
@@ -2178,24 +2243,13 @@ export default function App() {
                                     <Typography variant="caption">
                                       {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
                                     </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {bundle.summary.buildingsLabel} {plan.exactBuildingCount.toFixed(2)}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
+                                    </Typography>
                                   </Stack>
-                                </Box>
-                                <Box
-                                  sx={{
-                                    display: 'grid',
-                                    gap: 0.25,
-                                    textAlign: { xs: 'left', md: 'right' },
-                                    justifyItems: { xs: 'start', md: 'end' },
-                                  }}
-                                >
-                                  <Chip
-                                    size="small"
-                                    label={`${bundle.recipePlans.roundedLabel} ${plan.roundedUpBuildingCount}`}
-                                    sx={{ borderRadius: 999 }}
-                                  />
-                                  <Typography variant="caption" color="text.secondary">
-                                    {bundle.recipePlans.exactLabel} {plan.exactBuildingCount.toFixed(2)}
-                                  </Typography>
                                 </Box>
                               </Box>
 
@@ -2238,33 +2292,6 @@ export default function App() {
                                 </Box>
                               </Box>
 
-                              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={`${bundle.recipePlans.powerLabel} ${formatPower(
-                                    plan.activePowerMW,
-                                    locale
-                                  )}`}
-                                />
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={`${bundle.summary.buildingsLabel} ${plan.exactBuildingCount.toFixed(
-                                    2
-                                  )} / ${plan.roundedUpBuildingCount}`}
-                                />
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={`${bundle.recipePlans.inputsLabel} ${plan.inputs.length}`}
-                                />
-                                <Chip
-                                  size="small"
-                                  variant="outlined"
-                                  label={`${bundle.recipePlans.outputsLabel} ${plan.outputs.length}`}
-                                />
-                              </Stack>
                             </CardContent>
                           </Card>
                         ))}
