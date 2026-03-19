@@ -16,7 +16,7 @@ internal static class GameDataExporter
         return items != null && items.Length > 0 && recipes != null && recipes.Length > 0;
     }
 
-    public static string ExportToFile(string outputPath, ManualLogSource logger)
+    public static ExportedDatasetInfo ExportToFile(string outputPath, ManualLogSource logger)
     {
         ExportDataset dataset = BuildDataset(logger);
         string? directory = Path.GetDirectoryName(outputPath);
@@ -33,7 +33,12 @@ internal static class GameDataExporter
                 NullValueHandling = NullValueHandling.Ignore,
             });
         File.WriteAllText(outputPath, json);
-        return outputPath;
+        return new ExportedDatasetInfo
+        {
+            OutputPath = outputPath,
+            ItemCount = dataset.items.Count,
+            RecipeCount = dataset.recipes.Count,
+        };
     }
 
     private static ExportDataset BuildDataset(ManualLogSource logger)
@@ -249,4 +254,11 @@ internal static class GameDataExporter
         return ReflectionHelpers.GetDouble(prefabDesc, "workEnergyPerTick")
             ?? ReflectionHelpers.GetDouble(prefabDesc, "WorkEnergyPerTick");
     }
+}
+
+internal sealed class ExportedDatasetInfo
+{
+    public string OutputPath { get; set; } = string.Empty;
+    public int ItemCount { get; set; }
+    public int RecipeCount { get; set; }
 }

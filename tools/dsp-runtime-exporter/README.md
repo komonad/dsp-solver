@@ -113,6 +113,37 @@ The exporter writes a dataset JSON file to:
 The hotkey and output location are configurable through the generated BepInEx
 config file.
 
+## How to verify success or failure
+
+The exporter reports status in three places:
+
+1. BepInEx log
+   - plugin load
+   - runtime ready
+   - export success / failure
+   - item and recipe counts
+2. In-game realtime tip
+   - on load
+   - when runtime data becomes ready
+   - on export success / failure
+3. Sidecar status file
+   - written next to the dataset file as:
+
+```text
+<OutputDirectory>\CurrentGame.status.json
+```
+
+That status file records:
+
+- `success`
+- `reason`
+- `itemCount`
+- `recipeCount`
+- `outputPath`
+- `timestampUtc`
+- `message`
+- `exception` on failure
+
 ## Output format
 
 The exported JSON uses the current canonical raw dataset shape:
