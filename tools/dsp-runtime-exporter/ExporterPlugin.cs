@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Linq;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -22,7 +24,6 @@ public sealed class ExporterPlugin : BaseUnityPlugin
     private ConfigEntry<string>? datasetName;
     private ConfigEntry<string>? datasetDescription;
     private ConfigEntry<string>? sourceProfile;
-    private ConfigEntry<string>? modSummary;
     private ConfigEntry<string>? notes;
     private bool autoExportTriggered;
     private bool runtimeReadyLogged;
@@ -64,11 +65,6 @@ public sealed class ExporterPlugin : BaseUnityPlugin
             "SourceProfile",
             GuessProfileName(),
             "r2modman/BepInEx profile name that produced this dataset.");
-        modSummary = Config.Bind(
-            "Metadata",
-            "ModSummary",
-            string.Empty,
-            "Short summary of the active mod combination.");
         notes = Config.Bind(
             "Metadata",
             "Notes",
@@ -145,20 +141,20 @@ public sealed class ExporterPlugin : BaseUnityPlugin
 
             ExportedDatasetInfo exportInfo = GameDataExporter.ExportToFile(outputPath, Logger);
             WriteMetadataFile(outputPath, exportInfo);
-                WriteStatusFile(
-                    outputPath,
-                    new ExportRunStatus
-                    {
-                        success = true,
+            WriteStatusFile(
+                outputPath,
+                new ExportRunStatus
+                {
+                    success = true,
                     reason = reason,
-                        itemCount = exportInfo.ItemCount,
-                        recipeCount = exportInfo.RecipeCount,
-                        itemIconCount = exportInfo.ItemIconCount,
-                        itemIconDirectory = exportInfo.ItemIconDirectory,
-                        outputPath = exportInfo.OutputPath,
-                        timestampUtc = DateTime.UtcNow,
-                        message = $"Export completed ({reason}).",
-                    });
+                    itemCount = exportInfo.ItemCount,
+                    recipeCount = exportInfo.RecipeCount,
+                    itemIconCount = exportInfo.ItemIconCount,
+                    itemIconDirectory = exportInfo.ItemIconDirectory,
+                    outputPath = exportInfo.OutputPath,
+                    timestampUtc = DateTime.UtcNow,
+                    message = $"Export completed ({reason}).",
+                });
             Logger.LogInfo(
                 $"Export completed ({reason}): {exportInfo.OutputPath} " +
                 $"items={exportInfo.ItemCount} recipes={exportInfo.RecipeCount} itemIcons={exportInfo.ItemIconCount}");
@@ -195,17 +191,18 @@ public sealed class ExporterPlugin : BaseUnityPlugin
                 datasetName = NormalizeMetadataText(datasetName?.Value, Path.GetFileNameWithoutExtension(datasetPath)),
                 datasetDescription = NormalizeMetadataText(datasetDescription?.Value, string.Empty),
                 sourceProfile = NormalizeMetadataText(sourceProfile?.Value, GuessProfileName()),
-                modSummary = NormalizeMetadataText(modSummary?.Value, string.Empty),
                 notes = NormalizeMetadataText(notes?.Value, string.Empty),
                 outputPath = exportInfo.OutputPath,
                 itemCount = exportInfo.ItemCount,
                 recipeCount = exportInfo.RecipeCount,
                 itemIconCount = exportInfo.ItemIconCount,
                 itemIconDirectory = exportInfo.ItemIconDirectory,
+                loadedMods = CollectLoadedMods(),
                 exportedAtUtc = DateTime.UtcNow,
                 exportedBy = PluginGuid,
                 exporterVersion = PluginVersion,
             };
+            metadata.modSummary = BuildModSummary(metadata.loadedMods);
 
             string metadataPath = Path.Combine(
                 Path.GetDirectoryName(datasetPath) ?? Paths.ConfigPath,
@@ -284,6 +281,31 @@ public sealed class ExporterPlugin : BaseUnityPlugin
         string normalized = (value ?? string.Empty).Trim();
         return string.IsNullOrWhiteSpace(normalized) ? fallback : normalized;
     }
+
+    private static LoadedModInfo[] CollectLoadedMods()
+    {
+        return Chainloader.PluginInfos.Values
+            .Where(plugin => plugin != null && plugin.Metadata != null)
+            .Where(plugin => !string.Equals(plugin.Metadata.GUID, PluginGuid, StringComparison.OrdinalIgnoreCase))
+            .Select(plugin => new LoadedModInfo
+            {
+                guid = plugin.Metadata.GUID ?? string.Empty,
+                name = plugin.Metadata.Name ?? plugin.Metadata.GUID ?? string.Empty,
+                version = plugin.Metadata.Version?.ToString() ?? string.Empty,
+            })
+            .OrderBy(plugin => plugin.name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static string BuildModSummary(LoadedModInfo[] loadedMods)
+    {
+        if (loadedMods.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(" + ", loadedMods.Select(mod => mod.name));
+    }
 }
 
 internal sealed class ExportRunStatus
@@ -315,4 +337,12 @@ internal sealed class ExportDatasetMetadata
     public DateTime exportedAtUtc { get; set; }
     public string exportedBy { get; set; } = string.Empty;
     public string exporterVersion { get; set; } = string.Empty;
+    public LoadedModInfo[] loadedMods { get; set; } = Array.Empty<LoadedModInfo>();
+}
+
+internal sealed class LoadedModInfo
+{
+    public string guid { get; set; } = string.Empty;
+    public string name { get; set; } = string.Empty;
+    public string version { get; set; } = string.Empty;
 }

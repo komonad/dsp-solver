@@ -153,9 +153,13 @@ The exporter also writes a metadata sidecar file:
 That metadata file records:
 
 - `datasetName`
+  - manual dataset/config name from the exporter config
 - `datasetDescription`
 - `sourceProfile`
 - `modSummary`
+  - automatically generated from the currently loaded BepInEx plugins
+- `loadedMods`
+  - full detected mod list with `guid`, `name`, `version`
 - `notes`
 - `itemCount`
 - `recipeCount`
