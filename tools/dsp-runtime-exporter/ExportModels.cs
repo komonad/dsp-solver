@@ -35,3 +35,19 @@ internal sealed class ExportRecipeRecord
     public int Proliferator { get; set; }
     public string IconName { get; set; } = string.Empty;
 }
+
+internal sealed class ExportIconManifest
+{
+    public string datasetPath { get; set; } = string.Empty;
+    public string itemsDirectory { get; set; } = string.Empty;
+    public int iconCount { get; set; }
+    public List<ExportItemIconRecord> itemIcons { get; set; } = new List<ExportItemIconRecord>();
+}
+
+internal sealed class ExportItemIconRecord
+{
+    public int itemId { get; set; }
+    public string itemName { get; set; } = string.Empty;
+    public string iconName { get; set; } = string.Empty;
+    public string relativePath { get; set; } = string.Empty;
+}

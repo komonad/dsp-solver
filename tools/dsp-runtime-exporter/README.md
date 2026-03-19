@@ -159,9 +159,23 @@ That metadata file records:
 - `notes`
 - `itemCount`
 - `recipeCount`
+- `itemIconCount`
+- `itemIconDirectory`
 - `exportedAtUtc`
 - `exportedBy`
 - `exporterVersion`
+
+The exporter also writes item icons to:
+
+```text
+<OutputDirectory>\CurrentGame.icons\items\*.png
+```
+
+and a manifest file:
+
+```text
+<OutputDirectory>\CurrentGame.icons.manifest.json
+```
 
 ## Output format
 

@@ -43,6 +43,10 @@
       <HintPath>$(DSPManagedPath)UnityEngine.InputLegacyModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>$(DSPManagedPath)UnityEngine.ImageConversionModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
   <Target Name="ValidateLocalProps" BeforeTargets="PrepareForBuild">
@@ -70,6 +74,9 @@
     <Error
       Condition="!Exists('$(DSPManagedPath)UnityEngine.InputLegacyModule.dll')"
       Text="Missing UnityEngine.InputLegacyModule.dll under DSPManagedPath: $(DSPManagedPath)" />
+    <Error
+      Condition="!Exists('$(DSPManagedPath)UnityEngine.ImageConversionModule.dll')"
+      Text="Missing UnityEngine.ImageConversionModule.dll under DSPManagedPath: $(DSPManagedPath)" />
   </Target>
 
   <Target Name="DeployToProfile" DependsOnTargets="Build">

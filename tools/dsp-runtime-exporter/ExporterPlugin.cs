@@ -145,23 +145,25 @@ public sealed class ExporterPlugin : BaseUnityPlugin
 
             ExportedDatasetInfo exportInfo = GameDataExporter.ExportToFile(outputPath, Logger);
             WriteMetadataFile(outputPath, exportInfo);
-            WriteStatusFile(
-                outputPath,
-                new ExportRunStatus
-                {
-                    success = true,
+                WriteStatusFile(
+                    outputPath,
+                    new ExportRunStatus
+                    {
+                        success = true,
                     reason = reason,
-                    itemCount = exportInfo.ItemCount,
-                    recipeCount = exportInfo.RecipeCount,
-                    outputPath = exportInfo.OutputPath,
-                    timestampUtc = DateTime.UtcNow,
-                    message = $"Export completed ({reason}).",
-                });
+                        itemCount = exportInfo.ItemCount,
+                        recipeCount = exportInfo.RecipeCount,
+                        itemIconCount = exportInfo.ItemIconCount,
+                        itemIconDirectory = exportInfo.ItemIconDirectory,
+                        outputPath = exportInfo.OutputPath,
+                        timestampUtc = DateTime.UtcNow,
+                        message = $"Export completed ({reason}).",
+                    });
             Logger.LogInfo(
                 $"Export completed ({reason}): {exportInfo.OutputPath} " +
-                $"items={exportInfo.ItemCount} recipes={exportInfo.RecipeCount}");
+                $"items={exportInfo.ItemCount} recipes={exportInfo.RecipeCount} itemIcons={exportInfo.ItemIconCount}");
             RuntimeNotifier.TryNotifyInfo(
-                $"Export succeeded: {exportInfo.ItemCount} items, {exportInfo.RecipeCount} recipes.",
+                $"Export succeeded: {exportInfo.ItemCount} items, {exportInfo.RecipeCount} recipes, {exportInfo.ItemIconCount} item icons.",
                 Logger);
         }
         catch (Exception ex)
@@ -198,6 +200,8 @@ public sealed class ExporterPlugin : BaseUnityPlugin
                 outputPath = exportInfo.OutputPath,
                 itemCount = exportInfo.ItemCount,
                 recipeCount = exportInfo.RecipeCount,
+                itemIconCount = exportInfo.ItemIconCount,
+                itemIconDirectory = exportInfo.ItemIconDirectory,
                 exportedAtUtc = DateTime.UtcNow,
                 exportedBy = PluginGuid,
                 exporterVersion = PluginVersion,
@@ -288,6 +292,8 @@ internal sealed class ExportRunStatus
     public string reason { get; set; } = string.Empty;
     public int itemCount { get; set; }
     public int recipeCount { get; set; }
+    public int itemIconCount { get; set; }
+    public string itemIconDirectory { get; set; } = string.Empty;
     public string outputPath { get; set; } = string.Empty;
     public DateTime timestampUtc { get; set; }
     public string message { get; set; } = string.Empty;
@@ -304,6 +310,8 @@ internal sealed class ExportDatasetMetadata
     public string outputPath { get; set; } = string.Empty;
     public int itemCount { get; set; }
     public int recipeCount { get; set; }
+    public int itemIconCount { get; set; }
+    public string itemIconDirectory { get; set; } = string.Empty;
     public DateTime exportedAtUtc { get; set; }
     public string exportedBy { get; set; } = string.Empty;
     public string exporterVersion { get; set; } = string.Empty;

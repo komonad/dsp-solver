@@ -33,11 +33,14 @@ internal static class GameDataExporter
                 NullValueHandling = NullValueHandling.Ignore,
             });
         File.WriteAllText(outputPath, json);
+        ExportIconManifest iconManifest = ItemIconExporter.ExportItemIcons(outputPath, logger);
         return new ExportedDatasetInfo
         {
             OutputPath = outputPath,
             ItemCount = dataset.items.Count,
             RecipeCount = dataset.recipes.Count,
+            ItemIconCount = iconManifest.iconCount,
+            ItemIconDirectory = iconManifest.itemsDirectory,
         };
     }
 
@@ -261,4 +264,6 @@ internal sealed class ExportedDatasetInfo
     public string OutputPath { get; set; } = string.Empty;
     public int ItemCount { get; set; }
     public int RecipeCount { get; set; }
+    public int ItemIconCount { get; set; }
+    public string ItemIconDirectory { get; set; } = string.Empty;
 }
