@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -114,6 +115,25 @@ const inputStyle: React.CSSProperties = {
   color: '#183359',
   boxSizing: 'border-box',
 };
+
+const compactSelectFieldSx = {
+  minWidth: 0,
+  '& .MuiInputBase-root': {
+    minWidth: 0,
+  },
+  '& .MuiSelect-select': {
+    minWidth: 0,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    display: 'block',
+    pr: '32px !important',
+  },
+  '& .MuiSelect-select > *': {
+    minWidth: 0,
+    maxWidth: '100%',
+  },
+} as const;
 
 const buttonStyle: React.CSSProperties = {
   minHeight: 42,
@@ -1207,9 +1227,10 @@ export default function App() {
           <Paper
             sx={{
               p: { xs: 2, md: 2.5 },
-              borderRadius: 7,
+              borderRadius: '24px',
               display: 'grid',
               gap: 2.5,
+              overflow: 'hidden',
             }}
           >
             <Box
@@ -1246,25 +1267,29 @@ export default function App() {
                 sx={{
                   display: 'grid',
                   gap: 1,
-                  gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) auto auto' },
-                  alignItems: 'start',
                 }}
               >
-                <TextField
-                  select
-                  fullWidth
-                  size="small"
-                  label={bundle.summary.datasetLabel}
-                  value={presetId}
-                  onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
-                >
-                  {DATASET_PRESETS.map(preset => (
-                    <MenuItem key={preset.id} value={preset.id}>
-                      {getDatasetPresetText(preset.id, locale).label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-
+                <Box sx={{ display: 'grid', gap: 0.5 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {bundle.summary.datasetLabel}
+                  </Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    sx={compactSelectFieldSx}
+                    value={presetId}
+                    onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
+                    inputProps={{ 'aria-label': bundle.summary.datasetLabel }}
+                  >
+                    {DATASET_PRESETS.map(preset => (
+                      <MenuItem key={preset.id} value={preset.id}>
+                        {getDatasetPresetText(preset.id, locale).label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+                <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
                 <Button
                   size="small"
                   variant="contained"
@@ -1282,6 +1307,7 @@ export default function App() {
                 >
                   {bundle.datasetSource.clearCacheButton}
                 </Button>
+                </Stack>
               </Box>
 
               {isCustomPreset ? (
@@ -1402,7 +1428,7 @@ export default function App() {
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
+                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px' },
                         alignItems: 'start',
                       }}
                     >
@@ -1410,6 +1436,7 @@ export default function App() {
                         select
                         fullWidth
                         size="small"
+                        sx={compactSelectFieldSx}
                         label={bundle.summary.targetsLabel}
                         value={target.itemId}
                         onChange={event => updateTarget(index, { itemId: event.target.value })}
@@ -1435,82 +1462,66 @@ export default function App() {
                           })
                         }
                       />
-
-                      <Button
-                        variant="outlined"
-                        color="inherit"
-                        size="small"
-                        onClick={() => removeTarget(index)}
-                        disabled={!catalog}
-                        sx={{ minHeight: 40, px: 1.5 }}
-                      >
-                        {bundle.solveRequest.removeTarget}
-                      </Button>
                     </Box>
                   ))}
 
-                  {targets.length === 0 ? (
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
-                        alignItems: 'start',
-                        p: 1.75,
-                        borderRadius: 4,
-                        border: '1px dashed',
-                        borderColor: 'divider',
-                        backgroundColor: 'rgba(22, 54, 89, 0.03)',
-                      }}
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gap: 1,
+                      gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 110px auto' },
+                      alignItems: 'start',
+                      p: 1.75,
+                      borderRadius: '16px',
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      backgroundColor: 'rgba(22, 54, 89, 0.03)',
+                    }}
+                  >
+                    <TextField
+                      select
+                      fullWidth
+                      size="small"
+                      sx={compactSelectFieldSx}
+                      label={bundle.summary.targetsLabel}
+                      value={targetDraftItemId}
+                      onChange={event => setTargetDraftItemId(event.target.value)}
+                      disabled={!catalog}
                     >
-                      <TextField
-                        select
-                        fullWidth
-                        size="small"
-                        label={bundle.summary.targetsLabel}
-                        value={targetDraftItemId}
-                        onChange={event => setTargetDraftItemId(event.target.value)}
-                        disabled={!catalog}
-                      >
-                        {itemOptions.map(item => (
-                          <MenuItem key={item.itemId} value={item.itemId}>
-                            {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                      {itemOptions.map(item => (
+                        <MenuItem key={item.itemId} value={item.itemId}>
+                          {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
+                        </MenuItem>
+                      ))}
+                    </TextField>
 
-                      <TextField
-                        type="number"
-                        fullWidth
-                        size="small"
-                        label={bundle.overview.requestLabel}
-                        value={targetDraftRatePerMin}
-                        inputProps={{ min: 0, step: 1 }}
-                        onChange={event =>
-                          setTargetDraftRatePerMin(Number(event.target.value) || 0)
-                        }
-                      />
+                    <TextField
+                      type="number"
+                      fullWidth
+                      size="small"
+                      label={bundle.overview.requestLabel}
+                      value={targetDraftRatePerMin}
+                      inputProps={{ min: 0, step: 1 }}
+                      onChange={event =>
+                        setTargetDraftRatePerMin(Number(event.target.value) || 0)
+                      }
+                    />
 
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() =>
-                          addTarget({
-                            itemId: targetDraftItemId,
-                            ratePerMin: targetDraftRatePerMin,
-                          })
-                        }
-                        disabled={!catalog || !targetDraftItemId}
-                        sx={{ minHeight: 40, px: 1.5 }}
-                      >
-                        {bundle.solveRequest.addTarget}
-                      </Button>
-                    </Box>
-                  ) : (
-                    <Button variant="outlined" size="small" onClick={() => addTarget()} disabled={!catalog}>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() =>
+                        addTarget({
+                          itemId: targetDraftItemId,
+                          ratePerMin: targetDraftRatePerMin,
+                        })
+                      }
+                      disabled={!catalog || !targetDraftItemId}
+                      sx={{ minHeight: 40, px: 1.5 }}
+                    >
                       {bundle.solveRequest.addTarget}
                     </Button>
-                  )}
+                  </Box>
                 </div>
 
                 <Box
@@ -1523,6 +1534,7 @@ export default function App() {
                   <TextField
                     select
                     size="small"
+                    sx={compactSelectFieldSx}
                     label={bundle.summary.objectiveLabel}
                     value={objective}
                     onChange={event => setObjective(event.target.value as SolveObjective)}
@@ -1535,6 +1547,7 @@ export default function App() {
                   <TextField
                     select
                     size="small"
+                    sx={compactSelectFieldSx}
                     label={bundle.summary.balanceLabel}
                     value={balancePolicy}
                     onChange={event => setBalancePolicy(event.target.value as BalancePolicy)}
@@ -1546,6 +1559,7 @@ export default function App() {
                   <TextField
                     select
                     size="small"
+                    sx={compactSelectFieldSx}
                     label={bundle.summary.sprayLabel}
                     value={proliferatorPolicy}
                     onChange={event =>
@@ -1584,6 +1598,7 @@ export default function App() {
                         select
                         fullWidth
                         size="small"
+                        sx={compactSelectFieldSx}
                         label={bundle.solveRequest.disabledRecipesLabel}
                         value={disabledRecipeDraftId}
                         onChange={event => setDisabledRecipeDraftId(event.target.value)}
@@ -1638,6 +1653,7 @@ export default function App() {
                         select
                         fullWidth
                         size="small"
+                        sx={compactSelectFieldSx}
                         label={bundle.solveRequest.disabledBuildingsLabel}
                         value={disabledBuildingDraftId}
                         onChange={event => setDisabledBuildingDraftId(event.target.value)}
@@ -1695,6 +1711,7 @@ export default function App() {
                         select
                         fullWidth
                         size="small"
+                        sx={compactSelectFieldSx}
                         label={bundle.solveRequest.recipePreferencesLabel}
                         value={recipePreferenceDraftId}
                         onChange={event => setRecipePreferenceDraftId(event.target.value)}
@@ -1783,6 +1800,7 @@ export default function App() {
                                     select
                                     fullWidth
                                     size="small"
+                                    sx={compactSelectFieldSx}
                                     value={preference.preferredBuildingId}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
@@ -1807,6 +1825,7 @@ export default function App() {
                                     select
                                     fullWidth
                                     size="small"
+                                    sx={compactSelectFieldSx}
                                     value={preference.preferredProliferatorMode}
                                     onChange={event => {
                                       const nextMode = event.target.value as '' | ProliferatorMode;
@@ -1837,6 +1856,7 @@ export default function App() {
                                     select
                                     fullWidth
                                     size="small"
+                                    sx={compactSelectFieldSx}
                                     value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
                                     onChange={event =>
                                       updateRecipePreference(preference.recipeId, {
@@ -1941,10 +1961,35 @@ export default function App() {
                         {bundle.common.none}
                       </Typography>
                     ) : (
-                      requestSummary.targets.map(target => (
-                        <Typography key={target.itemId} variant="body2">
-                          {renderClickableItemLabel(target)}: {formatRate(target.ratePerMin, locale)}
-                        </Typography>
+                      requestSummary.targets.map((target, index) => (
+                        <Box
+                          key={`${target.itemId}:${index}`}
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(0, 1fr) auto',
+                            gap: 0.5,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ minWidth: 0 }}>
+                            {renderClickableItemLabel(target)}: {formatRate(target.ratePerMin, locale)}
+                          </Typography>
+                          <Tooltip title={bundle.solveRequest.removeTarget}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => removeTarget(index)}
+                                disabled={!catalog}
+                                sx={{
+                                  border: '1px solid rgba(24, 51, 89, 0.12)',
+                                  borderRadius: '10px',
+                                }}
+                              >
+                                <CloseRoundedIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
                       ))
                     )}
                   </Stack>
@@ -2078,14 +2123,23 @@ export default function App() {
                           <Card
                             key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`}
                             sx={{
-                              borderRadius: 5,
+                              borderRadius: '20px',
                               border: '1px solid',
                               borderColor: 'divider',
                               boxShadow: 'none',
                               backgroundColor: 'rgba(255,255,255,0.68)',
+                              overflow: 'hidden',
                             }}
                           >
-                            <CardContent sx={{ display: 'grid', gap: 1.25, p: 2, '&:last-child': { pb: 2 } }}>
+                            <CardContent
+                              sx={{
+                                display: 'grid',
+                                gap: 1.25,
+                                p: 2,
+                                borderRadius: '18px',
+                                '&:last-child': { pb: 2 },
+                              }}
+                            >
                               <Box
                                 sx={{
                                   display: 'flex',
@@ -2151,7 +2205,7 @@ export default function App() {
                                   alignItems: 'center',
                                   gap: 1,
                                   flexWrap: 'wrap',
-                                  borderRadius: 3.5,
+                                  borderRadius: '16px',
                                   px: 1.25,
                                   py: 1,
                                   backgroundColor: 'rgba(22, 54, 89, 0.035)',
