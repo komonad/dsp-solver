@@ -38,6 +38,13 @@ interface CollectRecipesResult {
   autoPromotedRawInputItemIds: string[];
 }
 
+interface CompiledSolveGraph {
+  recipes: ResolvedRecipeSpec[];
+  options: CompiledOptionContext[];
+  messages: string[];
+  resolvedRawInputItemIds: string[];
+}
+
 function aggregateTargetRates(request: SolveRequest): Map<string, number> {
   const targetRates = new Map<string, number>();
 
@@ -255,6 +262,32 @@ function buildRecipeOutputIndex(
   return recipesByOutputItem;
 }
 
+function buildSetKey(values: Iterable<string>): string {
+  return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right)).join('|');
+}
+
+function collectResolvableAuxiliaryItemIds(
+  compiledOptions: CompiledOptionContext[],
+  recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>
+): string[] {
+  const auxiliaryItemIds = new Set<string>();
+
+  for (const { option } of compiledOptions) {
+    const proliferatorItemId = option.proliferatorItemId;
+    if (!proliferatorItemId) {
+      continue;
+    }
+
+    if ((recipeOutputIndex.get(proliferatorItemId) ?? []).length === 0) {
+      continue;
+    }
+
+    auxiliaryItemIds.add(proliferatorItemId);
+  }
+
+  return Array.from(auxiliaryItemIds).sort((left, right) => left.localeCompare(right));
+}
+
 function compileRecipeOptions(
   catalog: ResolvedCatalogModel,
   recipe: ResolvedRecipeSpec,
@@ -355,13 +388,12 @@ function collectUpstreamRecipes(
   catalog: ResolvedCatalogModel,
   targetItemIds: string[],
   rawInputItemIds: Set<string>,
-  disabledRecipeIds: Set<string>,
+  recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>,
   disabledBuildingIds: Set<string>,
   request: SolveRequest,
   forcedRecipeByItem: Record<string, string>
 ): CollectRecipesResult {
   const messages: string[] = [];
-  const recipesByOutputItem = buildRecipeOutputIndex(catalog, disabledRecipeIds);
   const visitedItems = new Set<string>();
   const selectedRecipeIds = new Set<string>();
   const autoPromotedRawInputIds = new Set<string>();
@@ -375,11 +407,10 @@ function collectUpstreamRecipes(
     visitedItems.add(itemId);
 
     const forcedRecipeId = forcedRecipeByItem[itemId];
+    const availableProducers = recipeOutputIndex.get(itemId) ?? [];
     const producers = forcedRecipeId
-      ? [catalog.recipeMap.get(forcedRecipeId)].filter(
-          (recipe): recipe is ResolvedRecipeSpec => recipe !== undefined
-        )
-      : (recipesByOutputItem.get(itemId) ?? []);
+      ? availableProducers.filter(recipe => recipe.recipeId === forcedRecipeId)
+      : availableProducers;
 
     if (forcedRecipeId && producers.length === 0) {
       messages.push(`Forced recipe ${forcedRecipeId} for item ${itemId} does not exist.`);
@@ -428,6 +459,76 @@ function collectUpstreamRecipes(
     recipes: Array.from(selectedRecipeIds, recipeId => catalog.recipeMap.get(recipeId)!).filter(Boolean),
     messages,
     autoPromotedRawInputItemIds: Array.from(autoPromotedRawInputIds).sort((left, right) =>
+      left.localeCompare(right)
+    ),
+  };
+}
+
+function compileSolveGraph(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  targetItemIds: string[],
+  initialRawInputItemIds: Set<string>,
+  disabledRecipeIds: Set<string>,
+  disabledBuildingIds: Set<string>
+): CompiledSolveGraph {
+  const availableRecipeOutputIndex = buildRecipeOutputIndex(catalog, disabledRecipeIds);
+  const anyRecipeOutputIndex = buildRecipeOutputIndex(catalog, new Set<string>());
+  const diagnostics = new Set<string>();
+  const effectiveRawInputItemIds = new Set(initialRawInputItemIds);
+  let requiredItemIds = new Set(targetItemIds);
+  let recipes: ResolvedRecipeSpec[] = [];
+  let compiledOptions: CompiledOptionContext[] = [];
+  let previousStateKey = '';
+
+  const maxIterations =
+    catalog.items.length + catalog.recipes.length + catalog.proliferatorLevels.length + 8;
+
+  for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+    const collected = collectUpstreamRecipes(
+      catalog,
+      Array.from(requiredItemIds),
+      effectiveRawInputItemIds,
+      availableRecipeOutputIndex,
+      disabledBuildingIds,
+      request,
+      request.forcedRecipeByItem ?? {}
+    );
+    collected.messages.forEach(message => diagnostics.add(message));
+    collected.autoPromotedRawInputItemIds.forEach(itemId =>
+      effectiveRawInputItemIds.add(itemId)
+    );
+
+    const compiled = compileOptions(catalog, collected.recipes, request, disabledBuildingIds);
+    compiled.messages.forEach(message => diagnostics.add(message));
+
+    const auxiliaryItemIds = collectResolvableAuxiliaryItemIds(
+      compiled.options,
+      anyRecipeOutputIndex
+    );
+    const nextRequiredItemIds = new Set([...targetItemIds, ...auxiliaryItemIds]);
+    const stateKey = [
+      buildSetKey(collected.recipes.map(recipe => recipe.recipeId)),
+      buildSetKey(nextRequiredItemIds),
+      buildSetKey(effectiveRawInputItemIds),
+    ].join('||');
+
+    recipes = collected.recipes;
+    compiledOptions = compiled.options;
+
+    if (stateKey === previousStateKey) {
+      break;
+    }
+
+    previousStateKey = stateKey;
+    requiredItemIds = nextRequiredItemIds;
+  }
+
+  return {
+    recipes,
+    options: compiledOptions,
+    messages: Array.from(diagnostics),
+    resolvedRawInputItemIds: Array.from(effectiveRawInputItemIds).sort((left, right) =>
       left.localeCompare(right)
     ),
   };
@@ -650,13 +751,19 @@ function collectInvolvedItemIds(
 
 function collectExternalItemIds(
   rawInputItemIds: Set<string>,
-  compiledOptions: CompiledOptionContext[]
+  compiledOptions: CompiledOptionContext[],
+  recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>
 ): Set<string> {
   const externalItemIds = new Set(rawInputItemIds);
 
   for (const { option } of compiledOptions) {
-    if (option.proliferatorMode !== 'none') {
-      const proliferatorItemId = option.proliferatorItemId ?? `__proliferator_level_${option.proliferatorLevel}`;
+    if (option.proliferatorMode === 'none') {
+      continue;
+    }
+
+    const proliferatorItemId =
+      option.proliferatorItemId ?? `__proliferator_level_${option.proliferatorLevel}`;
+    if ((recipeOutputIndex.get(proliferatorItemId) ?? []).length === 0) {
       externalItemIds.add(proliferatorItemId);
     }
   }
@@ -941,6 +1048,84 @@ function buildResultFromSolution(params: {
   };
 }
 
+function solveCatalogRequestValidated(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest
+): SolveResult {
+  const targetRateMap = aggregateTargetRates(request);
+  const disabledRawInputItemIds = new Set(request.disabledRawInputItemIds ?? []);
+  const rawInputItemIds = new Set<string>(
+    [...catalog.rawItemIds, ...(request.rawInputItemIds ?? [])].filter(
+      itemId => !disabledRawInputItemIds.has(itemId)
+    )
+  );
+  const disabledRecipeIds = new Set(request.disabledRecipeIds ?? []);
+  const disabledBuildingIds = new Set(request.disabledBuildingIds ?? []);
+  const compiledGraph = compileSolveGraph(
+    catalog,
+    request,
+    Array.from(targetRateMap.keys()),
+    rawInputItemIds,
+    disabledRecipeIds,
+    disabledBuildingIds
+  );
+  const resolvedRawInputItemIds = new Set(compiledGraph.resolvedRawInputItemIds);
+  const externalItemIds = collectExternalItemIds(
+    resolvedRawInputItemIds,
+    compiledGraph.options,
+    buildRecipeOutputIndex(catalog, new Set<string>())
+  );
+  const diagnostics = [...compiledGraph.messages];
+
+  const model = buildModel(request, compiledGraph.options, targetRateMap, externalItemIds);
+  const solution = solveLinearProgram(model);
+
+  if (solution.status !== 'optimal') {
+    return {
+      status: 'infeasible',
+      diagnostics: {
+        messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
+        unmetPreferences: [],
+      },
+      resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
+        left.localeCompare(right)
+      ),
+      targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
+        itemId,
+        requestedRatePerMin,
+        actualRatePerMin: 0,
+      })),
+      recipePlans: [],
+      buildingSummary: [],
+      powerSummary: {
+        activePowerMW: 0,
+        roundedPlacementPowerMW: 0,
+      },
+      externalInputs: [],
+      surplusOutputs: [],
+      itemBalance: [],
+    };
+  }
+
+  const result = buildResultFromSolution({
+    request,
+    targetRateMap,
+    compiledOptions: compiledGraph.options,
+    solutionVariables: new Map<string, number>(solution.variables),
+    resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
+      left.localeCompare(right)
+    ),
+  });
+
+  return {
+    ...result,
+    diagnostics: {
+      messages: diagnostics,
+      unmetPreferences: result.diagnostics.unmetPreferences,
+    },
+  };
+}
+
 export function solveCatalogRequest(
   catalog: ResolvedCatalogModel,
   request: SolveRequest
@@ -967,76 +1152,36 @@ export function solveCatalogRequest(
     };
   }
 
-  const targetRateMap = aggregateTargetRates(request);
-  const disabledRawInputItemIds = new Set(request.disabledRawInputItemIds ?? []);
-  const rawInputItemIds = new Set<string>(
-    [...catalog.rawItemIds, ...(request.rawInputItemIds ?? [])].filter(
-      itemId => !disabledRawInputItemIds.has(itemId)
-    )
-  );
-  const disabledRecipeIds = new Set(request.disabledRecipeIds ?? []);
-  const disabledBuildingIds = new Set(request.disabledBuildingIds ?? []);
-  const collected = collectUpstreamRecipes(
-    catalog,
-    Array.from(targetRateMap.keys()),
-    rawInputItemIds,
-    disabledRecipeIds,
-    disabledBuildingIds,
-    request,
-    request.forcedRecipeByItem ?? {}
-  );
-  for (const itemId of collected.autoPromotedRawInputItemIds) {
-    rawInputItemIds.add(itemId);
-  }
-  const compiled = compileOptions(catalog, collected.recipes, request, disabledBuildingIds);
-  const diagnostics = [...collected.messages, ...compiled.messages];
-
-  const externalItemIds = collectExternalItemIds(rawInputItemIds, compiled.options);
-  const model = buildModel(request, compiled.options, targetRateMap, externalItemIds);
-  const solution = solveLinearProgram(model);
-
-  if (solution.status !== 'optimal') {
-    return {
-      status: 'infeasible',
-      diagnostics: {
-        messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
-        unmetPreferences: [],
-      },
-      resolvedRawInputItemIds: Array.from(rawInputItemIds).sort((left, right) =>
-        left.localeCompare(right)
-      ),
-      targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
-        itemId,
-        requestedRatePerMin,
-        actualRatePerMin: 0,
-      })),
-      recipePlans: [],
-      buildingSummary: [],
-      powerSummary: {
-        activePowerMW: 0,
-        roundedPlacementPowerMW: 0,
-      },
-      externalInputs: [],
-      surplusOutputs: [],
-      itemBalance: [],
-    };
+  const preferredRecipeByItem = request.preferredRecipeByItem ?? {};
+  if (Object.keys(preferredRecipeByItem).length === 0) {
+    return solveCatalogRequestValidated(catalog, request);
   }
 
-  const result = buildResultFromSolution({
-    request,
-    targetRateMap,
-    compiledOptions: compiled.options,
-    solutionVariables: new Map<string, number>(solution.variables),
-    resolvedRawInputItemIds: Array.from(rawInputItemIds).sort((left, right) =>
-      left.localeCompare(right)
-    ),
-  });
+  const strictPreferredRequest: SolveRequest = {
+    ...request,
+    forcedRecipeByItem: {
+      ...preferredRecipeByItem,
+      ...(request.forcedRecipeByItem ?? {}),
+    },
+  };
+  const strictPreferredResult = solveCatalogRequestValidated(catalog, strictPreferredRequest);
+  if (strictPreferredResult.status === 'optimal') {
+    return strictPreferredResult;
+  }
+
+  const fallbackResult = solveCatalogRequestValidated(catalog, request);
+  if (fallbackResult.status !== 'optimal') {
+    return fallbackResult;
+  }
 
   return {
-    ...result,
+    ...fallbackResult,
     diagnostics: {
-      messages: diagnostics,
-      unmetPreferences: result.diagnostics.unmetPreferences,
+      messages: [
+        ...fallbackResult.diagnostics.messages,
+        'Preferred recipes could not all be enforced as a hard constraint; fell back to soft preference solving.',
+      ],
+      unmetPreferences: fallbackResult.diagnostics.unmetPreferences,
     },
   };
 }

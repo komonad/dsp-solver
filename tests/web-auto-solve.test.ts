@@ -26,12 +26,25 @@ function buildDemoDataset(): VanillaDatasetSpec {
         ID: 1,
         Type: 1,
         Factories: [5001],
-        Name: 'Ore to Plate',
+        Name: 'Cheap Plate',
         Items: [1001],
         ItemCounts: [1],
         Results: [1101],
         ResultCounts: [1],
         TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Preferred Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 120,
         Proliferator: 0,
         IconName: 'plate',
       },
@@ -73,6 +86,7 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
   });
   expect(autoSolve.result?.status).toBe('optimal');
   expect(autoSolve.result?.externalInputs).toEqual([{ itemId: '1001', ratePerMin: 60 }]);
+  expect(autoSolve.result?.recipePlans[0].recipeId).toBe('1');
 });
 
 test('computeWorkbenchSolve surfaces advanced-override parse errors without emitting a request', () => {
@@ -122,4 +136,27 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
   });
   expect(autoSolve.result).toBeNull();
   expect(autoSolve.error).toBe(getLocaleBundle().solveRequest.validTargetRequired);
+});
+
+test('computeWorkbenchSolve applies preferredRecipeByItem strongly enough to change the chosen recipe', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const autoSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    preferredRecipeByItem: { '1101': '2' },
+    recipePreferences: [],
+    advancedOverridesText: '',
+  });
+
+  expect(autoSolve.error).toBe('');
+  expect(autoSolve.request?.preferredRecipeByItem).toEqual({ '1101': '2' });
+  expect(autoSolve.result?.status).toBe('optimal');
+  expect(autoSolve.result?.recipePlans[0].recipeId).toBe('2');
 });

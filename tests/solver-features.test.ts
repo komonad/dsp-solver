@@ -1,4 +1,7 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import {
+  parseJsonText,
   resolveCatalogModel,
   type CatalogDefaultConfigSpec,
   type VanillaDatasetSpec,
@@ -179,6 +182,52 @@ function buildUnavailableUpstreamDefaults(): CatalogDefaultConfigSpec {
     ],
     recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
     recommendedRawItemTypeIds: [1],
+  };
+}
+
+function buildAlternativeRecipeDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 2 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Assembler',
+        IconName: 'assembler',
+        GridIndex: 3,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Cheap Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Preferred Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 120,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+    ],
   };
 }
 
@@ -536,4 +585,80 @@ test('disabledRawInputItemIds can cancel a dataset default raw item', () => {
   });
 
   expect(disabledRawResult.status).toBe('infeasible');
+});
+
+test('preferredRecipeByItem is enforced when feasible before falling back to soft preference', () => {
+  const catalog = resolveCatalogModel(
+    buildAlternativeRecipeDataset(),
+    buildNoProliferatorDefaults()
+  );
+
+  const defaultResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(defaultResult.status).toBe('optimal');
+  expect(defaultResult.recipePlans).toHaveLength(1);
+  expect(defaultResult.recipePlans[0].recipeId).toBe('1');
+
+  const preferredResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    preferredRecipeByItem: { '1101': '2' },
+  });
+
+  expect(preferredResult.status).toBe('optimal');
+  expect(preferredResult.recipePlans).toHaveLength(1);
+  expect(preferredResult.recipePlans[0].recipeId).toBe('2');
+});
+
+test('preferredRecipeByItem falls back when the preferred recipe is unavailable', () => {
+  const catalog = resolveCatalogModel(
+    buildAlternativeRecipeDataset(),
+    buildNoProliferatorDefaults()
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    disabledRecipeIds: ['2'],
+    preferredRecipeByItem: { '1101': '2' },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].recipeId).toBe('1');
+  expect(result.diagnostics.messages).toContain(
+    'Preferred recipes could not all be enforced as a hard constraint; fell back to soft preference solving.'
+  );
+  expect(result.diagnostics.unmetPreferences).toContain(
+    'Preferred recipe 2 was not used for item 1101.'
+  );
+});
+
+test('vanilla proliferator items can be produced through their own recipe chain', () => {
+  const vanillaDataset = parseJsonText<VanillaDatasetSpec>(
+    readFileSync(join(__dirname, '..', 'data', 'Vanilla.json'), 'utf8')
+  );
+  const vanillaDefaults = parseJsonText<CatalogDefaultConfigSpec>(
+    readFileSync(join(__dirname, '..', 'data', 'Vanilla.defaults.json'), 'utf8')
+  );
+  const catalog = resolveCatalogModel(vanillaDataset, vanillaDefaults);
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1141', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.some(plan => plan.recipeId === '106')).toBe(true);
+  expect(result.recipePlans.some(plan => plan.outputs.some(output => output.itemId === '1141'))).toBe(
+    true
+  );
+  expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
 });
