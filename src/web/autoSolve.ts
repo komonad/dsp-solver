@@ -14,6 +14,7 @@ import {
   type EditableTarget,
   type WorkbenchProliferatorPolicy,
 } from './requestBuilder';
+import { recordWorkbenchPerf } from './workbenchPerf';
 
 export interface ComputeWorkbenchSolveParams {
   catalog: ResolvedCatalogModel;
@@ -65,9 +66,24 @@ export function computeWorkbenchSolve(
     locale = DEFAULT_APP_LOCALE,
   } = params;
   const bundle = getLocaleBundle(locale);
+  const startedAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
   const parsedOverrides = parseAdvancedSolveOverrides(advancedOverridesText, locale);
 
   if (parsedOverrides.error) {
+    const durationMs =
+      (typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()) - startedAt;
+    recordWorkbenchPerf({
+      phase: 'solve',
+      status: 'parse_error',
+      durationMs,
+      requestBuildMs: durationMs,
+      recordedAt: Date.now(),
+    });
     return {
       request: undefined,
       result: null,
@@ -98,8 +114,20 @@ export function computeWorkbenchSolve(
     disabledRawInputItemIds,
     advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),
   });
+  const requestBuiltAt =
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  const requestBuildMs = requestBuiltAt - startedAt;
 
   if (request.targets.length === 0) {
+    recordWorkbenchPerf({
+      phase: 'solve',
+      status: 'empty_target',
+      durationMs: requestBuildMs,
+      requestBuildMs,
+      recordedAt: Date.now(),
+    });
     return {
       request,
       result: null,
@@ -108,12 +136,37 @@ export function computeWorkbenchSolve(
   }
 
   try {
+    const result = solveCatalogRequest(catalog, request);
+    const finishedAt =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    recordWorkbenchPerf({
+      phase: 'solve',
+      status: result.status,
+      durationMs: finishedAt - startedAt,
+      requestBuildMs,
+      solveMs: finishedAt - requestBuiltAt,
+      recordedAt: Date.now(),
+    });
     return {
       request,
-      result: solveCatalogRequest(catalog, request),
+      result,
       error: '',
     };
   } catch (error) {
+    const finishedAt =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    recordWorkbenchPerf({
+      phase: 'solve',
+      status: 'exception',
+      durationMs: finishedAt - startedAt,
+      requestBuildMs,
+      solveMs: finishedAt - requestBuiltAt,
+      recordedAt: Date.now(),
+    });
     return {
       request,
       result: null,

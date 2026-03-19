@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -71,6 +71,7 @@ import {
   type WorkbenchCacheSource,
   type WorkbenchEditorState,
 } from './persistence';
+import { recordWorkbenchPerf } from './workbenchPerf';
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
@@ -623,16 +624,8 @@ export default function App() {
     [advancedOverridesText, locale]
   );
 
-  const autoSolveState = useMemo(() => {
-    if (!catalog || isLoading) {
-      return {
-        request: undefined,
-        result: null,
-        error: '',
-      };
-    }
-
-    return computeWorkbenchSolve({
+  const solveInputs = useMemo(
+    () => ({
       catalog,
       targets,
       objective,
@@ -648,46 +641,93 @@ export default function App() {
       recipeStrategyOverrides,
       advancedOverridesText,
       locale,
+      isLoading,
+    }),
+    [
+      advancedOverridesText,
+      autoPromoteUnavailableItemsToRawInputs,
+      balancePolicy,
+      catalog,
+      disabledRawInputItemIds,
+      disabledBuildingIds,
+      disabledRecipeIds,
+      isLoading,
+      locale,
+      objective,
+      preferredRecipeByItem,
+      proliferatorPolicy,
+      rawInputItemIds,
+      recipePreferences,
+      recipeStrategyOverrides,
+      targets,
+    ]
+  );
+  const deferredSolveInputs = useDeferredValue(solveInputs);
+
+  const autoSolveState = useMemo(() => {
+    if (!deferredSolveInputs.catalog || deferredSolveInputs.isLoading) {
+      return {
+        request: undefined,
+        result: null,
+        error: '',
+      };
+    }
+
+    return computeWorkbenchSolve({
+      catalog: deferredSolveInputs.catalog,
+      targets: deferredSolveInputs.targets,
+      objective: deferredSolveInputs.objective,
+      balancePolicy: deferredSolveInputs.balancePolicy,
+      proliferatorPolicy: deferredSolveInputs.proliferatorPolicy,
+      autoPromoteUnavailableItemsToRawInputs:
+        deferredSolveInputs.autoPromoteUnavailableItemsToRawInputs,
+      rawInputItemIds: deferredSolveInputs.rawInputItemIds,
+      disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
+      disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
+      disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
+      preferredRecipeByItem: deferredSolveInputs.preferredRecipeByItem,
+      recipePreferences: deferredSolveInputs.recipePreferences,
+      recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
+      advancedOverridesText: deferredSolveInputs.advancedOverridesText,
+      locale: deferredSolveInputs.locale,
     });
-  }, [
-    advancedOverridesText,
-    autoPromoteUnavailableItemsToRawInputs,
-    balancePolicy,
-    catalog,
-    disabledRawInputItemIds,
-    disabledBuildingIds,
-    disabledRecipeIds,
-    isLoading,
-    locale,
-    objective,
-    preferredRecipeByItem,
-    proliferatorPolicy,
-    rawInputItemIds,
-    recipePreferences,
-    recipeStrategyOverrides,
-    targets,
-  ]);
+  }, [deferredSolveInputs]);
 
   const lastRequest = autoSolveState.request;
   const result = autoSolveState.result;
   const solveError = autoSolveState.error;
   const hasTargets = targets.length > 0;
 
-  const model = useMemo(
-    () =>
-      catalog
-        ? buildPresentationModel({
-            catalog,
-            request: lastRequest,
-            result,
-            datasetLabel: catalogLabel,
-            datasetPath,
-            defaultConfigPath: defaultConfigPath || undefined,
-            locale,
-          })
-        : null,
-    [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]
-  );
+  const model = useMemo(() => {
+    if (!catalog) {
+      return null;
+    }
+
+    const startedAt =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    const nextModel = buildPresentationModel({
+      catalog,
+      request: lastRequest,
+      result,
+      datasetLabel: catalogLabel,
+      datasetPath,
+      defaultConfigPath: defaultConfigPath || undefined,
+      locale,
+    });
+    const finishedAt =
+      typeof performance !== 'undefined' && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now();
+    recordWorkbenchPerf({
+      phase: 'presentation',
+      status: result?.status ?? 'idle',
+      durationMs: finishedAt - startedAt,
+      recordedAt: Date.now(),
+    });
+    return nextModel;
+  }, [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]);
   const requestSummary = model?.requestSummary;
   const iconAtlasIds = model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
 
@@ -979,6 +1019,7 @@ export default function App() {
         preferredRecipeByItem,
         recipePreferences,
         recipeStrategyOverrides,
+        currentResolvedRawInputItemIds: result?.resolvedRawInputItemIds ?? [],
         advancedOverridesText,
         recipeId,
         patch,
@@ -1006,6 +1047,7 @@ export default function App() {
       preferredRecipeByItem,
       proliferatorPolicy,
       rawInputItemIds,
+      result,
       recipePreferences,
       recipeStrategyOverrides,
       targets,

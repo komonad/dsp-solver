@@ -23,6 +23,7 @@ export interface TryApplyRecipeStrategyOverrideParams {
   preferredRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
+  currentResolvedRawInputItemIds: string[];
   advancedOverridesText: string;
   recipeId: string;
   patch: Partial<EditableRecipeStrategyOverride>;
@@ -120,6 +121,7 @@ export function tryApplyRecipeStrategyOverride(
     preferredRecipeByItem,
     recipePreferences,
     recipeStrategyOverrides,
+    currentResolvedRawInputItemIds,
     advancedOverridesText,
     recipeId,
     patch,
@@ -131,24 +133,6 @@ export function tryApplyRecipeStrategyOverride(
     recipeId,
     patch
   );
-
-  const currentSolveState = computeWorkbenchSolve({
-    catalog,
-    targets,
-    objective,
-    balancePolicy,
-    proliferatorPolicy,
-    autoPromoteUnavailableItemsToRawInputs,
-    rawInputItemIds,
-    disabledRawInputItemIds,
-    disabledRecipeIds,
-    disabledBuildingIds,
-    preferredRecipeByItem,
-    recipePreferences,
-    recipeStrategyOverrides,
-    advancedOverridesText,
-    locale,
-  });
 
   const nextSolveState = computeWorkbenchSolve({
     catalog,
@@ -188,9 +172,7 @@ export function tryApplyRecipeStrategyOverride(
     };
   }
 
-  const currentResolvedRawInputIds = new Set(
-    currentSolveState.result?.resolvedRawInputItemIds ?? []
-  );
+  const currentResolvedRawInputIds = new Set(currentResolvedRawInputItemIds);
   const introducedResolvedRawInputIds = nextSolveState.result.resolvedRawInputItemIds.filter(
     itemId => !currentResolvedRawInputIds.has(itemId)
   );

@@ -1,5 +1,6 @@
 import type { EditableRecipeStrategyOverride } from '../src/web/requestBuilder';
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
+import { computeWorkbenchSolve } from '../src/web/autoSolve';
 import { tryApplyRecipeStrategyOverride } from '../src/web/recipeStrategy';
 
 function workEnergyForMW(megawatts: number): number {
@@ -73,6 +74,22 @@ function buildStrategyDemoCatalog() {
 
 test('tryApplyRecipeStrategyOverride accepts valid forced overrides and normalizes none to level 0', () => {
   const catalog = buildStrategyDemoCatalog();
+  const currentSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: ['5002'],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    advancedOverridesText: '',
+  });
 
   const result = tryApplyRecipeStrategyOverride({
     catalog,
@@ -88,6 +105,7 @@ test('tryApplyRecipeStrategyOverride accepts valid forced overrides and normaliz
     preferredRecipeByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    currentResolvedRawInputItemIds: currentSolve.result?.resolvedRawInputItemIds ?? [],
     advancedOverridesText: '',
     recipeId: '1',
     patch: {
@@ -118,6 +136,22 @@ test('tryApplyRecipeStrategyOverride rejects an override that makes the request 
       forcedProliferatorLevel: '',
     },
   ];
+  const currentSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: ['5002'],
+    preferredRecipeByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: currentOverrides,
+    advancedOverridesText: '',
+  });
 
   const result = tryApplyRecipeStrategyOverride({
     catalog,
@@ -133,6 +167,7 @@ test('tryApplyRecipeStrategyOverride rejects an override that makes the request 
     preferredRecipeByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: currentOverrides,
+    currentResolvedRawInputItemIds: currentSolve.result?.resolvedRawInputItemIds ?? [],
     advancedOverridesText: '',
     recipeId: '1',
     patch: {

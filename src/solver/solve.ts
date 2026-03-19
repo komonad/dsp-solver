@@ -45,6 +45,11 @@ interface CompiledSolveGraph {
   resolvedRawInputItemIds: string[];
 }
 
+interface CachedRecipeOptionCompilation {
+  options: CompiledOptionContext[];
+  messages: string[];
+}
+
 function aggregateTargetRates(request: SolveRequest): Map<string, number> {
   const targetRates = new Map<string, number>();
 
@@ -389,9 +394,9 @@ function collectUpstreamRecipes(
   targetItemIds: string[],
   rawInputItemIds: Set<string>,
   recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>,
-  disabledBuildingIds: Set<string>,
-  request: SolveRequest,
-  forcedRecipeByItem: Record<string, string>
+  autoPromoteUnavailableItemsToRawInputs: boolean,
+  forcedRecipeByItem: Record<string, string>,
+  getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
 ): CollectRecipesResult {
   const messages: string[] = [];
   const visitedItems = new Set<string>();
@@ -425,13 +430,10 @@ function collectUpstreamRecipes(
       continue;
     }
 
-    const feasibleProducers = producers.filter(
-      recipe =>
-        compileRecipeOptions(catalog, recipe, request, disabledBuildingIds).length > 0
-    );
+    const feasibleProducers = producers.filter(recipe => getCompiledRecipeOptions(recipe).length > 0);
 
     if (feasibleProducers.length === 0) {
-      if (request.autoPromoteUnavailableItemsToRawInputs) {
+      if (autoPromoteUnavailableItemsToRawInputs) {
         autoPromotedRawInputIds.add(itemId);
         messages.push(
           `Unavailable item ${itemId} (${catalog.itemMap.get(itemId)?.name ?? itemId}) was treated as an external/raw input.`
@@ -475,6 +477,29 @@ function compileSolveGraph(
   const availableRecipeOutputIndex = buildRecipeOutputIndex(catalog, disabledRecipeIds);
   const anyRecipeOutputIndex = buildRecipeOutputIndex(catalog, new Set<string>());
   const diagnostics = new Set<string>();
+  const recipeOptionCache = new Map<string, CachedRecipeOptionCompilation>();
+  const getCompiledRecipeOptions = (recipe: ResolvedRecipeSpec): CompiledOptionContext[] => {
+    const cached = recipeOptionCache.get(recipe.recipeId);
+    if (cached) {
+      return cached.options;
+    }
+
+    const messages: string[] = [];
+    const options = compileRecipeOptions(catalog, recipe, request, disabledBuildingIds, messages);
+    recipeOptionCache.set(recipe.recipeId, { options, messages });
+    return options;
+  };
+  const collectCachedCompilationMessages = (recipes: ResolvedRecipeSpec[]): string[] => {
+    const messages: string[] = [];
+    for (const recipe of recipes) {
+      const cached = recipeOptionCache.get(recipe.recipeId);
+      if (!cached) {
+        continue;
+      }
+      messages.push(...cached.messages);
+    }
+    return messages;
+  };
   const effectiveRawInputItemIds = new Set(initialRawInputItemIds);
   let requiredItemIds = new Set(targetItemIds);
   let recipes: ResolvedRecipeSpec[] = [];
@@ -490,16 +515,17 @@ function compileSolveGraph(
       Array.from(requiredItemIds),
       effectiveRawInputItemIds,
       availableRecipeOutputIndex,
-      disabledBuildingIds,
-      request,
-      request.forcedRecipeByItem ?? {}
+      Boolean(request.autoPromoteUnavailableItemsToRawInputs),
+      request.forcedRecipeByItem ?? {},
+      getCompiledRecipeOptions
     );
     collected.messages.forEach(message => diagnostics.add(message));
     collected.autoPromotedRawInputItemIds.forEach(itemId =>
       effectiveRawInputItemIds.add(itemId)
     );
 
-    const compiled = compileOptions(catalog, collected.recipes, request, disabledBuildingIds);
+    collectCachedCompilationMessages(collected.recipes).forEach(message => diagnostics.add(message));
+    const compiled = compileOptions(collected.recipes, getCompiledRecipeOptions);
     compiled.messages.forEach(message => diagnostics.add(message));
 
     const auxiliaryItemIds = collectResolvableAuxiliaryItemIds(
@@ -701,23 +727,18 @@ function isOptionAllowedByForce(
 }
 
 function compileOptions(
-  catalog: ResolvedCatalogModel,
   recipes: ResolvedRecipeSpec[],
-  request: SolveRequest,
-  disabledBuildingIds: Set<string>
+  getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
 ): { options: CompiledOptionContext[]; messages: string[] } {
-  const messages: string[] = [];
   const compiledOptions: CompiledOptionContext[] = [];
 
   for (const recipe of recipes) {
-    compiledOptions.push(
-      ...compileRecipeOptions(catalog, recipe, request, disabledBuildingIds, messages)
-    );
+    compiledOptions.push(...getCompiledRecipeOptions(recipe));
   }
 
   return {
     options: compiledOptions,
-    messages,
+    messages: [],
   };
 }
 
