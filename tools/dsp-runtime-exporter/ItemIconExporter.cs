@@ -168,20 +168,28 @@ internal static class ItemIconExporter
         try
         {
             Texture texture = sprite.texture;
-            renderTexture = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32);
-            Rect sourceRect = new Rect(
-                rect.x / texture.width,
-                rect.y / texture.height,
-                rect.width / texture.width,
-                rect.height / texture.height);
-
+            renderTexture = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32);
             RenderTexture.active = renderTexture;
             GL.Clear(true, true, Color.clear);
-            Graphics.DrawTexture(new Rect(0, 0, width, height), texture, sourceRect, 0, 0, 0, 0);
+            Graphics.Blit(texture, renderTexture);
 
             readableTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            readableTexture.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+            Rect readRect = new Rect(rect.x, rect.y, rect.width, rect.height);
+            readableTexture.ReadPixels(readRect, 0, 0);
             readableTexture.Apply();
+
+            if (IsFullyTransparent(readableTexture))
+            {
+                Rect flippedReadRect = new Rect(rect.x, texture.height - rect.y - rect.height, rect.width, rect.height);
+                readableTexture.ReadPixels(flippedReadRect, 0, 0);
+                readableTexture.Apply();
+            }
+
+            if (IsFullyTransparent(readableTexture))
+            {
+                logger.LogWarning($"Sprite {sprite.name} exported as fully transparent after both crop attempts.");
+            }
+
             return readableTexture.EncodeToPNG();
         }
         catch (Exception ex)
@@ -202,5 +210,19 @@ internal static class ItemIconExporter
                 RenderTexture.ReleaseTemporary(renderTexture);
             }
         }
+    }
+
+    private static bool IsFullyTransparent(Texture2D texture)
+    {
+        Color32[] pixels = texture.GetPixels32();
+        for (int index = 0; index < pixels.Length; index++)
+        {
+            if (pixels[index].a != 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
