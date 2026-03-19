@@ -181,6 +181,32 @@ and a manifest file:
 <OutputDirectory>\CurrentGame.icons.manifest.json
 ```
 
+## Validate an export
+
+You can validate the exported dataset and item icon files with a tolerance for
+missing icon coverage:
+
+```powershell
+node tools\dsp-runtime-exporter\scripts\validate-export.mjs "C:\Path\To\CurrentGame.json"
+```
+
+or:
+
+```powershell
+tools\dsp-runtime-exporter\scripts\validate-export.cmd "C:\Path\To\CurrentGame.json"
+```
+
+Default behavior:
+
+- missing icon coverage is reported as `warning`
+- broken manifest entries, missing files, empty files, or invalid PNG files are `error`
+
+If you want missing coverage to fail validation too:
+
+```powershell
+node tools\dsp-runtime-exporter\scripts\validate-export.mjs "C:\Path\To\CurrentGame.json" --strict-missing
+```
+
 ## Output format
 
 The exported JSON uses the current canonical raw dataset shape:
