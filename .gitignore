@@ -12,3 +12,4 @@ tools/**/bin/
 tools/**/obj/
 tools/**/package/
 tools/**/Local.props
+dspcalc.sln
