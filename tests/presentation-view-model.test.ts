@@ -338,9 +338,9 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
           itemId: '1001',
           itemName: 'Demo Ore',
           iconKey: 'demo-ore',
-          producedRatePerMin: 60,
+          producedRatePerMin: 0,
           consumedRatePerMin: 60,
-          netRatePerMin: 0,
+          netRatePerMin: -60,
           throughputRatePerMin: 60,
           isRawInput: true,
           isTarget: false,
@@ -360,8 +360,8 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
           itemName: 'Demo Plate',
           iconKey: 'demo-plate',
           producedRatePerMin: 60,
-          consumedRatePerMin: 60,
-          netRatePerMin: 0,
+          consumedRatePerMin: 0,
+          netRatePerMin: 60,
           throughputRatePerMin: 60,
           isRawInput: false,
           isTarget: true,
@@ -406,6 +406,9 @@ test('presentation model exposes per-item slices with producer and consumer plan
   expect(model.itemSlicesById['1101']).toMatchObject({
     itemId: '1101',
     itemName: 'Demo Plate',
+    producedRatePerMin: 60,
+    consumedRatePerMin: 0,
+    netRatePerMin: 60,
     targetRatePerMin: 60,
     externalInputRatePerMin: 0,
     isTarget: true,
@@ -421,6 +424,9 @@ test('presentation model exposes per-item slices with producer and consumer plan
   expect(model.itemSlicesById['1001']).toMatchObject({
     itemId: '1001',
     itemName: 'Demo Ore',
+    producedRatePerMin: 0,
+    consumedRatePerMin: 60,
+    netRatePerMin: -60,
     externalInputRatePerMin: 60,
     isRawInput: true,
   });
@@ -432,4 +438,137 @@ test('presentation model exposes per-item slices with producer and consumer plan
       itemRatePerMin: 60,
     }),
   ]);
+});
+
+test('item ledger keeps internal production and consumption separate from external supplementation', () => {
+  const catalog = resolveCatalogModel(
+    {
+      items: [
+        { ID: 1120, Type: 2, Name: 'Hydrogen', IconName: 'hydrogen', GridIndex: 1 },
+        { ID: 1201, Type: 2, Name: 'Loop Product', IconName: 'loop-product', GridIndex: 2 },
+        { ID: 5001, Type: 6, Name: 'Loop Plant', IconName: 'loop-plant', GridIndex: 3, Speed: 1, WorkEnergyPerTick: workEnergyForMW(1) },
+      ],
+      recipes: [
+        {
+          ID: 1,
+          Type: 1,
+          Factories: [5001],
+          Name: 'Hydrogen Producer',
+          Items: [],
+          ItemCounts: [],
+          Results: [1120],
+          ResultCounts: [10],
+          TimeSpend: 60,
+          Proliferator: 0,
+          IconName: 'hydrogen',
+        },
+        {
+          ID: 2,
+          Type: 1,
+          Factories: [5001],
+          Name: 'Hydrogen Consumer',
+          Items: [1120],
+          ItemCounts: [70],
+          Results: [1201],
+          ResultCounts: [1],
+          TimeSpend: 60,
+          Proliferator: 0,
+          IconName: 'loop-product',
+        },
+      ],
+    },
+    {
+      buildingRules: [{ ID: 5001, Category: 'chemical' }],
+      recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    }
+  );
+
+  const model = buildPresentationModel({
+    catalog,
+    request: {
+      targets: [{ itemId: '1201', ratePerMin: 1 }],
+      objective: 'min_external_input',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+    },
+    result: {
+      status: 'optimal',
+      diagnostics: { messages: [], unmetPreferences: [] },
+      resolvedRawInputItemIds: ['1120'],
+      targets: [{ itemId: '1201', requestedRatePerMin: 1, actualRatePerMin: 1 }],
+      recipePlans: [
+        {
+          recipeId: '1',
+          buildingId: '5001',
+          proliferatorLevel: 0,
+          proliferatorMode: 'none',
+          runsPerMin: 1,
+          exactBuildingCount: 1,
+          roundedUpBuildingCount: 1,
+          activePowerMW: 1,
+          roundedPlacementPowerMW: 1,
+          inputs: [],
+          outputs: [{ itemId: '1120', ratePerMin: 10 }],
+        },
+        {
+          recipeId: '2',
+          buildingId: '5001',
+          proliferatorLevel: 0,
+          proliferatorMode: 'none',
+          runsPerMin: 1,
+          exactBuildingCount: 1,
+          roundedUpBuildingCount: 1,
+          activePowerMW: 1,
+          roundedPlacementPowerMW: 1,
+          inputs: [{ itemId: '1120', ratePerMin: 70 }],
+          outputs: [{ itemId: '1201', ratePerMin: 1 }],
+        },
+      ],
+      buildingSummary: [
+        {
+          buildingId: '5001',
+          exactCount: 2,
+          roundedUpCount: 2,
+          activePowerMW: 2,
+          roundedPlacementPowerMW: 2,
+        },
+      ],
+      powerSummary: {
+        activePowerMW: 2,
+        roundedPlacementPowerMW: 2,
+      },
+      externalInputs: [{ itemId: '1120', ratePerMin: 60 }],
+      surplusOutputs: [],
+      itemBalance: [
+        {
+          itemId: '1120',
+          producedRatePerMin: 70,
+          consumedRatePerMin: 70,
+          netRatePerMin: 0,
+        },
+        {
+          itemId: '1201',
+          producedRatePerMin: 1,
+          consumedRatePerMin: 1,
+          netRatePerMin: 0,
+        },
+      ],
+    },
+  });
+
+  expect(model.itemLedgerSections[0].items).toContainEqual(
+    expect.objectContaining({
+      itemId: '1120',
+      producedRatePerMin: 10,
+      consumedRatePerMin: 70,
+      netRatePerMin: -60,
+      externalInputRatePerMin: 60,
+    })
+  );
+  expect(model.itemSlicesById['1120']).toMatchObject({
+    producedRatePerMin: 10,
+    consumedRatePerMin: 70,
+    netRatePerMin: -60,
+    externalInputRatePerMin: 60,
+  });
 });

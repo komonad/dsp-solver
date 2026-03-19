@@ -120,8 +120,11 @@ export interface PresentationItemLedgerEntry {
   itemId: string;
   itemName: string;
   iconKey?: string;
+  /** Internal production from selected recipe plans only. */
   producedRatePerMin: number;
+  /** Internal consumption from selected recipe plans only. */
   consumedRatePerMin: number;
+  /** Internal net flow: produced - consumed. */
   netRatePerMin: number;
   throughputRatePerMin: number;
   isRawInput: boolean;
@@ -159,8 +162,11 @@ export interface PresentationItemSlice {
   itemId: string;
   itemName: string;
   iconKey?: string;
+  /** Internal production from selected recipe plans only. */
   producedRatePerMin: number;
+  /** Internal consumption from selected recipe plans only. */
   consumedRatePerMin: number;
+  /** Internal net flow: produced - consumed. */
   netRatePerMin: number;
   externalInputRatePerMin: number;
   targetRatePerMin: number;
@@ -343,6 +349,8 @@ function buildPresentationItemLedgerSections(
 ): PresentationItemLedgerSection[] {
   const bundle = getLocaleBundle(locale);
   const effectiveRawInputIds = buildEffectiveRawInputSet(catalog, request, result);
+  const internalProducedRateByItem = new Map<string, number>();
+  const internalConsumedRateByItem = new Map<string, number>();
   const targetRateByItem = new Map(
     result.targets.map(target => [target.itemId, target.requestedRatePerMin])
   );
@@ -352,28 +360,56 @@ function buildPresentationItemLedgerSections(
   const surplusRateByItem = new Map(
     result.surplusOutputs.map(entry => [entry.itemId, entry.ratePerMin])
   );
+  const involvedItemIds = new Set<string>();
 
-  const allEntries = result.itemBalance.map(entry => {
-    const externalInputRatePerMin = externalInputRateByItem.get(entry.itemId) ?? 0;
-    const targetRatePerMin = targetRateByItem.get(entry.itemId) ?? 0;
-    const surplusRatePerMin = surplusRateByItem.get(entry.itemId) ?? 0;
-
-    return {
-      itemId: entry.itemId,
-      itemName: getItemName(catalog, entry.itemId),
-      iconKey: getItemIcon(catalog, entry.itemId),
-      producedRatePerMin: entry.producedRatePerMin,
-      consumedRatePerMin: entry.consumedRatePerMin,
-      netRatePerMin: entry.netRatePerMin,
-      throughputRatePerMin: Math.max(entry.producedRatePerMin, entry.consumedRatePerMin),
-      isRawInput: effectiveRawInputIds.has(entry.itemId),
-      isTarget: targetRatePerMin > EPSILON,
-      isSurplusOutput: surplusRatePerMin > EPSILON,
-      externalInputRatePerMin,
-      targetRatePerMin,
-      surplusRatePerMin,
-    };
+  result.recipePlans.forEach(plan => {
+    plan.inputs.forEach(input => {
+      involvedItemIds.add(input.itemId);
+      internalConsumedRateByItem.set(
+        input.itemId,
+        (internalConsumedRateByItem.get(input.itemId) ?? 0) + input.ratePerMin
+      );
+    });
+    plan.outputs.forEach(output => {
+      involvedItemIds.add(output.itemId);
+      internalProducedRateByItem.set(
+        output.itemId,
+        (internalProducedRateByItem.get(output.itemId) ?? 0) + output.ratePerMin
+      );
+    });
   });
+
+  result.itemBalance.forEach(entry => involvedItemIds.add(entry.itemId));
+  result.targets.forEach(entry => involvedItemIds.add(entry.itemId));
+  result.externalInputs.forEach(entry => involvedItemIds.add(entry.itemId));
+  result.surplusOutputs.forEach(entry => involvedItemIds.add(entry.itemId));
+
+  const allEntries = Array.from(involvedItemIds)
+    .sort((left, right) => left.localeCompare(right))
+    .map(itemId => {
+      const producedRatePerMin = internalProducedRateByItem.get(itemId) ?? 0;
+      const consumedRatePerMin = internalConsumedRateByItem.get(itemId) ?? 0;
+      const externalInputRatePerMin = externalInputRateByItem.get(itemId) ?? 0;
+      const targetRatePerMin = targetRateByItem.get(itemId) ?? 0;
+      const surplusRatePerMin = surplusRateByItem.get(itemId) ?? 0;
+      const netRatePerMin = producedRatePerMin - consumedRatePerMin;
+
+      return {
+        itemId,
+        itemName: getItemName(catalog, itemId),
+        iconKey: getItemIcon(catalog, itemId),
+        producedRatePerMin,
+        consumedRatePerMin,
+        netRatePerMin,
+        throughputRatePerMin: Math.max(producedRatePerMin, consumedRatePerMin),
+        isRawInput: effectiveRawInputIds.has(itemId),
+        isTarget: targetRatePerMin > EPSILON,
+        isSurplusOutput: surplusRatePerMin > EPSILON,
+        externalInputRatePerMin,
+        targetRatePerMin,
+        surplusRatePerMin,
+      };
+    });
 
   const netOutputs = allEntries.filter(entry => entry.isTarget || entry.isSurplusOutput);
   const netInputs = allEntries.filter(
