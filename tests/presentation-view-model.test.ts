@@ -1,6 +1,6 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { buildPresentationModel, buildPresentationOverviewSections, type PresentationModel } from '../src/presentation';
-import { solveCatalogRequest } from '../src/solver';
+import { SOLVER_VERSION, solveCatalogRequest } from '../src/solver';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;
@@ -95,6 +95,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
+    forcedRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [],
@@ -249,6 +250,7 @@ test('presentation model exposes named recipe preference summaries from the requ
   const model = buildPresentationModel({
     catalog,
     request: {
+      solverVersion: SOLVER_VERSION,
       targets: [{ itemId: '1101', ratePerMin: 60 }],
       objective: 'min_buildings',
       balancePolicy: 'force_balance',
@@ -261,11 +263,13 @@ test('presentation model exposes named recipe preference summaries from the requ
   });
 
   expect(model.requestSummary).toEqual({
+    solverVersion: SOLVER_VERSION,
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
+    forcedRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [
@@ -302,6 +306,7 @@ test('presentation model detects global proliferator disable requests', () => {
   const model = buildPresentationModel({
     catalog,
     request: {
+      solverVersion: SOLVER_VERSION,
       targets: [{ itemId: '1101', ratePerMin: 60 }],
       objective: 'min_buildings',
       balancePolicy: 'force_balance',
@@ -486,12 +491,14 @@ test('item ledger keeps internal production and consumption separate from extern
   const model = buildPresentationModel({
     catalog,
     request: {
+      solverVersion: SOLVER_VERSION,
       targets: [{ itemId: '1201', ratePerMin: 1 }],
       objective: 'min_external_input',
       balancePolicy: 'force_balance',
       rawInputItemIds: [],
     },
     result: {
+      solverVersion: SOLVER_VERSION,
       status: 'optimal',
       diagnostics: { messages: [], unmetPreferences: [] },
       resolvedRawInputItemIds: ['1120'],

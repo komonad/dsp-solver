@@ -7,6 +7,7 @@ import {
   parseAdvancedSolveOverrides,
 } from '../src/web/workbench/requestBuilder';
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
+import { SOLVER_VERSION } from '../src/solver';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;
@@ -79,6 +80,7 @@ test('buildWorkbenchRequest merges base request fields with advanced overrides',
   });
 
   expect(request).toEqual({
+    solverVersion: SOLVER_VERSION,
     targets: [{ itemId: '1101', ratePerMin: 60 }],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',

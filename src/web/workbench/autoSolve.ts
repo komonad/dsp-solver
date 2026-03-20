@@ -28,7 +28,7 @@ export interface ComputeWorkbenchSolveParams {
   disabledRawInputItemIds?: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  preferredRecipeByItem: Record<string, string>;
+  forcedRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
@@ -39,6 +39,11 @@ export interface WorkbenchSolveState {
   request?: SolveRequest;
   result: SolveResult | null;
   error: string;
+  fallback?: {
+    request: SolveRequest;
+    result: SolveResult;
+    reason: 'force_balance_infeasible';
+  };
 }
 
 /**
@@ -61,7 +66,7 @@ export function computeWorkbenchSolve(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    preferredRecipeByItem,
+    forcedRecipeByItem,
     recipePreferences,
     recipeStrategyOverrides,
     advancedOverridesText,
@@ -90,6 +95,7 @@ export function computeWorkbenchSolve(
       request: undefined,
       result: null,
       error: parsedOverrides.error,
+      fallback: undefined,
     };
   }
 
@@ -98,7 +104,7 @@ export function computeWorkbenchSolve(
       {
         disabledRecipeIds,
         disabledBuildingIds,
-        preferredRecipeByItem,
+        forcedRecipeByItem,
       },
       buildPreferredRecipeOverrides(recipePreferences)
     ),
@@ -134,11 +140,27 @@ export function computeWorkbenchSolve(
       request,
       result: null,
       error: bundle.solveRequest.validTargetRequired,
+      fallback: undefined,
     };
   }
 
   try {
     const result = solveCatalogRequest(catalog, request);
+    let fallback: WorkbenchSolveState['fallback'];
+    if (request.balancePolicy === 'force_balance' && result.status === 'infeasible') {
+      const fallbackRequest: SolveRequest = {
+        ...request,
+        balancePolicy: 'allow_surplus',
+      };
+      const fallbackResult = solveCatalogRequest(catalog, fallbackRequest);
+      if (fallbackResult.status === 'optimal') {
+        fallback = {
+          request: fallbackRequest,
+          result: fallbackResult,
+          reason: 'force_balance_infeasible',
+        };
+      }
+    }
     const finishedAt =
       typeof performance !== 'undefined' && typeof performance.now === 'function'
         ? performance.now()
@@ -155,6 +177,7 @@ export function computeWorkbenchSolve(
       request,
       result,
       error: '',
+      fallback,
     };
   } catch (error) {
     const finishedAt =
@@ -173,6 +196,7 @@ export function computeWorkbenchSolve(
       request,
       result: null,
       error: error instanceof Error ? error.message : String(error),
+      fallback: undefined,
     };
   }
 }

@@ -51,6 +51,7 @@ internal static class GameDataExporter
         Array recipesArray = TryGetProtoArray("recipes")
             ?? throw new InvalidOperationException("LDB.recipes.dataArray was not available.");
 
+        Dictionary<int, HashSet<int>> factoryIdsByRecipeType = new Dictionary<int, HashSet<int>>();
         List<ExportItemRecord> items = new List<ExportItemRecord>();
         foreach (object? entry in itemsArray)
         {
@@ -59,6 +60,7 @@ internal static class GameDataExporter
                 continue;
             }
 
+            CollectFactoryRecipeTypes(entry, factoryIdsByRecipeType, logger);
             ExportItemRecord? item = TryBuildItem(entry, logger);
             if (item != null)
             {
@@ -74,11 +76,21 @@ internal static class GameDataExporter
                 continue;
             }
 
-            ExportRecipeRecord? recipe = TryBuildRecipe(entry, logger);
+            ExportRecipeRecord? recipe = TryBuildRecipe(entry, factoryIdsByRecipeType, logger);
             if (recipe != null)
             {
                 recipes.Add(recipe);
             }
+        }
+
+        if (factoryIdsByRecipeType.Count > 0)
+        {
+            string summary = string.Join(
+                ", ",
+                factoryIdsByRecipeType
+                    .OrderBy(entry => entry.Key)
+                    .Select(entry => $"{entry.Key}:[{string.Join("/", entry.Value.OrderBy(id => id))}]"));
+            logger.LogInfo($"Derived runtime recipe-type factories: {summary}");
         }
 
         return new ExportDataset
@@ -123,6 +135,14 @@ internal static class GameDataExporter
 
     private static ExportRecipeRecord? TryBuildRecipe(object proto, ManualLogSource logger)
     {
+        return TryBuildRecipe(proto, new Dictionary<int, HashSet<int>>(), logger);
+    }
+
+    private static ExportRecipeRecord? TryBuildRecipe(
+        object proto,
+        IReadOnlyDictionary<int, HashSet<int>> factoryIdsByRecipeType,
+        ManualLogSource logger)
+    {
         int? id = ReflectionHelpers.GetInt(proto, "ID");
         if (!id.HasValue)
         {
@@ -136,11 +156,24 @@ internal static class GameDataExporter
             return null;
         }
 
+        int[] factories = ReflectionHelpers.GetIntArray(proto, "Factories");
+        if (factories.Length == 0 &&
+            factoryIdsByRecipeType.TryGetValue(type.Value, out HashSet<int>? derivedFactories) &&
+            derivedFactories.Count > 0)
+        {
+            factories = derivedFactories.OrderBy(factoryId => factoryId).ToArray();
+        }
+
+        if (factories.Length == 0 && type.Value == 15)
+        {
+            factories = new[] { 2901, 2902 };
+        }
+
         return new ExportRecipeRecord
         {
             ID = id.Value,
             Type = type.Value,
-            Factories = ReflectionHelpers.GetIntArray(proto, "Factories"),
+            Factories = factories,
             Name = ResolveTranslatedName(proto),
             Items = ReflectionHelpers.GetIntArray(proto, "Items"),
             ItemCounts = ReflectionHelpers.GetDoubleArray(proto, "ItemCounts"),
@@ -150,6 +183,64 @@ internal static class GameDataExporter
             Proliferator = ReflectionHelpers.GetInt(proto, "Proliferator") ?? 0,
             IconName = ResolveIconName(proto) ?? string.Empty,
         };
+    }
+
+    private static void CollectFactoryRecipeTypes(
+        object proto,
+        IDictionary<int, HashSet<int>> factoryIdsByRecipeType,
+        ManualLogSource logger)
+    {
+        int? itemId = ReflectionHelpers.GetInt(proto, "ID");
+        if (!itemId.HasValue)
+        {
+            return;
+        }
+
+        object? prefabDesc = ReflectionHelpers.GetMemberValue(proto, "prefabDesc");
+        if (prefabDesc == null)
+        {
+            return;
+        }
+
+        Dictionary<string, int> recipeTypeMembers = ReflectionHelpers.GetNamedIntMembers(
+            prefabDesc,
+            memberName => memberName.IndexOf("RecipeType", StringComparison.OrdinalIgnoreCase) >= 0);
+
+        if (recipeTypeMembers.Count == 0)
+        {
+            return;
+        }
+
+        bool isCandidateFactory =
+            recipeTypeMembers.Count > 0 &&
+            (
+                ReflectionHelpers.GetBool(prefabDesc, "isAssembler") == true ||
+                ReflectionHelpers.GetBool(prefabDesc, "isLab") == true ||
+                ReflectionHelpers.GetBool(prefabDesc, "isFractionator") == true ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "assemblerSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "labAssembleSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "fractionatorSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "chemicalSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "refinerSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "researchSpeed") ?? 0) > 0 ||
+                (ReflectionHelpers.GetDouble(prefabDesc, "workSpeed") ?? 0) > 0
+            );
+
+        if (!isCandidateFactory)
+        {
+            return;
+        }
+
+        foreach (int recipeType in recipeTypeMembers.Values)
+        {
+            if (!factoryIdsByRecipeType.TryGetValue(recipeType, out HashSet<int>? factoryIds))
+            {
+                factoryIds = new HashSet<int>();
+                factoryIdsByRecipeType[recipeType] = factoryIds;
+            }
+
+            factoryIds.Add(itemId.Value);
+        }
     }
 
     private static Array? TryGetProtoArray(string ldbMemberName)
@@ -233,11 +324,16 @@ internal static class GameDataExporter
             double? value = ReflectionHelpers.GetDouble(prefabDesc, candidate);
             if (value.HasValue && value.Value > 0)
             {
-                return value;
+                return NormalizeRuntimeSpeed(value.Value);
             }
         }
 
         return null;
+    }
+
+    private static double NormalizeRuntimeSpeed(double value)
+    {
+        return value >= 1000 ? value / 10000d : value;
     }
 
     private static double? ResolveNestedWorkEnergy(object proto)

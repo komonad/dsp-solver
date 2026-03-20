@@ -7,6 +7,7 @@ export type DatasetPresetId =
   | 'demo-smelting'
   | 'refinery-balance'
   | 'fullerene-loop'
+  | 'orbitalring'
   | 'custom';
 export type WorkbenchProliferatorPolicyLabel = 'auto' | 'none' | 'speed' | 'productivity';
 
@@ -117,9 +118,12 @@ export interface LocaleBundle {
     objectiveLabel: string;
     balanceLabel: string;
     sprayLabel: string;
+    solverVersionLabel: string;
     statusLabel: string;
     targetsLabel: string;
     rawOverridesLabel: string;
+    forcedRecipesLabel: string;
+    clearForcedRecipeButton: string;
     disabledRecipesLabel: string;
     disabledBuildingsLabel: string;
     advancedOverridesLabel: string;
@@ -166,6 +170,11 @@ export interface LocaleBundle {
     title: string;
     diagnosticsLabel: string;
     noDiagnostics: string;
+    fallbackTitle: string;
+    fallbackDescription: string;
+    fallbackNetInputsLabel: string;
+    fallbackSurplusLabel: string;
+    fallbackApplyButton: string;
     itemBalanceLabel: string;
     producedLabel: string;
     consumedLabel: string;
@@ -244,6 +253,10 @@ const zhCN: LocaleBundle = {
       label: '富勒烯回环',
       description: '富勒烯甲烷回环，以及富勒银/富勒醇出口循环场景。',
     },
+    orbitalring: {
+      label: '星环组合',
+      description: '星环 0.9.39 + 更多巨构 + 深空来敌的运行时导出数据快照。',
+    },
     custom: {
       label: '自定义路径',
       description: '加载当前 Web 根目录下任意可访问的数据集/默认配置 JSON。',
@@ -262,7 +275,7 @@ const zhCN: LocaleBundle = {
     loadButton: '加载数据集',
     loadingButton: '加载中...',
     autoCacheHint: '当前工作台状态会自动缓存到浏览器。',
-    clearCacheButton: '清除缓存并重置',
+    clearCacheButton: '清除所有缓存并重置',
     loadErrorTitle: '数据集加载失败',
     waitingTitle: '等待加载数据集',
     waitingDescription: '先加载一个内置数据集，或者填写自定义数据集文件路径。',
@@ -344,9 +357,12 @@ const zhCN: LocaleBundle = {
     objectiveLabel: '目标函数',
     balanceLabel: '配平策略',
     sprayLabel: '增产剂',
+    solverVersionLabel: '求解器',
     statusLabel: '求解状态',
     targetsLabel: '目标',
     rawOverridesLabel: '原矿覆盖',
+    forcedRecipesLabel: '强制配方',
+    clearForcedRecipeButton: '清除强制配方',
     disabledRecipesLabel: '禁用配方',
     disabledBuildingsLabel: '禁用建筑',
     advancedOverridesLabel: '高级覆盖',
@@ -393,6 +409,11 @@ const zhCN: LocaleBundle = {
     title: '诊断与审计',
     diagnosticsLabel: '诊断信息',
     noDiagnostics: '没有诊断信息。',
+    fallbackTitle: '强制配平无解，但允许冗余时存在可行方案',
+    fallbackDescription: '下面这组结果来自 allow_surplus，可作为定位副产物或原矿设置的提示。',
+    fallbackNetInputsLabel: 'Fallback 净输入',
+    fallbackSurplusLabel: 'Fallback 冗余产物',
+    fallbackApplyButton: '切换为允许冗余',
     itemBalanceLabel: '物品平衡',
     producedLabel: '生成',
     consumedLabel: '消耗',

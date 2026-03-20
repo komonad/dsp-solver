@@ -150,6 +150,7 @@ test.each([
     defaultsPath: './data/RefineryBalance.defaults.json',
     expectedRecipeCount: 2,
     expectedBuildingCount: 1,
+    expectedIconAtlasIds: ['Vanilla'],
     expectedRecommendedSolve: {
       objective: 'min_external_input',
       balancePolicy: 'force_balance',
@@ -160,10 +161,19 @@ test.each([
     defaultsPath: './data/FullereneLoop.defaults.json',
     expectedRecipeCount: 4,
     expectedBuildingCount: 3,
+    expectedIconAtlasIds: ['Vanilla'],
     expectedRecommendedSolve: {
       objective: 'min_external_input',
       balancePolicy: 'force_balance',
     },
+  },
+  {
+    datasetPath: './data/OrbitalRing.json',
+    defaultsPath: './data/OrbitalRing.defaults.json',
+    expectedRecipeCount: 366,
+    expectedBuildingCount: 21,
+    expectedIconAtlasIds: ['OrbitalRing'],
+    expectedRecommendedSolve: {},
   },
 ])(
   'loadResolvedCatalogFromFiles supports scenario dataset $datasetPath',
@@ -172,13 +182,100 @@ test.each([
     defaultsPath,
     expectedRecipeCount,
     expectedBuildingCount,
+    expectedIconAtlasIds,
     expectedRecommendedSolve,
   }) => {
     const resolved = await loadResolvedCatalogFromFiles(datasetPath, defaultsPath);
 
     expect(resolved.recipes).toHaveLength(expectedRecipeCount);
     expect(resolved.buildings).toHaveLength(expectedBuildingCount);
-    expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
+    expect(resolved.iconAtlasIds).toEqual(expectedIconAtlasIds);
     expect(resolved.recommendedSolve).toEqual(expectedRecommendedSolve);
   }
 );
+
+test('OrbitalRing defaults assign intrinsic productivity bonuses to special chemical plants', async () => {
+  const resolved = await loadResolvedCatalogFromFiles(
+    './data/OrbitalRing.json',
+    './data/OrbitalRing.defaults.json'
+  );
+
+  expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 3]);
+  expect(resolved.proliferatorLevelMap.get(3)).toMatchObject({
+    itemId: '1143',
+    sprayCount: 75,
+    speedMultiplier: 2,
+    productivityMultiplier: 1.25,
+    powerMultiplier: 2.5,
+  });
+  expect(resolved.proliferatorLevelMap.has(1)).toBe(false);
+  expect(resolved.proliferatorLevelMap.has(2)).toBe(false);
+
+  expect(resolved.buildingMap.get('2317')).toMatchObject({
+    buildingId: '2317',
+    intrinsicProductivityBonus: 1,
+  });
+  expect(resolved.buildingMap.get('7823')).toMatchObject({
+    buildingId: '7823',
+    intrinsicProductivityBonus: 0.25,
+  });
+  expect(resolved.buildingMap.get('2309')).toMatchObject({
+    buildingId: '2309',
+    speedMultiplier: 1,
+  });
+  expect(resolved.buildingMap.get('2304')).toMatchObject({
+    buildingId: '2304',
+    speedMultiplier: 2,
+  });
+  expect(resolved.recommendedDisabledRecipeIds).toEqual(['510']);
+  expect(resolved.rawItemIds).toEqual(
+    expect.arrayContaining(['1005', '1116', '6251', '6519', '7015', '7101'])
+  );
+  expect(resolved.recipeMap.get('32')).toMatchObject({
+    recipeId: '32',
+    allowedBuildingIds: ['2309', '7823', '2317', '6215'],
+    modifierCode: 3,
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('509')).toMatchObject({
+    recipeId: '509',
+    modifierCode: 3,
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('716')).toMatchObject({
+    recipeId: '716',
+    allowedBuildingIds: ['2309', '2317', '7823', '6215'],
+    modifierCode: 3,
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('717')).toMatchObject({
+    recipeId: '717',
+    allowedBuildingIds: ['2309', '2317', '7823', '6215'],
+    modifierCode: 3,
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('1')).toMatchObject({
+    recipeId: '1',
+    allowedBuildingIds: ['2302', '6501', '2315', '2319', '6215'],
+  });
+  expect(resolved.recipeMap.get('4')).toMatchObject({
+    recipeId: '4',
+    allowedBuildingIds: ['2303', '2304', '2318', '6215'],
+  });
+  expect(resolved.recipeMap.get('104')).toMatchObject({
+    recipeId: '104',
+    modifierCode: 1,
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('121')).toMatchObject({
+    recipeId: '121',
+    modifierCode: 1,
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 3,
+  });
+});

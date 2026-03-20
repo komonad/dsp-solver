@@ -5,6 +5,8 @@ const refineryBalanceDatasetPath = './data/RefineryBalance.json';
 const refineryBalanceDefaultsPath = './data/RefineryBalance.defaults.json';
 const fullereneLoopDatasetPath = './data/FullereneLoop.json';
 const fullereneLoopDefaultsPath = './data/FullereneLoop.defaults.json';
+const orbitalRingDatasetPath = './data/OrbitalRing.json';
+const orbitalRingDefaultsPath = './data/OrbitalRing.defaults.json';
 
 function getPlan(result: SolveResult, recipeId: string) {
   return result.recipePlans.find(plan => plan.recipeId === recipeId);
@@ -135,4 +137,91 @@ test('fullerene loop remains feasible with the low-temperature plant on the expo
   expect(getExternalRate(result, '10001')).toBeCloseTo(240, 6);
   expect(getExternalRate(result, '10002')).toBeCloseTo(106.66666667, 6);
   expect(getExternalRate(result, '12001')).toBeCloseTo(133.33333333, 6);
+});
+
+test('orbitalring fullersilver-embedded recipe chain is feasible when dataset defaults disable probabilistic super-refining', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    orbitalRingDatasetPath,
+    orbitalRingDefaultsPath
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '6522', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(getPlan(result, '510')).toBeUndefined();
+  expect(getPlan(result, '716')).toMatchObject({
+    buildingId: '2317',
+    proliferatorMode: 'productivity',
+    proliferatorLevel: 3,
+  });
+  expect(getPlan(result, '717')).toMatchObject({
+    buildingId: '2317',
+    proliferatorMode: 'productivity',
+    proliferatorLevel: 3,
+  });
+  expect(getPlan(result, '716')?.runsPerMin).toBeGreaterThan(0);
+  expect(getPlan(result, '717')?.runsPerMin).toBeGreaterThan(0);
+  expect(getExternalRate(result, '6519')).toBeGreaterThan(0);
+  expect(getExternalRate(result, '7015')).toBeGreaterThan(0);
+  expect(getExternalRate(result, '7101')).toBeGreaterThan(0);
+  expect(result.surplusOutputs).toEqual([]);
+});
+
+test('orbitalring keeps the feasible fullerol proliferator preference even if another preferred recipe is infeasible', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    orbitalRingDatasetPath,
+    orbitalRingDefaultsPath
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1143', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
+    preferredRecipeByItem: {
+      '1143': '715',
+      '6522': '510',
+    },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(getPlan(result, '715')).toBeDefined();
+  expect(getPlan(result, '108')).toBeUndefined();
+  expect(result.diagnostics.messages).toContain(
+    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
+  );
+  expect(result.diagnostics.unmetPreferences).toContain(
+    'Preferred recipe 510 was not used for item 6522.'
+  );
+});
+
+test('orbitalring can still enforce the fullerol proliferator recipe when pure silver is solved internally', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    orbitalRingDatasetPath,
+    orbitalRingDefaultsPath
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1143', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
+    disabledRawInputItemIds: ['7101'],
+    preferredRecipeByItem: {
+      '1143': '715',
+    },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(getPlan(result, '715')).toBeDefined();
+  expect(getPlan(result, '108')).toBeUndefined();
+  expect(getExternalRate(result, '1116')).toBeGreaterThan(0);
+  expect(result.diagnostics.unmetPreferences).not.toContain(
+    'Preferred recipe 715 was not used for item 1143.'
+  );
 });

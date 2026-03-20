@@ -27,8 +27,8 @@ interface ItemSliceOverlayHostProps {
   locale: AppLocale;
   atlasIds?: string[];
   itemSlicesById: Record<string, PresentationItemSlice>;
-  preferredRecipeByItem: Record<string, string>;
-  preferredRecipeOptionsByItem: Record<
+  forcedRecipeByItem: Record<string, string>;
+  forcedRecipeOptionsByItem: Record<
     string,
     Array<{
       recipeId: string;
@@ -48,8 +48,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     locale,
     atlasIds,
     itemSlicesById,
-    preferredRecipeByItem,
-    preferredRecipeOptionsByItem,
+    forcedRecipeByItem,
+    forcedRecipeOptionsByItem,
     onMarkRaw,
     onUnmarkRaw,
     onPreferredRecipeChange,
@@ -65,8 +65,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
   const selectedItemSlice = overlayState.selectedItemId
     ? itemSlicesById[overlayState.selectedItemId]
     : undefined;
-  const preferredRecipeOptions = selectedItemSlice
-    ? preferredRecipeOptionsByItem[selectedItemSlice.itemId] ?? []
+  const forcedRecipeOptions = selectedItemSlice
+    ? forcedRecipeOptionsByItem[selectedItemSlice.itemId] ?? []
     : [];
 
   const pendingPerfRef = useRef<{
@@ -207,8 +207,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             locale={locale}
             atlasIds={atlasIds}
             slice={selectedItemSlice}
-            preferredRecipeId={preferredRecipeByItem[selectedItemSlice.itemId]}
-            preferredRecipeOptions={preferredRecipeOptions}
+            preferredRecipeId={forcedRecipeByItem[selectedItemSlice.itemId]}
+            preferredRecipeOptions={forcedRecipeOptions}
             onSelectItem={openItemSliceOverlay}
             onMarkRaw={onMarkRaw}
             onUnmarkRaw={onUnmarkRaw}

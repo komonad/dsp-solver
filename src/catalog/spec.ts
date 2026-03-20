@@ -156,6 +156,52 @@ export interface RecipeModifierRuleSpec {
 }
 
 /**
+ * Optional per-recipe default overrides.
+ *
+ * These are dataset-coupled defaults that patch gaps in the raw exported
+ * recipe records without mutating the canonical raw dataset file.
+ */
+export interface CatalogRecipeRuleSpec {
+  /** Upstream numeric recipe ID that this rule applies to. */
+  ID: number;
+  /** Optional authoritative building list override for this recipe. */
+  AllowedBuildingIds?: number[];
+  /** Optional effective modifier code override for this recipe. */
+  ModifierCodeOverride?: number;
+}
+
+/**
+ * Optional dataset-coupled policies for deriving effective modifier semantics.
+ *
+ * These policies are applied in the interpretation layer, after loading the raw
+ * dataset and before the solver consumes the resolved model.
+ */
+export interface CatalogRecipeModifierPolicySpec {
+  /**
+   * Optional explicit recipe IDs that should be interpreted as speed-only
+   * proliferator recipes.
+   */
+  speedOnlyRecipeIds?: number[];
+  /**
+   * When enabled, a recipe becomes speed-only if the same item with the same
+   * amount appears in both its inputs and outputs.
+   */
+  speedOnlyWhenInputOutputCountsMatch?: boolean;
+}
+
+/**
+ * Symmetric building-expansion group for recipe compatibility.
+ *
+ * If a recipe is explicitly allowed on any building in the group, the
+ * interpretation layer expands its allowed-building set to include every
+ * building in the same group.
+ */
+export interface CatalogRecipeBuildingExpansionGroupSpec {
+  /** Concrete building IDs that should be treated as interchangeable here. */
+  BuildingIds: number[];
+}
+
+/**
  * Optional dataset-level recommended solve settings.
  *
  * These are not hard constraints. They describe the request defaults that a
@@ -181,10 +227,20 @@ export interface CatalogDefaultConfigSpec {
   proliferatorLevels?: ProliferatorLevelConfigSpec[];
   /** Optional building metadata/defaults keyed by building ID. */
   buildingRules?: CatalogBuildingRuleSpec[];
+  /** Optional per-recipe overrides for gaps in the raw exported dataset. */
+  recipeRules?: CatalogRecipeRuleSpec[];
+  /** Optional policies used to reinterpret raw recipe modifier codes. */
+  recipeModifierPolicy?: CatalogRecipeModifierPolicySpec;
+  /** Optional symmetric expansion groups for recipe allowed-building inference. */
+  recipeBuildingExpansionGroups?: CatalogRecipeBuildingExpansionGroupSpec[];
+  /** Optional building IDs appended to every recipe as globally available factories. */
+  recipeBuildingUniversalIds?: number[];
   /** Optional mapping from raw modifier codes to internal meaning. */
   recipeModifierRules?: RecipeModifierRuleSpec[];
   /** Optional recommended solve defaults for UI/request initialization. */
   recommendedSolve?: CatalogRecommendedSolveSpec;
+  /** Optional recipe IDs that UI/request layers should disable by default. */
+  recommendedDisabledRecipeIds?: number[];
   /** Optional building IDs that UI/request layers should disable by default. */
   recommendedDisabledBuildingIds?: number[];
   /** Optional recommended raw-input item IDs. */
@@ -259,7 +315,7 @@ export interface ResolvedRecipeSpec {
   outputs: RecipeIOItem[];
   /** Authoritative list of allowed building IDs for this recipe. */
   allowedBuildingIds: string[];
-  /** Original raw modifier code from the dataset. */
+  /** Effective modifier code after applying dataset defaults/overrides. */
   modifierCode: number;
   /** Resolved interpretation of modifierCode. */
   modifierKind: RecipeModifierKind;
@@ -272,7 +328,12 @@ export interface ResolvedRecipeSpec {
   /** Optional normalized tags. */
   tags?: string[];
   /** Original raw recipe record for traceability. */
-  source: VanillaRecipeRecord;
+  source: {
+    /** Raw recipe record loaded from the dataset. */
+    recipe: VanillaRecipeRecord;
+    /** Optional dataset default rule used during resolution. */
+    rule?: CatalogRecipeRuleSpec;
+  };
 }
 
 /**
@@ -361,6 +422,8 @@ export interface ResolvedCatalogModel {
   proliferatorLevelMap: Map<number, ResolvedProliferatorLevelSpec>;
   /** Recommended request defaults carried through from the dataset defaults. */
   recommendedSolve: CatalogRecommendedSolveSpec;
+  /** Default disabled recipe IDs inferred from dataset defaults. */
+  recommendedDisabledRecipeIds: string[];
   /** Default disabled building IDs inferred from dataset defaults. */
   recommendedDisabledBuildingIds: string[];
   /** Default raw-input item IDs inferred from dataset + defaults. */
@@ -577,6 +640,36 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     pushIssue(errors, '$.buildingRules', 'buildingRules must be an array when present.');
   }
 
+  if (value.recipeRules !== undefined && !Array.isArray(value.recipeRules)) {
+    pushIssue(errors, '$.recipeRules', 'recipeRules must be an array when present.');
+  }
+
+  if (value.recipeModifierPolicy !== undefined && !isRecord(value.recipeModifierPolicy)) {
+    pushIssue(errors, '$.recipeModifierPolicy', 'recipeModifierPolicy must be an object when present.');
+  }
+
+  if (
+    value.recipeBuildingExpansionGroups !== undefined &&
+    !Array.isArray(value.recipeBuildingExpansionGroups)
+  ) {
+    pushIssue(
+      errors,
+      '$.recipeBuildingExpansionGroups',
+      'recipeBuildingExpansionGroups must be an array when present.'
+    );
+  }
+
+  if (
+    value.recipeBuildingUniversalIds !== undefined &&
+    !isNumberArray(value.recipeBuildingUniversalIds)
+  ) {
+    pushIssue(
+      errors,
+      '$.recipeBuildingUniversalIds',
+      'recipeBuildingUniversalIds must be a number array when present.'
+    );
+  }
+
   if (value.recipeModifierRules !== undefined && !Array.isArray(value.recipeModifierRules)) {
     pushIssue(errors, '$.recipeModifierRules', 'recipeModifierRules must be an array when present.');
   }
@@ -587,6 +680,17 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
 
   if (value.recommendedRawItemIds !== undefined && !isNumberArray(value.recommendedRawItemIds)) {
     pushIssue(errors, '$.recommendedRawItemIds', 'recommendedRawItemIds must be a number array when present.');
+  }
+
+  if (
+    value.recommendedDisabledRecipeIds !== undefined &&
+    !isNumberArray(value.recommendedDisabledRecipeIds)
+  ) {
+    pushIssue(
+      errors,
+      '$.recommendedDisabledRecipeIds',
+      'recommendedDisabledRecipeIds must be a number array when present.'
+    );
   }
 
   if (
@@ -623,6 +727,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
   const config = value as unknown as CatalogDefaultConfigSpec;
   const levels = new Set<number>();
   const buildingIds = new Set<number>();
+  const recipeRuleIds = new Set<number>();
   const modifierCodes = new Set<number>();
   const modeSet = new Set<ProliferatorMode>(['none', 'speed', 'productivity']);
   const kindSet = new Set<RecipeModifierKind>(['none', 'proliferator', 'special']);
@@ -703,6 +808,87 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         pushIssue(errors, `${path}.ID`, `Duplicate building rule ID ${rule.ID}.`);
       }
       buildingIds.add(rule.ID);
+    }
+  });
+
+  (config.recipeRules ?? []).forEach((rule, index) => {
+    const path = `$.recipeRules[${index}]`;
+
+    if (!isRecord(rule)) {
+      pushIssue(errors, path, 'Recipe rule must be an object.');
+      return;
+    }
+
+    if (!isFiniteNumber(rule.ID)) pushIssue(errors, `${path}.ID`, 'ID must be a finite number.');
+    if (
+      rule.AllowedBuildingIds !== undefined &&
+      !isNumberArray(rule.AllowedBuildingIds)
+    ) {
+      pushIssue(
+        errors,
+        `${path}.AllowedBuildingIds`,
+        'AllowedBuildingIds must be a number array when present.'
+      );
+    }
+    if (
+      rule.ModifierCodeOverride !== undefined &&
+      (!isFiniteNumber(rule.ModifierCodeOverride) || rule.ModifierCodeOverride < 0)
+    ) {
+      pushIssue(
+        errors,
+        `${path}.ModifierCodeOverride`,
+        'ModifierCodeOverride must be a non-negative finite number when present.'
+      );
+    }
+
+    if (isFiniteNumber(rule.ID)) {
+      if (recipeRuleIds.has(rule.ID)) {
+        pushIssue(errors, `${path}.ID`, `Duplicate recipe rule ID ${rule.ID}.`);
+      }
+      recipeRuleIds.add(rule.ID);
+    }
+  });
+
+  if (config.recipeModifierPolicy !== undefined) {
+    const policy = config.recipeModifierPolicy;
+
+    if (
+      policy.speedOnlyRecipeIds !== undefined &&
+      !isNumberArray(policy.speedOnlyRecipeIds)
+    ) {
+      pushIssue(
+        errors,
+        '$.recipeModifierPolicy.speedOnlyRecipeIds',
+        'speedOnlyRecipeIds must be a number array when present.'
+      );
+    }
+
+    if (
+      policy.speedOnlyWhenInputOutputCountsMatch !== undefined &&
+      typeof policy.speedOnlyWhenInputOutputCountsMatch !== 'boolean'
+    ) {
+      pushIssue(
+        errors,
+        '$.recipeModifierPolicy.speedOnlyWhenInputOutputCountsMatch',
+        'speedOnlyWhenInputOutputCountsMatch must be a boolean when present.'
+      );
+    }
+  }
+
+  (config.recipeBuildingExpansionGroups ?? []).forEach((group, index) => {
+    const path = `$.recipeBuildingExpansionGroups[${index}]`;
+
+    if (!isRecord(group)) {
+      pushIssue(errors, path, 'Recipe building expansion group must be an object.');
+      return;
+    }
+
+    if (!isNumberArray(group.BuildingIds) || group.BuildingIds.length === 0) {
+      pushIssue(
+        errors,
+        `${path}.BuildingIds`,
+        'BuildingIds must be a non-empty number array.'
+      );
     }
   });
 

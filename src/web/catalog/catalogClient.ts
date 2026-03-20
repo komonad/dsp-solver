@@ -30,6 +30,11 @@ export const DATASET_PRESETS: DatasetPresetDefinition[] = [
     defaultConfigPath: './FullereneLoop.defaults.json',
   },
   {
+    id: 'orbitalring',
+    datasetPath: './OrbitalRing.json',
+    defaultConfigPath: './OrbitalRing.defaults.json',
+  },
+  {
     id: 'custom',
     datasetPath: '',
     defaultConfigPath: '',

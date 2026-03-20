@@ -708,6 +708,18 @@ function DefaultsEditor(props: {
           style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
         />
       </DetailField>
+      <DetailField label="recommendedDisabledRecipeIds">
+        <textarea
+          key="defaults-recommendedDisabledRecipeIds"
+          defaultValue={stringifyNumberList(defaults.recommendedDisabledRecipeIds ?? [])}
+          onBlur={event =>
+            updateDefaults({
+              recommendedDisabledRecipeIds: parseNumberList(event.target.value),
+            })
+          }
+          style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
+        />
+      </DetailField>
       <DetailField label="recommendedRawItemIds">
         <textarea
           key="defaults-recommendedRawItemIds"

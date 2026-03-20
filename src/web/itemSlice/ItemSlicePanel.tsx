@@ -198,7 +198,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
       <Card sx={{ borderRadius: '18px', overflow: 'hidden' }}>
         <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
           <Typography variant="overline" color="text.secondary">
-            {bundle.itemSlice.preferredRecipeLabel}
+            {bundle.itemSlice.forcedRecipeLabel}
           </Typography>
           <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
             {slice.isRawInput ? (
@@ -213,17 +213,17 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
 
             <FormControl size="small" sx={{ minWidth: 220 }}>
               <InputLabel id={`preferred-recipe-${slice.itemId}`}>
-                {bundle.itemSlice.preferredRecipeLabel}
+                {bundle.itemSlice.forcedRecipeLabel}
               </InputLabel>
               <Select
                 labelId={`preferred-recipe-${slice.itemId}`}
                 value={preferredRecipeId ?? ''}
-                label={bundle.itemSlice.preferredRecipeLabel}
+                label={bundle.itemSlice.forcedRecipeLabel}
                 onChange={event =>
                   onPreferredRecipeChange(slice.itemId, String(event.target.value))
                 }
               >
-                <MenuItem value="">{bundle.itemSlice.noPreferredRecipe}</MenuItem>
+                <MenuItem value="">{bundle.itemSlice.noForcedRecipe}</MenuItem>
                 {preferredRecipeOptions.map(option => (
                   <MenuItem key={option.recipeId} value={option.recipeId}>
                     {option.recipeName}
@@ -238,7 +238,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
               onClick={() => onClearPreferredRecipe(slice.itemId)}
               disabled={!preferredRecipeId}
             >
-              {bundle.itemSlice.clearPreferredRecipeButton}
+              {bundle.itemSlice.clearForcedRecipeButton}
             </Button>
           </Stack>
         </Box>

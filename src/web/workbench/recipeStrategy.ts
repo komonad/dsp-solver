@@ -21,7 +21,7 @@ export interface TryApplyRecipeStrategyOverrideParams {
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  preferredRecipeByItem: Record<string, string>;
+  forcedRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   currentResolvedRawInputItemIds: string[];
@@ -120,7 +120,7 @@ export function tryApplyRecipeStrategyOverride(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    preferredRecipeByItem,
+    forcedRecipeByItem,
     recipePreferences,
     recipeStrategyOverrides,
     currentResolvedRawInputItemIds,
@@ -148,7 +148,7 @@ export function tryApplyRecipeStrategyOverride(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    preferredRecipeByItem,
+    forcedRecipeByItem,
     recipePreferences,
     recipeStrategyOverrides: nextOverrides,
     advancedOverridesText,

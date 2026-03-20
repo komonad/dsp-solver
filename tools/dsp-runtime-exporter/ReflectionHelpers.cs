@@ -59,6 +59,52 @@ internal static class ReflectionHelpers
         return ToArray<double>(GetMemberValue(target, memberName), ConvertToDouble);
     }
 
+    public static bool? GetBool(object target, string memberName)
+    {
+        return ConvertToBoolean(GetMemberValue(target, memberName));
+    }
+
+    public static Dictionary<string, int> GetNamedIntMembers(
+        object target,
+        Func<string, bool> predicate)
+    {
+        const BindingFlags flags =
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+
+        Dictionary<string, int> values = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        Type type = target.GetType();
+
+        foreach (PropertyInfo property in type.GetProperties(flags))
+        {
+            if (!predicate(property.Name))
+            {
+                continue;
+            }
+
+            int? value = ConvertToInt32(property.GetValue(target));
+            if (value.HasValue)
+            {
+                values[property.Name] = value.Value;
+            }
+        }
+
+        foreach (FieldInfo field in type.GetFields(flags))
+        {
+            if (!predicate(field.Name))
+            {
+                continue;
+            }
+
+            int? value = ConvertToInt32(field.GetValue(target));
+            if (value.HasValue)
+            {
+                values[field.Name] = value.Value;
+            }
+        }
+
+        return values;
+    }
+
     public static bool TryTranslateInGame(string rawKey, out string translated)
     {
         translated = rawKey;
@@ -162,6 +208,23 @@ internal static class ReflectionHelpers
         try
         {
             return Convert.ToDouble(value, CultureInfo.InvariantCulture);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool? ConvertToBoolean(object? value)
+    {
+        if (value == null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return Convert.ToBoolean(value, CultureInfo.InvariantCulture);
         }
         catch
         {

@@ -1,10 +1,11 @@
 import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
 import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
-import type { BalancePolicy, SolveObjective, SolveRequest } from '../../solver';
+import { SOLVER_VERSION, type BalancePolicy, type SolveObjective, type SolveRequest } from '../../solver';
 
 export type AdvancedSolveOverrides = Omit<
   SolveRequest,
   | 'targets'
+  | 'solverVersion'
   | 'objective'
   | 'balancePolicy'
   | 'autoPromoteUnavailableItemsToRawInputs'
@@ -467,6 +468,7 @@ export function mergeAdvancedSolveOverrides(
 
 export function buildWorkbenchRequest(params: BuildWorkbenchRequestParams): SolveRequest {
   return {
+    solverVersion: SOLVER_VERSION,
     targets: params.targets
       .filter(target => target.itemId && Number.isFinite(target.ratePerMin) && target.ratePerMin >= 0)
       .map(target => ({ itemId: target.itemId, ratePerMin: target.ratePerMin })),

@@ -36,12 +36,15 @@ export interface SolveTarget {
  * Unless otherwise noted, `forced*` fields are hard constraints.
  *
  * `preferredRecipeByItem` is treated as a best-effort strong preference:
- * the solver first tries to enforce it as a hard constraint and only falls
- * back to soft preference solving if that strict solve is infeasible.
+ * the solver tries to keep each preferred recipe as a hard constraint when it
+ * remains feasible, and only downgrades the infeasible subset back to soft
+ * preferences.
  *
  * Other `preferred*` fields remain soft preferences used for tie-breaking.
  */
 export interface SolveRequest {
+  /** Solver version stamp attached by the active client/build. */
+  solverVersion?: string;
   /** One or more requested output targets. */
   targets: SolveTarget[];
   /** Primary optimization objective. */
@@ -72,9 +75,9 @@ export interface SolveRequest {
   /**
    * Best-effort per-item recipe preference, keyed by produced item ID.
    *
-   * The solver first tries to satisfy these as hard recipe choices. If that
-   * makes the request infeasible, it falls back to the normal soft-preference
-   * solve and reports the missed preference in diagnostics.
+   * The solver first tries to satisfy these as hard recipe choices where
+   * feasible. Preferences that make the request infeasible are downgraded back
+   * to soft preferences and reported in diagnostics.
    */
   preferredRecipeByItem?: Record<string, string>;
   /** Hard per-recipe building selection. */

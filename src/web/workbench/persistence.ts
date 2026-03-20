@@ -1,6 +1,6 @@
 import type { ResolvedCatalogModel } from '../../catalog';
 import type { DatasetPresetId } from '../../i18n';
-import type { BalancePolicy, SolveObjective } from '../../solver';
+import { SOLVER_VERSION, type BalancePolicy, type SolveObjective } from '../../solver';
 import type {
   EditableRecipePreference,
   EditableRecipeStrategyOverride,
@@ -8,7 +8,8 @@ import type {
   WorkbenchProliferatorPolicy,
 } from './requestBuilder';
 
-const WORKBENCH_CACHE_STORAGE_KEY = 'dspcalc.workbench.v1';
+const DSPCALC_STORAGE_PREFIX = 'dspcalc.';
+const WORKBENCH_CACHE_STORAGE_KEY = `dspcalc.workbench.${SOLVER_VERSION}`;
 
 export interface WorkbenchCacheSource {
   presetId: DatasetPresetId;
@@ -27,7 +28,7 @@ export interface WorkbenchEditorState {
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  preferredRecipeByItem: Record<string, string>;
+  forcedRecipeByItem: Record<string, string>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
@@ -35,9 +36,11 @@ export interface WorkbenchEditorState {
 
 type SanitizableWorkbenchEditorState = Omit<
   WorkbenchEditorState,
-  'proliferatorPolicy'
+  'proliferatorPolicy' | 'forcedRecipeByItem'
 > & {
   proliferatorPolicy?: WorkbenchProliferatorPolicy | 'disable_all';
+  forcedRecipeByItem?: Record<string, string>;
+  preferredRecipeByItem?: Record<string, string>;
 };
 
 export interface WorkbenchDatasetDraft {
@@ -53,6 +56,7 @@ interface WorkbenchCachePayload {
 }
 
 type MinimalStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+type EnumerableStorage = Pick<Storage, 'key' | 'removeItem'> & { length: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -64,6 +68,7 @@ function isDatasetPresetId(value: unknown): value is DatasetPresetId {
     value === 'demo-smelting' ||
     value === 'refinery-balance' ||
     value === 'fullerene-loop' ||
+    value === 'orbitalring' ||
     value === 'custom'
   );
 }
@@ -245,6 +250,26 @@ export function clearWorkbenchCache(storage?: MinimalStorage): void {
   storage?.removeItem(WORKBENCH_CACHE_STORAGE_KEY);
 }
 
+export function clearNamespacedStorage(
+  storage?: EnumerableStorage,
+  prefix: string = DSPCALC_STORAGE_PREFIX
+): string[] {
+  if (!storage) {
+    return [];
+  }
+
+  const keysToRemove: string[] = [];
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (typeof key === 'string' && key.startsWith(prefix)) {
+      keysToRemove.push(key);
+    }
+  }
+
+  keysToRemove.forEach(key => storage.removeItem(key));
+  return keysToRemove;
+}
+
 export function sanitizeWorkbenchEditorState(
   catalog: ResolvedCatalogModel,
   state: SanitizableWorkbenchEditorState
@@ -252,7 +277,8 @@ export function sanitizeWorkbenchEditorState(
   const validItemIds = new Set(catalog.items.map(item => item.itemId));
   const validRecipeIds = new Set(catalog.recipes.map(recipe => recipe.recipeId));
   const validBuildingIds = new Set(catalog.buildings.map(building => building.buildingId));
-  const preferredRecipeByItem = Object.entries(state.preferredRecipeByItem ?? {}).reduce<
+  const forcedRecipeSource = state.forcedRecipeByItem ?? state.preferredRecipeByItem ?? {};
+  const forcedRecipeByItem = Object.entries(forcedRecipeSource).reduce<
     Record<string, string>
   >((next, [itemId, recipeId]) => {
     if (!validItemIds.has(itemId) || !validRecipeIds.has(recipeId)) {
@@ -408,7 +434,7 @@ export function sanitizeWorkbenchEditorState(
     disabledBuildingIds: sanitizeStringArray(state.disabledBuildingIds).filter(buildingId =>
       validBuildingIds.has(buildingId)
     ),
-    preferredRecipeByItem,
+    forcedRecipeByItem,
     recipePreferences,
     recipeStrategyOverrides,
     advancedOverridesText:

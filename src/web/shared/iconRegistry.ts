@@ -1,6 +1,7 @@
 import vanillaAtlas from '../iconAtlas/vanillaAtlas.json';
 import genesisBookAtlas from '../iconAtlas/GenesisBook.json';
 import moreMegaStructureAtlas from '../iconAtlas/MoreMegaStructure.json';
+import orbitalRingAtlas from '../iconAtlas/OrbitalRing.json';
 
 export interface IconSpriteDefinition {
   x: number;
@@ -34,6 +35,10 @@ const ICON_ATLASES: Record<string, IconAtlasDefinition> = {
   MoreMegaStructure: {
     src: './icons/MoreMegaStructure.png',
     atlas: moreMegaStructureAtlas as Record<string, IconSpriteDefinition>,
+  },
+  OrbitalRing: {
+    src: './icons/OrbitalRing.png',
+    atlas: orbitalRingAtlas as Record<string, IconSpriteDefinition>,
   },
 };
 

@@ -1,0 +1,54 @@
+{
+  "iconAtlasIds": ["OrbitalRing"],
+  "proliferatorLevels": [
+    { "Level": 0, "SpeedMultiplier": 1, "ProductivityMultiplier": 1, "PowerMultiplier": 1 },
+    { "Level": 3, "ItemID": 1143, "SprayCount": 75, "SpeedMultiplier": 2, "ProductivityMultiplier": 1.25, "PowerMultiplier": 2.5 }
+  ],
+  "buildingRules": [
+    { "ID": 2302, "Category": "smelter" },
+    { "ID": 2303, "Category": "assembler" },
+    { "ID": 2304, "Category": "assembler" },
+    { "ID": 2305, "Category": "assembler" },
+    { "ID": 2308, "Category": "refinery" },
+    { "ID": 2309, "Category": "chemical" },
+    { "ID": 2310, "Category": "particle" },
+    { "ID": 2314, "Category": "fractionator", "SpeedMultiplierOverride": 1 },
+    { "ID": 2315, "Category": "smelter" },
+    { "ID": 2317, "Category": "chemical", "IntrinsicProductivityBonus": 1, "Tags": ["quantum-chemical"] },
+    { "ID": 2318, "Category": "assembler" },
+    { "ID": 2319, "Category": "smelter" },
+    { "ID": 2901, "Category": "lab" },
+    { "ID": 2902, "Category": "lab" },
+    { "ID": 6215, "Category": "black-box" },
+    { "ID": 6254, "Category": "farming" },
+    { "ID": 6257, "Category": "shipyard" },
+    { "ID": 6264, "Category": "farming" },
+    { "ID": 6265, "Category": "particle" },
+    { "ID": 6501, "Category": "smelter" },
+    { "ID": 7823, "Category": "chemical", "IntrinsicProductivityBonus": 0.25, "Tags": ["cryogenic-chemical"] }
+  ],
+  "recipeModifierRules": [
+    { "Code": 0, "Kind": "none", "SupportedModes": ["none"], "MaxLevel": 0 },
+    { "Code": 1, "Kind": "proliferator", "SupportedModes": ["none", "speed"], "MaxLevel": 3, "Tags": ["speed-only"] },
+    { "Code": 3, "Kind": "proliferator", "SupportedModes": ["none", "speed", "productivity"], "MaxLevel": 3, "Tags": ["full-proliferator"] },
+    { "Code": 4, "Kind": "special", "SupportedModes": ["none"], "MaxLevel": 0, "Tags": ["ray-receiver-lens"] }
+  ],
+  "recipeRules": [
+    { "ID": 32, "ModifierCodeOverride": 3 },
+    { "ID": 509, "ModifierCodeOverride": 3 },
+    { "ID": 716, "AllowedBuildingIds": [2309, 2317, 7823], "ModifierCodeOverride": 3 },
+    { "ID": 717, "AllowedBuildingIds": [2309, 2317, 7823], "ModifierCodeOverride": 3 }
+  ],
+  "recipeModifierPolicy": {
+    "speedOnlyRecipeIds": [104],
+    "speedOnlyWhenInputOutputCountsMatch": true
+  },
+  "recipeBuildingExpansionGroups": [
+    { "BuildingIds": [2302, 2315, 2319] },
+    { "BuildingIds": [2303, 2304, 2318] },
+    { "BuildingIds": [2309, 7823, 2317] }
+  ],
+  "recipeBuildingUniversalIds": [6215],
+  "recommendedDisabledRecipeIds": [510],
+  "recommendedRawItemIds": [1005, 1116, 6251, 7015, 7101]
+}

@@ -17,6 +17,7 @@ import type {
   SolveResult,
 } from './result';
 import { recordSolverPerf } from './perf';
+import { SOLVER_VERSION } from './version';
 
 const EPSILON = 1e-8;
 const PREFERENCE_EPSILON = 1e-6;
@@ -1176,6 +1177,7 @@ function buildResultFromSolution(params: {
     }));
 
   return {
+    solverVersion: SOLVER_VERSION,
     status: 'optimal',
     diagnostics: {
       messages: [],
@@ -1280,6 +1282,7 @@ function solveCatalogRequestValidated(
       recordedAt: Date.now(),
     });
     return {
+      solverVersion: SOLVER_VERSION,
       status: 'infeasible',
       diagnostics: {
         messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
@@ -1365,6 +1368,7 @@ export function solveCatalogRequest(
   const validation = validateSolveRequest(catalog, request);
   if (!validation.valid) {
     return {
+      solverVersion: SOLVER_VERSION,
       status: 'invalid_input',
       diagnostics: {
         messages: validation.messages,
@@ -1389,16 +1393,62 @@ export function solveCatalogRequest(
     return solveCatalogRequestValidatedCached(catalog, request);
   }
 
-  const strictPreferredRequest: SolveRequest = {
+  const existingForcedRecipeByItem = request.forcedRecipeByItem ?? {};
+  const preferredEntries = Object.entries(preferredRecipeByItem).filter(
+    ([itemId]) => existingForcedRecipeByItem[itemId] === undefined
+  );
+
+  let acceptedForcedRecipeByItem: Record<string, string> = { ...existingForcedRecipeByItem };
+  let lastAcceptedResult: SolveResult | null = null;
+  const rejectedPreferredEntries: Array<[string, string]> = [];
+
+  for (const [itemId, recipeId] of preferredEntries) {
+    const candidateRequest: SolveRequest = {
+      ...request,
+      forcedRecipeByItem: {
+        ...acceptedForcedRecipeByItem,
+        [itemId]: recipeId,
+      },
+    };
+    const candidateResult = solveCatalogRequestValidatedCached(catalog, candidateRequest);
+    if (candidateResult.status === 'optimal') {
+      acceptedForcedRecipeByItem = {
+        ...acceptedForcedRecipeByItem,
+        [itemId]: recipeId,
+      };
+      lastAcceptedResult = candidateResult;
+      continue;
+    }
+
+    rejectedPreferredEntries.push([itemId, recipeId]);
+  }
+
+  if (rejectedPreferredEntries.length === 0) {
+    return (
+      lastAcceptedResult ??
+      solveCatalogRequestValidatedCached(catalog, {
+        ...request,
+        forcedRecipeByItem: acceptedForcedRecipeByItem,
+      })
+    );
+  }
+
+  const partialPreferredRequest: SolveRequest = {
     ...request,
-    forcedRecipeByItem: {
-      ...preferredRecipeByItem,
-      ...(request.forcedRecipeByItem ?? {}),
-    },
+    forcedRecipeByItem: acceptedForcedRecipeByItem,
   };
-  const strictPreferredResult = solveCatalogRequestValidatedCached(catalog, strictPreferredRequest);
-  if (strictPreferredResult.status === 'optimal') {
-    return strictPreferredResult;
+  const partialPreferredResult = solveCatalogRequestValidatedCached(catalog, partialPreferredRequest);
+  if (partialPreferredResult.status === 'optimal') {
+    return {
+      ...partialPreferredResult,
+      diagnostics: {
+        messages: [
+          ...partialPreferredResult.diagnostics.messages,
+          'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.',
+        ],
+        unmetPreferences: partialPreferredResult.diagnostics.unmetPreferences,
+      },
+    };
   }
 
   const fallbackResult = solveCatalogRequestValidatedCached(catalog, request);

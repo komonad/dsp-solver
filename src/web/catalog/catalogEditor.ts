@@ -40,6 +40,18 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       ...rule,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
+    recipeRules: defaultConfig.recipeRules?.map(rule => ({
+      ...rule,
+      AllowedBuildingIds: rule.AllowedBuildingIds ? [...rule.AllowedBuildingIds] : undefined,
+    })),
+    recipeModifierPolicy: defaultConfig.recipeModifierPolicy
+      ? {
+          ...defaultConfig.recipeModifierPolicy,
+          speedOnlyRecipeIds: defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds
+            ? [...defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds]
+            : undefined,
+        }
+      : undefined,
     recipeModifierRules: defaultConfig.recipeModifierRules?.map(rule => ({
       ...rule,
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
@@ -47,6 +59,9 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
     })),
     recommendedSolve: defaultConfig.recommendedSolve
       ? { ...defaultConfig.recommendedSolve }
+      : undefined,
+    recommendedDisabledRecipeIds: defaultConfig.recommendedDisabledRecipeIds
+      ? [...defaultConfig.recommendedDisabledRecipeIds]
       : undefined,
     recommendedDisabledBuildingIds: defaultConfig.recommendedDisabledBuildingIds
       ? [...defaultConfig.recommendedDisabledBuildingIds]

@@ -46,12 +46,23 @@ export interface PresentationRecipePreference {
   proliferatorPreferenceLabel?: string;
 }
 
+export interface PresentationForcedRecipeSetting {
+  itemId: string;
+  itemName: string;
+  iconKey?: string;
+  recipeId: string;
+  recipeName: string;
+  recipeIconKey?: string;
+}
+
 export interface PresentationRequestSummary {
+  solverVersion?: string;
   objective: SolveRequest['objective'];
   balancePolicy: SolveRequest['balancePolicy'];
   proliferatorPolicyLabel: string;
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
+  forcedRecipeSettings: PresentationForcedRecipeSetting[];
   disabledRecipes: PresentationNamedItem[];
   disabledBuildings: PresentationNamedItem[];
   preferredRecipeSettings: PresentationRecipePreference[];
@@ -693,6 +704,7 @@ export function buildPresentationModel(
   } = params;
   const requestSummary: PresentationRequestSummary | undefined = request
     ? {
+        solverVersion: request.solverVersion,
         objective: request.objective,
         balancePolicy: request.balancePolicy,
         proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request, locale),
@@ -709,6 +721,20 @@ export function buildPresentationModel(
             iconKey: getItemIcon(catalog, itemId),
           }))
         ),
+        forcedRecipeSettings: Object.entries(request.forcedRecipeByItem ?? {})
+          .map(([itemId, recipeId]) => ({
+            itemId,
+            itemName: getItemName(catalog, itemId),
+            iconKey: getItemIcon(catalog, itemId),
+            recipeId,
+            recipeName: getRecipeName(catalog, recipeId),
+            recipeIconKey: getRecipeIcon(catalog, recipeId),
+          }))
+          .sort(
+            (left, right) =>
+              left.itemName.localeCompare(right.itemName) ||
+              left.recipeName.localeCompare(right.recipeName)
+          ),
         disabledRecipes: sortByName(
           (request.disabledRecipeIds ?? []).map(recipeId => ({
             itemId: recipeId,

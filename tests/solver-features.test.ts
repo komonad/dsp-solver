@@ -87,6 +87,37 @@ function buildVanillaLikeProliferatorDefaults(): CatalogDefaultConfigSpec {
   };
 }
 
+function buildIntrinsicProductivityDefaults(): CatalogDefaultConfigSpec {
+  return {
+    proliferatorLevels: [
+      {
+        Level: 1,
+        ItemID: 1141,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+    ],
+    buildingRules: [
+      {
+        ID: 5001,
+        Category: 'smelter',
+        IntrinsicProductivityBonus: 0.25,
+      },
+    ],
+    recipeModifierRules: [
+      {
+        Code: 3,
+        Kind: 'proliferator',
+        SupportedModes: ['none', 'speed', 'productivity'],
+        MaxLevel: 1,
+      },
+    ],
+    recommendedRawItemTypeIds: [1],
+  };
+}
+
 function buildTieBreakerDefaults(): CatalogDefaultConfigSpec {
   return {
     proliferatorLevels: [
@@ -231,6 +262,88 @@ function buildAlternativeRecipeDataset(): VanillaDatasetSpec {
   };
 }
 
+function buildPartialPreferredRecipeDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Plate A', IconName: 'plate-a', GridIndex: 2 },
+      { ID: 1201, Type: 2, Name: 'Plate B', IconName: 'plate-b', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Assembler',
+        IconName: 'assembler',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+      {
+        ID: 5009,
+        Type: 6,
+        Name: 'Exclusive Plant',
+        IconName: 'exclusive',
+        GridIndex: 5,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Cheap A',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate-a',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Preferred A',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 120,
+        Proliferator: 0,
+        IconName: 'plate-a',
+      },
+      {
+        ID: 3,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Cheap B',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1201],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate-b',
+      },
+      {
+        ID: 4,
+        Type: 1,
+        Factories: [5009],
+        Name: 'Preferred B',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1201],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate-b',
+      },
+    ],
+  };
+}
+
 test('solver chooses speed proliferator variant for min_buildings', () => {
   const catalog = resolveCatalogModel(buildSingleRecipeDataset([5001]), buildVanillaLikeProliferatorDefaults());
   const result = solveCatalogRequest(catalog, {
@@ -276,6 +389,41 @@ test('solver chooses productivity proliferator variant for min_external_input', 
   expect(result.externalInputs[0].ratePerMin).toBeCloseTo(60 / 1.125, 6);
   expect(result.externalInputs[1].itemId).toBe('1141');
   expect(result.externalInputs[1].ratePerMin).toBeCloseTo((60 / 1.125) / 13, 6);
+});
+
+test('intrinsic productivity multiplies with proliferator productivity', () => {
+  const catalog = resolveCatalogModel(buildSingleRecipeDataset([5001]), buildIntrinsicProductivityDefaults());
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    forcedProliferatorLevelByRecipe: { '1': 1 },
+    forcedProliferatorModeByRecipe: { '1': 'productivity' },
+  });
+
+  const combinedProductivity = 1.25 * 1.125;
+  const expectedRunsPerMin = 60 / combinedProductivity;
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '1',
+    proliferatorLevel: 1,
+    proliferatorMode: 'productivity',
+  });
+  expect(result.recipePlans[0].runsPerMin).toBeCloseTo(expectedRunsPerMin, 6);
+  expect(result.recipePlans[0].outputs).toHaveLength(1);
+  expect(result.recipePlans[0].outputs[0].itemId).toBe('1101');
+  expect(result.recipePlans[0].outputs[0].ratePerMin).toBeCloseTo(60, 6);
+  expect(result.externalInputs).toHaveLength(2);
+  expect(result.externalInputs[0]).toEqual({
+    itemId: '1001',
+    ratePerMin: expect.closeTo(expectedRunsPerMin, 6),
+  });
+  expect(result.externalInputs[1]).toEqual({
+    itemId: '1141',
+    ratePerMin: expect.closeTo(expectedRunsPerMin / 13, 6),
+  });
 });
 
 test('solver respects forced proliferator mode and level', () => {
@@ -633,10 +781,45 @@ test('preferredRecipeByItem falls back when the preferred recipe is unavailable'
   expect(result.recipePlans).toHaveLength(1);
   expect(result.recipePlans[0].recipeId).toBe('1');
   expect(result.diagnostics.messages).toContain(
-    'Preferred recipes could not all be enforced as a hard constraint; fell back to soft preference solving.'
+    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
   );
   expect(result.diagnostics.unmetPreferences).toContain(
     'Preferred recipe 2 was not used for item 1101.'
+  );
+});
+
+test('preferredRecipeByItem keeps feasible preferences even when another preferred recipe is infeasible', () => {
+  const catalog = resolveCatalogModel(
+    buildPartialPreferredRecipeDataset(),
+    {
+      buildingRules: [
+        { ID: 5001, Category: 'assembler' },
+        { ID: 5009, Category: 'special' },
+      ],
+      recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+      recommendedRawItemTypeIds: [1],
+    }
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [
+      { itemId: '1101', ratePerMin: 60 },
+      { itemId: '1201', ratePerMin: 60 },
+    ],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    disabledBuildingIds: ['5009'],
+    preferredRecipeByItem: { '1101': '2', '1201': '4' },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(2);
+  expect(result.recipePlans.map(plan => plan.recipeId)).toEqual(['2', '3']);
+  expect(result.diagnostics.messages).toContain(
+    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
+  );
+  expect(result.diagnostics.unmetPreferences).toContain(
+    'Preferred recipe 4 was not used for item 1201.'
   );
 });
 

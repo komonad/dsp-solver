@@ -1,6 +1,9 @@
 import {
   type CatalogBuildingRuleSpec,
   type CatalogDefaultConfigSpec,
+  type CatalogRecipeBuildingExpansionGroupSpec,
+  type CatalogRecipeModifierPolicySpec,
+  type CatalogRecipeRuleSpec,
   type ItemKind,
   type ProliferatorMode,
   type RecipeModifierRuleSpec,
@@ -22,6 +25,24 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       ...rule,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
+    recipeRules: defaultConfig.recipeRules?.map(rule => ({
+      ...rule,
+      AllowedBuildingIds: rule.AllowedBuildingIds ? [...rule.AllowedBuildingIds] : undefined,
+    })),
+    recipeModifierPolicy: defaultConfig.recipeModifierPolicy
+      ? {
+          ...defaultConfig.recipeModifierPolicy,
+          speedOnlyRecipeIds: defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds
+            ? [...defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds]
+            : undefined,
+        }
+      : undefined,
+    recipeBuildingExpansionGroups: defaultConfig.recipeBuildingExpansionGroups?.map(group => ({
+      BuildingIds: [...group.BuildingIds],
+    })),
+    recipeBuildingUniversalIds: defaultConfig.recipeBuildingUniversalIds
+      ? [...defaultConfig.recipeBuildingUniversalIds]
+      : undefined,
     recipeModifierRules: defaultConfig.recipeModifierRules?.map(rule => ({
       ...rule,
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
@@ -29,6 +50,9 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
     })),
     recommendedSolve: defaultConfig.recommendedSolve
       ? { ...defaultConfig.recommendedSolve }
+      : undefined,
+    recommendedDisabledRecipeIds: defaultConfig.recommendedDisabledRecipeIds
+      ? [...defaultConfig.recommendedDisabledRecipeIds]
       : undefined,
     recommendedDisabledBuildingIds: defaultConfig.recommendedDisabledBuildingIds
       ? [...defaultConfig.recommendedDisabledBuildingIds]
@@ -130,6 +154,53 @@ function defaultNoneMode(): ProliferatorMode[] {
   return ['none'];
 }
 
+function matchesSpeedOnlyPolicy(
+  recipe: VanillaDatasetSpec['recipes'][number],
+  policy?: CatalogRecipeModifierPolicySpec
+): boolean {
+  if (!policy) {
+    return false;
+  }
+
+  if (policy.speedOnlyRecipeIds?.includes(recipe.ID)) {
+    return true;
+  }
+
+  if (!policy.speedOnlyWhenInputOutputCountsMatch) {
+    return false;
+  }
+
+  for (let inputIndex = 0; inputIndex < recipe.Items.length; inputIndex += 1) {
+    for (let outputIndex = 0; outputIndex < recipe.Results.length; outputIndex += 1) {
+      if (recipe.Items[inputIndex] !== recipe.Results[outputIndex]) {
+        continue;
+      }
+
+      if (recipe.ItemCounts[inputIndex] === recipe.ResultCounts[outputIndex]) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function deriveEffectiveModifierCode(
+  recipe: VanillaDatasetSpec['recipes'][number],
+  recipeRule: CatalogRecipeRuleSpec | undefined,
+  policy: CatalogRecipeModifierPolicySpec | undefined
+): number {
+  if (recipeRule?.ModifierCodeOverride !== undefined) {
+    return recipeRule.ModifierCodeOverride;
+  }
+
+  if (matchesSpeedOnlyPolicy(recipe, policy)) {
+    return 1;
+  }
+
+  return recipe.Proliferator;
+}
+
 function deriveWorkPowerMW(
   buildingItem: { WorkEnergyPerTick?: number },
   rule?: CatalogBuildingRuleSpec
@@ -161,11 +232,48 @@ function deriveSpeedMultiplier(
     throw new Error(`Building ${idText} is missing Speed and no SpeedMultiplierOverride was provided.`);
   }
 
+  if (buildingItem.Speed >= 1000) {
+    return buildingItem.Speed / 10000;
+  }
+
   return buildingItem.Speed;
 }
 
 function deriveBuildingCategory(rule?: CatalogBuildingRuleSpec): string {
   return rule?.Category?.trim() || 'factory';
+}
+
+function expandAllowedBuildingIds(
+  baseBuildingIds: number[],
+  expansionGroups: CatalogRecipeBuildingExpansionGroupSpec[],
+  universalBuildingIds: number[]
+): number[] {
+  const expanded = [...baseBuildingIds];
+  const expandedSet = new Set(expanded);
+
+  for (const group of expansionGroups) {
+    if (!group.BuildingIds.some(buildingId => expandedSet.has(buildingId))) {
+      continue;
+    }
+
+    for (const buildingId of group.BuildingIds) {
+      if (expandedSet.has(buildingId)) {
+        continue;
+      }
+      expanded.push(buildingId);
+      expandedSet.add(buildingId);
+    }
+  }
+
+  for (const buildingId of universalBuildingIds) {
+    if (expandedSet.has(buildingId)) {
+      continue;
+    }
+    expanded.push(buildingId);
+    expandedSet.add(buildingId);
+  }
+
+  return expanded;
 }
 
 function buildRecipeTags(params: {
@@ -234,13 +342,24 @@ export function resolveCatalogModel(
   const buildingRuleMap = new Map<number, CatalogBuildingRuleSpec>(
     (resolvedDefaultConfig.buildingRules ?? []).map(rule => [rule.ID, rule])
   );
+  const recipeRuleMap = new Map<number, CatalogRecipeRuleSpec>(
+    (resolvedDefaultConfig.recipeRules ?? []).map(rule => [rule.ID, rule])
+  );
+  const recipeBuildingExpansionGroups = resolvedDefaultConfig.recipeBuildingExpansionGroups ?? [];
+  const recipeBuildingUniversalIds = resolvedDefaultConfig.recipeBuildingUniversalIds ?? [];
+  const recipeModifierPolicy = resolvedDefaultConfig.recipeModifierPolicy;
   const modifierRuleMap = new Map<number, RecipeModifierRuleSpec>(
     (resolvedDefaultConfig.recipeModifierRules ?? []).map(rule => [rule.Code, rule])
   );
   const itemById = new Map(dataset.items.map(item => [item.ID, item]));
-  const usedFactoryIds = Array.from(new Set(dataset.recipes.flatMap(recipe => recipe.Factories))).sort(
-    (a, b) => a - b
-  );
+  const usedFactoryIds = Array.from(
+    new Set([
+      ...dataset.recipes.flatMap(recipe => recipe.Factories),
+      ...(resolvedDefaultConfig.recipeRules ?? []).flatMap(rule => rule.AllowedBuildingIds ?? []),
+      ...recipeBuildingExpansionGroups.flatMap(group => group.BuildingIds),
+      ...recipeBuildingUniversalIds,
+    ])
+  ).sort((a, b) => a - b);
   const producedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Results));
   const consumedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Items));
   const highestConfiguredProliferatorLevel = Math.max(
@@ -269,7 +388,13 @@ export function resolveCatalogModel(
   }));
 
   const recipes: ResolvedRecipeSpec[] = dataset.recipes.map(recipe => {
-    const modifier = modifierRuleMap.get(recipe.Proliferator);
+    const recipeRule = recipeRuleMap.get(recipe.ID);
+    const effectiveModifierCode = deriveEffectiveModifierCode(
+      recipe,
+      recipeRule,
+      recipeModifierPolicy
+    );
+    const modifier = modifierRuleMap.get(effectiveModifierCode);
     const modifierKind = modifier?.Kind ?? 'none';
     const supportsProliferatorModes =
       modifierKind === 'proliferator' && modifier ? normalizeModes(modifier) : defaultNoneMode();
@@ -277,10 +402,15 @@ export function resolveCatalogModel(
       modifierKind === 'proliferator'
         ? (modifier?.MaxLevel ?? highestConfiguredProliferatorLevel)
         : 0;
+    const allowedBuildingIds = expandAllowedBuildingIds(
+      recipeRule?.AllowedBuildingIds ?? recipe.Factories,
+      recipeBuildingExpansionGroups,
+      recipeBuildingUniversalIds
+    );
     const { isSynthetic, tags } = buildRecipeTags({
       recipeName: recipe.Name,
       recipeType: recipe.Type,
-      recipeFactories: recipe.Factories,
+      recipeFactories: allowedBuildingIds,
       recipeInputCount: recipe.Items.length,
       outputCount: recipe.Results.length,
       modifier,
@@ -304,14 +434,17 @@ export function resolveCatalogModel(
         itemId: itemId.toString(),
         amount: recipe.ResultCounts[index] ?? 0,
       })),
-      allowedBuildingIds: recipe.Factories.map(factoryId => factoryId.toString()),
-      modifierCode: recipe.Proliferator,
+      allowedBuildingIds: allowedBuildingIds.map(factoryId => factoryId.toString()),
+      modifierCode: effectiveModifierCode,
       modifierKind,
       supportsProliferatorModes,
       maxProliferatorLevel,
       isSynthetic,
       tags: tags.length > 0 ? tags : undefined,
-      source: recipe,
+      source: {
+        recipe,
+        rule: recipeRule,
+      },
     };
   });
 
@@ -369,6 +502,11 @@ export function resolveCatalogModel(
   )
     .map(buildingId => buildingId.toString())
     .filter(buildingId => buildingMap.has(buildingId));
+  const recommendedDisabledRecipeIds = (
+    resolvedDefaultConfig.recommendedDisabledRecipeIds ?? []
+  )
+    .map(recipeId => recipeId.toString())
+    .filter(recipeId => recipeMap.has(recipeId));
 
   return {
     version: 'vanilla-compatible@1',
@@ -384,6 +522,7 @@ export function resolveCatalogModel(
     buildingMap,
     proliferatorLevelMap,
     recommendedSolve: resolvedDefaultConfig.recommendedSolve ?? {},
+    recommendedDisabledRecipeIds,
     recommendedDisabledBuildingIds,
     rawItemIds,
     syntheticRecipeIds,

@@ -1,6 +1,8 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
+import { SOLVER_VERSION } from '../src/solver';
 import {
   buildWorkbenchCacheKey,
+  clearNamespacedStorage,
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
   readWorkbenchDatasetDraft,
@@ -63,6 +65,12 @@ function createMemoryStorage() {
   const store = new Map<string, string>();
 
   return {
+    get length() {
+      return store.size;
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null;
+    },
     getItem(key: string) {
       return store.get(key) ?? null;
     },
@@ -92,10 +100,10 @@ test('workbench cache stores active dataset source and editor state per dataset 
     disabledRawInputItemIds: [],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
-    preferredRecipeByItem: { '1101': '1' },
+    forcedRecipeByItem: { '1101': '1' },
     recipePreferences: [],
     recipeStrategyOverrides: [],
-    advancedOverridesText: '{"preferredRecipeByItem":{"1101":"1"}}',
+    advancedOverridesText: '{"forcedRecipeByItem":{"1101":"1"}}',
   };
 
   writeActiveWorkbenchCacheSource(storage, source);
@@ -127,7 +135,7 @@ test('clearWorkbenchCache removes both active source and entries', () => {
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    preferredRecipeByItem: {},
+    forcedRecipeByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -138,6 +146,62 @@ test('clearWorkbenchCache removes both active source and entries', () => {
   expect(readActiveWorkbenchCacheSource(storage)).toBeNull();
   expect(readWorkbenchEditorState(storage, source)).toBeNull();
   expect(readWorkbenchDatasetDraft(storage, source)).toBeNull();
+});
+
+test('clearNamespacedStorage removes every dspcalc.* key and leaves unrelated keys intact', () => {
+  const storage = createMemoryStorage();
+  const currentCacheKey = `dspcalc.workbench.${SOLVER_VERSION}`;
+  storage.setItem(currentCacheKey, '{"version":1}');
+  storage.setItem('dspcalc.perfLog', '1');
+  storage.setItem('dspcalc.solverPerfLog', '1');
+  storage.setItem('unrelated', 'keep');
+
+  const removedKeys = clearNamespacedStorage(storage);
+
+  expect(removedKeys.sort()).toEqual([
+    'dspcalc.perfLog',
+    'dspcalc.solverPerfLog',
+    currentCacheKey,
+  ]);
+  expect(storage.getItem(currentCacheKey)).toBeNull();
+  expect(storage.getItem('dspcalc.perfLog')).toBeNull();
+  expect(storage.getItem('dspcalc.solverPerfLog')).toBeNull();
+  expect(storage.getItem('unrelated')).toBe('keep');
+});
+
+test('workbench cache ignores stale solver-version cache keys', () => {
+  const storage = createMemoryStorage();
+  storage.setItem(
+    'dspcalc.workbench.older-version',
+    JSON.stringify({
+      version: 1,
+      activeSource: {
+        presetId: 'demo-smelting',
+        datasetPath: './DemoSmelting.json',
+        defaultConfigPath: './DemoSmelting.defaults.json',
+      },
+      entries: {
+        './DemoSmelting.json::./DemoSmelting.defaults.json': {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+        },
+      },
+    })
+  );
+
+  expect(readActiveWorkbenchCacheSource(storage)).toBeNull();
+});
+
+test('workbench cache accepts orbitalring as a persisted dataset preset', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'orbitalring',
+    datasetPath: './OrbitalRing.json',
+    defaultConfigPath: './OrbitalRing.defaults.json',
+  };
+
+  writeActiveWorkbenchCacheSource(storage, source);
+
+  expect(readActiveWorkbenchCacheSource(storage)).toEqual(source);
 });
 
 test('dataset drafts are stored per source key and cleared with the rest of the cache', () => {
@@ -174,7 +238,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001', '9999'],
     disabledRecipeIds: ['1', '9999'],
     disabledBuildingIds: ['5001', '9999'],
-    preferredRecipeByItem: {
+    forcedRecipeByItem: {
       '1101': '1',
       '9999': '1',
       '1001': '1',
@@ -221,7 +285,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001'],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
-    preferredRecipeByItem: { '1101': '1' },
+    forcedRecipeByItem: { '1101': '1' },
     recipePreferences: [
       {
         recipeId: '1',
@@ -270,7 +334,7 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    preferredRecipeByItem: {},
+    forcedRecipeByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -278,4 +342,25 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
 
   expect(sanitized.proliferatorPolicy).toBe('speed');
   expect(sanitized.globalProliferatorLevel).toBe(2);
+});
+
+test('sanitizeWorkbenchEditorState migrates legacy preferredRecipeByItem cache entries into forcedRecipeByItem', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const sanitized = sanitizeWorkbenchEditorState(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'auto',
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    preferredRecipeByItem: { '1101': '1' },
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    advancedOverridesText: '',
+  });
+
+  expect(sanitized.forcedRecipeByItem).toEqual({ '1101': '1' });
 });

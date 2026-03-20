@@ -60,6 +60,7 @@ import {
   type WorkbenchProliferatorPolicy,
 } from './workbench/requestBuilder';
 import {
+  clearNamespacedStorage,
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
   readWorkbenchDatasetDraft,
@@ -255,6 +256,18 @@ function getBrowserStorage(): Storage | undefined {
   }
 }
 
+function getBrowserSessionStorage(): Storage | undefined {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 function buildDefaultWorkbenchEditorState(
   catalog: ResolvedCatalogModel
 ): WorkbenchEditorState {
@@ -268,9 +281,9 @@ function buildDefaultWorkbenchEditorState(
     globalProliferatorLevel: '',
     rawInputItemIds: [],
     disabledRawInputItemIds: [],
-    disabledRecipeIds: [],
+    disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
     disabledBuildingIds: catalog.recommendedDisabledBuildingIds,
-    preferredRecipeByItem: {},
+    forcedRecipeByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -284,6 +297,7 @@ export default function App() {
   const pageDescription =
     '切换数据集、编辑求解请求并直接查看当前浏览器实际展示的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
   const browserStorage = useMemo(() => getBrowserStorage(), []);
+  const browserSessionStorage = useMemo(() => getBrowserSessionStorage(), []);
   const initialCachedSource = useMemo(
     () => readActiveWorkbenchCacheSource(browserStorage),
     [browserStorage]
@@ -335,7 +349,7 @@ export default function App() {
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
-  const [preferredRecipeByItem, setPreferredRecipeByItem] = useState<Record<string, string>>({});
+  const [forcedRecipeByItem, setForcedRecipeByItem] = useState<Record<string, string>>({});
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipeStrategyOverrides, setRecipeStrategyOverrides] = useState<
     EditableRecipeStrategyOverride[]
@@ -368,7 +382,7 @@ export default function App() {
     setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
     setDisabledBuildingIds(editorState.disabledBuildingIds);
     setDisabledBuildingDraftId('');
-    setPreferredRecipeByItem(editorState.preferredRecipeByItem);
+    setForcedRecipeByItem(editorState.forcedRecipeByItem);
     setRecipePreferences(editorState.recipePreferences);
     setRecipeStrategyOverrides(editorState.recipeStrategyOverrides);
     setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
@@ -388,7 +402,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      preferredRecipeByItem,
+      forcedRecipeByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -598,7 +612,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      preferredRecipeByItem,
+      forcedRecipeByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -613,7 +627,7 @@ export default function App() {
     disabledRecipeIds,
     loadedSource,
     objective,
-    preferredRecipeByItem,
+    forcedRecipeByItem,
     proliferatorPolicy,
     globalProliferatorLevel,
     rawInputItemIds,
@@ -656,7 +670,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      preferredRecipeByItem,
+      forcedRecipeByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -674,7 +688,7 @@ export default function App() {
       isLoading,
       locale,
       objective,
-      preferredRecipeByItem,
+      forcedRecipeByItem,
       proliferatorPolicy,
       globalProliferatorLevel,
       rawInputItemIds,
@@ -707,7 +721,7 @@ export default function App() {
       disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
       disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
       disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
-      preferredRecipeByItem: deferredSolveInputs.preferredRecipeByItem,
+      forcedRecipeByItem: deferredSolveInputs.forcedRecipeByItem,
       recipePreferences: deferredSolveInputs.recipePreferences,
       recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
       advancedOverridesText: deferredSolveInputs.advancedOverridesText,
@@ -718,6 +732,7 @@ export default function App() {
   const lastRequest = autoSolveState.request;
   const result = autoSolveState.result;
   const solveError = autoSolveState.error;
+  const fallbackSolve = autoSolveState.fallback;
   const hasTargets = targets.length > 0;
 
   const model = useMemo(() => {
@@ -752,6 +767,21 @@ export default function App() {
   }, [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]);
   const requestSummary = model?.requestSummary;
   const iconAtlasIds = model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
+  const fallbackModel = useMemo(() => {
+    if (!catalog || !fallbackSolve) {
+      return null;
+    }
+
+    return buildPresentationModel({
+      catalog,
+      request: fallbackSolve.request,
+      result: fallbackSolve.result,
+      datasetLabel: catalogLabel,
+      datasetPath,
+      defaultConfigPath: defaultConfigPath || undefined,
+      locale,
+    });
+  }, [catalog, fallbackSolve, catalogLabel, datasetPath, defaultConfigPath, locale]);
 
   function onPresetChange(nextPresetId: DatasetPresetId) {
     setPresetId(nextPresetId);
@@ -773,15 +803,26 @@ export default function App() {
   }
 
   function clearCachedWorkbenchState() {
-    clearWorkbenchCache(browserStorage);
+    clearNamespacedStorage(browserStorage);
+    clearNamespacedStorage(browserSessionStorage);
     setDatasetEditorText(loadedDatasetText);
     setDefaultConfigEditorText(loadedDefaultConfigText);
     setDatasetEditorError('');
 
+    if (typeof window !== 'undefined') {
+      window.location.reload();
+      return;
+    }
+
     if (catalog) {
+      clearWorkbenchCache(browserStorage);
       applyWorkbenchEditorState(catalog, buildDefaultWorkbenchEditorState(catalog));
     }
   }
+
+  const applyAllowSurplusFallback = useCallback(() => {
+    setBalancePolicy('allow_surplus');
+  }, []);
 
   function resetDatasetEditorToLoadedSource() {
     setDatasetEditorText(loadedDatasetText);
@@ -1039,7 +1080,7 @@ export default function App() {
         disabledRawInputItemIds,
         disabledRecipeIds,
         disabledBuildingIds,
-        preferredRecipeByItem,
+        forcedRecipeByItem,
         recipePreferences,
         recipeStrategyOverrides,
         currentResolvedRawInputItemIds: result?.resolvedRawInputItemIds ?? [],
@@ -1067,7 +1108,7 @@ export default function App() {
       disabledRecipeIds,
       locale,
       objective,
-      preferredRecipeByItem,
+      forcedRecipeByItem,
       proliferatorPolicy,
       globalProliferatorLevel,
       rawInputItemIds,
@@ -1127,11 +1168,11 @@ export default function App() {
     proliferatorPolicy === 'none' ||
     globalProliferatorLevelOptions.length === 0;
 
-  const updatePreferredRecipeForItem = useCallback(function updatePreferredRecipeForItem(
+  const updateForcedRecipeForItem = useCallback(function updateForcedRecipeForItem(
     itemId: string,
     recipeId: string
   ) {
-    setPreferredRecipeByItem(current => {
+    setForcedRecipeByItem(current => {
       const next = { ...current };
       if (!recipeId) {
         delete next[itemId];
@@ -1142,10 +1183,10 @@ export default function App() {
     });
   }, []);
 
-  const clearPreferredRecipeForItem = useCallback(function clearPreferredRecipeForItem(
+  const clearForcedRecipeForItem = useCallback(function clearForcedRecipeForItem(
     itemId: string
   ) {
-    setPreferredRecipeByItem(current => {
+    setForcedRecipeByItem(current => {
       if (!current[itemId]) {
         return current;
       }
@@ -1263,14 +1304,20 @@ export default function App() {
 
   function renderSelectOption(option: { label: string; iconKey?: string }, size = 18) {
     return (
-      <EntityLabel
-        label={option.label}
-        iconKey={option.iconKey}
-        atlasIds={iconAtlasIds}
-        size={size}
-        gap={8}
-        textStyle={{ fontSize: 14 }}
-      />
+      <Box
+        component="span"
+        sx={{
+          display: 'inline-block',
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontSize: size <= 16 ? 13 : 14,
+          verticalAlign: 'middle',
+        }}
+      >
+        {option.label}
+      </Box>
     );
   }
 
@@ -2425,6 +2472,13 @@ export default function App() {
               {requestSummary ? (
                 <>
                   <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
+                    {requestSummary.solverVersion ? (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={`${bundle.summary.solverVersionLabel}: ${requestSummary.solverVersion}`}
+                      />
+                    ) : null}
                     <Chip
                       size="small"
                       variant="outlined"
@@ -2488,6 +2542,54 @@ export default function App() {
                               <IconButton
                                 size="small"
                                 onClick={() => removeTarget(index)}
+                                disabled={!catalog}
+                                sx={{
+                                  border: '1px solid rgba(24, 51, 89, 0.12)',
+                                  borderRadius: '10px',
+                                }}
+                              >
+                                <CloseRoundedIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                        </Box>
+                      ))
+                    )}
+                  </Stack>
+
+                  <Stack spacing={1}>
+                    <Typography variant="overline" color="text.secondary">
+                      {bundle.summary.forcedRecipesLabel}
+                    </Typography>
+                    {requestSummary.forcedRecipeSettings.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">
+                        {bundle.common.none}
+                      </Typography>
+                    ) : (
+                      requestSummary.forcedRecipeSettings.map(setting => (
+                        <Box
+                          key={`${setting.itemId}:${setting.recipeId}`}
+                          sx={{
+                            display: 'grid',
+                            gridTemplateColumns: 'minmax(0, 1fr) auto',
+                            gap: 0.5,
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ minWidth: 0 }}>
+                            {renderClickableItemLabel(setting)} {'->'}{' '}
+                            <EntityLabel
+                              label={setting.recipeName}
+                              iconKey={setting.recipeIconKey}
+                              atlasIds={iconAtlasIds}
+                              size={18}
+                            />
+                          </Typography>
+                          <Tooltip title={bundle.summary.clearForcedRecipeButton}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                onClick={() => clearForcedRecipeForItem(setting.itemId)}
                                 disabled={!catalog}
                                 sx={{
                                   border: '1px solid rgba(24, 51, 89, 0.12)',
@@ -2687,6 +2789,35 @@ export default function App() {
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{bundle.diagnostics.title}</h2>
                       <div style={{ display: 'grid', gap: 8 }}>
+                        {fallbackModel && fallbackSolve?.reason === 'force_balance_infeasible' ? (
+                          <Alert
+                            severity="warning"
+                            action={
+                              <Button color="inherit" size="small" onClick={applyAllowSurplusFallback}>
+                                {bundle.diagnostics.fallbackApplyButton}
+                              </Button>
+                            }
+                          >
+                            <div style={{ display: 'grid', gap: 8 }}>
+                              <div style={{ fontWeight: 700 }}>
+                                {bundle.diagnostics.fallbackTitle}
+                              </div>
+                              <div>{bundle.diagnostics.fallbackDescription}</div>
+                              {fallbackModel.solvedSummary?.netInputs.length ? (
+                                <div>
+                                  <strong>{bundle.diagnostics.fallbackNetInputsLabel}</strong>{' '}
+                                  {renderFlowRateSequence(fallbackModel.solvedSummary.netInputs)}
+                                </div>
+                              ) : null}
+                              {fallbackModel.surplusOutputs.length ? (
+                                <div>
+                                  <strong>{bundle.diagnostics.fallbackSurplusLabel}</strong>{' '}
+                                  {renderFlowRateSequence(fallbackModel.surplusOutputs)}
+                                </div>
+                              ) : null}
+                            </div>
+                          </Alert>
+                        ) : null}
                         {model.diagnostics &&
                         model.diagnostics.messages.length === 0 &&
                         model.diagnostics.unmetPreferences.length === 0 ? (
@@ -2811,12 +2942,12 @@ export default function App() {
         locale={locale}
         atlasIds={iconAtlasIds}
         itemSlicesById={model?.itemSlicesById ?? {}}
-        preferredRecipeByItem={preferredRecipeByItem}
-        preferredRecipeOptionsByItem={preferredRecipeOptionsByItem}
+        forcedRecipeByItem={forcedRecipeByItem}
+        forcedRecipeOptionsByItem={preferredRecipeOptionsByItem}
         onMarkRaw={markItemAsRawInput}
         onUnmarkRaw={unmarkItemAsRawInput}
-        onPreferredRecipeChange={updatePreferredRecipeForItem}
-        onClearPreferredRecipe={clearPreferredRecipeForItem}
+        onPreferredRecipeChange={updateForcedRecipeForItem}
+        onClearPreferredRecipe={clearForcedRecipeForItem}
         onLocateInLedger={locateItemInLedger}
       />
       <Snackbar
