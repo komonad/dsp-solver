@@ -49,6 +49,8 @@ import { EntityLabel, EntityLabelButton } from './shared/EntityIcon';
 import ItemSliceOverlayHost from './itemSlice/ItemSliceOverlayHost';
 import { openItemSliceOverlay } from './itemSlice/itemSliceStore';
 import { computeLedgerSectionScrollTop } from './shared/ledgerScroll';
+import ItemGridPicker from './shared/ItemGridPicker';
+import type { ItemPickerOption } from './shared/itemPickerModel';
 import { tryApplyRecipeStrategyOverride } from './workbench/recipeStrategy';
 import StructuredDatasetEditor from './catalog/StructuredDatasetEditor';
 import { buildRecipeFlowDisplay } from './shared/recipeDisplay';
@@ -336,6 +338,7 @@ export default function App() {
   const [targets, setTargets] = useState<EditableTarget[]>([]);
   const [targetDraftItemId, setTargetDraftItemId] = useState('');
   const [targetDraftRatePerMin, setTargetDraftRatePerMin] = useState(60);
+  const [targetPickerQuery, setTargetPickerQuery] = useState('');
   const [objective, setObjective] = useState<SolveObjective>('min_buildings');
   const [balancePolicy, setBalancePolicy] = useState<BalancePolicy>('force_balance');
   const [autoPromoteUnavailableItemsToRawInputs, setAutoPromoteUnavailableItemsToRawInputs] =
@@ -369,6 +372,7 @@ export default function App() {
       pickSuggestedTargetItemId(nextCatalog, nextCatalog.items.filter(item => item.kind !== 'utility'), editorState.targets)
     );
     setTargetDraftRatePerMin(60);
+    setTargetPickerQuery('');
     setObjective(editorState.objective);
     setBalancePolicy(editorState.balancePolicy);
     setAutoPromoteUnavailableItemsToRawInputs(
@@ -505,12 +509,17 @@ export default function App() {
     });
   }, [browserStorage, defaultConfigPath, datasetPath, presetId]);
 
-  const itemOptions = useMemo(
+  const itemOptions = useMemo<ItemPickerOption[]>(
     () =>
       catalog?.items
         .filter(item => item.kind !== 'utility')
         .slice()
-        .sort((left, right) => left.name.localeCompare(right.name)) ?? [],
+        .sort((left, right) => left.name.localeCompare(right.name))
+        .map(item => ({
+          itemId: item.itemId,
+          name: item.name,
+          icon: item.icon,
+        })) ?? [],
     [catalog]
   );
 
@@ -921,6 +930,7 @@ export default function App() {
       );
       setTargetDraftItemId(followingItemId);
       setTargetDraftRatePerMin(60);
+      setTargetPickerQuery('');
     }
   }
 
@@ -1167,6 +1177,10 @@ export default function App() {
     proliferatorPolicy === 'auto' ||
     proliferatorPolicy === 'none' ||
     globalProliferatorLevelOptions.length === 0;
+  const targetDraftItemOption = useMemo(
+    () => itemOptions.find(item => item.itemId === targetDraftItemId) ?? null,
+    [itemOptions, targetDraftItemId]
+  );
 
   const updateForcedRecipeForItem = useCallback(function updateForcedRecipeForItem(
     itemId: string,
@@ -1947,105 +1961,100 @@ export default function App() {
               <Typography variant="h6">{bundle.solveRequest.title}</Typography>
               <div style={{ display: 'grid', gap: 16 }}>
                 <div style={{ display: 'grid', gap: 10 }}>
-                  {targets.map((target, index) => (
+                  <Typography variant="body2" color="text.secondary">
+                    {bundle.solveRequest.editTargetsHint}
+                  </Typography>
+
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gap: 1.25,
+                      p: 1.75,
+                      borderRadius: '16px',
+                      border: '1px dashed',
+                      borderColor: 'divider',
+                      backgroundColor: 'rgba(22, 54, 89, 0.03)',
+                    }}
+                  >
+                    <Typography variant="subtitle2">{bundle.solveRequest.addTargetTitle}</Typography>
+
+                    <ItemGridPicker
+                      items={itemOptions}
+                      selectedItemId={targetDraftItemId}
+                      query={targetPickerQuery}
+                      onQueryChange={setTargetPickerQuery}
+                      onSelect={setTargetDraftItemId}
+                      atlasIds={iconAtlasIds}
+                      searchLabel={bundle.solveRequest.targetSearchLabel}
+                      searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
+                      emptyText={bundle.solveRequest.targetPickerEmpty}
+                    />
+
                     <Box
-                      key={`${target.itemId}-${index}`}
                       sx={{
                         display: 'grid',
                         gap: 1,
-                        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 96px' },
-                        alignItems: 'start',
+                        gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 104px auto' },
+                        alignItems: 'center',
                       }}
                     >
-                      <TextField
-                        select
-                        fullWidth
-                        size="small"
-                        sx={compactSelectFieldSx}
-                        label={bundle.summary.targetsLabel}
-                        value={target.itemId}
-                        onChange={event => updateTarget(index, { itemId: event.target.value })}
-                        disabled={!catalog}
+                      <Box
+                        sx={{
+                          minHeight: 40,
+                          px: 1.25,
+                          borderRadius: '12px',
+                          border: '1px solid rgba(24, 51, 89, 0.12)',
+                          backgroundColor: 'rgba(255,255,255,0.86)',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
                       >
-                        {itemOptions.map(item => (
-                          <MenuItem key={item.itemId} value={item.itemId}>
-                            {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                        {targetDraftItemOption ? (
+                          <Stack spacing={0.2} sx={{ minWidth: 0 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              {bundle.solveRequest.selectedTargetLabel}
+                            </Typography>
+                            <EntityLabel
+                              label={targetDraftItemOption.name}
+                              iconKey={targetDraftItemOption.icon}
+                              atlasIds={iconAtlasIds}
+                              size={18}
+                            />
+                          </Stack>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            {bundle.common.notSet}
+                          </Typography>
+                        )}
+                      </Box>
 
                       <TextField
                         type="number"
                         fullWidth
                         size="small"
                         label={bundle.overview.requestLabel}
-                        value={target.ratePerMin}
+                        value={targetDraftRatePerMin}
                         inputProps={{ min: 0, step: 1 }}
                         onChange={event =>
-                          updateTarget(index, {
-                            ratePerMin: Number(event.target.value) || 0,
-                          })
+                          setTargetDraftRatePerMin(Number(event.target.value) || 0)
                         }
                       />
+
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() =>
+                          addTarget({
+                            itemId: targetDraftItemId,
+                            ratePerMin: targetDraftRatePerMin,
+                          })
+                        }
+                        disabled={!catalog || !targetDraftItemId}
+                        sx={{ minHeight: 40, px: 1.5 }}
+                      >
+                        {bundle.solveRequest.addTarget}
+                      </Button>
                     </Box>
-                  ))}
-
-                  <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 1,
-                    gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 96px auto' },
-                    alignItems: 'start',
-                    p: 1.75,
-                    borderRadius: '16px',
-                      border: '1px dashed',
-                      borderColor: 'divider',
-                      backgroundColor: 'rgba(22, 54, 89, 0.03)',
-                    }}
-                  >
-                    <TextField
-                      select
-                      fullWidth
-                      size="small"
-                      sx={compactSelectFieldSx}
-                      label={bundle.summary.targetsLabel}
-                      value={targetDraftItemId}
-                      onChange={event => setTargetDraftItemId(event.target.value)}
-                      disabled={!catalog}
-                    >
-                      {itemOptions.map(item => (
-                        <MenuItem key={item.itemId} value={item.itemId}>
-                          {renderSelectOption({ label: item.name, iconKey: item.icon }, 18)}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-
-                    <TextField
-                      type="number"
-                      fullWidth
-                      size="small"
-                      label={bundle.overview.requestLabel}
-                      value={targetDraftRatePerMin}
-                      inputProps={{ min: 0, step: 1 }}
-                      onChange={event =>
-                        setTargetDraftRatePerMin(Number(event.target.value) || 0)
-                      }
-                    />
-
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() =>
-                        addTarget({
-                          itemId: targetDraftItemId,
-                          ratePerMin: targetDraftRatePerMin,
-                        })
-                      }
-                      disabled={!catalog || !targetDraftItemId}
-                      sx={{ minHeight: 40, px: 1.5 }}
-                    >
-                      {bundle.solveRequest.addTarget}
-                    </Button>
                   </Box>
                 </div>
 
@@ -2529,14 +2538,29 @@ export default function App() {
                           key={`${target.itemId}:${index}`}
                           sx={{
                             display: 'grid',
-                            gridTemplateColumns: 'minmax(0, 1fr) auto',
-                            gap: 0.5,
+                            gridTemplateColumns: 'minmax(0, 1fr) 104px auto',
+                            gap: 0.75,
                             alignItems: 'center',
                           }}
                         >
-                          <Typography variant="body2" sx={{ minWidth: 0 }}>
-                            {renderClickableItemLabel(target)}: {formatRate(target.ratePerMin, locale)}
-                          </Typography>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ minWidth: 0 }}>
+                              {renderClickableItemLabel(target)}
+                            </Typography>
+                          </Box>
+                          <TextField
+                            type="number"
+                            size="small"
+                            fullWidth
+                            label={bundle.overview.requestLabel}
+                            value={targets[index]?.ratePerMin ?? target.ratePerMin}
+                            inputProps={{ min: 0, step: 1 }}
+                            onChange={event =>
+                              updateTarget(index, {
+                                ratePerMin: Number(event.target.value) || 0,
+                              })
+                            }
+                          />
                           <Tooltip title={bundle.solveRequest.removeTarget}>
                             <span>
                               <IconButton
