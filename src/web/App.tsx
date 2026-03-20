@@ -45,7 +45,7 @@ import {
 } from './catalog/catalogClient';
 import { computeWorkbenchSolve } from './workbench/autoSolve';
 import DatasetEditorPanel from './catalog/DatasetEditorPanel';
-import { EntityLabel, EntityLabelButton } from './shared/EntityIcon';
+import { EntityIcon, EntityLabel, EntityLabelButton } from './shared/EntityIcon';
 import ItemSliceOverlayHost from './itemSlice/ItemSliceOverlayHost';
 import { openItemSliceOverlay } from './itemSlice/itemSliceStore';
 import { computeLedgerSectionScrollTop } from './shared/ledgerScroll';
@@ -155,7 +155,7 @@ const subtleButtonStyle: React.CSSProperties = {
 const resultBodyGridStyle: React.CSSProperties = {
   display: 'grid',
   gap: 20,
-  gridTemplateColumns: 'minmax(0, 1fr) minmax(280px, 320px)',
+  gridTemplateColumns: 'minmax(280px, 1fr) minmax(0, 2fr) minmax(280px, 1fr)',
   alignItems: 'start',
 };
 
@@ -1222,20 +1222,55 @@ export default function App() {
     scrollItemLedgerToSection(targetSection.key);
   }, [model]);
 
-  function renderClickableItemLabel(item: {
+  function renderClickableItemLabel(
+    item: {
     itemId: string;
     itemName: string;
     iconKey?: string;
-  }) {
+    },
+    options?: {
+      iconOnly?: boolean;
+      iconSize?: number;
+    }
+  ) {
+    const iconOnly = options?.iconOnly ?? false;
+    const iconSize = options?.iconSize ?? 18;
     return (
-      <EntityLabelButton
-        label={item.itemName}
-        iconKey={item.iconKey}
-        atlasIds={iconAtlasIds}
-        size={18}
-        gap={8}
+      <button
+        type="button"
         onClick={() => openItemSliceOverlay(item.itemId)}
-      />
+        style={{
+          border: 'none',
+          padding: 0,
+          margin: 0,
+          background: 'transparent',
+          color: 'inherit',
+          font: 'inherit',
+          cursor: 'pointer',
+          display: 'inline-flex',
+          alignItems: 'center',
+          minWidth: 0,
+        }}
+        title={item.itemName}
+      >
+        {iconOnly ? (
+          <EntityIcon
+            label={item.itemName}
+            iconKey={item.iconKey}
+            atlasIds={iconAtlasIds}
+            size={iconSize}
+          />
+        ) : (
+          <EntityLabelButton
+            label={item.itemName}
+            iconKey={item.iconKey}
+            atlasIds={iconAtlasIds}
+            size={iconSize}
+            gap={8}
+            onClick={() => openItemSliceOverlay(item.itemId)}
+          />
+        )}
+      </button>
     );
   }
 
@@ -1804,7 +1839,7 @@ export default function App() {
                   gap: 2,
                   gridTemplateColumns: {
                     xs: '1fr',
-                    lg: 'minmax(260px, 300px) minmax(0, 1fr) minmax(230px, 260px)',
+                    lg: 'minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)',
                   },
                   alignItems: 'start',
                 }}
@@ -2538,21 +2573,24 @@ export default function App() {
                           key={`${target.itemId}:${index}`}
                           sx={{
                             display: 'grid',
-                            gridTemplateColumns: 'minmax(0, 1fr) 104px auto',
+                            gridTemplateColumns: 'auto 84px auto',
                             gap: 0.75,
                             alignItems: 'center',
+                            justifyContent: 'start',
                           }}
                         >
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" sx={{ minWidth: 0 }}>
-                              {renderClickableItemLabel(target)}
-                            </Typography>
+                          <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center' }}>
+                            {renderClickableItemLabel(target, { iconOnly: true, iconSize: 22 })}
                           </Box>
                           <TextField
                             type="number"
                             size="small"
                             fullWidth
                             label={bundle.overview.requestLabel}
+                            sx={{
+                              '& .MuiInputBase-input': { px: 1, py: 0.75, fontSize: 13 },
+                              '& .MuiInputLabel-root': { fontSize: 12 },
+                            }}
                             value={targets[index]?.ratePerMin ?? target.ratePerMin}
                             inputProps={{ min: 0, step: 1 }}
                             onChange={event =>
@@ -2600,15 +2638,19 @@ export default function App() {
                             alignItems: 'center',
                           }}
                         >
-                          <Typography variant="body2" sx={{ minWidth: 0 }}>
-                            {renderClickableItemLabel(setting)} {'->'}{' '}
+                          <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                            {renderClickableItemLabel(setting, { iconOnly: true, iconSize: 18 })}
+                            <Typography variant="body2" color="text.secondary" component="span">
+                              :
+                            </Typography>
                             <EntityLabel
                               label={setting.recipeName}
                               iconKey={setting.recipeIconKey}
                               atlasIds={iconAtlasIds}
                               size={18}
+                              textStyle={{ fontWeight: 700 }}
                             />
-                          </Typography>
+                          </Box>
                           <Tooltip title={bundle.summary.clearForcedRecipeButton}>
                             <span>
                               <IconButton
@@ -2687,7 +2729,7 @@ export default function App() {
             {model ? (
               model.status ? (
                 <section style={resultBodyGridStyle}>
-                  <div style={resultMainColumnStyle}>
+                  <div style={{ ...resultMainColumnStyle, gridColumn: '1', gridRow: '1 / span 2' }}>
                     <article style={cardStyle}>
                       <h2 style={{ marginTop: 0 }}>{bundle.overview.summaryTitle}</h2>
                       <div
@@ -2702,12 +2744,20 @@ export default function App() {
                           {(model.solvedSummary?.netInputs.length ?? 0) === 0 ? (
                             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
                           ) : (
-                            model.solvedSummary?.netInputs.map(item => (
-                              <div key={item.itemId}>
-                                {renderClickableItemLabel(item)}:{' '}
-                                {formatRate(item.ratePerMin, locale)}
-                              </div>
-                            ))
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                              {model.solvedSummary?.netInputs.map(item => (
+                                <div
+                                  key={item.itemId}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
+                                >
+                                  {renderClickableItemLabel(item, { iconOnly: true, iconSize: 18 })}
+                                  <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
+                                    {formatRate(item.ratePerMin, locale)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
 
@@ -2716,12 +2766,20 @@ export default function App() {
                           {(model.solvedSummary?.netOutputs.length ?? 0) === 0 ? (
                             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
                           ) : (
-                            model.solvedSummary?.netOutputs.map(item => (
-                              <div key={item.itemId}>
-                                {renderClickableItemLabel(item)}:{' '}
-                                {formatRate(item.ratePerMin, locale)}
-                              </div>
-                            ))
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                              {model.solvedSummary?.netOutputs.map(item => (
+                                <div
+                                  key={item.itemId}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                                  title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
+                                >
+                                  {renderClickableItemLabel(item, { iconOnly: true, iconSize: 18 })}
+                                  <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
+                                    {formatRate(item.ratePerMin, locale)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
 
@@ -2796,18 +2854,6 @@ export default function App() {
                           <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>{bundle.recipePlans.title}</div>
                         </div>
                       </div>
-                    </article>
-
-                    <article
-                      style={{
-                        ...cardStyle,
-                        width: '100%',
-                        maxWidth: 1040,
-                        justifySelf: 'center',
-                      }}
-                    >
-                      <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
-                      <div style={{ display: 'grid', gap: 12 }}>{recipePlanNodes}</div>
                     </article>
 
                     <article style={cardStyle}>
@@ -2887,9 +2933,16 @@ export default function App() {
                         </pre>
                       </details>
                     </article>
-                    </div>
+                  </div>
 
-                    <aside style={resultSideColumnStyle}>
+                  <div style={{ gridColumn: '2', gridRow: '1 / span 2' }}>
+                    <article style={{ ...cardStyle, width: '100%', maxWidth: 'none', justifySelf: 'stretch' }}>
+                      <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
+                      <div style={{ display: 'grid', gap: 12 }}>{recipePlanNodes}</div>
+                    </article>
+                  </div>
+
+                    <aside style={{ ...resultSideColumnStyle, gridColumn: '3', gridRow: '1 / span 2' }}>
                       <article
                         style={{
                           ...cardStyle,

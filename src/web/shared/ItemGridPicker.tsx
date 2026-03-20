@@ -28,7 +28,31 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
     emptyText,
   } = props;
 
-  const filteredItems = useMemo(() => filterItemPickerOptions(items, query), [items, query]);
+  const filteredItems = useMemo(() => {
+    const filtered = filterItemPickerOptions(items, query);
+    return [...filtered].sort((left, right) => {
+      const leftPrefix = left.itemId.charAt(0);
+      const rightPrefix = right.itemId.charAt(0);
+      if (leftPrefix !== rightPrefix) {
+        return leftPrefix.localeCompare(rightPrefix);
+      }
+      return left.itemId.localeCompare(right.itemId, 'en');
+    });
+  }, [items, query]);
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map<string, ItemPickerOption[]>();
+    for (const item of filteredItems) {
+      const key = item.itemId.charAt(0) || '#';
+      const existing = groups.get(key);
+      if (existing) {
+        existing.push(item);
+      } else {
+        groups.set(key, [item]);
+      }
+    }
+    return Array.from(groups.entries());
+  }, [filteredItems]);
 
   return (
     <Box sx={{ display: 'grid', gap: 1.25 }}>
@@ -48,12 +72,10 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))',
-          gap: 1,
+          gap: 0.35,
           maxHeight: 252,
           minHeight: 124,
           overflowY: 'auto',
-          p: 0.25,
         }}
       >
         {filteredItems.length === 0 ? (
@@ -73,69 +95,57 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
             </Typography>
           </Box>
         ) : (
-          filteredItems.map(item => {
-            const isSelected = item.itemId === selectedItemId;
-            return (
-              <button
-                key={item.itemId}
-                type="button"
-                onClick={() => onSelect(item.itemId)}
-                style={{
-                  display: 'grid',
-                  gap: 6,
-                  justifyItems: 'center',
-                  alignContent: 'start',
-                  minHeight: 92,
-                  padding: '10px 8px',
-                  borderRadius: 14,
-                  border: isSelected
-                    ? '1px solid rgba(24, 88, 163, 0.64)'
-                    : '1px solid rgba(24, 51, 89, 0.12)',
-                  background: isSelected ? 'rgba(24, 88, 163, 0.10)' : 'rgba(255, 255, 255, 0.92)',
-                  color: '#183359',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                  contentVisibility: 'auto',
-                  containIntrinsicSize: '92px',
-                }}
-              >
-                <EntityIcon
-                  label={item.name}
-                  iconKey={item.icon}
-                  atlasIds={atlasIds}
-                  size={28}
-                />
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 700,
-                    lineHeight: 1.25,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                  }}
-                  title={item.name}
-                >
-                  {item.name}
-                </span>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: 'rgba(24, 51, 89, 0.68)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%',
-                  }}
-                  title={item.itemId}
-                >
-                  {item.itemId}
-                </span>
-              </button>
-            );
-          })
+          groupedItems.map(([groupKey, group]) => (
+            <Box
+              key={groupKey}
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(28px, 28px))',
+                gap: 0.2,
+                alignItems: 'center',
+                alignContent: 'start',
+              }}
+            >
+              {group.map(item => {
+                const isSelected = item.itemId === selectedItemId;
+                return (
+                  <button
+                    key={item.itemId}
+                    type="button"
+                    onClick={() => onSelect(item.itemId)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 28,
+                      height: 28,
+                      minHeight: 28,
+                      padding: 0,
+                      borderRadius: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      color: '#183359',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      contentVisibility: 'auto',
+                      containIntrinsicSize: '28px',
+                      justifySelf: 'center',
+                      opacity: isSelected ? 1 : 0.92,
+                      filter: isSelected ? 'drop-shadow(0 0 0.75px rgba(24, 88, 163, 0.9))' : 'none',
+                    }}
+                    title={`${item.name} (${item.itemId})`}
+                  >
+                    <EntityIcon
+                      label={item.name}
+                      iconKey={item.icon}
+                      atlasIds={atlasIds}
+                      size={28}
+                    />
+                  </button>
+                );
+              })}
+            </Box>
+          ))
         )}
       </Box>
     </Box>
