@@ -1625,7 +1625,7 @@ export default function App() {
             >
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  闁诲海鍋ｉ崐娑樷枍閿濆鍋?
+                  建筑
                 </Typography>
                 <Select
                   size="small"
@@ -1671,7 +1671,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  濠电姭鎷冮崨顓濈钵婵?
+                  增产模式
                 </Typography>
                 <Select
                   size="small"
@@ -1718,7 +1718,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  缂傚倷鐒︾粙鎴λ囨潏顭戞?
+                  增产等级
                 </Typography>
                 <Select
                   size="small"
