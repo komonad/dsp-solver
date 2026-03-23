@@ -53,6 +53,9 @@ export interface PresentationForcedRecipeSetting {
   recipeId: string;
   recipeName: string;
   recipeIconKey?: string;
+  cycleTimeSec: number;
+  inputs: PresentationItemRate[];
+  outputs: PresentationItemRate[];
 }
 
 export interface PresentationRequestSummary {
@@ -733,14 +736,34 @@ export function buildPresentationModel(
           }))
         ),
         forcedRecipeSettings: Object.entries(request.forcedRecipeByItem ?? {})
-          .map(([itemId, recipeId]) => ({
-            itemId,
-            itemName: getItemName(catalog, itemId),
-            iconKey: getItemIcon(catalog, itemId),
-            recipeId,
-            recipeName: getRecipeName(catalog, recipeId),
-            recipeIconKey: getRecipeIcon(catalog, recipeId),
-          }))
+          .map(([itemId, recipeId]) => {
+            const recipe = catalog.recipeMap.get(recipeId);
+            return {
+              itemId,
+              itemName: getItemName(catalog, itemId),
+              iconKey: getItemIcon(catalog, itemId),
+              recipeId,
+              recipeName: getRecipeName(catalog, recipeId),
+              recipeIconKey: getRecipeIcon(catalog, recipeId),
+              cycleTimeSec: recipe?.cycleTimeSec ?? 0,
+              inputs: recipe
+                ? recipe.inputs.map(input => ({
+                    itemId: input.itemId,
+                    itemName: getItemName(catalog, input.itemId),
+                    iconKey: getItemIcon(catalog, input.itemId),
+                    ratePerMin: input.amount,
+                  }))
+                : [],
+              outputs: recipe
+                ? recipe.outputs.map(output => ({
+                    itemId: output.itemId,
+                    itemName: getItemName(catalog, output.itemId),
+                    iconKey: getItemIcon(catalog, output.itemId),
+                    ratePerMin: output.amount,
+                  }))
+                : [],
+            };
+          })
           .sort(
             (left, right) =>
               left.itemName.localeCompare(right.itemName) ||

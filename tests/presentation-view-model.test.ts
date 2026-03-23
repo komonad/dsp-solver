@@ -286,6 +286,50 @@ test('presentation model exposes named recipe preference summaries from the requ
   });
 });
 
+test('presentation model exposes forced recipe flow details for snapshot rendering', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const model = buildPresentationModel({
+    catalog,
+    request: {
+      solverVersion: SOLVER_VERSION,
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+      forcedRecipeByItem: { '1101': '1' },
+    },
+    datasetLabel: 'Demo Smelting',
+  });
+
+  expect(model.requestSummary?.forcedRecipeSettings).toEqual([
+    {
+      itemId: '1101',
+      itemName: 'Demo Plate',
+      iconKey: 'demo-plate',
+      recipeId: '1',
+      recipeName: 'Ore to Plate',
+      recipeIconKey: 'demo-plate',
+      cycleTimeSec: 1,
+      inputs: [
+        {
+          itemId: '1001',
+          itemName: 'Demo Ore',
+          iconKey: 'demo-ore',
+          ratePerMin: 1,
+        },
+      ],
+      outputs: [
+        {
+          itemId: '1101',
+          itemName: 'Demo Plate',
+          iconKey: 'demo-plate',
+          ratePerMin: 1,
+        },
+      ],
+    },
+  ]);
+});
+
 test('presentation model detects global proliferator disable requests', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), {
     ...buildDemoDefaults(),

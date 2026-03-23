@@ -78,13 +78,11 @@ function EntityIconImpl(props: EntityIconProps) {
         style={{
           width: size,
           height: size,
-          borderRadius: 8,
           backgroundImage: `url(${atlasSrc})`,
           backgroundRepeat: 'no-repeat',
           backgroundSize: `${sprite.total_width * scale}px ${sprite.total_height * scale}px`,
           backgroundPosition: `${-sprite.x * scale}px ${-sprite.y * scale}px`,
           flex: '0 0 auto',
-          boxShadow: 'inset 0 0 0 1px rgba(24, 51, 89, 0.08)',
         }}
       />
     );
@@ -97,7 +95,7 @@ function EntityIconImpl(props: EntityIconProps) {
       style={{
         width: size,
         height: size,
-        borderRadius: 8,
+        borderRadius: 0,
         background: getIconFallbackColor(label),
         color: '#183359',
         display: 'inline-flex',
@@ -107,7 +105,6 @@ function EntityIconImpl(props: EntityIconProps) {
         fontWeight: 700,
         lineHeight: 1,
         flex: '0 0 auto',
-        boxShadow: 'inset 0 0 0 1px rgba(24, 51, 89, 0.12)',
       }}
     >
       {getIconFallbackText(label)}

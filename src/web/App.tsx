@@ -203,6 +203,26 @@ const sectionHeadingStyle: React.CSSProperties = {
   letterSpacing: '0.08em',
 };
 
+function formatRecipeAmount(amount: number, locale: string): string {
+  return Number.isInteger(amount)
+    ? new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)
+    : new Intl.NumberFormat(locale, {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      }).format(amount);
+}
+
+function shouldOmitRecipeAmount(amount: number): boolean {
+  return Math.abs(amount - 1) < 1e-9;
+}
+
+function formatRecipeCycleTime(seconds: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: seconds < 10 && !Number.isInteger(seconds) ? 1 : 0,
+    maximumFractionDigits: seconds < 10 ? 1 : 2,
+  }).format(seconds);
+}
+
 function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
   return (
     catalog.items.find(item => item.kind === 'product')?.itemId ??
@@ -1345,6 +1365,70 @@ export default function App() {
               </Typography>
             ) : null}
             {renderFlowRateToken(item)}
+          </React.Fragment>
+        ))}
+      </Box>
+    );
+  }
+
+  function renderRecipeIoSequence(
+    items: Array<{
+      itemId: string;
+      itemName: string;
+      iconKey?: string;
+      ratePerMin: number;
+    }>
+  ) {
+    if (items.length === 0) {
+      return (
+        <Typography variant="body2" color="text.secondary">
+          {bundle.common.none}
+        </Typography>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 0.75,
+          flexWrap: 'wrap',
+          minWidth: 0,
+        }}
+      >
+        {items.map((item, index) => (
+          <React.Fragment key={`${item.itemId}:${index}`}>
+            {index > 0 ? (
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                +
+              </Typography>
+            ) : null}
+            <Box
+              sx={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 0.5,
+                minWidth: 0,
+                maxWidth: '100%',
+              }}
+            >
+              {shouldOmitRecipeAmount(item.ratePerMin) ? null : (
+                <Typography
+                  variant="caption"
+                  sx={{ whiteSpace: 'nowrap', fontWeight: 700, color: '#183359' }}
+                >
+                  {formatRecipeAmount(item.ratePerMin, locale)}
+                </Typography>
+              )}
+              <EntityIcon
+                label={item.itemName}
+                iconKey={item.iconKey}
+                atlasIds={iconAtlasIds}
+                size={20}
+              />
+            </Box>
           </React.Fragment>
         ))}
       </Box>
@@ -2634,22 +2718,104 @@ export default function App() {
                           sx={{
                             display: 'grid',
                             gridTemplateColumns: 'minmax(0, 1fr) auto',
-                            gap: 0.5,
+                            gap: 0.75,
                             alignItems: 'center',
                           }}
                         >
-                          <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                            {renderClickableItemLabel(setting, { iconOnly: true, iconSize: 18 })}
-                            <Typography variant="body2" color="text.secondary" component="span">
-                              :
-                            </Typography>
-                            <EntityLabel
-                              label={setting.recipeName}
-                              iconKey={setting.recipeIconKey}
-                              atlasIds={iconAtlasIds}
-                              size={18}
-                              textStyle={{ fontWeight: 700 }}
-                            />
+                          <Box
+                            sx={{
+                              minWidth: 0,
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.75,
+                              flexWrap: 'nowrap',
+                              overflowX: 'auto',
+                              overflowY: 'hidden',
+                              px: 0.25,
+                              py: 0.4,
+                              minHeight: 0,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: 'inline-grid',
+                                gridTemplateColumns: 'auto auto auto',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                minWidth: 0,
+                                flex: '0 0 auto',
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  minWidth: 0,
+                                  display: 'flex',
+                                  justifyContent: 'flex-end',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {renderRecipeIoSequence(setting.inputs)}
+                              </Box>
+                              <Box
+                                sx={{
+                                  position: 'relative',
+                                  display: 'inline-grid',
+                                  gridTemplateRows: '10px 10px',
+                                  justifyItems: 'center',
+                                  alignItems: 'center',
+                                  minWidth: 28,
+                                  flex: '0 0 auto',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    whiteSpace: 'nowrap',
+                                    fontWeight: 700,
+                                    color: '#183359',
+                                    letterSpacing: '0.02em',
+                                    fontSize: 10,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  {`${formatRecipeCycleTime(setting.cycleTimeSec, locale)} s`}
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    position: 'relative',
+                                    width: '100%',
+                                    minWidth: 24,
+                                    height: 2,
+                                    borderRadius: '999px',
+                                    background:
+                                      'linear-gradient(90deg, rgba(24, 51, 89, 0.22) 0%, rgba(24, 51, 89, 0.75) 100%)',
+                                  }}
+                                >
+                                  <Box
+                                    sx={{
+                                      position: 'absolute',
+                                      right: -1,
+                                      top: '50%',
+                                      width: 8,
+                                      height: 8,
+                                      borderTop: '2px solid #183359',
+                                      borderRight: '2px solid #183359',
+                                      transform: 'translateY(-50%) rotate(45deg)',
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
+                              <Box
+                                sx={{
+                                  minWidth: 0,
+                                  display: 'flex',
+                                  justifyContent: 'flex-start',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {renderRecipeIoSequence(setting.outputs)}
+                              </Box>
+                            </Box>
                           </Box>
                           <Tooltip title={bundle.summary.clearForcedRecipeButton}>
                             <span>
