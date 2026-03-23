@@ -266,7 +266,18 @@ function getRecipeName(catalog: ResolvedCatalogModel, recipeId: string): string 
 }
 
 function getRecipeIcon(catalog: ResolvedCatalogModel, recipeId: string): string | undefined {
-  return catalog.recipeMap.get(recipeId)?.icon;
+  const recipe = catalog.recipeMap.get(recipeId);
+  if (!recipe) {
+    return undefined;
+  }
+  if (recipe.icon) {
+    return recipe.icon;
+  }
+  const firstOutputItemId = recipe.outputs[0]?.itemId;
+  if (!firstOutputItemId) {
+    return undefined;
+  }
+  return getItemIcon(catalog, firstOutputItemId);
 }
 
 function getBuildingName(catalog: ResolvedCatalogModel, buildingId: string): string {
