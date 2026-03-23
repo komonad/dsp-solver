@@ -28,7 +28,7 @@ export interface ComputeWorkbenchSolveParams {
   disabledRawInputItemIds?: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  forcedRecipeByItem: Record<string, string>;
+  allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
@@ -66,7 +66,7 @@ export function computeWorkbenchSolve(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    forcedRecipeByItem,
+    allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
     advancedOverridesText,
@@ -104,7 +104,7 @@ export function computeWorkbenchSolve(
       {
         disabledRecipeIds,
         disabledBuildingIds,
-        forcedRecipeByItem,
+        allowedRecipesByItem,
       },
       buildPreferredRecipeOverrides(recipePreferences)
     ),
@@ -200,3 +200,4 @@ export function computeWorkbenchSolve(
     };
   }
 }
+

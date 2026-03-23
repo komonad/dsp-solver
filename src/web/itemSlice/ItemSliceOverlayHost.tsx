@@ -27,8 +27,8 @@ interface ItemSliceOverlayHostProps {
   locale: AppLocale;
   atlasIds?: string[];
   itemSlicesById: Record<string, PresentationItemSlice>;
-  forcedRecipeByItem: Record<string, string>;
-  forcedRecipeOptionsByItem: Record<
+  allowedRecipesByItem: Record<string, string[]>;
+  allowedRecipeOptionsByItem: Record<
     string,
     Array<{
       recipeId: string;
@@ -38,8 +38,8 @@ interface ItemSliceOverlayHostProps {
   >;
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
-  onPreferredRecipeChange: (itemId: string, recipeId: string) => void;
-  onClearPreferredRecipe: (itemId: string) => void;
+  onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
+  onClearAllowedRecipes: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
 }
 
@@ -48,12 +48,12 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     locale,
     atlasIds,
     itemSlicesById,
-    forcedRecipeByItem,
-    forcedRecipeOptionsByItem,
+    allowedRecipesByItem,
+    allowedRecipeOptionsByItem,
     onMarkRaw,
     onUnmarkRaw,
-    onPreferredRecipeChange,
-    onClearPreferredRecipe,
+    onApplyPreferredRecipes,
+    onClearAllowedRecipes,
     onLocateInLedger,
   } = props;
   const workbenchExtra = useMemo(() => getWorkbenchExtraBundle(locale), [locale]);
@@ -65,8 +65,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
   const selectedItemSlice = overlayState.selectedItemId
     ? itemSlicesById[overlayState.selectedItemId]
     : undefined;
-  const forcedRecipeOptions = selectedItemSlice
-    ? forcedRecipeOptionsByItem[selectedItemSlice.itemId] ?? []
+  const allowedRecipeOptions = selectedItemSlice
+    ? allowedRecipeOptionsByItem[selectedItemSlice.itemId] ?? []
     : [];
 
   const pendingPerfRef = useRef<{
@@ -207,13 +207,13 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             locale={locale}
             atlasIds={atlasIds}
             slice={selectedItemSlice}
-            preferredRecipeId={forcedRecipeByItem[selectedItemSlice.itemId]}
-            preferredRecipeOptions={forcedRecipeOptions}
+            preferredRecipeIds={allowedRecipesByItem[selectedItemSlice.itemId] ?? []}
+            preferredRecipeOptions={allowedRecipeOptions}
             onSelectItem={openItemSliceOverlay}
             onMarkRaw={onMarkRaw}
             onUnmarkRaw={onUnmarkRaw}
-            onPreferredRecipeChange={onPreferredRecipeChange}
-            onClearPreferredRecipe={onClearPreferredRecipe}
+            onApplyPreferredRecipes={onApplyPreferredRecipes}
+            onClearPreferredRecipe={onClearAllowedRecipes}
             onLocateInLedger={onLocateInLedger}
           />
         </Box>
@@ -221,3 +221,5 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     </Box>
   );
 }
+
+

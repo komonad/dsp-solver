@@ -107,7 +107,7 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -138,7 +138,7 @@ test('computeWorkbenchSolve surfaces advanced-override parse errors without emit
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '{',
@@ -161,7 +161,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -178,7 +178,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
   expect(autoSolve.error).toBe(getLocaleBundle().solveRequest.validTargetRequired);
 });
 
-test('computeWorkbenchSolve applies forcedRecipeByItem as a hard item-level constraint', () => {
+test('computeWorkbenchSolve applies allowedRecipesByItem as a hard item-level constraint', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
   const autoSolve = computeWorkbenchSolve({
     catalog,
@@ -190,14 +190,14 @@ test('computeWorkbenchSolve applies forcedRecipeByItem as a hard item-level cons
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: { '1101': '2' },
+    allowedRecipesByItem: { '1101': ['2'] },
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
   });
 
   expect(autoSolve.error).toBe('');
-  expect(autoSolve.request?.forcedRecipeByItem).toEqual({ '1101': '2' });
+  expect(autoSolve.request?.allowedRecipesByItem).toEqual({ '1101': ['2'] });
   expect(autoSolve.result?.status).toBe('optimal');
   expect(autoSolve.result?.recipePlans[0].recipeId).toBe('2');
 });
@@ -214,7 +214,7 @@ test('computeWorkbenchSolve emits forced per-recipe strategy overrides from card
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [
       {
@@ -244,7 +244,7 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
     rawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -259,3 +259,5 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
     { itemId: '1201', ratePerMin: 60 },
   ]);
 });
+
+

@@ -35,12 +35,8 @@ export interface SolveTarget {
  * All IDs use normalized string IDs from the resolved catalog.
  * Unless otherwise noted, `forced*` fields are hard constraints.
  *
- * `preferredRecipeByItem` is treated as a best-effort strong preference:
- * the solver tries to keep each preferred recipe as a hard constraint when it
- * remains feasible, and only downgrades the infeasible subset back to soft
- * preferences.
- *
- * Other `preferred*` fields remain soft preferences used for tie-breaking.
+ * `allowedRecipesByItem` is a hard per-item recipe whitelist. Other
+ * `preferred*` fields are soft preferences used for tie-breaking.
  */
 export interface SolveRequest {
   /** Solver version stamp attached by the active client/build. */
@@ -70,16 +66,14 @@ export interface SolveRequest {
   disabledRecipeIds?: string[];
   /** Building IDs that are forbidden in this request. */
   disabledBuildingIds?: string[];
-  /** Hard per-item recipe selection, keyed by produced item ID. */
-  forcedRecipeByItem?: Record<string, string>;
   /**
-   * Best-effort per-item recipe preference, keyed by produced item ID.
+   * Hard per-item allowed recipe whitelist, keyed by produced item ID.
    *
-   * The solver first tries to satisfy these as hard recipe choices where
-   * feasible. Preferences that make the request infeasible are downgraded back
-   * to soft preferences and reported in diagnostics.
+   * When present for one item, any recipe that produces that item but is not
+   * listed here is forbidden, including recipes that only produce it as a
+   * byproduct.
    */
-  preferredRecipeByItem?: Record<string, string>;
+  allowedRecipesByItem?: Record<string, string[]>;
   /** Hard per-recipe building selection. */
   forcedBuildingByRecipe?: Record<string, string>;
   /** Soft per-recipe building preference. */

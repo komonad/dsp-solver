@@ -183,21 +183,13 @@ test('orbitalring keeps the feasible fullerol proliferator preference even if an
     balancePolicy: 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
     disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
-    preferredRecipeByItem: {
-      '1143': '715',
-      '6522': '510',
+    allowedRecipesByItem: {
+      '1143': ['715'],
+      '6522': ['510'],
     },
   });
 
-  expect(result.status).toBe('optimal');
-  expect(getPlan(result, '715')).toBeDefined();
-  expect(getPlan(result, '108')).toBeUndefined();
-  expect(result.diagnostics.messages).toContain(
-    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
-  );
-  expect(result.diagnostics.unmetPreferences).toContain(
-    'Preferred recipe 510 was not used for item 6522.'
-  );
+  expect(result.status).toBe('infeasible');
 });
 
 test('orbitalring can still enforce the fullerol proliferator recipe when pure silver is solved internally', async () => {
@@ -212,8 +204,8 @@ test('orbitalring can still enforce the fullerol proliferator recipe when pure s
     autoPromoteUnavailableItemsToRawInputs: true,
     disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
     disabledRawInputItemIds: ['7101'],
-    preferredRecipeByItem: {
-      '1143': '715',
+    allowedRecipesByItem: {
+      '1143': ['715'],
     },
   });
 
@@ -221,7 +213,4 @@ test('orbitalring can still enforce the fullerol proliferator recipe when pure s
   expect(getPlan(result, '715')).toBeDefined();
   expect(getPlan(result, '108')).toBeUndefined();
   expect(getExternalRate(result, '1116')).toBeGreaterThan(0);
-  expect(result.diagnostics.unmetPreferences).not.toContain(
-    'Preferred recipe 715 was not used for item 1143.'
-  );
 });

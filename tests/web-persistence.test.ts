@@ -100,10 +100,10 @@ test('workbench cache stores active dataset source and editor state per dataset 
     disabledRawInputItemIds: [],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
-    forcedRecipeByItem: { '1101': '1' },
+    allowedRecipesByItem: { '1101': ['1'] },
     recipePreferences: [],
     recipeStrategyOverrides: [],
-    advancedOverridesText: '{"forcedRecipeByItem":{"1101":"1"}}',
+    advancedOverridesText: '{"allowedRecipesByItem":{"1101":"1"}}',
   };
 
   writeActiveWorkbenchCacheSource(storage, source);
@@ -135,7 +135,7 @@ test('clearWorkbenchCache removes both active source and entries', () => {
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -238,10 +238,10 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001', '9999'],
     disabledRecipeIds: ['1', '9999'],
     disabledBuildingIds: ['5001', '9999'],
-    forcedRecipeByItem: {
-      '1101': '1',
-      '9999': '1',
-      '1001': '1',
+    allowedRecipesByItem: {
+      '1101': ['1'],
+      '9999': ['1'],
+      '1001': ['1'],
     },
     recipePreferences: [
       {
@@ -285,7 +285,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
     disabledRawInputItemIds: ['1001'],
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
-    forcedRecipeByItem: { '1101': '1' },
+    allowedRecipesByItem: { '1101': ['1'] },
     recipePreferences: [
       {
         recipeId: '1',
@@ -334,7 +334,7 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
     disabledRawInputItemIds: [],
     disabledRecipeIds: [],
     disabledBuildingIds: [],
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -342,25 +342,4 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
 
   expect(sanitized.proliferatorPolicy).toBe('speed');
   expect(sanitized.globalProliferatorLevel).toBe(2);
-});
-
-test('sanitizeWorkbenchEditorState migrates legacy preferredRecipeByItem cache entries into forcedRecipeByItem', () => {
-  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
-  const sanitized = sanitizeWorkbenchEditorState(catalog, {
-    targets: [{ itemId: '1101', ratePerMin: 60 }],
-    objective: 'min_buildings',
-    balancePolicy: 'force_balance',
-    autoPromoteUnavailableItemsToRawInputs: true,
-    proliferatorPolicy: 'auto',
-    rawInputItemIds: [],
-    disabledRawInputItemIds: [],
-    disabledRecipeIds: [],
-    disabledBuildingIds: [],
-    preferredRecipeByItem: { '1101': '1' },
-    recipePreferences: [],
-    recipeStrategyOverrides: [],
-    advancedOverridesText: '',
-  });
-
-  expect(sanitized.forcedRecipeByItem).toEqual({ '1101': '1' });
 });

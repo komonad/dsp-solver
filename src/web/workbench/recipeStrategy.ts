@@ -21,7 +21,7 @@ export interface TryApplyRecipeStrategyOverrideParams {
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  forcedRecipeByItem: Record<string, string>;
+  allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   currentResolvedRawInputItemIds: string[];
@@ -120,7 +120,7 @@ export function tryApplyRecipeStrategyOverride(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    forcedRecipeByItem,
+    allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
     currentResolvedRawInputItemIds,
@@ -148,7 +148,7 @@ export function tryApplyRecipeStrategyOverride(
     disabledRawInputItemIds,
     disabledRecipeIds,
     disabledBuildingIds,
-    forcedRecipeByItem,
+    allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides: nextOverrides,
     advancedOverridesText,
@@ -171,7 +171,7 @@ export function tryApplyRecipeStrategyOverride(
     return {
       accepted: false,
       nextOverrides: recipeStrategyOverrides,
-      message: diagnosticMessage || 'è¯¥ä¿®æ”¹ä¼šå¯¼è‡´å½“å‰æ–¹æ¡ˆæ— è§£ï¼Œå·²æ’¤é”€ã€‚',
+      message: diagnosticMessage || '¸ÃĞŞ¸Ä»áµ¼ÖÂµ±Ç°·½°¸ÎŞ½â£¬ÒÑ³·Ïú¡£',
     };
   }
 
@@ -183,7 +183,7 @@ export function tryApplyRecipeStrategyOverride(
     const diagnosticMessage =
       nextSolveState.result.diagnostics.messages.find(message =>
         message.includes(introducedResolvedRawInputIds[0])
-      ) ?? `è¯¥ä¿®æ”¹ä¼šä½¿ç›¸å…³ç‰©å“é€€åŒ–ä¸ºå¤–éƒ¨è¾“å…¥ï¼Œå·²æ’¤é”€ã€‚`;
+      ) ?? `¸ÃĞŞ¸Ä»áÊ¹Ïà¹ØÎïÆ·ÍË»¯ÎªÍâ²¿ÊäÈë£¬ÒÑ³·Ïú¡£`;
     return {
       accepted: false,
       nextOverrides: recipeStrategyOverrides,

@@ -61,6 +61,10 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   return isRecord(value) && Object.values(value).every(entry => typeof entry === 'string');
 }
 
+function isStringArrayRecord(value: unknown): value is Record<string, string[]> {
+  return isRecord(value) && Object.values(value).every(entry => isStringArray(entry));
+}
+
 function isNumberRecord(value: unknown): value is Record<string, number> {
   return isRecord(value) && Object.values(value).every(entry => typeof entry === 'number' && Number.isFinite(entry));
 }
@@ -98,6 +102,23 @@ function readOptionalStringRecord(
     return undefined;
   }
   if (!isStringRecord(value)) {
+    errors.push(getLocaleBundle(locale).advancedOverrides.stringRecord(String(key)));
+    return undefined;
+  }
+  return value;
+}
+
+function readOptionalStringArrayRecord(
+  source: Record<string, unknown>,
+  key: keyof AdvancedSolveOverrides,
+  errors: string[],
+  locale: AppLocale
+): Record<string, string[]> | undefined {
+  const value = source[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isStringArrayRecord(value)) {
     errors.push(getLocaleBundle(locale).advancedOverrides.stringRecord(String(key)));
     return undefined;
   }
@@ -154,6 +175,21 @@ function mergeRecord<T extends string | number>(
   return Object.keys(merged).length > 0 ? merged : undefined;
 }
 
+function mergeStringArrayRecord(
+  left?: Record<string, string[]>,
+  right?: Record<string, string[]>
+): Record<string, string[]> | undefined {
+  const mergedKeys = new Set([...(left ? Object.keys(left) : []), ...(right ? Object.keys(right) : [])]);
+  const merged: Record<string, string[]> = {};
+  for (const key of mergedKeys) {
+    const values = Array.from(new Set([...(left?.[key] ?? []), ...(right?.[key] ?? [])]));
+    if (values.length > 0) {
+      merged[key] = values;
+    }
+  }
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
 export function parseAdvancedSolveOverrides(
   text: string,
   locale: AppLocale = DEFAULT_APP_LOCALE
@@ -186,8 +222,7 @@ export function parseAdvancedSolveOverrides(
   const value: AdvancedSolveOverrides = {
     disabledRecipeIds: readOptionalStringArray(source, 'disabledRecipeIds', errors, locale),
     disabledBuildingIds: readOptionalStringArray(source, 'disabledBuildingIds', errors, locale),
-    forcedRecipeByItem: readOptionalStringRecord(source, 'forcedRecipeByItem', errors, locale),
-    preferredRecipeByItem: readOptionalStringRecord(source, 'preferredRecipeByItem', errors, locale),
+    allowedRecipesByItem: readOptionalStringArrayRecord(source, 'allowedRecipesByItem', errors, locale),
     forcedBuildingByRecipe: readOptionalStringRecord(source, 'forcedBuildingByRecipe', errors, locale),
     preferredBuildingByRecipe: readOptionalStringRecord(source, 'preferredBuildingByRecipe', errors, locale),
     forcedProliferatorLevelByRecipe: readOptionalNumberRecord(
@@ -399,20 +434,12 @@ export function mergeAdvancedSolveOverrides(
     merged.disabledBuildingIds = disabledBuildingIds;
   }
 
-  const forcedRecipeByItem = mergeRecord(
-    base.forcedRecipeByItem,
-    override.forcedRecipeByItem
+  const allowedRecipesByItem = mergeStringArrayRecord(
+    base.allowedRecipesByItem,
+    override.allowedRecipesByItem
   );
-  if (forcedRecipeByItem) {
-    merged.forcedRecipeByItem = forcedRecipeByItem;
-  }
-
-  const preferredRecipeByItem = mergeRecord(
-    base.preferredRecipeByItem,
-    override.preferredRecipeByItem
-  );
-  if (preferredRecipeByItem) {
-    merged.preferredRecipeByItem = preferredRecipeByItem;
+  if (allowedRecipesByItem) {
+    merged.allowedRecipesByItem = allowedRecipesByItem;
   }
 
   const forcedBuildingByRecipe = mergeRecord(

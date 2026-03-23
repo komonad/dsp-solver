@@ -22,6 +22,7 @@ import { SOLVER_VERSION } from './version';
 const EPSILON = 1e-8;
 const PREFERENCE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
+const SURPLUS_OUTPUT_EPSILON = 1e-3;
 
 interface ValidateResult {
   valid: boolean;
@@ -85,6 +86,23 @@ function validateRecipeRecordMap(
   return Object.entries(record)
     .filter(([key, value]) => !validator(catalog, key, value))
     .map(([key, value]) => `${recordName} contains an invalid entry: ${key} -> ${value}.`);
+}
+
+function validateRecipeArrayRecordMap(
+  catalog: ResolvedCatalogModel,
+  record: Record<string, string[]> | undefined,
+  recordName: string,
+  validator: (catalog: ResolvedCatalogModel, key: string, value: string) => boolean
+): string[] {
+  if (!record) {
+    return [];
+  }
+
+  return Object.entries(record).flatMap(([key, values]) =>
+    values
+      .filter(value => !validator(catalog, key, value))
+      .map(value => `${recordName} contains an invalid entry: ${key} -> ${value}.`)
+  );
 }
 
 function validateNumericRecordMap(
@@ -165,22 +183,10 @@ function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveReque
   }
 
   messages.push(
-    ...validateRecipeRecordMap(
+    ...validateRecipeArrayRecordMap(
       catalog,
-      request.forcedRecipeByItem,
-      'forcedRecipeByItem',
-      (innerCatalog, itemId, recipeId) =>
-        innerCatalog.itemMap.has(itemId) &&
-        innerCatalog.recipeMap.has(recipeId) &&
-        innerCatalog.recipeMap.get(recipeId)!.outputs.some(output => output.itemId === itemId)
-    )
-  );
-
-  messages.push(
-    ...validateRecipeRecordMap(
-      catalog,
-      request.preferredRecipeByItem,
-      'preferredRecipeByItem',
+      request.allowedRecipesByItem,
+      'allowedRecipesByItem',
       (innerCatalog, itemId, recipeId) =>
         innerCatalog.itemMap.has(itemId) &&
         innerCatalog.recipeMap.has(recipeId) &&
@@ -524,7 +530,7 @@ function collectUpstreamRecipes(
   rawInputItemIds: Set<string>,
   recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>,
   autoPromoteUnavailableItemsToRawInputs: boolean,
-  forcedRecipeByItem: Record<string, string>,
+  allowedRecipesByItem: Record<string, string[]>,
   getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
 ): CollectRecipesResult {
   const messages: string[] = [];
@@ -540,22 +546,23 @@ function collectUpstreamRecipes(
     }
     visitedItems.add(itemId);
 
-    const forcedRecipeId = forcedRecipeByItem[itemId];
+    const allowedRecipeIds = allowedRecipesByItem[itemId];
     const availableProducers = recipeOutputIndex.get(itemId) ?? [];
-    const producers = forcedRecipeId
-      ? availableProducers.filter(recipe => recipe.recipeId === forcedRecipeId)
+    const producers = allowedRecipeIds && allowedRecipeIds.length > 0
+      ? availableProducers.filter(recipe => allowedRecipeIds.includes(recipe.recipeId))
       : availableProducers;
 
-    if (forcedRecipeId && producers.length === 0) {
-      messages.push(`Forced recipe ${forcedRecipeId} for item ${itemId} does not exist.`);
+    if (allowedRecipeIds && allowedRecipeIds.length > 0 && producers.length === 0) {
+      messages.push(`Allowed recipes ${allowedRecipeIds.join(', ')} for item ${itemId} do not exist.`);
       continue;
     }
 
     if (
-      forcedRecipeId &&
+      allowedRecipeIds &&
+      allowedRecipeIds.length > 0 &&
       !producers.some(recipe => recipe.outputs.some(output => output.itemId === itemId))
     ) {
-      messages.push(`Forced recipe ${forcedRecipeId} does not produce item ${itemId}.`);
+      messages.push(`Allowed recipes ${allowedRecipeIds.join(', ')} do not produce item ${itemId}.`);
       continue;
     }
 
@@ -646,7 +653,7 @@ function compileSolveGraph(
       effectiveRawInputItemIds,
       availableRecipeOutputIndex,
       Boolean(request.autoPromoteUnavailableItemsToRawInputs),
-      request.forcedRecipeByItem ?? {},
+      request.allowedRecipesByItem ?? {},
       getCompiledRecipeOptions
     );
     collected.messages.forEach(message => diagnostics.add(message));
@@ -690,20 +697,6 @@ function compileSolveGraph(
   };
 }
 
-function getPreferredRecipePenalty(
-  recipe: ResolvedRecipeSpec,
-  preferredRecipeByItem: Record<string, string>
-): number {
-  for (const output of recipe.outputs) {
-    const preferredRecipeId = preferredRecipeByItem[output.itemId];
-    if (preferredRecipeId) {
-      return preferredRecipeId === recipe.recipeId ? 0 : 1;
-    }
-  }
-
-  return 0;
-}
-
 function createProliferatorItemId(level: ResolvedProliferatorLevelSpec): string {
   return level.itemId ?? `__proliferator_level_${level.level}`;
 }
@@ -714,8 +707,6 @@ function getPreferredOptionPenalty(
   option: CompiledOption
 ): number {
   let penalty = 0;
-
-  penalty += getPreferredRecipePenalty(recipe, request.preferredRecipeByItem ?? {});
 
   const preferredBuildingId = request.preferredBuildingByRecipe?.[recipe.recipeId];
   if (preferredBuildingId && preferredBuildingId !== option.buildingId) {
@@ -741,10 +732,15 @@ function buildObjectiveCoefficient(
   option: CompiledOption
 ): number {
   const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
+  const surplusPenalty =
+    request.balancePolicy === 'allow_surplus'
+      ? Object.values(option.outputPerRun).reduce((sum, amount) => sum + amount, 0)
+      : 0;
 
   if (request.objective === 'min_buildings') {
     return (
-      option.buildingCostPerRunPerMin +
+      surplusPenalty +
+      option.buildingCostPerRunPerMin * SURPLUS_OUTPUT_EPSILON +
       preferencePenalty * PREFERENCE_EPSILON +
       option.powerCostMWPerRunPerMin * SECONDARY_EPSILON
     );
@@ -752,13 +748,15 @@ function buildObjectiveCoefficient(
 
   if (request.objective === 'min_power') {
     return (
-      option.powerCostMWPerRunPerMin +
+      surplusPenalty +
+      option.powerCostMWPerRunPerMin * SURPLUS_OUTPUT_EPSILON +
       preferencePenalty * PREFERENCE_EPSILON +
       option.buildingCostPerRunPerMin * SECONDARY_EPSILON
     );
   }
 
   return (
+    surplusPenalty +
     preferencePenalty * PREFERENCE_EPSILON +
     option.buildingCostPerRunPerMin * SECONDARY_EPSILON +
     option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON
@@ -941,6 +939,16 @@ function buildModel(
   }
 
   for (const { option, recipe } of compiledOptions) {
+    const violatesAllowedItemOutput = Object.entries(request.allowedRecipesByItem ?? {}).some(
+      ([itemId, allowedRecipeIds]) =>
+        allowedRecipeIds.length > 0 &&
+        !allowedRecipeIds.includes(recipe.recipeId) &&
+        (option.outputPerRun[itemId] ?? 0) > EPSILON
+    );
+    if (violatesAllowedItemOutput) {
+      continue;
+    }
+
     const coefficients: Record<string, number> = {
       __objective__: buildObjectiveCoefficient(request, recipe, option),
     };
@@ -1020,14 +1028,6 @@ function buildUnmetPreferences(
     const plans = plansByRecipe.get(recipeId);
     if (plans && !plans.some(plan => plan.proliferatorMode === preferredMode)) {
       unmet.push(`Preferred proliferator mode ${preferredMode} was not used for recipe ${recipeId}.`);
-    }
-  }
-
-  for (const [itemId, preferredRecipeId] of Object.entries(request.preferredRecipeByItem ?? {})) {
-    const plans = recipePlans.filter(plan => plan.recipeId === preferredRecipeId);
-    const itemHasAnyPlan = recipePlans.length > 0 && recipePlans.some(plan => plan.outputs.some(output => output.itemId === itemId));
-    if (itemHasAnyPlan && plans.length === 0) {
-      unmet.push(`Preferred recipe ${preferredRecipeId} was not used for item ${itemId}.`);
     }
   }
 
@@ -1388,82 +1388,6 @@ export function solveCatalogRequest(
     };
   }
 
-  const preferredRecipeByItem = request.preferredRecipeByItem ?? {};
-  if (Object.keys(preferredRecipeByItem).length === 0) {
-    return solveCatalogRequestValidatedCached(catalog, request);
-  }
-
-  const existingForcedRecipeByItem = request.forcedRecipeByItem ?? {};
-  const preferredEntries = Object.entries(preferredRecipeByItem).filter(
-    ([itemId]) => existingForcedRecipeByItem[itemId] === undefined
-  );
-
-  let acceptedForcedRecipeByItem: Record<string, string> = { ...existingForcedRecipeByItem };
-  let lastAcceptedResult: SolveResult | null = null;
-  const rejectedPreferredEntries: Array<[string, string]> = [];
-
-  for (const [itemId, recipeId] of preferredEntries) {
-    const candidateRequest: SolveRequest = {
-      ...request,
-      forcedRecipeByItem: {
-        ...acceptedForcedRecipeByItem,
-        [itemId]: recipeId,
-      },
-    };
-    const candidateResult = solveCatalogRequestValidatedCached(catalog, candidateRequest);
-    if (candidateResult.status === 'optimal') {
-      acceptedForcedRecipeByItem = {
-        ...acceptedForcedRecipeByItem,
-        [itemId]: recipeId,
-      };
-      lastAcceptedResult = candidateResult;
-      continue;
-    }
-
-    rejectedPreferredEntries.push([itemId, recipeId]);
-  }
-
-  if (rejectedPreferredEntries.length === 0) {
-    return (
-      lastAcceptedResult ??
-      solveCatalogRequestValidatedCached(catalog, {
-        ...request,
-        forcedRecipeByItem: acceptedForcedRecipeByItem,
-      })
-    );
-  }
-
-  const partialPreferredRequest: SolveRequest = {
-    ...request,
-    forcedRecipeByItem: acceptedForcedRecipeByItem,
-  };
-  const partialPreferredResult = solveCatalogRequestValidatedCached(catalog, partialPreferredRequest);
-  if (partialPreferredResult.status === 'optimal') {
-    return {
-      ...partialPreferredResult,
-      diagnostics: {
-        messages: [
-          ...partialPreferredResult.diagnostics.messages,
-          'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.',
-        ],
-        unmetPreferences: partialPreferredResult.diagnostics.unmetPreferences,
-      },
-    };
-  }
-
-  const fallbackResult = solveCatalogRequestValidatedCached(catalog, request);
-  if (fallbackResult.status !== 'optimal') {
-    return fallbackResult;
-  }
-
-  return {
-    ...fallbackResult,
-    diagnostics: {
-      messages: [
-        ...fallbackResult.diagnostics.messages,
-        'Preferred recipes could not all be enforced as a hard constraint; fell back to soft preference solving.',
-      ],
-      unmetPreferences: fallbackResult.diagnostics.unmetPreferences,
-    },
-  };
+  return solveCatalogRequestValidatedCached(catalog, request);
 }
+

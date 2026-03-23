@@ -46,7 +46,7 @@ export interface PresentationRecipePreference {
   proliferatorPreferenceLabel?: string;
 }
 
-export interface PresentationForcedRecipeSetting {
+export interface PresentationAllowedRecipeSetting {
   itemId: string;
   itemName: string;
   iconKey?: string;
@@ -65,7 +65,7 @@ export interface PresentationRequestSummary {
   proliferatorPolicyLabel: string;
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
-  forcedRecipeSettings: PresentationForcedRecipeSetting[];
+  allowedRecipeSettings: PresentationAllowedRecipeSetting[];
   disabledRecipes: PresentationNamedItem[];
   disabledBuildings: PresentationNamedItem[];
   preferredRecipeSettings: PresentationRecipePreference[];
@@ -638,7 +638,7 @@ function inferGlobalProliferatorPolicyLabel(
 
   const nonNoneForcedModes = new Set<ProliferatorMode>();
   const nonNoneForcedLevels = new Set<number>();
-  let hasNonNoneForcedRecipe = false;
+  let hasNonNoneAllowedRecipe = false;
 
   for (const recipe of affectedRecipes) {
     const forcedMode = forcedModes[recipe.recipeId];
@@ -652,14 +652,14 @@ function inferGlobalProliferatorPolicyLabel(
       Number.isFinite(forcedLevel) &&
       forcedLevel > 0
     ) {
-      hasNonNoneForcedRecipe = true;
+      hasNonNoneAllowedRecipe = true;
       nonNoneForcedModes.add(forcedMode);
       nonNoneForcedLevels.add(forcedLevel);
     }
   }
 
   if (
-    hasNonNoneForcedRecipe &&
+    hasNonNoneAllowedRecipe &&
     nonNoneForcedModes.size === 1 &&
     nonNoneForcedLevels.size === 1
   ) {
@@ -735,35 +735,37 @@ export function buildPresentationModel(
             iconKey: getItemIcon(catalog, itemId),
           }))
         ),
-        forcedRecipeSettings: Object.entries(request.forcedRecipeByItem ?? {})
-          .map(([itemId, recipeId]) => {
-            const recipe = catalog.recipeMap.get(recipeId);
-            return {
-              itemId,
-              itemName: getItemName(catalog, itemId),
-              iconKey: getItemIcon(catalog, itemId),
-              recipeId,
-              recipeName: getRecipeName(catalog, recipeId),
-              recipeIconKey: getRecipeIcon(catalog, recipeId),
-              cycleTimeSec: recipe?.cycleTimeSec ?? 0,
-              inputs: recipe
-                ? recipe.inputs.map(input => ({
-                    itemId: input.itemId,
-                    itemName: getItemName(catalog, input.itemId),
-                    iconKey: getItemIcon(catalog, input.itemId),
-                    ratePerMin: input.amount,
-                  }))
-                : [],
-              outputs: recipe
-                ? recipe.outputs.map(output => ({
-                    itemId: output.itemId,
-                    itemName: getItemName(catalog, output.itemId),
-                    iconKey: getItemIcon(catalog, output.itemId),
-                    ratePerMin: output.amount,
-                  }))
-                : [],
-            };
-          })
+        allowedRecipeSettings: Object.entries(request.allowedRecipesByItem ?? {})
+          .flatMap(([itemId, recipeIds]) =>
+            recipeIds.map(recipeId => {
+              const recipe = catalog.recipeMap.get(recipeId);
+              return {
+                itemId,
+                itemName: getItemName(catalog, itemId),
+                iconKey: getItemIcon(catalog, itemId),
+                recipeId,
+                recipeName: getRecipeName(catalog, recipeId),
+                recipeIconKey: getRecipeIcon(catalog, recipeId),
+                cycleTimeSec: recipe?.cycleTimeSec ?? 0,
+                inputs: recipe
+                  ? recipe.inputs.map(input => ({
+                      itemId: input.itemId,
+                      itemName: getItemName(catalog, input.itemId),
+                      iconKey: getItemIcon(catalog, input.itemId),
+                      ratePerMin: input.amount,
+                    }))
+                  : [],
+                outputs: recipe
+                  ? recipe.outputs.map(output => ({
+                      itemId: output.itemId,
+                      itemName: getItemName(catalog, output.itemId),
+                      iconKey: getItemIcon(catalog, output.itemId),
+                      ratePerMin: output.amount,
+                    }))
+                  : [],
+              };
+            })
+          )
           .sort(
             (left, right) =>
               left.itemName.localeCompare(right.itemName) ||
@@ -806,8 +808,7 @@ export function buildPresentationModel(
           }))
           .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
         hasAdvancedOverrides:
-          Object.keys(request.forcedRecipeByItem ?? {}).length > 0 ||
-          Object.keys(request.preferredRecipeByItem ?? {}).length > 0 ||
+          Object.keys(request.allowedRecipesByItem ?? {}).length > 0 ||
           Object.keys(request.forcedBuildingByRecipe ?? {}).length > 0 ||
           Object.keys(request.preferredBuildingByRecipe ?? {}).length > 0 ||
           Object.keys(request.forcedProliferatorLevelByRecipe ?? {}).length > 0 ||
@@ -917,3 +918,4 @@ export function buildPresentationModel(
     itemSlicesById: buildPresentationItemSlices(recipePlans, itemLedgerSections),
   };
 }
+

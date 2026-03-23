@@ -95,7 +95,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
-    forcedRecipeSettings: [],
+    allowedRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [],
@@ -223,12 +223,12 @@ test('overview sections keep surplus outputs separate from buildings and power',
   const overview = buildPresentationOverviewSections(model);
 
   expect(overview.targetsAndExternalInputs).toEqual({
-    title: '目标与外部输入',
+    title: '目标与外部输�?,
     targets: model.targets,
     externalInputs: model.externalInputs,
   });
   expect(overview.buildingsAndPower).toEqual({
-    title: '建筑与功耗',
+    title: '建筑与功�?,
     buildingSummary: model.buildingSummary,
     activePowerMW: 4,
     roundedPlacementPowerMW: 4,
@@ -269,7 +269,7 @@ test('presentation model exposes named recipe preference summaries from the requ
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
-    forcedRecipeSettings: [],
+    allowedRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [
@@ -279,14 +279,14 @@ test('presentation model exposes named recipe preference summaries from the requ
         recipeIconKey: 'demo-plate',
         buildingName: 'Compact Smelter',
         buildingIconKey: 'compact-smelter',
-        proliferatorPreferenceLabel: '加速 等级 1',
+        proliferatorPreferenceLabel: '加�?等级 1',
       },
     ],
     hasAdvancedOverrides: true,
   });
 });
 
-test('presentation model exposes forced recipe flow details for snapshot rendering', () => {
+test('presentation model exposes allowed recipe flow details for snapshot rendering', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
   const model = buildPresentationModel({
     catalog,
@@ -296,12 +296,12 @@ test('presentation model exposes forced recipe flow details for snapshot renderi
       objective: 'min_buildings',
       balancePolicy: 'force_balance',
       rawInputItemIds: [],
-      forcedRecipeByItem: { '1101': '1' },
+      allowedRecipesByItem: { '1101': ['1'] },
     },
     datasetLabel: 'Demo Smelting',
   });
 
-  expect(model.requestSummary?.forcedRecipeSettings).toEqual([
+  expect(model.requestSummary?.allowedRecipeSettings).toEqual([
     {
       itemId: '1101',
       itemName: 'Demo Plate',
@@ -623,3 +623,5 @@ test('item ledger keeps internal production and consumption separate from extern
     externalInputRatePerMin: 60,
   });
 });
+
+

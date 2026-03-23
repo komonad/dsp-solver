@@ -603,6 +603,215 @@ test('allow_surplus keeps byproducts as explicit surplus output', () => {
   ]);
 });
 
+test('allowedRecipesByItem is enforced as a hard solver constraint even under allow_surplus', () => {
+  const dataset: VanillaDatasetSpec = {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Titanium Ore', IconName: 'ti-ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Titanium Ingot', IconName: 'ti-ingot', GridIndex: 2 },
+      { ID: 1201, Type: 2, Name: 'Titanium Alloy', IconName: 'ti-alloy', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Smelter',
+        IconName: 'smelter',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Titanium Smelting',
+        Items: [1001],
+        ItemCounts: [2],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'ti-ingot',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Titanium-Iron Co-Production',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1201],
+        ResultCounts: [1, 5],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'ti-alloy',
+      },
+    ],
+  };
+  const catalog = resolveCatalogModel(dataset, {
+    buildingRules: [{ ID: 5001, Category: 'smelter' }],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'allow_surplus',
+    allowedRecipesByItem: { '1101': ['1'] },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].recipeId).toBe('1');
+  expect(result.surplusOutputs).toEqual([]);
+});
+
+test('allow_surplus still minimizes unnecessary byproduct magnitude and variety', () => {
+  const dataset: VanillaDatasetSpec = {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Target Plate', IconName: 'plate', GridIndex: 2 },
+      { ID: 1201, Type: 2, Name: 'Byproduct A', IconName: 'by-a', GridIndex: 3 },
+      { ID: 1202, Type: 2, Name: 'Byproduct B', IconName: 'by-b', GridIndex: 4 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Smelter',
+        IconName: 'smelter',
+        GridIndex: 5,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Clean Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 120,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Messy Plate A',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1201],
+        ResultCounts: [1, 8],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-a',
+      },
+      {
+        ID: 3,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Messy Plate B',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1202],
+        ResultCounts: [1, 8],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-b',
+      },
+    ],
+  };
+  const catalog = resolveCatalogModel(dataset, {
+    buildingRules: [{ ID: 5001, Category: 'smelter' }],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'allow_surplus',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].recipeId).toBe('1');
+  expect(result.surplusOutputs).toEqual([]);
+});
+
+test('orbital ring request honors forced graphite recipe instead of delayed coking', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    solverVersion: '2026.03.20.1',
+    targets: [{ itemId: '6003', ratePerMin: 120 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: ['1000'],
+    disabledRawInputItemIds: ['7015', '7101', '1116'],
+    disabledRecipeIds: ['510', '105', '778', '422', '523'],
+    disabledBuildingIds: ['6215', '2319', '6265', '6264', '2902', '2318'],
+    allowedRecipesByItem: {
+      '1030': ['776'],
+      '1106': ['65'],
+      '1109': ['17'],
+      '1124': ['33'],
+      '1206': ['99'],
+    },
+    forcedProliferatorLevelByRecipe: {
+      '32': 0,
+      '104': 0,
+      '121': 0,
+      '409': 0,
+      '509': 0,
+      '518': 0,
+      '550': 0,
+      '705': 0,
+      '716': 0,
+      '717': 0,
+      '775': 0,
+      '777': 0,
+      '797': 0,
+      '813': 0,
+      '845': 0,
+    },
+    forcedProliferatorModeByRecipe: {
+      '32': 'none',
+      '104': 'none',
+      '121': 'none',
+      '409': 'none',
+      '509': 'none',
+      '518': 'none',
+      '550': 'none',
+      '705': 'none',
+      '716': 'none',
+      '717': 'none',
+      '775': 'none',
+      '777': 'none',
+      '797': 'none',
+      '813': 'none',
+      '845': 'none',
+    },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.some(plan => plan.recipeId === '423')).toBe(false);
+});
+
 test('force_balance rejects unresolved byproducts', () => {
   const dataset: VanillaDatasetSpec = {
     items: [
@@ -735,7 +944,7 @@ test('disabledRawInputItemIds can cancel a dataset default raw item', () => {
   expect(disabledRawResult.status).toBe('infeasible');
 });
 
-test('preferredRecipeByItem is enforced when feasible before falling back to soft preference', () => {
+test('allowedRecipesByItem enforces the selected recipe when feasible', () => {
   const catalog = resolveCatalogModel(
     buildAlternativeRecipeDataset(),
     buildNoProliferatorDefaults()
@@ -755,7 +964,7 @@ test('preferredRecipeByItem is enforced when feasible before falling back to sof
     targets: [{ itemId: '1101', ratePerMin: 60 }],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
-    preferredRecipeByItem: { '1101': '2' },
+    allowedRecipesByItem: { '1101': ['2'] },
   });
 
   expect(preferredResult.status).toBe('optimal');
@@ -763,7 +972,7 @@ test('preferredRecipeByItem is enforced when feasible before falling back to sof
   expect(preferredResult.recipePlans[0].recipeId).toBe('2');
 });
 
-test('preferredRecipeByItem falls back when the preferred recipe is unavailable', () => {
+test('allowedRecipesByItem makes the solve infeasible when the only allowed recipe is unavailable', () => {
   const catalog = resolveCatalogModel(
     buildAlternativeRecipeDataset(),
     buildNoProliferatorDefaults()
@@ -774,21 +983,13 @@ test('preferredRecipeByItem falls back when the preferred recipe is unavailable'
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
     disabledRecipeIds: ['2'],
-    preferredRecipeByItem: { '1101': '2' },
+    allowedRecipesByItem: { '1101': ['2'] },
   });
 
-  expect(result.status).toBe('optimal');
-  expect(result.recipePlans).toHaveLength(1);
-  expect(result.recipePlans[0].recipeId).toBe('1');
-  expect(result.diagnostics.messages).toContain(
-    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
-  );
-  expect(result.diagnostics.unmetPreferences).toContain(
-    'Preferred recipe 2 was not used for item 1101.'
-  );
+  expect(result.status).toBe('infeasible');
 });
 
-test('preferredRecipeByItem keeps feasible preferences even when another preferred recipe is infeasible', () => {
+test('allowedRecipesByItem only constrains the listed items and recipes', () => {
   const catalog = resolveCatalogModel(
     buildPartialPreferredRecipeDataset(),
     {
@@ -809,18 +1010,12 @@ test('preferredRecipeByItem keeps feasible preferences even when another preferr
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
     disabledBuildingIds: ['5009'],
-    preferredRecipeByItem: { '1101': '2', '1201': '4' },
+    allowedRecipesByItem: { '1101': ['2'] },
   });
 
   expect(result.status).toBe('optimal');
   expect(result.recipePlans).toHaveLength(2);
   expect(result.recipePlans.map(plan => plan.recipeId)).toEqual(['2', '3']);
-  expect(result.diagnostics.messages).toContain(
-    'Some preferred recipes could not be enforced as hard constraints; kept the feasible subset and downgraded the rest to soft preferences.'
-  );
-  expect(result.diagnostics.unmetPreferences).toContain(
-    'Preferred recipe 4 was not used for item 1201.'
-  );
 });
 
 test('vanilla proliferator items can be produced through their own recipe chain', () => {
@@ -845,3 +1040,6 @@ test('vanilla proliferator items can be produced through their own recipe chain'
   );
   expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
 });
+
+
+

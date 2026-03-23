@@ -77,14 +77,8 @@ export interface LocaleBundle {
   };
   solveRequest: {
     title: string;
-    addTargetTitle: string;
     addTarget: string;
     removeTarget: string;
-    editTargetsHint: string;
-    targetSearchLabel: string;
-    targetSearchPlaceholder: string;
-    targetPickerEmpty: string;
-    selectedTargetLabel: string;
     objectiveOptions: Record<SolveObjective, string>;
     balancePolicyOptions: Record<BalancePolicy, string>;
     proliferatorPolicyOptions: Record<WorkbenchProliferatorPolicyLabel, string>;
@@ -309,14 +303,8 @@ const zhCN: LocaleBundle = {
   },
   solveRequest: {
     title: '求解请求',
-    addTargetTitle: '添加目标',
     addTarget: '添加目标',
     removeTarget: '移除',
-    editTargetsHint: '当前目标的需求速度请在右侧求解快照中修改。',
-    targetSearchLabel: '搜索物品',
-    targetSearchPlaceholder: '按 ID、名称筛选',
-    targetPickerEmpty: '没有匹配的物品。',
-    selectedTargetLabel: '已选物品',
     objectiveOptions: {
       min_buildings: '最少建筑',
       min_power: '最低功耗',

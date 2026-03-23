@@ -305,7 +305,7 @@ function buildDefaultWorkbenchEditorState(
     disabledRawInputItemIds: [],
     disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
     disabledBuildingIds: catalog.recommendedDisabledBuildingIds,
-    forcedRecipeByItem: {},
+    allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
     advancedOverridesText: '',
@@ -317,7 +317,7 @@ export default function App() {
   const bundle = useMemo(() => getLocaleBundle(locale), [locale]);
   const pageTitle = 'DSP 产线求解工作台';
   const pageDescription =
-    '切换数据集、编辑求解请求并直接查看当前浏览器实际展示的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
+    '切换数据集、编辑求解请求，并直接查看当前浏览器实际渲染的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
   const browserStorage = useMemo(() => getBrowserStorage(), []);
   const browserSessionStorage = useMemo(() => getBrowserSessionStorage(), []);
   const initialCachedSource = useMemo(
@@ -372,7 +372,7 @@ export default function App() {
   const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
-  const [forcedRecipeByItem, setForcedRecipeByItem] = useState<Record<string, string>>({});
+  const [allowedRecipesByItem, setAllowedRecipesByItem] = useState<Record<string, string[]>>({});
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipeStrategyOverrides, setRecipeStrategyOverrides] = useState<
     EditableRecipeStrategyOverride[]
@@ -406,7 +406,7 @@ export default function App() {
     setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
     setDisabledBuildingIds(editorState.disabledBuildingIds);
     setDisabledBuildingDraftId('');
-    setForcedRecipeByItem(editorState.forcedRecipeByItem);
+    setAllowedRecipesByItem(editorState.allowedRecipesByItem);
     setRecipePreferences(editorState.recipePreferences);
     setRecipeStrategyOverrides(editorState.recipeStrategyOverrides);
     setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
@@ -426,7 +426,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      forcedRecipeByItem,
+      allowedRecipesByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -641,7 +641,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      forcedRecipeByItem,
+      allowedRecipesByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -656,7 +656,7 @@ export default function App() {
     disabledRecipeIds,
     loadedSource,
     objective,
-    forcedRecipeByItem,
+    allowedRecipesByItem,
     proliferatorPolicy,
     globalProliferatorLevel,
     rawInputItemIds,
@@ -699,7 +699,7 @@ export default function App() {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      forcedRecipeByItem,
+      allowedRecipesByItem,
       recipePreferences,
       recipeStrategyOverrides,
       advancedOverridesText,
@@ -717,7 +717,7 @@ export default function App() {
       isLoading,
       locale,
       objective,
-      forcedRecipeByItem,
+      allowedRecipesByItem,
       proliferatorPolicy,
       globalProliferatorLevel,
       rawInputItemIds,
@@ -750,7 +750,7 @@ export default function App() {
       disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
       disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
       disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
-      forcedRecipeByItem: deferredSolveInputs.forcedRecipeByItem,
+      allowedRecipesByItem: deferredSolveInputs.allowedRecipesByItem,
       recipePreferences: deferredSolveInputs.recipePreferences,
       recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
       advancedOverridesText: deferredSolveInputs.advancedOverridesText,
@@ -1110,7 +1110,7 @@ export default function App() {
         disabledRawInputItemIds,
         disabledRecipeIds,
         disabledBuildingIds,
-        forcedRecipeByItem,
+        allowedRecipesByItem,
         recipePreferences,
         recipeStrategyOverrides,
         currentResolvedRawInputItemIds: result?.resolvedRawInputItemIds ?? [],
@@ -1138,7 +1138,7 @@ export default function App() {
       disabledRecipeIds,
       locale,
       objective,
-      forcedRecipeByItem,
+      allowedRecipesByItem,
       proliferatorPolicy,
       globalProliferatorLevel,
       rawInputItemIds,
@@ -1202,25 +1202,76 @@ export default function App() {
     [itemOptions, targetDraftItemId]
   );
 
-  const updateForcedRecipeForItem = useCallback(function updateForcedRecipeForItem(
+  const applyAllowedRecipesForItem = useCallback(function applyAllowedRecipesForItem(
     itemId: string,
-    recipeId: string
+    recipeIds: string[]
   ) {
-    setForcedRecipeByItem(current => {
-      const next = { ...current };
-      if (!recipeId) {
-        delete next[itemId];
-      } else {
-        next[itemId] = recipeId;
-      }
-      return next;
-    });
-  }, []);
+    if (!catalog) {
+      return { accepted: true, message: '' };
+    }
 
-  const clearForcedRecipeForItem = useCallback(function clearForcedRecipeForItem(
+    const nextAllowedRecipesByItem = { ...allowedRecipesByItem };
+    if (recipeIds.length === 0) {
+      delete nextAllowedRecipesByItem[itemId];
+    } else {
+      nextAllowedRecipesByItem[itemId] = recipeIds;
+    }
+
+    const nextSolveState = computeWorkbenchSolve({
+      catalog,
+      targets,
+      objective,
+      balancePolicy,
+      proliferatorPolicy,
+      globalProliferatorLevel,
+      autoPromoteUnavailableItemsToRawInputs,
+      rawInputItemIds,
+      disabledRawInputItemIds,
+      disabledRecipeIds,
+      disabledBuildingIds,
+      allowedRecipesByItem: nextAllowedRecipesByItem,
+      recipePreferences,
+      recipeStrategyOverrides,
+      advancedOverridesText,
+      locale,
+    });
+
+    if (nextSolveState.error || !nextSolveState.result || nextSolveState.result.status !== 'optimal') {
+      const message =
+        nextSolveState.error ||
+        nextSolveState.result?.diagnostics.messages[0] ||
+        nextSolveState.result?.diagnostics.unmetPreferences[0] ||
+        '该允许配方组合会导致当前方案无解，未应用。';
+      setRecipeStrategyWarning(message);
+      return { accepted: false, message };
+    }
+
+    setAllowedRecipesByItem(nextAllowedRecipesByItem);
+    setRecipeStrategyWarning('');
+    return { accepted: true, message: '' };
+  }, [
+    advancedOverridesText,
+    autoPromoteUnavailableItemsToRawInputs,
+    allowedRecipesByItem,
+    balancePolicy,
+    catalog,
+    disabledBuildingIds,
+    disabledRawInputItemIds,
+    disabledRecipeIds,
+    globalProliferatorLevel,
+    locale,
+    objective,
+    proliferatorPolicy,
+    rawInputItemIds,
+    recipePreferences,
+    recipeStrategyOverrides,
+    targets,
+  ]);
+
+  const clearAllowedRecipesForItem = useCallback(function clearAllowedRecipesForItem(
     itemId: string
   ) {
-    setForcedRecipeByItem(current => {
+    setAllowedRecipesByItem(current => {
       if (!current[itemId]) {
         return current;
       }
@@ -1574,7 +1625,7 @@ export default function App() {
             >
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  建筑
+                  闁诲海鍋ｉ崐娑樷枍閿濆鍋?
                 </Typography>
                 <Select
                   size="small"
@@ -1620,7 +1671,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  增产
+                  濠电姭鎷冮崨顓濈钵婵?
                 </Typography>
                 <Select
                   size="small"
@@ -1667,7 +1718,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  等级
+                  缂傚倷鐒︾粙鎴λ囨潏顭戞?
                 </Typography>
                 <Select
                   size="small"
@@ -1755,7 +1806,7 @@ export default function App() {
                       fontWeight: 600,
                     }}
                   >
-                    <span>（</span>
+                    <span>+</span>
                     <EntityLabelButton
                       label={auxiliaryProliferatorInput.itemName}
                       iconKey={auxiliaryProliferatorInput.iconKey}
@@ -1769,7 +1820,7 @@ export default function App() {
                       }}
                       onClick={() => openItemSliceOverlay(auxiliaryProliferatorInput.itemId)}
                     />
-                    <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}）</span>
+                    <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}</span>
                   </Box>
                 ) : null}
               </Box>
@@ -2707,12 +2758,12 @@ export default function App() {
                     <Typography variant="overline" color="text.secondary">
                       {bundle.summary.forcedRecipesLabel}
                     </Typography>
-                    {requestSummary.forcedRecipeSettings.length === 0 ? (
+                    {requestSummary.allowedRecipeSettings.length === 0 ? (
                       <Typography variant="body2" color="text.secondary">
                         {bundle.common.none}
                       </Typography>
                     ) : (
-                      requestSummary.forcedRecipeSettings.map(setting => (
+                      requestSummary.allowedRecipeSettings.map(setting => (
                         <Box
                           key={`${setting.itemId}:${setting.recipeId}`}
                           sx={{
@@ -2821,7 +2872,7 @@ export default function App() {
                             <span>
                               <IconButton
                                 size="small"
-                                onClick={() => clearForcedRecipeForItem(setting.itemId)}
+                                onClick={() => clearAllowedRecipesForItem(setting.itemId)}
                                 disabled={!catalog}
                                 sx={{
                                   border: '1px solid rgba(24, 51, 89, 0.12)',
@@ -3185,12 +3236,12 @@ export default function App() {
         locale={locale}
         atlasIds={iconAtlasIds}
         itemSlicesById={model?.itemSlicesById ?? {}}
-        forcedRecipeByItem={forcedRecipeByItem}
-        forcedRecipeOptionsByItem={preferredRecipeOptionsByItem}
+        allowedRecipesByItem={allowedRecipesByItem}
+        allowedRecipeOptionsByItem={preferredRecipeOptionsByItem}
         onMarkRaw={markItemAsRawInput}
         onUnmarkRaw={unmarkItemAsRawInput}
-        onPreferredRecipeChange={updateForcedRecipeForItem}
-        onClearPreferredRecipe={clearForcedRecipeForItem}
+        onApplyPreferredRecipes={applyAllowedRecipesForItem}
+        onClearAllowedRecipes={clearAllowedRecipesForItem}
         onLocateInLedger={locateItemInLedger}
       />
       <Snackbar

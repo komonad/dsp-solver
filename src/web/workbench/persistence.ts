@@ -28,7 +28,7 @@ export interface WorkbenchEditorState {
   disabledRawInputItemIds: string[];
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
-  forcedRecipeByItem: Record<string, string>;
+  allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
@@ -36,11 +36,10 @@ export interface WorkbenchEditorState {
 
 type SanitizableWorkbenchEditorState = Omit<
   WorkbenchEditorState,
-  'proliferatorPolicy' | 'forcedRecipeByItem'
+  'proliferatorPolicy' | 'allowedRecipesByItem'
 > & {
   proliferatorPolicy?: WorkbenchProliferatorPolicy | 'disable_all';
-  forcedRecipeByItem?: Record<string, string>;
-  preferredRecipeByItem?: Record<string, string>;
+  allowedRecipesByItem?: Record<string, string[]>;
 };
 
 export interface WorkbenchDatasetDraft {
@@ -277,20 +276,25 @@ export function sanitizeWorkbenchEditorState(
   const validItemIds = new Set(catalog.items.map(item => item.itemId));
   const validRecipeIds = new Set(catalog.recipes.map(recipe => recipe.recipeId));
   const validBuildingIds = new Set(catalog.buildings.map(building => building.buildingId));
-  const forcedRecipeSource = state.forcedRecipeByItem ?? state.preferredRecipeByItem ?? {};
-  const forcedRecipeByItem = Object.entries(forcedRecipeSource).reduce<
-    Record<string, string>
-  >((next, [itemId, recipeId]) => {
-    if (!validItemIds.has(itemId) || !validRecipeIds.has(recipeId)) {
+  const allowedRecipeSource = state.allowedRecipesByItem ?? {};
+  const allowedRecipesByItem = Object.entries(allowedRecipeSource).reduce<
+    Record<string, string[]>
+  >((next, [itemId, recipeIds]) => {
+    if (!validItemIds.has(itemId) || !Array.isArray(recipeIds)) {
       return next;
     }
 
-    const recipe = catalog.recipeMap.get(recipeId);
-    if (!recipe || !recipe.outputs.some(output => output.itemId === itemId)) {
-      return next;
-    }
+    const filteredRecipeIds = recipeIds.filter(recipeId => {
+      if (!validRecipeIds.has(recipeId)) {
+        return false;
+      }
+      const recipe = catalog.recipeMap.get(recipeId);
+      return Boolean(recipe && recipe.outputs.some(output => output.itemId === itemId));
+    });
 
-    next[itemId] = recipeId;
+    if (filteredRecipeIds.length > 0) {
+      next[itemId] = Array.from(new Set(filteredRecipeIds));
+    }
     return next;
   }, {});
 
@@ -434,10 +438,12 @@ export function sanitizeWorkbenchEditorState(
     disabledBuildingIds: sanitizeStringArray(state.disabledBuildingIds).filter(buildingId =>
       validBuildingIds.has(buildingId)
     ),
-    forcedRecipeByItem,
+    allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
     advancedOverridesText:
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',
   };
 }
+
+
