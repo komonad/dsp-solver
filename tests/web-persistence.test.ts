@@ -7,10 +7,12 @@ import {
   readActiveWorkbenchCacheSource,
   readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
+  readWorkbenchSnapshotSectionState,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
   writeWorkbenchDatasetDraft,
   writeWorkbenchEditorState,
+  writeWorkbenchSnapshotSectionState,
   type WorkbenchCacheSource,
   type WorkbenchDatasetDraft,
   type WorkbenchEditorState,
@@ -223,6 +225,50 @@ test('dataset drafts are stored per source key and cleared with the rest of the 
 
   clearWorkbenchCache(storage);
   expect(readWorkbenchDatasetDraft(storage, source)).toBeNull();
+});
+
+test('snapshot section states are stored per source key and preserved alongside editor state', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'demo-smelting',
+    datasetPath: './DemoSmelting.json',
+    defaultConfigPath: './DemoSmelting.defaults.json',
+  };
+
+  writeWorkbenchSnapshotSectionState(storage, source, {
+    targets: true,
+    allowedRecipes: false,
+    disabledRecipes: true,
+    proliferatorPreferences: false,
+    disabledBuildings: true,
+    preferredBuildings: false,
+  });
+
+  writeWorkbenchEditorState(storage, source, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'auto',
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  });
+
+  expect(readWorkbenchSnapshotSectionState(storage, source)).toEqual({
+    targets: true,
+    allowedRecipes: false,
+    disabledRecipes: true,
+    proliferatorPreferences: false,
+    disabledBuildings: true,
+    preferredBuildings: false,
+  });
 });
 
 test('sanitizeWorkbenchEditorState drops references that do not exist in the loaded catalog', () => {

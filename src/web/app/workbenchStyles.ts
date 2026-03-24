@@ -341,8 +341,46 @@ export const snapshotSectionToggleIconSx = {
   flexShrink: 0,
 } as const;
 
+export const snapshotSectionLabelClusterSx = {
+  minWidth: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 0.5,
+  flexWrap: 'wrap',
+} as const;
+
+export const snapshotSectionCountSx = {
+  minWidth: 18,
+  height: 18,
+  px: 0.5,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '999px',
+  backgroundColor: 'rgba(24, 51, 89, 0.08)',
+  color: 'rgba(24, 51, 89, 0.72)',
+  fontSize: 11,
+  fontWeight: 700,
+  lineHeight: 1,
+  boxSizing: 'border-box',
+} as const;
+
 export const snapshotSectionBodySx = {
   mt: 0.75,
+} as const;
+
+export const snapshotFormalTooltipSlotProps = {
+  tooltip: {
+    sx: {
+      borderRadius: '4px',
+      px: 0.875,
+      py: 0.625,
+      fontSize: 12,
+      lineHeight: 1.45,
+      maxWidth: 360,
+      boxShadow: '0 6px 18px rgba(24, 51, 89, 0.16)',
+    },
+  },
 } as const;
 
 export const collapsibleSectionStyle: React.CSSProperties = {

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-import { Box, Typography } from '@mui/material';
+import { Box, Tooltip, Typography } from '@mui/material';
 import {
+  snapshotFormalTooltipSlotProps,
   snapshotSectionBodySx,
+  snapshotSectionCountSx,
+  snapshotSectionLabelClusterSx,
   snapshotSectionToggleIconSx,
   snapshotSectionToggleSx,
 } from './workbenchStyles';
@@ -11,35 +14,65 @@ interface CollapsibleSnapshotSectionProps {
   title: string;
   children: React.ReactNode;
   defaultExpanded?: boolean;
+  expanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+  count?: number;
+  description?: React.ReactNode;
 }
 
 export default function CollapsibleSnapshotSection({
   title,
   children,
   defaultExpanded = true,
+  expanded,
+  onExpandedChange,
+  count = 0,
+  description,
 }: CollapsibleSnapshotSectionProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+  const resolvedExpanded = expanded ?? internalExpanded;
+  const labelContent = useMemo(
+    () => (
+      <Box sx={snapshotSectionLabelClusterSx}>
+        <Typography variant="overline" color="text.secondary">
+          {title}
+        </Typography>
+        {count > 0 ? <Box component="span" sx={snapshotSectionCountSx}>{count}</Box> : null}
+      </Box>
+    ),
+    [count, title]
+  );
 
   return (
     <section>
       <Box
         component="button"
         type="button"
-        onClick={() => setExpanded(current => !current)}
-        aria-expanded={expanded}
+        onClick={() => {
+          const nextExpanded = !resolvedExpanded;
+          if (expanded === undefined) {
+            setInternalExpanded(nextExpanded);
+          }
+          onExpandedChange?.(nextExpanded);
+        }}
+        aria-expanded={resolvedExpanded}
         sx={snapshotSectionToggleSx}
       >
-        <Typography variant="overline" color="text.secondary">
-          {title}
-        </Typography>
+        {description ? (
+          <Tooltip title={description} slotProps={snapshotFormalTooltipSlotProps}>
+            {labelContent}
+          </Tooltip>
+        ) : (
+          labelContent
+        )}
         <ExpandMoreRoundedIcon
           sx={{
             ...snapshotSectionToggleIconSx,
-            transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+            transform: resolvedExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
           }}
         />
       </Box>
-      {expanded ? <Box sx={snapshotSectionBodySx}>{children}</Box> : null}
+      {resolvedExpanded ? <Box sx={snapshotSectionBodySx}>{children}</Box> : null}
     </section>
   );
 }

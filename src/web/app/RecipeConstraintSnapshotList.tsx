@@ -23,25 +23,37 @@ export interface RecipeConstraintSnapshotEntry {
 
 export interface RecipeConstraintSnapshotListProps {
   title: string;
+  description: string;
   emptyText: string;
   clearTooltip: string;
   noneText: string;
   locale: AppLocale;
   atlasIds?: string[];
   entries: RecipeConstraintSnapshotEntry[];
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 export default function RecipeConstraintSnapshotList({
   title,
+  description,
   emptyText,
   clearTooltip,
   noneText,
   locale,
   atlasIds,
   entries,
+  expanded,
+  onExpandedChange,
 }: RecipeConstraintSnapshotListProps) {
   return (
-    <CollapsibleSnapshotSection title={title}>
+    <CollapsibleSnapshotSection
+      title={title}
+      count={entries.length}
+      description={description}
+      expanded={expanded}
+      onExpandedChange={onExpandedChange}
+    >
       {entries.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}

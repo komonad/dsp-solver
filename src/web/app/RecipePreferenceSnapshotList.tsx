@@ -19,21 +19,33 @@ export interface RecipePreferenceSnapshotEntry {
 
 export interface RecipePreferenceSnapshotListProps {
   title: string;
+  description: string;
   emptyText: string;
   clearTooltip: string;
   atlasIds?: string[];
   entries: RecipePreferenceSnapshotEntry[];
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
 }
 
 export default function RecipePreferenceSnapshotList({
   title,
+  description,
   emptyText,
   clearTooltip,
   atlasIds,
   entries,
+  expanded,
+  onExpandedChange,
 }: RecipePreferenceSnapshotListProps) {
   return (
-    <CollapsibleSnapshotSection title={title}>
+    <CollapsibleSnapshotSection
+      title={title}
+      count={entries.length}
+      description={description}
+      expanded={expanded}
+      onExpandedChange={onExpandedChange}
+    >
       {entries.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}

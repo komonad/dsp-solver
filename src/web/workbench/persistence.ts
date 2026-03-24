@@ -8,6 +8,7 @@ import type {
   EditableTarget,
   WorkbenchProliferatorPolicy,
 } from './requestBuilder';
+import type { WorkbenchSnapshotSectionState } from './snapshotSections';
 
 const DSPCALC_STORAGE_PREFIX = 'dspcalc.';
 const WORKBENCH_CACHE_STORAGE_KEY = `dspcalc.workbench.${SOLVER_VERSION}`;
@@ -54,6 +55,7 @@ interface WorkbenchCachePayload {
   activeSource?: WorkbenchCacheSource;
   entries: Record<string, WorkbenchEditorState>;
   sourceDrafts?: Record<string, WorkbenchDatasetDraft>;
+  snapshotSectionStates?: Record<string, WorkbenchSnapshotSectionState>;
 }
 
 type MinimalStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -118,6 +120,32 @@ function sanitizeCacheSource(value: unknown): WorkbenchCacheSource | null {
   };
 }
 
+function sanitizeSnapshotSectionState(value: unknown): WorkbenchSnapshotSectionState | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const nextState: Partial<WorkbenchSnapshotSectionState> = {};
+  const keys: Array<keyof WorkbenchSnapshotSectionState> = [
+    'targets',
+    'allowedRecipes',
+    'disabledRecipes',
+    'proliferatorPreferences',
+    'disabledBuildings',
+    'preferredBuildings',
+  ];
+
+  for (const key of keys) {
+    if (typeof value[key] === 'boolean') {
+      nextState[key] = value[key] as boolean;
+    }
+  }
+
+  return Object.keys(nextState).length > 0
+    ? (nextState as WorkbenchSnapshotSectionState)
+    : null;
+}
+
 function readCachePayload(storage?: MinimalStorage): WorkbenchCachePayload | null {
   if (!storage) {
     return null;
@@ -141,6 +169,17 @@ function readCachePayload(storage?: MinimalStorage): WorkbenchCachePayload | nul
       entries: parsed.entries as Record<string, WorkbenchEditorState>,
       sourceDrafts: isRecord(parsed.sourceDrafts)
         ? (parsed.sourceDrafts as Record<string, WorkbenchDatasetDraft>)
+        : undefined,
+      snapshotSectionStates: isRecord(parsed.snapshotSectionStates)
+        ? Object.entries(parsed.snapshotSectionStates).reduce<
+            Record<string, WorkbenchSnapshotSectionState>
+          >((next, [key, value]) => {
+            const sanitizedState = sanitizeSnapshotSectionState(value);
+            if (sanitizedState) {
+              next[key] = sanitizedState;
+            }
+            return next;
+          }, {})
         : undefined,
     };
   } catch {
@@ -211,6 +250,7 @@ export function writeWorkbenchEditorState(
       [buildWorkbenchCacheKey(source)]: editorState,
     },
     sourceDrafts: payload.sourceDrafts,
+    snapshotSectionStates: payload.snapshotSectionStates,
   });
 }
 
@@ -224,6 +264,18 @@ export function readWorkbenchDatasetDraft(
   }
 
   return payload.sourceDrafts?.[buildWorkbenchCacheKey(source)] ?? null;
+}
+
+export function readWorkbenchSnapshotSectionState(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource
+): WorkbenchSnapshotSectionState | null {
+  const payload = readCachePayload(storage);
+  if (!payload) {
+    return null;
+  }
+
+  return payload.snapshotSectionStates?.[buildWorkbenchCacheKey(source)] ?? null;
 }
 
 export function writeWorkbenchDatasetDraft(
@@ -243,6 +295,29 @@ export function writeWorkbenchDatasetDraft(
     sourceDrafts: {
       ...(payload.sourceDrafts ?? {}),
       [buildWorkbenchCacheKey(source)]: draft,
+    },
+    snapshotSectionStates: payload.snapshotSectionStates,
+  });
+}
+
+export function writeWorkbenchSnapshotSectionState(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource,
+  state: WorkbenchSnapshotSectionState
+): void {
+  const payload = readCachePayload(storage) ?? {
+    version: 1 as const,
+    entries: {},
+  };
+
+  writeCachePayload(storage, {
+    version: 1,
+    activeSource: source,
+    entries: payload.entries,
+    sourceDrafts: payload.sourceDrafts,
+    snapshotSectionStates: {
+      ...(payload.snapshotSectionStates ?? {}),
+      [buildWorkbenchCacheKey(source)]: state,
     },
   });
 }
@@ -265,6 +340,7 @@ export function clearWorkbenchDatasetDraft(
   writeCachePayload(storage, {
     ...payload,
     sourceDrafts: remainingDrafts,
+    snapshotSectionStates: payload.snapshotSectionStates,
   });
 }
 
@@ -487,5 +563,3 @@ export function sanitizeWorkbenchEditorState(
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',
   };
 }
-
-
