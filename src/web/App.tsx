@@ -316,8 +316,7 @@ export default function App() {
   const locale = DEFAULT_APP_LOCALE;
   const bundle = useMemo(() => getLocaleBundle(locale), [locale]);
   const pageTitle = 'DSP 产线求解工作台';
-  const pageDescription =
-    '切换数据集、编辑求解请求，并直接查看当前浏览器实际渲染的产线结果。页面只负责装载数据、构造请求和渲染展示模型，不在前端重复计算隐藏业务公式。';
+  const pageDescription = bundle.page.description;
   const browserStorage = useMemo(() => getBrowserStorage(), []);
   const browserSessionStorage = useMemo(() => getBrowserSessionStorage(), []);
   const initialCachedSource = useMemo(
@@ -1241,7 +1240,7 @@ export default function App() {
         nextSolveState.error ||
         nextSolveState.result?.diagnostics.messages[0] ||
         nextSolveState.result?.diagnostics.unmetPreferences[0] ||
-        '该允许配方组合会导致当前方案无解，未应用。';
+        bundle.solveRequest.invalidAllowedRecipeSelectionMessage;
       setRecipeStrategyWarning(message);
       return { accepted: false, message };
     }
@@ -1625,7 +1624,7 @@ export default function App() {
             >
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  建筑
+                  {bundle.summary.buildingsLabel}
                 </Typography>
                 <Select
                   size="small"
@@ -1671,7 +1670,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  增产模式
+                  {bundle.solveRequest.preferredSprayModeLabel}
                 </Typography>
                 <Select
                   size="small"
@@ -1718,7 +1717,7 @@ export default function App() {
 
               <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                  增产等级
+                  {bundle.solveRequest.preferredSprayLevelLabel}
                 </Typography>
                 <Select
                   size="small"

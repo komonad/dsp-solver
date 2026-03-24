@@ -109,6 +109,7 @@ export interface LocaleBundle {
     autoSolveHint: string;
     levelPrefix: string;
     validTargetRequired: string;
+    invalidAllowedRecipeSelectionMessage: string;
   };
   summary: {
     catalogTitle: string;
@@ -354,6 +355,7 @@ const zhCN: LocaleBundle = {
     autoSolveHint: '已改为自动求解。左侧任一会影响求解的输入变更后，右侧结果会立即更新。',
     levelPrefix: '等级',
     validTargetRequired: '至少需要一个有效目标。',
+    invalidAllowedRecipeSelectionMessage: '该允许配方组合会导致当前方案无解，未应用。',
   },
   summary: {
     catalogTitle: '数据集概览',
