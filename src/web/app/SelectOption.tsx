@@ -1,7 +1,8 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { EntityIcon } from '../shared/EntityIcon';
-import { formatRecipeAmount, formatRecipeCycleTime, shouldOmitRecipeAmount } from './workbenchHelpers';
+import RecipeCycleArrow from './RecipeCycleArrow';
+import { formatRecipeAmount, shouldOmitRecipeAmount } from './workbenchHelpers';
 
 // ---------------------------------------------------------------------------
 // SelectOption
@@ -77,21 +78,13 @@ export function RecipeOptionLabel({
       <span style={{ fontWeight: 600 }}>{recipeName}</span>
       <span style={{ color: 'rgba(24,51,89,0.4)' }}>:</span>
       <IoTokens items={inputs} locale={locale} atlasIds={atlasIds} />
-      <Box
-        component="span"
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 0.25,
-          color: '#183359',
-          fontWeight: 700,
-          fontSize: 10,
-        }}
-      >
-        <span>{`${formatRecipeCycleTime(cycleTimeSec, locale)}s`}</span>
-        <span style={{ fontSize: 11 }}>→</span>
-      </Box>
-      <IoTokens items={outputs} locale={locale} atlasIds={atlasIds} highlightItemId={highlightItemId} />
+      <RecipeCycleArrow cycleTimeSec={cycleTimeSec} locale={locale} variant="inline" />
+      <IoTokens
+        items={outputs}
+        locale={locale}
+        atlasIds={atlasIds}
+        highlightItemId={highlightItemId}
+      />
     </Box>
   );
 }
@@ -108,21 +101,25 @@ function IoTokens({
   highlightItemId?: string;
 }) {
   return (
-    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375 }}>
       {items.map((item, index) => (
         <React.Fragment key={`${item.itemId}:${index}`}>
           {index > 0 ? (
             <span style={{ fontWeight: 700, color: 'rgba(24,51,89,0.5)', fontSize: 10 }}>+</span>
           ) : null}
           {shouldOmitRecipeAmount(item.amount) ? null : (
-            <span style={{ fontWeight: 700, color: '#183359', fontSize: 11 }}>
+            <span style={{ fontWeight: 400, color: '#183359', fontSize: 11 }}>
               {formatRecipeAmount(item.amount, locale)}
             </span>
           )}
           <Box
             component="span"
             sx={highlightItemId === item.itemId
-              ? { display: 'inline-flex', backgroundColor: 'rgba(25, 118, 210, 0.12)', borderRadius: '3px' }
+              ? {
+                  display: 'inline-flex',
+                  backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                  borderRadius: '3px',
+                }
               : { display: 'inline-flex' }}
           >
             <EntityIcon

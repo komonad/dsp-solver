@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { AppLocale } from '../../i18n';
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemSlice } from '../../presentation';
+import type { WorkbenchRecipeOption } from '../app/workbenchHelpers';
 import ItemSlicePanel from './ItemSlicePanel';
 import { recordItemSlicePerf } from './itemSlicePerf';
 import {
@@ -28,14 +29,7 @@ interface ItemSliceOverlayHostProps {
   atlasIds?: string[];
   itemSlicesById: Record<string, PresentationItemSlice>;
   allowedRecipesByItem: Record<string, string[]>;
-  allowedRecipeOptionsByItem: Record<
-    string,
-    Array<{
-      recipeId: string;
-      recipeName: string;
-      recipeIconKey?: string;
-    }>
-  >;
+  allowedRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };

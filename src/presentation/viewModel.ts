@@ -58,6 +58,15 @@ export interface PresentationAllowedRecipeSetting {
   outputs: PresentationItemRate[];
 }
 
+export interface PresentationDisabledRecipeSetting {
+  recipeId: string;
+  recipeName: string;
+  recipeIconKey?: string;
+  cycleTimeSec: number;
+  inputs: PresentationItemRate[];
+  outputs: PresentationItemRate[];
+}
+
 export interface PresentationRequestSummary {
   solverVersion?: string;
   objective: SolveRequest['objective'];
@@ -66,6 +75,7 @@ export interface PresentationRequestSummary {
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
   allowedRecipeSettings: PresentationAllowedRecipeSetting[];
+  disabledRecipeSettings: PresentationDisabledRecipeSetting[];
   disabledRecipes: PresentationNamedItem[];
   disabledBuildings: PresentationNamedItem[];
   preferredRecipeSettings: PresentationRecipePreference[];
@@ -308,6 +318,18 @@ function mapItemRates(
     itemName: getItemName(catalog, itemRate.itemId),
     iconKey: getItemIcon(catalog, itemRate.itemId),
     ratePerMin: itemRate.ratePerMin,
+  }));
+}
+
+function mapRecipeIoAmounts(
+  catalog: ResolvedCatalogModel,
+  itemRates: Array<{ itemId: string; amount: number }>
+): PresentationItemRate[] {
+  return itemRates.map(itemRate => ({
+    itemId: itemRate.itemId,
+    itemName: getItemName(catalog, itemRate.itemId),
+    iconKey: getItemIcon(catalog, itemRate.itemId),
+    ratePerMin: itemRate.amount,
   }));
 }
 
@@ -747,22 +769,8 @@ export function buildPresentationModel(
                 recipeName: getRecipeName(catalog, recipeId),
                 recipeIconKey: getRecipeIcon(catalog, recipeId),
                 cycleTimeSec: recipe?.cycleTimeSec ?? 0,
-                inputs: recipe
-                  ? recipe.inputs.map(input => ({
-                      itemId: input.itemId,
-                      itemName: getItemName(catalog, input.itemId),
-                      iconKey: getItemIcon(catalog, input.itemId),
-                      ratePerMin: input.amount,
-                    }))
-                  : [],
-                outputs: recipe
-                  ? recipe.outputs.map(output => ({
-                      itemId: output.itemId,
-                      itemName: getItemName(catalog, output.itemId),
-                      iconKey: getItemIcon(catalog, output.itemId),
-                      ratePerMin: output.amount,
-                    }))
-                  : [],
+                inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
+                outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
               };
             })
           )
@@ -771,6 +779,19 @@ export function buildPresentationModel(
               left.itemName.localeCompare(right.itemName) ||
               left.recipeName.localeCompare(right.recipeName)
           ),
+        disabledRecipeSettings: (request.disabledRecipeIds ?? [])
+          .map(recipeId => {
+            const recipe = catalog.recipeMap.get(recipeId);
+            return {
+              recipeId,
+              recipeName: getRecipeName(catalog, recipeId),
+              recipeIconKey: getRecipeIcon(catalog, recipeId),
+              cycleTimeSec: recipe?.cycleTimeSec ?? 0,
+              inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
+              outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
+            };
+          })
+          .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
         disabledRecipes: sortByName(
           (request.disabledRecipeIds ?? []).map(recipeId => ({
             itemId: recipeId,
@@ -918,4 +939,3 @@ export function buildPresentationModel(
     itemSlicesById: buildPresentationItemSlices(recipePlans, itemLedgerSections),
   };
 }
-

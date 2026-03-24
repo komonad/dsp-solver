@@ -96,6 +96,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
     allowedRecipeSettings: [],
+    disabledRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [],
@@ -270,6 +271,7 @@ test('presentation model exposes named recipe preference summaries from the requ
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
     allowedRecipeSettings: [],
+    disabledRecipeSettings: [],
     disabledRecipes: [],
     disabledBuildings: [],
     preferredRecipeSettings: [
@@ -306,6 +308,47 @@ test('presentation model exposes allowed recipe flow details for snapshot render
       itemId: '1101',
       itemName: 'Demo Plate',
       iconKey: 'demo-plate',
+      recipeId: '1',
+      recipeName: 'Ore to Plate',
+      recipeIconKey: 'demo-plate',
+      cycleTimeSec: 1,
+      inputs: [
+        {
+          itemId: '1001',
+          itemName: 'Demo Ore',
+          iconKey: 'demo-ore',
+          ratePerMin: 1,
+        },
+      ],
+      outputs: [
+        {
+          itemId: '1101',
+          itemName: 'Demo Plate',
+          iconKey: 'demo-plate',
+          ratePerMin: 1,
+        },
+      ],
+    },
+  ]);
+});
+
+test('presentation model exposes disabled recipe flow details for snapshot rendering', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const model = buildPresentationModel({
+    catalog,
+    request: {
+      solverVersion: SOLVER_VERSION,
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+      disabledRecipeIds: ['1'],
+    },
+    datasetLabel: 'Demo Smelting',
+  });
+
+  expect(model.requestSummary?.disabledRecipeSettings).toEqual([
+    {
       recipeId: '1',
       recipeName: 'Ore to Plate',
       recipeIconKey: 'demo-plate',
@@ -623,5 +666,4 @@ test('item ledger keeps internal production and consumption separate from extern
     externalInputRatePerMin: 60,
   });
 });
-
 

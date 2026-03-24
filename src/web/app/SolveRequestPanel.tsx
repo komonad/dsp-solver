@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 import {
   Box,
   Button,
@@ -11,7 +11,7 @@ import {
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import type { WorkbenchProliferatorPolicy } from '../workbench/requestBuilder';
 import ItemGridPicker from '../shared/ItemGridPicker';
-import { RecipeOptionLabel, SelectOption } from './SelectOption';
+import { SelectOption } from './SelectOption';
 import { pickDefaultGlobalProliferatorLevel } from './workbenchHelpers';
 import {
   cardStyle,
@@ -21,15 +21,13 @@ import {
   summaryStyle,
 } from './workbenchStyles';
 import { useWorkbench } from './WorkbenchContext';
-
-// ---------------------------------------------------------------------------
-// SolveRequestPanel
-// ---------------------------------------------------------------------------
+import AllowedRecipesSection from './AllowedRecipesSection';
+import DisabledRecipesSection from './DisabledRecipesSection';
+import PreferredBuildingsSection from './PreferredBuildingsSection';
 
 export default function SolveRequestPanel() {
   const {
     bundle,
-    locale,
     catalog,
     iconAtlasIds,
     itemOptions,
@@ -43,22 +41,9 @@ export default function SolveRequestPanel() {
     globalProliferatorLevel,
     globalProliferatorLevelOptions,
     globalProliferatorLevelDisabled,
-    preferredRecipeOptionsByItem,
-    allowedRecipesByItem,
-    applyAllowedRecipesForItem,
-    disabledRecipeIds,
-    disabledRecipeDraftId,
-    disableRecipeOptions,
     disabledBuildingIds,
     disabledBuildingDraftId,
     disableBuildingOptions,
-    preferredBuildings,
-    preferredBuildingDraftBuildingId,
-    preferredBuildingDraftRecipeId,
-    setPreferredBuildingDraftBuildingId,
-    setPreferredBuildingDraftRecipeId,
-    addPreferredBuilding,
-    removePreferredBuilding,
     advancedOverridesText,
     parsedOverrides,
     setTargetPickerQuery,
@@ -68,44 +53,17 @@ export default function SolveRequestPanel() {
     setBalancePolicy,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
-    setDisabledRecipeDraftId,
     setDisabledBuildingDraftId,
     setAdvancedOverridesText,
     addTarget,
-    addDisabledRecipe,
-    removeDisabledRecipe,
     addDisabledBuilding,
     removeDisabledBuilding,
   } = useWorkbench();
-
-  // --- Allowed recipe inline add ---
-  const [allowedRecipeDraftItemId, setAllowedRecipeDraftItemId] = useState('');
-  const [allowedRecipePickerQuery, setAllowedRecipePickerQuery] = useState('');
-  const [allowedRecipeDraftRecipeId, setAllowedRecipeDraftRecipeId] = useState('');
-  const [allowedRecipeMessage, setAllowedRecipeMessage] = useState('');
-  const allowedRecipeDraftItem = catalog?.itemMap.get(allowedRecipeDraftItemId) ?? null;
-  const allowedRecipeOptions = useMemo(
-    () => (allowedRecipeDraftItemId ? (preferredRecipeOptionsByItem[allowedRecipeDraftItemId] ?? []) : []),
-    [allowedRecipeDraftItemId, preferredRecipeOptionsByItem],
-  );
-
-  const allRecipeOptions = catalog?.recipes ?? [];
-  const preferredBuildingCompatibleBuildings = useMemo(() => {
-    if (!catalog) return [];
-    if (!preferredBuildingDraftRecipeId) {
-      // Global: show all buildings
-      return catalog.buildings;
-    }
-    const recipe = catalog.recipeMap.get(preferredBuildingDraftRecipeId);
-    if (!recipe) return [];
-    return catalog.buildings.filter(b => recipe.allowedBuildingIds.includes(b.buildingId));
-  }, [catalog, preferredBuildingDraftRecipeId]);
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
       <Typography variant="h6">{bundle.solveRequest.title}</Typography>
       <div style={{ display: 'grid', gap: 16 }}>
-        {/* Target editor section */}
         <div style={{ display: 'grid', gap: 10 }}>
           <Typography variant="body2" color="text.secondary">
             {bundle.solveRequest.editTargetsHint}
@@ -153,9 +111,7 @@ export default function SolveRequestPanel() {
                 label={bundle.overview.requestLabel}
                 value={targetDraftRatePerMin}
                 inputProps={{ min: 0, step: 1 }}
-                onChange={event =>
-                  setTargetDraftRatePerMin(Number(event.target.value) || 0)
-                }
+                onChange={event => setTargetDraftRatePerMin(Number(event.target.value) || 0)}
               />
 
               <Button
@@ -176,7 +132,6 @@ export default function SolveRequestPanel() {
           </Box>
         </div>
 
-        {/* Solve options bar */}
         <Box
           sx={{
             display: 'grid',
@@ -241,9 +196,7 @@ export default function SolveRequestPanel() {
             value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
             disabled={globalProliferatorLevelDisabled}
             onChange={event =>
-              setGlobalProliferatorLevel(
-                event.target.value ? Number(event.target.value) : ''
-              )
+              setGlobalProliferatorLevel(event.target.value ? Number(event.target.value) : '')
             }
           >
             <MenuItem value="">{bundle.common.auto}</MenuItem>
@@ -255,63 +208,8 @@ export default function SolveRequestPanel() {
           </TextField>
         </Box>
 
-        {/* Disabled recipes collapsible section */}
-        <details style={collapsibleSectionStyle}>
-          <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
-                alignItems: 'start',
-              }}
-            >
-              <TextField
-                select
-                fullWidth
-                size="small"
-                sx={compactSelectFieldSx}
-                label={bundle.solveRequest.disabledRecipesLabel}
-                value={disabledRecipeDraftId}
-                onChange={event => setDisabledRecipeDraftId(event.target.value)}
-                disabled={!catalog || disableRecipeOptions.length === 0}
-              >
-                {disableRecipeOptions.map(recipe => (
-                  <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
-                    <SelectOption label={recipe.name} iconKey={recipe.icon} size={18} />
-                  </MenuItem>
-                ))}
-              </TextField>
+        <DisabledRecipesSection />
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={addDisabledRecipe}
-                disabled={!disabledRecipeDraftId}
-                sx={{ minHeight: 40, px: 1.5 }}
-              >
-                {bundle.solveRequest.disableButton}
-              </Button>
-            </Box>
-
-            <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-              {disabledRecipeIds.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noDisabledRecipes}</Typography>
-              ) : (
-                disabledRecipeIds.map(recipeId => (
-                  <Chip
-                    key={recipeId}
-                    label={(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
-                    onDelete={() => removeDisabledRecipe(recipeId)}
-                  />
-                ))
-              )}
-            </Stack>
-          </div>
-        </details>
-
-        {/* Disabled buildings collapsible section */}
         <details style={collapsibleSectionStyle}>
           <summary style={summaryStyle}>{bundle.solveRequest.disabledBuildingsLabel}</summary>
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
@@ -353,15 +251,14 @@ export default function SolveRequestPanel() {
 
             <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
               {disabledBuildingIds.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noDisabledBuildings}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {bundle.solveRequest.noDisabledBuildings}
+                </Typography>
               ) : (
                 disabledBuildingIds.map(buildingId => (
                   <Chip
                     key={buildingId}
-                    label={
-                      (catalog?.buildingMap.get(buildingId)?.name ?? buildingId) +
-                      ` ${bundle.common.removeSuffix}`
-                    }
+                    label={(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ` ${bundle.common.removeSuffix}`}
                     onDelete={() => removeDisabledBuilding(buildingId)}
                   />
                 ))
@@ -370,181 +267,10 @@ export default function SolveRequestPanel() {
           </div>
         </details>
 
-        {/* Allowed recipes collapsible section */}
-        <details style={collapsibleSectionStyle}>
-          <summary style={summaryStyle}>{bundle.summary.forcedRecipesLabel}</summary>
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: '1fr 1fr auto', sm: 'minmax(0, 1fr) minmax(0, 1fr) auto' },
-                alignItems: 'center',
-              }}
-            >
-              <ItemGridPicker
-                items={itemOptions}
-                selectedItemId={allowedRecipeDraftItemId}
-                query={allowedRecipePickerQuery}
-                onQueryChange={setAllowedRecipePickerQuery}
-                onSelect={itemId => {
-                  setAllowedRecipeDraftItemId(itemId);
-                  setAllowedRecipeDraftRecipeId('');
-                  setAllowedRecipeMessage('');
-                }}
-                atlasIds={iconAtlasIds}
-                searchLabel={bundle.solveRequest.targetSearchLabel}
-                searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
-                emptyText={bundle.solveRequest.targetPickerEmpty}
-                selectedItemName={allowedRecipeDraftItem?.name}
-                selectedItemIcon={allowedRecipeDraftItem?.icon}
-              />
+        <AllowedRecipesSection />
 
-              <TextField
-                select
-                fullWidth
-                size="small"
-                sx={compactSelectFieldSx}
-                label={bundle.summary.forcedRecipesLabel}
-                value={allowedRecipeDraftRecipeId}
-                disabled={!allowedRecipeDraftItemId || allowedRecipeOptions.length === 0}
-                onChange={event => setAllowedRecipeDraftRecipeId(event.target.value)}
-              >
-                {allowedRecipeOptions.map(o => (
-                  <MenuItem
-                    key={o.recipeId}
-                    value={o.recipeId}
-                    disabled={(allowedRecipesByItem[allowedRecipeDraftItemId] ?? []).includes(o.recipeId)}
-                  >
-                    <RecipeOptionLabel
-                      recipeName={o.recipeName}
-                      inputs={o.inputs}
-                      outputs={o.outputs}
-                      cycleTimeSec={o.cycleTimeSec}
-                      locale={locale}
-                      atlasIds={iconAtlasIds}
-                      highlightItemId={allowedRecipeDraftItemId}
-                    />
-                  </MenuItem>
-                ))}
-              </TextField>
+        <PreferredBuildingsSection />
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => {
-                  if (!allowedRecipeDraftRecipeId || !allowedRecipeDraftItemId) return;
-                  const existing = allowedRecipesByItem[allowedRecipeDraftItemId] ?? [];
-                  if (existing.includes(allowedRecipeDraftRecipeId)) return;
-                  const result = applyAllowedRecipesForItem(
-                    allowedRecipeDraftItemId,
-                    [...existing, allowedRecipeDraftRecipeId],
-                  );
-                  if (result.accepted) {
-                    setAllowedRecipeDraftRecipeId('');
-                    setAllowedRecipeMessage('');
-                  } else {
-                    setAllowedRecipeMessage(result.message);
-                  }
-                }}
-                disabled={!allowedRecipeDraftRecipeId}
-                sx={{ minHeight: 40, px: 1.5 }}
-              >
-                {bundle.solveRequest.addTarget}
-              </Button>
-            </Box>
-
-            {allowedRecipeMessage ? (
-              <Typography variant="body2" color="warning.main">
-                {allowedRecipeMessage}
-              </Typography>
-            ) : null}
-          </div>
-        </details>
-
-        {/* Preferred buildings collapsible section */}
-        <details style={collapsibleSectionStyle}>
-          <summary style={summaryStyle}>{bundle.solveRequest.preferredBuildingsLabel}</summary>
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: '1fr 1fr auto', sm: 'minmax(0, 200px) minmax(0, 200px) auto' },
-                alignItems: 'start',
-              }}
-            >
-              <TextField
-                select
-                fullWidth
-                size="small"
-                sx={compactSelectFieldSx}
-                label={bundle.summary.recipesLabel}
-                value={preferredBuildingDraftRecipeId}
-                disabled={!catalog || allRecipeOptions.length === 0}
-                onChange={event => {
-                  setPreferredBuildingDraftRecipeId(event.target.value);
-                  setPreferredBuildingDraftBuildingId('');
-                }}
-              >
-                <MenuItem value="">{bundle.solveRequest.preferredBuildingGlobalScope}</MenuItem>
-                {allRecipeOptions.map(recipe => (
-                  <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
-                    <SelectOption label={recipe.name} iconKey={recipe.icon} size={18} />
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <TextField
-                select
-                fullWidth
-                size="small"
-                sx={compactSelectFieldSx}
-                label={bundle.summary.buildingsLabel}
-                value={preferredBuildingDraftBuildingId}
-                disabled={preferredBuildingCompatibleBuildings.length === 0}
-                onChange={event => setPreferredBuildingDraftBuildingId(event.target.value)}
-              >
-                {preferredBuildingCompatibleBuildings.map(building => (
-                  <MenuItem key={building.buildingId} value={building.buildingId}>
-                    <SelectOption label={building.name} iconKey={building.icon} size={18} />
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={addPreferredBuilding}
-                disabled={!preferredBuildingDraftBuildingId}
-                sx={{ minHeight: 40, px: 1.5 }}
-              >
-                {bundle.solveRequest.addPreferredBuilding}
-              </Button>
-            </Box>
-
-            <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-              {preferredBuildings.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noPreferredBuildings}</Typography>
-              ) : (
-                preferredBuildings.map((entry, index) => {
-                  const building = catalog?.buildingMap.get(entry.buildingId);
-                  const recipe = entry.recipeId ? catalog?.recipeMap.get(entry.recipeId) : null;
-                  const label = `${building?.name ?? entry.buildingId}: ${recipe ? recipe.name : '*'}`;
-                  return (
-                    <Chip
-                      key={`${entry.buildingId}:${entry.recipeId}:${index}`}
-                      label={label}
-                      onDelete={() => removePreferredBuilding(index)}
-                    />
-                  );
-                })
-              )}
-            </Stack>
-          </div>
-        </details>
-
-        {/* Advanced overrides collapsible section */}
         <details style={collapsibleSectionStyle}>
           <summary style={summaryStyle}>{bundle.solveRequest.advancedOverridesLabel}</summary>
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
@@ -568,7 +294,6 @@ export default function SolveRequestPanel() {
             )}
           </div>
         </details>
-
       </div>
     </article>
   );

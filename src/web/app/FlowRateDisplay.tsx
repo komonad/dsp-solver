@@ -137,7 +137,7 @@ export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightI
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 0.75,
+        gap: 0.375,
         flexWrap: 'wrap',
         minWidth: 0,
       }}
@@ -153,7 +153,7 @@ export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightI
             sx={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 0.5,
+              gap: 0.125,
               minWidth: 0,
               maxWidth: '100%',
             }}
@@ -161,7 +161,7 @@ export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightI
             {shouldOmitRecipeAmount(item.ratePerMin) ? null : (
               <Typography
                 variant="caption"
-                sx={{ whiteSpace: 'nowrap', fontWeight: 700, color: '#183359' }}
+                sx={{ whiteSpace: 'nowrap', fontWeight: 400, color: '#183359' }}
               >
                 {formatRecipeAmount(item.ratePerMin, locale)}
               </Typography>

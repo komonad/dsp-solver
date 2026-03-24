@@ -110,10 +110,166 @@ export const compactLedgerButtonStyle: React.CSSProperties = {
   fontWeight: 700,
 };
 
+export const snapshotRemoveButtonSx = {
+  width: 20,
+  height: 20,
+  minWidth: 20,
+  p: 0,
+  flexShrink: 0,
+  color: 'rgba(24, 51, 89, 0.72)',
+  borderRadius: '8px',
+  border: '1px solid rgba(24, 51, 89, 0.18)',
+  backgroundColor: 'rgba(255, 255, 255, 0.82)',
+  boxShadow: 'none',
+  transition: 'color 140ms ease, border-color 140ms ease, background-color 140ms ease',
+  '& .MuiSvgIcon-root': {
+    fontSize: 11,
+  },
+  '&:hover': {
+    color: '#a53b3b',
+    borderColor: 'rgba(165, 59, 59, 0.28)',
+    backgroundColor: 'rgba(165, 59, 59, 0.08)',
+  },
+  '&:focus-visible': {
+    outline: '2px solid rgba(24, 88, 163, 0.28)',
+    outlineOffset: 1,
+  },
+  '&:disabled': {
+    color: 'rgba(24, 51, 89, 0.34)',
+    borderColor: 'rgba(24, 51, 89, 0.10)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    boxShadow: 'none',
+  },
+} as const;
+
+export const snapshotEmbeddedRemoveButtonSx = {
+  width: 18,
+  height: 18,
+  minWidth: 18,
+  p: 0,
+  flexShrink: 0,
+  color: 'rgba(24, 51, 89, 0.72)',
+  borderRadius: '6px',
+  border: '1px solid rgba(24, 51, 89, 0.16)',
+  backgroundColor: 'rgba(255, 255, 255, 0.82)',
+  boxShadow: 'none',
+  transition: 'color 140ms ease, border-color 140ms ease, background-color 140ms ease',
+  '& .MuiSvgIcon-root': {
+    fontSize: 11,
+  },
+  '&:hover': {
+    color: '#a53b3b',
+    borderColor: 'rgba(165, 59, 59, 0.18)',
+    backgroundColor: 'rgba(165, 59, 59, 0.08)',
+  },
+  '&:focus-visible': {
+    outline: '2px solid rgba(24, 88, 163, 0.24)',
+    outlineOffset: 1,
+  },
+  '&:disabled': {
+    color: 'rgba(24, 51, 89, 0.34)',
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    boxShadow: 'none',
+  },
+} as const;
+
+export const snapshotEntryGroupSx = {
+  display: 'inline-flex',
+  alignItems: 'flex-start',
+  gap: 0.5,
+  flexWrap: 'nowrap',
+  width: 'fit-content',
+  maxWidth: '100%',
+  minWidth: 0,
+  alignSelf: 'flex-start',
+  px: 0.875,
+  py: 0.5,
+  borderRadius: '10px',
+  border: '1px solid rgba(24, 51, 89, 0.10)',
+  backgroundColor: 'rgba(24, 51, 89, 0.04)',
+} as const;
+
+export const snapshotEntryCapsuleSx = {
+  minWidth: 0,
+  maxWidth: '100%',
+  flex: '1 1 auto',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.5,
+  flexWrap: 'wrap',
+} as const;
+
+export const snapshotEntryActionSegmentSx = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flex: '0 0 auto',
+} as const;
+
+export const snapshotTargetFieldSx = {
+  width: 80,
+  height: 18,
+  minWidth: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
+  alignSelf: 'center',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+  borderRadius: '6px',
+  border: '1px solid rgba(24, 51, 89, 0.18)',
+  backgroundColor: 'rgba(255, 255, 255, 0.88)',
+  '&:focus-within': {
+    borderColor: 'rgba(25, 118, 210, 0.55)',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  },
+} as const;
+
+export const snapshotTargetInputSx = {
+  width: '100%',
+  height: '100%',
+  minWidth: 0,
+  display: 'block',
+  px: 0.625,
+  py: 0,
+  m: 0,
+  border: 0,
+  outline: 0,
+  background: 'transparent',
+  color: '#183359',
+  fontFamily: 'inherit',
+  fontSize: 12,
+  fontWeight: 400,
+  lineHeight: '16px',
+  textAlign: 'center',
+  boxSizing: 'border-box',
+  appearance: 'textfield',
+} as const;
+
+export const snapshotTargetEntrySx = {
+  ...snapshotEntryGroupSx,
+  alignItems: 'center',
+  gap: 0.375,
+  py: 0.25,
+} as const;
+
 export const collapsibleSectionStyle: React.CSSProperties = {
   borderTop: '1px solid rgba(24, 51, 89, 0.10)',
   paddingTop: 12,
 };
+
+export const inlineSectionLayoutSx = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 1,
+  alignItems: 'center',
+} as const;
+
+export const inlineSectionLabelSx = {
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  lineHeight: 1.2,
+} as const;
 
 export const summaryStyle: React.CSSProperties = {
   cursor: 'pointer',

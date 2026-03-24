@@ -15,6 +15,7 @@ interface ItemGridPickerProps {
   emptyText: string;
   selectedItemName?: string;
   selectedItemIcon?: string;
+  disabled?: boolean;
 }
 
 export default function ItemGridPicker(props: ItemGridPickerProps) {
@@ -30,6 +31,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
     emptyText,
     selectedItemName,
     selectedItemIcon,
+    disabled = false,
   } = props;
 
   const anchorRef = useRef<HTMLDivElement | null>(null);
@@ -79,8 +81,13 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
         label={searchLabel}
         placeholder={selectedItemName || searchPlaceholder}
         value={query}
-        onChange={event => onQueryChange(event.target.value)}
-        onFocus={() => setOpen(true)}
+      onChange={event => onQueryChange(event.target.value)}
+      onFocus={() => {
+        if (!disabled) {
+          setOpen(true);
+        }
+      }}
+      disabled={disabled}
         slotProps={{
           input: {
             startAdornment: selectedItemId && selectedItemIcon ? (
@@ -98,7 +105,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
       />
 
       <Popover
-        open={open}
+        open={open && !disabled}
         anchorEl={anchorRef.current}
         onClose={() => setOpen(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}

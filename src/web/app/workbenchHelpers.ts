@@ -2,6 +2,22 @@ import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
 import type { EditableTarget } from '../workbench/requestBuilder';
 import type { WorkbenchEditorState } from '../workbench/persistence';
 
+export interface WorkbenchRecipeOptionIO {
+  itemId: string;
+  itemName: string;
+  iconKey?: string;
+  amount: number;
+}
+
+export interface WorkbenchRecipeOption {
+  recipeId: string;
+  recipeName: string;
+  recipeIconKey?: string;
+  cycleTimeSec: number;
+  inputs: WorkbenchRecipeOptionIO[];
+  outputs: WorkbenchRecipeOptionIO[];
+}
+
 export function formatRecipeAmount(amount: number, locale: string): string {
   return Number.isInteger(amount)
     ? new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(amount)
@@ -33,6 +49,80 @@ export function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
 
 export function pickDefaultRecipePreference(catalog: ResolvedCatalogModel): string {
   return catalog.recipes[0]?.recipeId ?? '';
+}
+
+export function buildRecipeOptionsByOutputItem(
+  catalog: ResolvedCatalogModel | null
+): Record<string, WorkbenchRecipeOption[]> {
+  const next: Record<string, WorkbenchRecipeOption[]> = {};
+
+  if (!catalog) {
+    return next;
+  }
+
+  const resolveIO = (io: Array<{ itemId: string; amount: number }>) =>
+    io.map(entry => {
+      const item = catalog.itemMap.get(entry.itemId);
+      return {
+        itemId: entry.itemId,
+        itemName: item?.name ?? entry.itemId,
+        iconKey: item?.icon,
+        amount: entry.amount,
+      };
+    });
+
+  for (const recipe of catalog.recipes) {
+    const option = {
+      recipeId: recipe.recipeId,
+      recipeName: recipe.name,
+      recipeIconKey: recipe.icon,
+      cycleTimeSec: recipe.cycleTimeSec,
+      inputs: resolveIO(recipe.inputs),
+      outputs: resolveIO(recipe.outputs),
+    };
+
+    for (const output of recipe.outputs) {
+      if (!next[output.itemId]) {
+        next[output.itemId] = [];
+      }
+      next[output.itemId].push(option);
+    }
+  }
+
+  for (const itemId of Object.keys(next)) {
+    next[itemId].sort((left, right) => left.recipeName.localeCompare(right.recipeName));
+  }
+
+  return next;
+}
+
+export function filterRecipeOptionsByExclusion(
+  recipeOptions: WorkbenchRecipeOption[] | undefined,
+  excludedRecipeIds: string[] = []
+): WorkbenchRecipeOption[] {
+  if (!recipeOptions || recipeOptions.length === 0) {
+    return [];
+  }
+
+  if (excludedRecipeIds.length === 0) {
+    return recipeOptions;
+  }
+
+  const excluded = new Set(excludedRecipeIds);
+  return recipeOptions.filter(option => !excluded.has(option.recipeId));
+}
+
+export function filterItemOptionsByRecipeAvailability<T extends { itemId: string }>(
+  itemOptions: T[],
+  recipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>,
+  getExcludedRecipeIds: (itemId: string) => string[] = () => []
+): T[] {
+  return itemOptions.filter(item =>
+    filterRecipeOptionsByExclusion(
+      recipeOptionsByItem[item.itemId],
+      getExcludedRecipeIds(item.itemId),
+    ).length > 0
+  );
 }
 
 export function pickSuggestedTargetItemId(

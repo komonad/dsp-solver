@@ -1,30 +1,35 @@
-import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
 import {
   Alert,
   Box,
   Chip,
   Divider,
-  IconButton,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
+import type { ResolvedCatalogModel, ResolvedRecipeSpec } from '../../catalog';
+import type { AppLocale } from '../../i18n';
 import {
   formatBalancePolicy,
   formatSolveObjective,
   formatSolveStatus,
 } from '../../i18n';
-import { EntityLabel } from '../shared/EntityIcon';
+import { EntityIcon } from '../shared/EntityIcon';
 import { ClickableItemLabel } from './ClickableItemLabel';
 import { RecipeIoSequence } from './FlowRateDisplay';
-import { formatRecipeCycleTime } from './workbenchHelpers';
-import { cardStyle } from './workbenchStyles';
+import RecipeCycleArrow from './RecipeCycleArrow';
+import RecipeConstraintSnapshotList from './RecipeConstraintSnapshotList';
+import SnapshotRemoveButton from './SnapshotRemoveButton';
+import {
+  cardStyle,
+  snapshotEntryActionSegmentSx,
+  snapshotEntryCapsuleSx,
+  snapshotEntryGroupSx,
+  snapshotTargetEntrySx,
+  snapshotTargetFieldSx,
+  snapshotTargetInputSx,
+} from './workbenchStyles';
 import { useWorkbench } from './WorkbenchContext';
-
-// ---------------------------------------------------------------------------
-// SolveSnapshotPanel
-// ---------------------------------------------------------------------------
 
 export default function SolveSnapshotPanel() {
   const {
@@ -43,6 +48,7 @@ export default function SolveSnapshotPanel() {
     updateTarget,
     removeTarget,
     removeAllowedRecipeForItem,
+    removeDisabledRecipe,
     removePreferredBuilding,
   } = useWorkbench();
 
@@ -52,7 +58,6 @@ export default function SolveSnapshotPanel() {
       {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
       {requestSummary ? (
         <>
-          {/* Solver info chips */}
           <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
             {requestSummary.solverVersion ? (
               <Chip
@@ -64,40 +69,28 @@ export default function SolveSnapshotPanel() {
             <Chip
               size="small"
               variant="outlined"
-              label={`${bundle.summary.objectiveLabel}: ${formatSolveObjective(
-                objective,
-                locale
-              )}`}
+              label={`${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`}
             />
             <Chip
               size="small"
               variant="outlined"
-              label={`${bundle.summary.balanceLabel}: ${formatBalancePolicy(
-                balancePolicy,
-                locale
-              )}`}
+              label={`${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`}
             />
             <Chip
               size="small"
               variant="outlined"
-              label={`${bundle.summary.sprayLabel}: ${
-                requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet
-              }`}
+              label={`${bundle.summary.sprayLabel}: ${requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet}`}
             />
             <Chip
               size="small"
               variant="outlined"
               color={model?.status === 'optimal' ? 'success' : 'default'}
-              label={`${bundle.summary.statusLabel}: ${formatSolveStatus(
-                model?.status ?? null,
-                locale
-              )}`}
+              label={`${bundle.summary.statusLabel}: ${formatSolveStatus(model?.status ?? null, locale)}`}
             />
           </Stack>
 
           <Divider />
 
-          {/* Editable target list */}
           <Stack spacing={1}>
             <Typography variant="overline" color="text.secondary">
               {bundle.summary.targetsLabel}
@@ -108,17 +101,14 @@ export default function SolveSnapshotPanel() {
               </Typography>
             ) : (
               requestSummary.targets.map((target, index) => (
-                <Box
-                  key={`${target.itemId}:${index}`}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'auto 84px auto',
-                    gap: 0.75,
-                    alignItems: 'center',
-                    justifyContent: 'start',
-                  }}
-                >
-                  <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center' }}>
+                <Box key={`${target.itemId}:${index}`} sx={snapshotTargetEntrySx}>
+                  <Box
+                    sx={{
+                      minWidth: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
                     <ClickableItemLabel
                       itemId={target.itemId}
                       itemName={target.itemName}
@@ -128,179 +118,69 @@ export default function SolveSnapshotPanel() {
                       atlasIds={iconAtlasIds}
                     />
                   </Box>
-                  <TextField
-                    type="number"
-                    size="small"
-                    fullWidth
-                    label={bundle.overview.requestLabel}
-                    sx={{
-                      '& .MuiInputBase-input': { px: 1, py: 0.75, fontSize: 13 },
-                      '& .MuiInputLabel-root': { fontSize: 12 },
-                    }}
-                    value={targets[index]?.ratePerMin ?? target.ratePerMin}
-                    inputProps={{ min: 0, step: 1 }}
-                    onChange={event =>
-                      updateTarget(index, {
-                        ratePerMin: Number(event.target.value) || 0,
-                      })
-                    }
-                  />
-                  <Tooltip title={bundle.solveRequest.removeTarget}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={() => removeTarget(index)}
-                        disabled={!catalog}
-                        sx={{
-                          border: '1px solid rgba(24, 51, 89, 0.12)',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        <CloseRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                </Box>
-              ))
-            )}
-          </Stack>
-
-          {/* Forced recipes list (allowedRecipeSettings) */}
-          <Stack spacing={1}>
-            <Typography variant="overline" color="text.secondary">
-              {bundle.summary.forcedRecipesLabel}
-            </Typography>
-            {requestSummary.allowedRecipeSettings.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                {bundle.common.none}
-              </Typography>
-            ) : (
-              requestSummary.allowedRecipeSettings.map(setting => (
-                <Box
-                  key={`${setting.itemId}:${setting.recipeId}`}
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: 'minmax(0, 1fr) auto',
-                    gap: 0.75,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Box
-                    sx={{
-                      minWidth: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      flexWrap: 'nowrap',
-                      overflowX: 'auto',
-                      overflowY: 'hidden',
-                      px: 0.25,
-                      py: 0.4,
-                      minHeight: 0,
-                    }}
-                  >
+                  <Box component="span" sx={snapshotTargetFieldSx}>
                     <Box
-                      sx={{
-                        display: 'inline-grid',
-                        gridTemplateColumns: 'auto auto auto',
-                        alignItems: 'center',
-                        gap: 0.5,
-                        minWidth: 0,
-                        flex: '0 0 auto',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          minWidth: 0,
-                          display: 'flex',
-                          justifyContent: 'flex-end',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <RecipeIoSequence items={setting.inputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
-                      </Box>
-                      <Box
-                        sx={{
-                          position: 'relative',
-                          display: 'inline-grid',
-                          gridTemplateRows: '10px 10px',
-                          justifyItems: 'center',
-                          alignItems: 'center',
-                          minWidth: 28,
-                          flex: '0 0 auto',
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            whiteSpace: 'nowrap',
-                            fontWeight: 700,
-                            color: '#183359',
-                            letterSpacing: '0.02em',
-                            fontSize: 10,
-                            lineHeight: 1,
-                          }}
-                        >
-                          {`${formatRecipeCycleTime(setting.cycleTimeSec, locale)} s`}
-                        </Typography>
-                        <Box
-                          sx={{
-                            position: 'relative',
-                            width: '100%',
-                            minWidth: 24,
-                            height: 2,
-                            borderRadius: '999px',
-                            background:
-                              'linear-gradient(90deg, rgba(24, 51, 89, 0.22) 0%, rgba(24, 51, 89, 0.75) 100%)',
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              right: -1,
-                              top: '50%',
-                              width: 8,
-                              height: 8,
-                              borderTop: '2px solid #183359',
-                              borderRight: '2px solid #183359',
-                              transform: 'translateY(-50%) rotate(45deg)',
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                      <Box
-                        sx={{
-                          minWidth: 0,
-                          display: 'flex',
-                          justifyContent: 'flex-start',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <RecipeIoSequence items={setting.outputs} highlightItemId={setting.itemId} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
-                      </Box>
-                    </Box>
+                      component="input"
+                      type="text"
+                      inputMode="decimal"
+                      aria-label={bundle.overview.requestLabel}
+                      sx={snapshotTargetInputSx}
+                      value={targets[index]?.ratePerMin ?? target.ratePerMin}
+                      onChange={event =>
+                        updateTarget(index, {
+                          ratePerMin: Number(event.currentTarget.value) || 0,
+                        })
+                      }
+                    />
                   </Box>
-                  <Tooltip title={bundle.summary.clearForcedRecipeButton}>
-                    <span>
-                      <IconButton
-                        size="small"
-                        onClick={() => removeAllowedRecipeForItem(setting.itemId, setting.recipeId)}
-                        disabled={!catalog}
-                        sx={{
-                          border: '1px solid rgba(24, 51, 89, 0.12)',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        <CloseRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
+                  <Box component="span" sx={snapshotEntryActionSegmentSx}>
+                    <SnapshotRemoveButton
+                      tooltip={bundle.solveRequest.removeTarget}
+                      onClick={() => removeTarget(index)}
+                      disabled={!catalog}
+                      variant="embedded"
+                    />
+                  </Box>
                 </Box>
               ))
             )}
           </Stack>
 
-          {/* Preferred buildings list */}
+          <RecipeConstraintSnapshotList
+            title={bundle.summary.forcedRecipesLabel}
+            emptyText={bundle.common.none}
+            clearTooltip={bundle.summary.clearForcedRecipeButton}
+            noneText={bundle.common.none}
+            locale={locale}
+            atlasIds={iconAtlasIds}
+            entries={requestSummary.allowedRecipeSettings.map(setting => ({
+              key: `${setting.itemId}:${setting.recipeId}`,
+              recipeName: setting.recipeName,
+              inputs: setting.inputs,
+              outputs: setting.outputs,
+              cycleTimeSec: setting.cycleTimeSec,
+              highlightItemId: setting.itemId,
+              onRemove: () => removeAllowedRecipeForItem(setting.itemId, setting.recipeId),
+            }))}
+          />
+
+          <RecipeConstraintSnapshotList
+            title={bundle.summary.disabledRecipesLabel}
+            emptyText={bundle.common.none}
+            clearTooltip={bundle.common.removeSuffix}
+            noneText={bundle.common.none}
+            locale={locale}
+            atlasIds={iconAtlasIds}
+            entries={requestSummary.disabledRecipeSettings.map(setting => ({
+              key: setting.recipeId,
+              recipeName: setting.recipeName,
+              inputs: setting.inputs,
+              outputs: setting.outputs,
+              cycleTimeSec: setting.cycleTimeSec,
+              onRemove: () => removeDisabledRecipe(setting.recipeId),
+            }))}
+          />
+
           <Stack spacing={1}>
             <Typography variant="overline" color="text.secondary">
               {bundle.summary.preferredBuildingsLabel}
@@ -310,134 +190,69 @@ export default function SolveSnapshotPanel() {
                 {bundle.common.none}
               </Typography>
             ) : (
-              preferredBuildings.map((entry, index) => {
-                const building = catalog?.buildingMap.get(entry.buildingId);
-                const recipe = entry.recipeId ? catalog?.recipeMap.get(entry.recipeId) : null;
-                return (
-                  <Box
-                    key={`${entry.buildingId}:${entry.recipeId}:${index}`}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'minmax(0, 1fr) auto',
-                      gap: 0.75,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        minWidth: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.75,
-                        overflowX: 'auto',
-                        overflowY: 'hidden',
-                        px: 0.25,
-                        py: 0.4,
-                      }}
-                    >
-                      <EntityLabel
-                        label={building?.name ?? entry.buildingId}
-                        iconKey={building?.icon}
-                        atlasIds={iconAtlasIds}
-                        size={18}
-                        gap={6}
-                        textStyle={{ fontWeight: 600 }}
-                      />
-                      <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>:</Typography>
-                      {recipe ? (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'flex-start' }}>
+                {preferredBuildings.map((entry, index) => {
+                  const building = catalog?.buildingMap.get(entry.buildingId);
+                  const recipe = entry.recipeId ? catalog?.recipeMap.get(entry.recipeId) : null;
+                  return (
+                    <Box key={`${entry.buildingId}:${entry.recipeId}:${index}`} sx={snapshotEntryGroupSx}>
+                      <Box
+                        sx={{
+                          ...snapshotEntryCapsuleSx,
+                        }}
+                      >
                         <Box
                           sx={{
-                            display: 'inline-grid',
-                            gridTemplateColumns: 'auto auto auto',
-                            alignItems: 'center',
-                            gap: 0.5,
                             minWidth: 0,
-                            flex: '0 0 auto',
+                            maxWidth: '100%',
+                            flex: '1 1 auto',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: 0.375,
+                            minHeight: 0,
                           }}
                         >
-                          <Box sx={{ minWidth: 0, display: 'flex', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
-                            <RecipeIoSequence items={recipe.inputs.map(io => {
-                              const item = catalog?.itemMap.get(io.itemId);
-                              return { itemId: io.itemId, itemName: item?.name ?? io.itemId, iconKey: item?.icon, ratePerMin: io.amount };
-                            })} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
-                          </Box>
-                          <Box
-                            sx={{
-                              position: 'relative',
-                              display: 'inline-grid',
-                              gridTemplateRows: '10px 10px',
-                              justifyItems: 'center',
-                              alignItems: 'center',
-                              minWidth: 28,
-                              flex: '0 0 auto',
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                whiteSpace: 'nowrap',
-                                fontWeight: 700,
-                                color: '#183359',
-                                letterSpacing: '0.02em',
-                                fontSize: 10,
-                                lineHeight: 1,
-                              }}
-                            >
-                              {`${formatRecipeCycleTime(recipe.cycleTimeSec, locale)} s`}
+                          <EntityIcon
+                            label={building?.name ?? entry.buildingId}
+                            iconKey={building?.icon}
+                            atlasIds={iconAtlasIds}
+                            size={18}
+                          />
+                          <Typography variant="body2" sx={{ fontWeight: 600, flexShrink: 0 }}>
+                            :
+                          </Typography>
+                          {recipe ? (
+                            <Tooltip title={recipe.name}>
+                              <Box sx={{ minWidth: 0, display: 'flex', maxWidth: '100%' }}>
+                                <RecipeFlowSummary
+                                  recipe={recipe}
+                                  locale={locale}
+                                  atlasIds={iconAtlasIds}
+                                  noneText={bundle.common.none}
+                                  catalog={catalog}
+                                />
+                              </Box>
+                            </Tooltip>
+                          ) : (
+                            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                              *
                             </Typography>
-                            <Box
-                              sx={{
-                                position: 'relative',
-                                width: '100%',
-                                minWidth: 24,
-                                height: 2,
-                                borderRadius: '999px',
-                                background: 'linear-gradient(90deg, rgba(24, 51, 89, 0.22) 0%, rgba(24, 51, 89, 0.75) 100%)',
-                              }}
-                            >
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  right: -1,
-                                  top: '50%',
-                                  width: 8,
-                                  height: 8,
-                                  borderTop: '2px solid #183359',
-                                  borderRight: '2px solid #183359',
-                                  transform: 'translateY(-50%) rotate(45deg)',
-                                }}
-                              />
-                            </Box>
-                          </Box>
-                          <Box sx={{ minWidth: 0, display: 'flex', justifyContent: 'flex-start', whiteSpace: 'nowrap' }}>
-                            <RecipeIoSequence items={recipe.outputs.map(io => {
-                              const item = catalog?.itemMap.get(io.itemId);
-                              return { itemId: io.itemId, itemName: item?.name ?? io.itemId, iconKey: item?.icon, ratePerMin: io.amount };
-                            })} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
-                          </Box>
+                          )}
                         </Box>
-                      ) : (
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>*</Typography>
-                      )}
-                    </Box>
-                    <Tooltip title={bundle.summary.removePreferredBuildingButton}>
-                      <span>
-                        <IconButton
-                          size="small"
+                      </Box>
+                      <Box component="span" sx={snapshotEntryActionSegmentSx}>
+                        <SnapshotRemoveButton
+                          tooltip={bundle.summary.removePreferredBuildingButton}
                           onClick={() => removePreferredBuilding(index)}
                           disabled={!catalog}
-                          sx={{
-                            border: '1px solid rgba(24, 51, 89, 0.12)',
-                            borderRadius: '10px',
-                          }}
-                        >
-                          <CloseRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                );
-              })
+                          variant="embedded"
+                        />
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
             )}
           </Stack>
         </>
@@ -447,5 +262,67 @@ export default function SolveSnapshotPanel() {
         </Typography>
       )}
     </article>
+  );
+}
+
+function RecipeFlowSummary({
+  recipe,
+  locale,
+  atlasIds,
+  noneText,
+  catalog,
+}: {
+  recipe: ResolvedRecipeSpec;
+  locale: AppLocale;
+  atlasIds?: string[];
+  noneText: string;
+  catalog: ResolvedCatalogModel | null;
+}) {
+  return (
+    <Box
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.375,
+        flexWrap: 'wrap',
+        minWidth: 0,
+        maxWidth: '100%',
+        flex: '1 1 auto',
+      }}
+    >
+      <Box sx={{ minWidth: 0, display: 'flex', maxWidth: '100%' }}>
+        <RecipeIoSequence
+          items={recipe.inputs.map(io => {
+            const item = catalog?.itemMap.get(io.itemId);
+            return {
+              itemId: io.itemId,
+              itemName: item?.name ?? io.itemId,
+              iconKey: item?.icon,
+              ratePerMin: io.amount,
+            };
+          })}
+          locale={locale}
+          atlasIds={atlasIds}
+          noneText={noneText}
+        />
+      </Box>
+      <RecipeCycleArrow cycleTimeSec={recipe.cycleTimeSec} locale={locale} />
+      <Box sx={{ minWidth: 0, display: 'flex', maxWidth: '100%' }}>
+        <RecipeIoSequence
+          items={recipe.outputs.map(io => {
+            const item = catalog?.itemMap.get(io.itemId);
+            return {
+              itemId: io.itemId,
+              itemName: item?.name ?? io.itemId,
+              iconKey: item?.icon,
+              ratePerMin: io.amount,
+            };
+          })}
+          locale={locale}
+          atlasIds={atlasIds}
+          noneText={noneText}
+        />
+      </Box>
+    </Box>
   );
 }

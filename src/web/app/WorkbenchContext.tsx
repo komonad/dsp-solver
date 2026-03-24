@@ -52,6 +52,7 @@ import {
 } from '../workbench/persistence';
 import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
+  buildRecipeOptionsByOutputItem,
   buildDefaultWorkbenchEditorState,
   getBrowserSessionStorage,
   getBrowserStorage,
@@ -60,6 +61,7 @@ import {
   pickDefaultTarget,
   pickSuggestedTargetItemId,
   sortModeOptions,
+  type WorkbenchRecipeOption,
 } from './workbenchHelpers';
 
 // ---------------------------------------------------------------------------
@@ -117,8 +119,6 @@ export interface WorkbenchContextValue {
   setDisabledRawInputItemIds: React.Dispatch<React.SetStateAction<string[]>>;
   disabledRecipeIds: string[];
   setDisabledRecipeIds: React.Dispatch<React.SetStateAction<string[]>>;
-  disabledRecipeDraftId: string;
-  setDisabledRecipeDraftId: React.Dispatch<React.SetStateAction<string>>;
   disabledBuildingIds: string[];
   setDisabledBuildingIds: React.Dispatch<React.SetStateAction<string[]>>;
   disabledBuildingDraftId: string;
@@ -141,10 +141,6 @@ export interface WorkbenchContextValue {
   // Preferred buildings
   preferredBuildings: EditablePreferredBuilding[];
   setPreferredBuildings: React.Dispatch<React.SetStateAction<EditablePreferredBuilding[]>>;
-  preferredBuildingDraftBuildingId: string;
-  setPreferredBuildingDraftBuildingId: React.Dispatch<React.SetStateAction<string>>;
-  preferredBuildingDraftRecipeId: string;
-  setPreferredBuildingDraftRecipeId: React.Dispatch<React.SetStateAction<string>>;
 
   // Refs
   itemLedgerScrollRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -158,17 +154,7 @@ export interface WorkbenchContextValue {
   autoSolveState: WorkbenchSolveState;
   model: PresentationModel | null;
   fallbackModel: PresentationModel | null;
-  preferredRecipeOptionsByItem: Record<
-    string,
-    Array<{
-      recipeId: string;
-      recipeName: string;
-      recipeIconKey?: string;
-      cycleTimeSec: number;
-      inputs: Array<{ itemId: string; itemName: string; iconKey?: string; amount: number }>;
-      outputs: Array<{ itemId: string; itemName: string; iconKey?: string; amount: number }>;
-    }>
-  >;
+  preferredRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
   globalProliferatorLevelOptions: number[];
   recipeStrategyOverrideMap: Map<string, EditableRecipeStrategyOverride>;
   isCustomPreset: boolean;
@@ -180,7 +166,6 @@ export interface WorkbenchContextValue {
   requestSummary: PresentationModel['requestSummary'] | undefined;
   iconAtlasIds: string[];
   targetDraftItemOption: ItemPickerOption | null;
-  disableRecipeOptions: ResolvedRecipeSpec[];
   disableBuildingOptions: ResolvedCatalogModel['buildings'];
   recipePreferenceOptions: ResolvedRecipeSpec[];
   globalProliferatorLevelDisabled: boolean;
@@ -208,7 +193,7 @@ export interface WorkbenchContextValue {
   removeTarget: (index: number) => void;
   markItemAsRawInput: (itemId: string) => void;
   unmarkItemAsRawInput: (itemId: string) => void;
-  addDisabledRecipe: () => void;
+  addDisabledRecipe: (recipeId: string) => void;
   removeDisabledRecipe: (recipeId: string) => void;
   addDisabledBuilding: () => void;
   removeDisabledBuilding: (buildingId: string) => void;
@@ -231,7 +216,7 @@ export interface WorkbenchContextValue {
   ) => { accepted: boolean; message: string };
   clearAllowedRecipesForItem: (itemId: string) => void;
   removeAllowedRecipeForItem: (itemId: string, recipeId: string) => void;
-  addPreferredBuilding: () => void;
+  addPreferredBuilding: (entry: EditablePreferredBuilding) => void;
   removePreferredBuilding: (index: number) => void;
   locateItemInLedger: (itemId: string) => void;
   scrollItemLedgerToTop: () => void;
@@ -312,7 +297,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [rawInputItemIds, setRawInputItemIds] = useState<string[]>([]);
   const [disabledRawInputItemIds, setDisabledRawInputItemIds] = useState<string[]>([]);
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
-  const [disabledRecipeDraftId, setDisabledRecipeDraftId] = useState('');
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
   const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
   const [allowedRecipesByItem, setAllowedRecipesByItem] = useState<Record<string, string[]>>({});
@@ -324,8 +308,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [recipeStrategyWarning, setRecipeStrategyWarning] = useState('');
   const [preferredBuildings, setPreferredBuildings] = useState<EditablePreferredBuilding[]>([]);
-  const [preferredBuildingDraftBuildingId, setPreferredBuildingDraftBuildingId] = useState('');
-  const [preferredBuildingDraftRecipeId, setPreferredBuildingDraftRecipeId] = useState('');
 
   // -------------------------------------------------------------------------
   // Refs
@@ -362,7 +344,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     setRawInputItemIds(editorState.rawInputItemIds);
     setDisabledRawInputItemIds(editorState.disabledRawInputItemIds);
     setDisabledRecipeIds(editorState.disabledRecipeIds);
-    setDisabledRecipeDraftId(nextCatalog.recipes[0]?.recipeId ?? '');
     setDisabledBuildingIds(editorState.disabledBuildingIds);
     setDisabledBuildingDraftId('');
     setAllowedRecipesByItem(editorState.allowedRecipesByItem);
@@ -372,8 +353,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     setAdvancedOverridesText(editorState.advancedOverridesText);
     setRecipeStrategyWarning('');
     setPreferredBuildings(editorState.preferredBuildings);
-    setPreferredBuildingDraftBuildingId('');
-    setPreferredBuildingDraftRecipeId('');
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -550,13 +529,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   );
 
   // -------------------------------------------------------------------------
-  // Derived: disableRecipeOptions, disableBuildingOptions, recipePreferenceOptions
+  // Derived: disableBuildingOptions, recipePreferenceOptions
   // -------------------------------------------------------------------------
-
-  const disableRecipeOptions = useMemo(
-    () => recipeOptions.filter(recipe => !disabledRecipeIds.includes(recipe.recipeId)),
-    [recipeOptions, disabledRecipeIds]
-  );
 
   const disableBuildingOptions = useMemo(
     () =>
@@ -571,21 +545,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       ),
     [recipeOptions, recipePreferences]
   );
-
-  // Sync disabledRecipeDraftId
-  useEffect(() => {
-    if (!disabledRecipeDraftId && disableRecipeOptions.length > 0) {
-      setDisabledRecipeDraftId(disableRecipeOptions[0].recipeId);
-      return;
-    }
-    if (
-      disabledRecipeDraftId &&
-      disableRecipeOptions.length > 0 &&
-      !disableRecipeOptions.some(recipe => recipe.recipeId === disabledRecipeDraftId)
-    ) {
-      setDisabledRecipeDraftId(disableRecipeOptions[0].recipeId);
-    }
-  }, [disabledRecipeDraftId, disableRecipeOptions]);
 
   // Sync disabledBuildingDraftId
   useEffect(() => {
@@ -830,57 +789,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [recipeStrategyOverrides]
   );
 
-  const preferredRecipeOptionsByItem = useMemo(() => {
-    const next: Record<
-      string,
-      Array<{
-        recipeId: string;
-        recipeName: string;
-        recipeIconKey?: string;
-        cycleTimeSec: number;
-        inputs: Array<{ itemId: string; itemName: string; iconKey?: string; amount: number }>;
-        outputs: Array<{ itemId: string; itemName: string; iconKey?: string; amount: number }>;
-      }>
-    > = {};
-
-    if (!catalog) {
-      return next;
-    }
-
-    const resolveIO = (io: Array<{ itemId: string; amount: number }>) =>
-      io.map(entry => {
-        const item = catalog.itemMap.get(entry.itemId);
-        return {
-          itemId: entry.itemId,
-          itemName: item?.name ?? entry.itemId,
-          iconKey: item?.icon,
-          amount: entry.amount,
-        };
-      });
-
-    for (const recipe of catalog.recipes) {
-      const option = {
-        recipeId: recipe.recipeId,
-        recipeName: recipe.name,
-        recipeIconKey: recipe.icon,
-        cycleTimeSec: recipe.cycleTimeSec,
-        inputs: resolveIO(recipe.inputs),
-        outputs: resolveIO(recipe.outputs),
-      };
-      for (const output of recipe.outputs) {
-        if (!next[output.itemId]) {
-          next[output.itemId] = [];
-        }
-        next[output.itemId].push(option);
-      }
-    }
-
-    for (const itemId of Object.keys(next)) {
-      next[itemId].sort((left, right) => left.recipeName.localeCompare(right.recipeName));
-    }
-
-    return next;
-  }, [catalog]);
+  const preferredRecipeOptionsByItem = useMemo(
+    () => buildRecipeOptionsByOutputItem(catalog),
+    [catalog]
+  );
 
   const globalProliferatorLevelOptions = useMemo(
     () =>
@@ -1115,11 +1027,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [catalog]
   );
 
-  function addDisabledRecipe() {
-    if (!disabledRecipeDraftId || disabledRecipeIds.includes(disabledRecipeDraftId)) {
+  function addDisabledRecipe(recipeId: string) {
+    if (!recipeId || disabledRecipeIds.includes(recipeId)) {
       return;
     }
-    setDisabledRecipeIds(current => [...current, disabledRecipeDraftId]);
+    setDisabledRecipeIds(current => [...current, recipeId]);
   }
 
   function removeDisabledRecipe(recipeId: string) {
@@ -1369,17 +1281,15 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const addPreferredBuilding = useCallback(function addPreferredBuilding() {
-    setPreferredBuildings(current => {
-      if (!preferredBuildingDraftBuildingId) return current;
-      return [...current, {
-        buildingId: preferredBuildingDraftBuildingId,
-        recipeId: preferredBuildingDraftRecipeId,
-      }];
-    });
-    setPreferredBuildingDraftBuildingId('');
-    setPreferredBuildingDraftRecipeId('');
-  }, [preferredBuildingDraftBuildingId, preferredBuildingDraftRecipeId]);
+  const addPreferredBuilding = useCallback(function addPreferredBuilding(
+    entry: EditablePreferredBuilding
+  ) {
+    if (!entry.buildingId) {
+      return;
+    }
+
+    setPreferredBuildings(current => [...current, entry]);
+  }, []);
 
   const removePreferredBuilding = useCallback(function removePreferredBuilding(index: number) {
     setPreferredBuildings(current => current.filter((_, i) => i !== index));
@@ -1457,8 +1367,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setDisabledRawInputItemIds,
       disabledRecipeIds,
       setDisabledRecipeIds,
-      disabledRecipeDraftId,
-      setDisabledRecipeDraftId,
       disabledBuildingIds,
       setDisabledBuildingIds,
       disabledBuildingDraftId,
@@ -1477,10 +1385,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setRecipeStrategyWarning,
       preferredBuildings,
       setPreferredBuildings,
-      preferredBuildingDraftBuildingId,
-      setPreferredBuildingDraftBuildingId,
-      preferredBuildingDraftRecipeId,
-      setPreferredBuildingDraftRecipeId,
 
       // Refs
       itemLedgerScrollRef,
@@ -1506,7 +1410,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       requestSummary,
       iconAtlasIds,
       targetDraftItemOption,
-      disableRecipeOptions,
       disableBuildingOptions,
       recipePreferenceOptions,
       globalProliferatorLevelDisabled,
@@ -1581,7 +1484,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       rawInputItemIds,
       disabledRawInputItemIds,
       disabledRecipeIds,
-      disabledRecipeDraftId,
       disabledBuildingIds,
       disabledBuildingDraftId,
       allowedRecipesByItem,
@@ -1591,8 +1493,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       advancedOverridesText,
       recipeStrategyWarning,
       preferredBuildings,
-      preferredBuildingDraftBuildingId,
-      preferredBuildingDraftRecipeId,
       itemOptions,
       recipeOptions,
       buildingOptions,
@@ -1612,7 +1512,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       requestSummary,
       iconAtlasIds,
       targetDraftItemOption,
-      disableRecipeOptions,
       disableBuildingOptions,
       recipePreferenceOptions,
       globalProliferatorLevelDisabled,
