@@ -8,6 +8,7 @@ dist-web/
 coverage/
 .env
 .codex-research/
+.codex-output/
 tools/**/bin/
 tools/**/obj/
 tools/**/package/
