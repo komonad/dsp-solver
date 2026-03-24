@@ -2,9 +2,7 @@ import React from 'react';
 import {
   Box,
   Button,
-  Chip,
   MenuItem,
-  Stack,
   TextField,
   Typography,
 } from '@mui/material';
@@ -18,10 +16,12 @@ import {
   collapsibleSectionStyle,
   compactSelectFieldSx,
   inputStyle,
+  inlineConstraintSectionGroupSx,
   summaryStyle,
 } from './workbenchStyles';
 import { useWorkbench } from './WorkbenchContext';
 import AllowedRecipesSection from './AllowedRecipesSection';
+import DisabledBuildingsSection from './DisabledBuildingsSection';
 import DisabledRecipesSection from './DisabledRecipesSection';
 import PreferredBuildingsSection from './PreferredBuildingsSection';
 
@@ -41,9 +41,6 @@ export default function SolveRequestPanel() {
     globalProliferatorLevel,
     globalProliferatorLevelOptions,
     globalProliferatorLevelDisabled,
-    disabledBuildingIds,
-    disabledBuildingDraftId,
-    disableBuildingOptions,
     advancedOverridesText,
     parsedOverrides,
     setTargetPickerQuery,
@@ -53,11 +50,8 @@ export default function SolveRequestPanel() {
     setBalancePolicy,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
-    setDisabledBuildingDraftId,
     setAdvancedOverridesText,
     addTarget,
-    addDisabledBuilding,
-    removeDisabledBuilding,
   } = useWorkbench();
 
   return (
@@ -86,8 +80,11 @@ export default function SolveRequestPanel() {
               sx={{
                 display: 'grid',
                 gap: 1,
-                gridTemplateColumns: { xs: '1fr 80px auto', sm: 'minmax(0, 1fr) 80px auto' },
-                alignItems: 'center',
+                gridTemplateColumns: {
+                  xs: 'minmax(0, 1fr) 88px',
+                  lg: 'minmax(0, 1fr) 88px auto',
+                },
+                alignItems: 'end',
               }}
             >
               <ItemGridPicker
@@ -124,7 +121,13 @@ export default function SolveRequestPanel() {
                   })
                 }
                 disabled={!catalog || !targetDraftItemId}
-                sx={{ minHeight: 40, px: 1.5 }}
+                sx={{
+                  minHeight: 40,
+                  px: 1.5,
+                  gridColumn: { xs: '1 / -1', lg: 'auto' },
+                  justifySelf: 'start',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {bundle.solveRequest.addTarget}
               </Button>
@@ -136,7 +139,7 @@ export default function SolveRequestPanel() {
           sx={{
             display: 'grid',
             gap: 1,
-            gridTemplateColumns: { xs: '1fr', md: 'repeat(4, minmax(150px, 188px))' },
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           }}
         >
           <TextField
@@ -208,64 +211,10 @@ export default function SolveRequestPanel() {
           </TextField>
         </Box>
 
-        <DisabledRecipesSection />
-
-        <details style={collapsibleSectionStyle}>
-          <summary style={summaryStyle}>{bundle.solveRequest.disabledBuildingsLabel}</summary>
-          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
-                alignItems: 'start',
-              }}
-            >
-              <TextField
-                select
-                fullWidth
-                size="small"
-                sx={compactSelectFieldSx}
-                label={bundle.solveRequest.disabledBuildingsLabel}
-                value={disabledBuildingDraftId}
-                onChange={event => setDisabledBuildingDraftId(event.target.value)}
-                disabled={!catalog || disableBuildingOptions.length === 0}
-              >
-                {disableBuildingOptions.map(building => (
-                  <MenuItem key={building.buildingId} value={building.buildingId}>
-                    <SelectOption label={building.name} iconKey={building.icon} size={18} />
-                  </MenuItem>
-                ))}
-              </TextField>
-
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={addDisabledBuilding}
-                disabled={!disabledBuildingDraftId}
-                sx={{ minHeight: 40, px: 1.5 }}
-              >
-                {bundle.solveRequest.disableButton}
-              </Button>
-            </Box>
-
-            <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-              {disabledBuildingIds.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  {bundle.solveRequest.noDisabledBuildings}
-                </Typography>
-              ) : (
-                disabledBuildingIds.map(buildingId => (
-                  <Chip
-                    key={buildingId}
-                    label={(catalog?.buildingMap.get(buildingId)?.name ?? buildingId) + ` ${bundle.common.removeSuffix}`}
-                    onDelete={() => removeDisabledBuilding(buildingId)}
-                  />
-                ))
-              )}
-            </Stack>
-          </div>
-        </details>
+        <Box sx={inlineConstraintSectionGroupSx}>
+          <DisabledRecipesSection />
+          <DisabledBuildingsSection />
+        </Box>
 
         <AllowedRecipesSection />
 

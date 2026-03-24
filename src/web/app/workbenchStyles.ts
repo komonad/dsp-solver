@@ -22,6 +22,8 @@ export const cardStyle: React.CSSProperties = {
   border: '1px solid rgba(18, 45, 77, 0.12)',
   borderRadius: 20,
   padding: 16,
+  boxSizing: 'border-box',
+  minWidth: 0,
   boxShadow: '0 10px 26px rgba(24, 51, 89, 0.07)',
 };
 
@@ -98,6 +100,7 @@ export const resultSideColumnStyle: React.CSSProperties = {
   height: 'calc(100vh - 24px)',
   maxHeight: 'calc(100vh - 24px)',
   minHeight: 0,
+  minWidth: 0,
   display: 'grid',
   gap: 20,
 };
@@ -253,6 +256,32 @@ export const snapshotTargetEntrySx = {
   py: 0.25,
 } as const;
 
+export const snapshotSectionToggleSx = {
+  width: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 1,
+  p: 0,
+  border: 0,
+  background: 'transparent',
+  color: 'inherit',
+  cursor: 'pointer',
+  textAlign: 'left',
+  font: 'inherit',
+} as const;
+
+export const snapshotSectionToggleIconSx = {
+  fontSize: 18,
+  color: 'rgba(24, 51, 89, 0.58)',
+  transition: 'transform 140ms ease',
+  flexShrink: 0,
+} as const;
+
+export const snapshotSectionBodySx = {
+  mt: 0.75,
+} as const;
+
 export const collapsibleSectionStyle: React.CSSProperties = {
   borderTop: '1px solid rgba(24, 51, 89, 0.10)',
   paddingTop: 12,
@@ -263,6 +292,13 @@ export const inlineSectionLayoutSx = {
   flexWrap: 'wrap',
   gap: 1,
   alignItems: 'center',
+} as const;
+
+export const inlineConstraintSectionGroupSx = {
+  display: 'grid',
+  gap: 1.25,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  alignItems: 'start',
 } as const;
 
 export const inlineSectionLabelSx = {

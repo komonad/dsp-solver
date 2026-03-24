@@ -1,33 +1,39 @@
 import React, { useState } from 'react';
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Typography } from '@mui/material';
 import ProducedRecipeSelector from './ProducedRecipeSelector';
 import { useWorkbench } from './WorkbenchContext';
-import { collapsibleSectionStyle, summaryStyle } from './workbenchStyles';
+import {
+  collapsibleSectionStyle,
+  inlineSectionLabelSx,
+  inlineSectionLayoutSx,
+} from './workbenchStyles';
 
 export default function DisabledRecipesSection() {
   const {
     bundle,
     locale,
-    catalog,
     iconAtlasIds,
     itemOptions,
     preferredRecipeOptionsByItem,
     disabledRecipeIds,
     addDisabledRecipe,
-    removeDisabledRecipe,
   } = useWorkbench();
   const [selectedItemId, setSelectedItemId] = useState('');
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
 
   return (
-    <details style={collapsibleSectionStyle}>
-      <summary style={summaryStyle}>{bundle.solveRequest.disabledRecipesLabel}</summary>
-      <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+    <section style={collapsibleSectionStyle}>
+      <Box sx={inlineSectionLayoutSx}>
+        <Typography variant="subtitle2" sx={inlineSectionLabelSx}>
+          {bundle.solveRequest.disabledRecipesLabel}
+        </Typography>
         <Box
           sx={{
+            minWidth: 0,
+            flex: '1 1 0',
             display: 'grid',
             gap: 1,
-            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) auto' },
+            gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1fr) auto' },
             alignItems: 'start',
           }}
         >
@@ -59,28 +65,12 @@ export default function DisabledRecipesSection() {
               setSelectedRecipeId('');
             }}
             disabled={!selectedRecipeId}
-            sx={{ minHeight: 40, px: 1.5 }}
+            sx={{ minHeight: 40, px: 1.5, whiteSpace: 'nowrap', justifySelf: 'start' }}
           >
             {bundle.solveRequest.disableButton}
           </Button>
         </Box>
-
-        <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-          {disabledRecipeIds.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              {bundle.solveRequest.noDisabledRecipes}
-            </Typography>
-          ) : (
-            disabledRecipeIds.map(recipeId => (
-              <Chip
-                key={recipeId}
-                label={(catalog?.recipeMap.get(recipeId)?.name ?? recipeId) + ` ${bundle.common.removeSuffix}`}
-                onDelete={() => removeDisabledRecipe(recipeId)}
-              />
-            ))
-          )}
-        </Stack>
-      </div>
-    </details>
+      </Box>
+    </section>
   );
 }

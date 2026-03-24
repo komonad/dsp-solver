@@ -54,7 +54,8 @@ export default function PreferredBuildingsSection() {
             gap: 1,
             gridTemplateColumns: {
               xs: '1fr',
-              md: 'auto minmax(0, 1.45fr) minmax(168px, 0.75fr) auto',
+              sm: 'auto minmax(0, 1fr)',
+              xl: 'auto minmax(0, 1.45fr) minmax(168px, 0.75fr) auto',
             },
             alignItems: 'start',
           }}
@@ -135,7 +136,7 @@ export default function PreferredBuildingsSection() {
               setSelectedBuildingId('');
             }}
             disabled={!selectedBuildingId || (!isGlobal && !selectedRecipeId)}
-            sx={{ minHeight: 40, px: 1.5, whiteSpace: 'nowrap' }}
+            sx={{ minHeight: 40, px: 1.5, whiteSpace: 'nowrap', justifySelf: 'start' }}
           >
             {bundle.solveRequest.addPreferredBuilding}
           </Button>

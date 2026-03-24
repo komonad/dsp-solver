@@ -33,12 +33,12 @@ export default function ResultsArea() {
 
   return (
     <section style={resultBodyGridStyle}>
-      <div style={{ ...resultMainColumnStyle, gridColumn: '1', gridRow: '1 / span 2' }}>
+      <div style={{ ...resultMainColumnStyle, gridColumn: '1', gridRow: '1 / span 2', minWidth: 0 }}>
         <SummaryCard />
         <DiagnosticsCard />
       </div>
 
-      <div style={{ gridColumn: '2', gridRow: '1 / span 2' }}>
+      <div style={{ gridColumn: '2', gridRow: '1 / span 2', minWidth: 0 }}>
         <article style={{ ...cardStyle, width: '100%', maxWidth: 'none', justifySelf: 'stretch' }}>
           <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
           <div style={{ display: 'grid', gap: 12 }}>

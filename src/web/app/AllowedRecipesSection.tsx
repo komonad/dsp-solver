@@ -34,7 +34,7 @@ export default function AllowedRecipesSection() {
             flex: '1 1 0',
             display: 'grid',
             gap: 1,
-            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) auto' },
+            gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1fr) auto' },
             alignItems: 'start',
           }}
         >
@@ -82,7 +82,7 @@ export default function AllowedRecipesSection() {
               }
             }}
             disabled={!selectedRecipeId}
-            sx={{ minHeight: 40, px: 1.5 }}
+            sx={{ minHeight: 40, px: 1.5, justifySelf: 'start', whiteSpace: 'nowrap' }}
           >
             {bundle.solveRequest.addTarget}
           </Button>

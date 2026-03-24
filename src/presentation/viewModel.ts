@@ -802,6 +802,7 @@ export function buildPresentationModel(
           (request.disabledBuildingIds ?? []).map(buildingId => ({
             itemId: buildingId,
             itemName: getBuildingName(catalog, buildingId),
+            iconKey: getBuildingIcon(catalog, buildingId),
           }))
         ),
         preferredRecipeSettings: Array.from(

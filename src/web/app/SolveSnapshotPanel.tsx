@@ -16,6 +16,7 @@ import {
 } from '../../i18n';
 import { EntityIcon } from '../shared/EntityIcon';
 import { ClickableItemLabel } from './ClickableItemLabel';
+import CollapsibleSnapshotSection from './CollapsibleSnapshotSection';
 import { RecipeIoSequence } from './FlowRateDisplay';
 import RecipeCycleArrow from './RecipeCycleArrow';
 import RecipeConstraintSnapshotList from './RecipeConstraintSnapshotList';
@@ -49,6 +50,7 @@ export default function SolveSnapshotPanel() {
     removeTarget,
     removeAllowedRecipeForItem,
     removeDisabledRecipe,
+    removeDisabledBuilding,
     removePreferredBuilding,
   } = useWorkbench();
 
@@ -181,10 +183,42 @@ export default function SolveSnapshotPanel() {
             }))}
           />
 
-          <Stack spacing={1}>
-            <Typography variant="overline" color="text.secondary">
-              {bundle.summary.preferredBuildingsLabel}
-            </Typography>
+          <CollapsibleSnapshotSection title={bundle.solveRequest.disabledBuildingsLabel}>
+            {requestSummary.disabledBuildings.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                {bundle.common.none}
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'flex-start' }}>
+                {requestSummary.disabledBuildings.map(entry => (
+                  <Box key={entry.itemId} sx={snapshotEntryGroupSx}>
+                    <Box sx={snapshotEntryCapsuleSx}>
+                      <Tooltip title={entry.itemName}>
+                        <Box sx={{ display: 'inline-flex' }}>
+                          <EntityIcon
+                            label={entry.itemName}
+                            iconKey={entry.iconKey}
+                            atlasIds={iconAtlasIds}
+                            size={18}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </Box>
+                    <Box component="span" sx={snapshotEntryActionSegmentSx}>
+                      <SnapshotRemoveButton
+                        tooltip={bundle.common.removeSuffix}
+                        onClick={() => removeDisabledBuilding(entry.itemId)}
+                        disabled={!catalog}
+                        variant="embedded"
+                      />
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </CollapsibleSnapshotSection>
+
+          <CollapsibleSnapshotSection title={bundle.summary.preferredBuildingsLabel}>
             {preferredBuildings.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {bundle.common.none}
@@ -254,7 +288,7 @@ export default function SolveSnapshotPanel() {
                 })}
               </Box>
             )}
-          </Stack>
+          </CollapsibleSnapshotSection>
         </>
       ) : (
         <Typography variant="body2" color="text.secondary">

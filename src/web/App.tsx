@@ -71,14 +71,30 @@ function WorkbenchLayout() {
                   gap: 2,
                   gridTemplateColumns: {
                     xs: '1fr',
-                    lg: 'minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)',
+                    lg: 'minmax(260px, 0.95fr) minmax(0, 1.65fr)',
+                    xl: 'minmax(260px, 0.95fr) minmax(0, 1.65fr) minmax(260px, 0.95fr)',
                   },
                   alignItems: 'start',
                 }}
               >
-                <DatasetSourcePanel />
-                <SolveRequestPanel />
-                <SolveSnapshotPanel />
+                <Box sx={{ minWidth: 0 }}>
+                  <DatasetSourcePanel />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <SolveRequestPanel />
+                </Box>
+                <Box
+                  sx={{
+                    minWidth: 0,
+                    gridColumn: {
+                      xs: '1',
+                      lg: '1 / -1',
+                      xl: '3',
+                    },
+                  }}
+                >
+                  <SolveSnapshotPanel />
+                </Box>
               </Box>
             </Box>
           </Paper>

@@ -20,7 +20,7 @@ export default function SummaryCard() {
         style={{
           display: 'grid',
           gap: 16,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
         }}
       >
         <div style={{ display: 'grid', gap: 8 }}>

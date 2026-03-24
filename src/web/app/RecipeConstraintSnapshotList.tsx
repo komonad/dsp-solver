@@ -1,6 +1,7 @@
 import { Box, Stack, Tooltip, Typography } from '@mui/material';
 import type { AppLocale } from '../../i18n';
 import type { PresentationItemRate } from '../../presentation';
+import CollapsibleSnapshotSection from './CollapsibleSnapshotSection';
 import RecipeCycleArrow from './RecipeCycleArrow';
 import { RecipeIoSequence } from './FlowRateDisplay';
 import SnapshotRemoveButton from './SnapshotRemoveButton';
@@ -40,66 +41,65 @@ export default function RecipeConstraintSnapshotList({
   entries,
 }: RecipeConstraintSnapshotListProps) {
   return (
-    <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
-      <Typography variant="overline" color="text.secondary">
-        {title}
-      </Typography>
+    <CollapsibleSnapshotSection title={title}>
       {entries.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}
         </Typography>
       ) : (
-        entries.map(entry => {
-          const flowContent = (
-            <Box
-              sx={{
-                ...snapshotEntryCapsuleSx,
-              }}
-            >
+        <Stack spacing={1} sx={{ alignItems: 'flex-start' }}>
+          {entries.map(entry => {
+            const flowContent = (
               <Box
                 sx={{
-                  minWidth: 0,
-                  maxWidth: '100%',
-                  flex: '1 1 auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 0.375,
-                  flexWrap: 'wrap',
-                  minHeight: 0,
+                  ...snapshotEntryCapsuleSx,
                 }}
               >
-                <RecipeFlowContent
-                  inputs={entry.inputs}
-                  outputs={entry.outputs}
-                  cycleTimeSec={entry.cycleTimeSec}
-                  noneText={noneText}
-                  locale={locale}
-                  atlasIds={atlasIds}
-                  highlightItemId={entry.highlightItemId}
-                />
+                <Box
+                  sx={{
+                    minWidth: 0,
+                    maxWidth: '100%',
+                    flex: '1 1 auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 0.375,
+                    flexWrap: 'wrap',
+                    minHeight: 0,
+                  }}
+                >
+                  <RecipeFlowContent
+                    inputs={entry.inputs}
+                    outputs={entry.outputs}
+                    cycleTimeSec={entry.cycleTimeSec}
+                    noneText={noneText}
+                    locale={locale}
+                    atlasIds={atlasIds}
+                    highlightItemId={entry.highlightItemId}
+                  />
+                </Box>
               </Box>
-            </Box>
-          );
+            );
 
-          return (
-            <Box key={entry.key} sx={snapshotEntryGroupSx}>
-              {entry.recipeName ? (
-                <Tooltip title={entry.recipeName}>
-                  {flowContent}
-                </Tooltip>
-              ) : flowContent}
-              <Box component="span" sx={snapshotEntryActionSegmentSx}>
-                <SnapshotRemoveButton
-                  tooltip={clearTooltip}
-                  onClick={entry.onRemove}
-                  variant="embedded"
-                />
+            return (
+              <Box key={entry.key} sx={snapshotEntryGroupSx}>
+                {entry.recipeName ? (
+                  <Tooltip title={entry.recipeName}>
+                    {flowContent}
+                  </Tooltip>
+                ) : flowContent}
+                <Box component="span" sx={snapshotEntryActionSegmentSx}>
+                  <SnapshotRemoveButton
+                    tooltip={clearTooltip}
+                    onClick={entry.onRemove}
+                    variant="embedded"
+                  />
+                </Box>
               </Box>
-            </Box>
-          );
-        })
+            );
+          })}
+        </Stack>
       )}
-    </Stack>
+    </CollapsibleSnapshotSection>
   );
 }
 
