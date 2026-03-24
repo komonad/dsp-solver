@@ -1,54 +1,1646 @@
 {
-  "iconAtlasIds": ["OrbitalRing"],
+  "iconAtlasIds": [
+    "OrbitalRing"
+  ],
   "proliferatorLevels": [
-    { "Level": 0, "SpeedMultiplier": 1, "ProductivityMultiplier": 1, "PowerMultiplier": 1 },
-    { "Level": 3, "ItemID": 1143, "SprayCount": 75, "SpeedMultiplier": 2, "ProductivityMultiplier": 1.25, "PowerMultiplier": 2.5 }
+    {
+      "Level": 0,
+      "SpeedMultiplier": 1,
+      "ProductivityMultiplier": 1,
+      "PowerMultiplier": 1
+    },
+    {
+      "Level": 3,
+      "ItemID": 1143,
+      "SprayCount": 75,
+      "SpeedMultiplier": 2,
+      "ProductivityMultiplier": 1.25,
+      "PowerMultiplier": 2.5
+    }
   ],
   "buildingRules": [
-    { "ID": 2302, "Category": "smelter" },
-    { "ID": 2303, "Category": "assembler" },
-    { "ID": 2304, "Category": "assembler" },
-    { "ID": 2305, "Category": "assembler" },
-    { "ID": 2308, "Category": "refinery" },
-    { "ID": 2309, "Category": "chemical" },
-    { "ID": 2310, "Category": "particle" },
-    { "ID": 2314, "Category": "fractionator", "SpeedMultiplierOverride": 1 },
-    { "ID": 2315, "Category": "smelter" },
-    { "ID": 2317, "Category": "chemical", "IntrinsicProductivityBonus": 1, "Tags": ["quantum-chemical"] },
-    { "ID": 2318, "Category": "assembler" },
-    { "ID": 2319, "Category": "smelter" },
-    { "ID": 2901, "Category": "lab" },
-    { "ID": 2902, "Category": "lab" },
-    { "ID": 6215, "Category": "black-box" },
-    { "ID": 6254, "Category": "farming" },
-    { "ID": 6257, "Category": "shipyard" },
-    { "ID": 6264, "Category": "farming" },
-    { "ID": 6265, "Category": "particle" },
-    { "ID": 6501, "Category": "smelter" },
-    { "ID": 7823, "Category": "chemical", "IntrinsicProductivityBonus": 0.25, "Tags": ["cryogenic-chemical"] }
+    {
+      "ID": 2302,
+      "Category": "smelter"
+    },
+    {
+      "ID": 2303,
+      "Category": "assembler"
+    },
+    {
+      "ID": 2304,
+      "Category": "assembler"
+    },
+    {
+      "ID": 2305,
+      "Category": "assembler"
+    },
+    {
+      "ID": 2308,
+      "Category": "refinery"
+    },
+    {
+      "ID": 2309,
+      "Category": "chemical"
+    },
+    {
+      "ID": 2310,
+      "Category": "particle"
+    },
+    {
+      "ID": 2314,
+      "Category": "fractionator",
+      "SpeedMultiplierOverride": 1
+    },
+    {
+      "ID": 2315,
+      "Category": "smelter"
+    },
+    {
+      "ID": 2317,
+      "Category": "chemical",
+      "IntrinsicProductivityBonus": 1,
+      "Tags": [
+        "quantum-chemical"
+      ]
+    },
+    {
+      "ID": 2318,
+      "Category": "assembler"
+    },
+    {
+      "ID": 2319,
+      "Category": "smelter"
+    },
+    {
+      "ID": 2901,
+      "Category": "lab"
+    },
+    {
+      "ID": 2902,
+      "Category": "lab"
+    },
+    {
+      "ID": 6215,
+      "Category": "black-box"
+    },
+    {
+      "ID": 6254,
+      "Category": "farming"
+    },
+    {
+      "ID": 6257,
+      "Category": "shipyard"
+    },
+    {
+      "ID": 6264,
+      "Category": "farming"
+    },
+    {
+      "ID": 6265,
+      "Category": "particle"
+    },
+    {
+      "ID": 6501,
+      "Category": "smelter"
+    },
+    {
+      "ID": 7823,
+      "Category": "chemical",
+      "IntrinsicProductivityBonus": 0.25,
+      "Tags": [
+        "cryogenic-chemical"
+      ]
+    }
   ],
   "recipeModifierRules": [
-    { "Code": 0, "Kind": "none", "SupportedModes": ["none"], "MaxLevel": 0 },
-    { "Code": 1, "Kind": "proliferator", "SupportedModes": ["none", "speed"], "MaxLevel": 3, "Tags": ["speed-only"] },
-    { "Code": 3, "Kind": "proliferator", "SupportedModes": ["none", "speed", "productivity"], "MaxLevel": 3, "Tags": ["full-proliferator"] },
-    { "Code": 4, "Kind": "special", "SupportedModes": ["none"], "MaxLevel": 0, "Tags": ["ray-receiver-lens"] }
+    {
+      "Code": 0,
+      "Kind": "none",
+      "SupportedModes": [
+        "none"
+      ],
+      "MaxLevel": 0
+    },
+    {
+      "Code": 1,
+      "Kind": "proliferator",
+      "SupportedModes": [
+        "none",
+        "speed"
+      ],
+      "MaxLevel": 3,
+      "Tags": [
+        "speed-only"
+      ]
+    },
+    {
+      "Code": 3,
+      "Kind": "proliferator",
+      "SupportedModes": [
+        "none",
+        "speed",
+        "productivity"
+      ],
+      "MaxLevel": 3,
+      "Tags": [
+        "full-proliferator"
+      ]
+    },
+    {
+      "Code": 4,
+      "Kind": "special",
+      "SupportedModes": [
+        "none"
+      ],
+      "MaxLevel": 0,
+      "Tags": [
+        "ray-receiver-lens"
+      ]
+    }
   ],
   "recipeRules": [
-    { "ID": 32, "ModifierCodeOverride": 3 },
-    { "ID": 509, "ModifierCodeOverride": 3 },
-    { "ID": 716, "AllowedBuildingIds": [2309, 2317, 7823], "ModifierCodeOverride": 3 },
-    { "ID": 717, "AllowedBuildingIds": [2309, 2317, 7823], "ModifierCodeOverride": 3 }
+    {
+      "ID": 1,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 2,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 3,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 4,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 5,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 6,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 7,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 8,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 9,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 10,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 11,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 12,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 13,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 14,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 15,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 16,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 17,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 18,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 19,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 20,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 21,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 22,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 23,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 24,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 25,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 26,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 27,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 28,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 29,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 30,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 31,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 32,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 33,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 34,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 35,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 36,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 37,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 38,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 39,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 40,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 41,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 42,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 43,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 44,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 45,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 46,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 47,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 48,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 49,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 50,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 51,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 52,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 53,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 54,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 55,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 56,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 57,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 58,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 59,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 60,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 61,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 62,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 63,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 64,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 65,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 66,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 67,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 68,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 69,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 70,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 71,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 72,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 73,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 74,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 75,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 76,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 77,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 78,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 79,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 80,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 81,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 82,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 83,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 84,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 85,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 86,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 87,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 88,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 89,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 90,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 91,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 92,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 93,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 94,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 95,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 96,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 97,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 98,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 99,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 100,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 101,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 102,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 103,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 105,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 106,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 107,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 108,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 109,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 110,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 111,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 112,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 113,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 114,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 115,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 116,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 117,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 118,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 119,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 120,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 122,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 123,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 124,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 125,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 126,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 127,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 128,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 129,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 130,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 131,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 132,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 133,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 134,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 135,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 136,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 137,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 138,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 139,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 140,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 141,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 142,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 143,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 144,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 145,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 146,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 147,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 148,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 149,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 150,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 151,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 152,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 153,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 154,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 155,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 156,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 157,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 158,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 159,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 160,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 161,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 352,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 353,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 354,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 355,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 356,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 357,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 382,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 401,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 402,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 403,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 404,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 405,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 406,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 407,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 408,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 410,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 411,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 412,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 413,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 414,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 415,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 416,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 417,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 418,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 419,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 420,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 421,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 422,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 423,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 424,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 425,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 426,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 427,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 428,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 429,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 501,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 502,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 503,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 504,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 506,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 507,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 508,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 509,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 510,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 512,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 513,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 514,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 515,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 516,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 517,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 519,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 520,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 521,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 522,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 523,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 524,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 530,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 531,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 532,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 533,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 534,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 535,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 536,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 537,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 538,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 539,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 540,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 541,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 542,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 543,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 544,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 545,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 546,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 547,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 548,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 549,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 551,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 552,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 553,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 554,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 555,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 556,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 557,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 558,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 559,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 560,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 561,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 562,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 563,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 564,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 565,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 566,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 567,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 568,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 569,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 570,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 571,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 572,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 573,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 575,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 624,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 625,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 641,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 642,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 643,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 701,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 702,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 703,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 704,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 706,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 707,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 708,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 709,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 710,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 711,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 712,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 713,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 714,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 715,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 716,
+      "AllowedBuildingIds": [
+        2309,
+        2317,
+        7823
+      ],
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 717,
+      "AllowedBuildingIds": [
+        2309,
+        2317,
+        7823
+      ],
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 718,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 751,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 752,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 753,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 754,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 755,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 771,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 772,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 773,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 774,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 776,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 778,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 779,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 780,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 781,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 782,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 783,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 784,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 785,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 787,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 789,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 791,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 792,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 793,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 794,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 795,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 796,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 800,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 801,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 802,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 803,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 804,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 805,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 806,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 807,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 808,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 809,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 810,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 811,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 812,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 814,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 815,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 816,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 817,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 818,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 819,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 820,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 821,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 822,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 823,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 824,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 825,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 826,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 827,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 828,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 829,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 830,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 831,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 832,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 833,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 834,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 835,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 836,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 837,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 838,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 839,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 840,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 841,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 842,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 843,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 844,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 846,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 847,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 848,
+      "ModifierCodeOverride": 3
+    },
+    {
+      "ID": 849,
+      "ModifierCodeOverride": 3
+    }
   ],
   "recipeModifierPolicy": {
-    "speedOnlyRecipeIds": [104],
-    "speedOnlyWhenInputOutputCountsMatch": true
+    "speedOnlyRecipeIds": [
+      104,
+      121,
+      409,
+      518,
+      550,
+      705,
+      775,
+      777,
+      797,
+      813,
+      845
+    ]
   },
   "recipeBuildingExpansionGroups": [
-    { "BuildingIds": [2302, 2315, 2319] },
-    { "BuildingIds": [2303, 2304, 2318] },
-    { "BuildingIds": [2309, 7823, 2317] }
+    {
+      "BuildingIds": [
+        2302,
+        2315,
+        2319
+      ]
+    },
+    {
+      "BuildingIds": [
+        2303,
+        2304,
+        2318
+      ]
+    },
+    {
+      "BuildingIds": [
+        2309,
+        7823,
+        2317
+      ]
+    }
   ],
-  "recipeBuildingUniversalIds": [6215],
-  "recommendedDisabledRecipeIds": [510],
-  "recommendedRawItemIds": [1005, 1013, 1116, 6251, 7015, 7101]
+  "recipeBuildingUniversalIds": [
+    6215
+  ],
+  "recommendedDisabledRecipeIds": [
+    510
+  ],
+  "recommendedRawItemIds": [
+    1005,
+    1013,
+    1116,
+    6251,
+    7015,
+    7101
+  ]
 }
