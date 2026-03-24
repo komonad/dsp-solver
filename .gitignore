@@ -13,3 +13,6 @@ tools/**/obj/
 tools/**/package/
 tools/**/Local.props
 dspcalc.sln
+.claude/
+test-results/
+playwright-report/

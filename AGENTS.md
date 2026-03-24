@@ -13,6 +13,15 @@
 2. 当修改某个 spec 文件时，必须检查并同步更新该文件中同一层级的其它相关导出类型，禁止只补一部分类型、留下同文件内其它裸类型没有语义说明。
 3. 文档注释必须明确写清单位、字段来源、是否为原始字段、是否为解析后字段、是否允许用户覆盖，以及该字段是否直接参与求解。
 
+## 前端代码组织规范
+1. 单个组件文件不应超过 400 行；超过时应按功能拆分为独立子组件或提取逻辑到 hooks/helpers。
+2. 全局共享状态通过 `WorkbenchContext`（`src/web/app/WorkbenchContext.tsx`）管理，子组件通过 `useWorkbench()` hook 消费；不引入外部状态管理库。
+3. 纯展示型辅助函数（如格式化、排序、默认值选取）放在 `src/web/app/workbenchHelpers.ts`；样式常量放在 `src/web/app/workbenchStyles.ts`。
+4. 新增 UI 组件放在 `src/web/app/` 目录下，按功能命名（PascalCase `.tsx`）；可复用的非业务组件放在 `src/web/shared/`。
+5. 渲染开销大的列表项组件（如 `RecipePlanCard`、`ItemLedgerSection`）须用 `React.memo` 包裹，避免上层 Context 变化触发不必要的重渲染。
+6. 将 render helper 函数（`renderXxx`）转为独立的 React 组件导出，而不是在组件内部定义闭包函数。
+7. 仅在组件真正需要的粒度消费 Context 值；纯 UI 草稿状态（如搜索关键词、下拉草稿选中值）应保留为组件本地 `useState`，不放入 Context。
+
 ## 编码与文件写入要求（Windows）
 1. 本仓库所有文本文件默认统一使用 UTF-8 编码；修改现有文件时禁止擅自改变编码、BOM 形式或换行风格。
 2. 在 Windows / PowerShell 环境下，禁止使用会隐式重编码或整文件重写的写法直接回写源码文件，例如 `Set-Content`、`Out-File`、`>`、`>>` 等；优先使用 `apply_patch` 做最小修改。
