@@ -18,6 +18,7 @@ import { EntityIcon } from '../shared/EntityIcon';
 import { ClickableItemLabel } from './ClickableItemLabel';
 import CollapsibleSnapshotSection from './CollapsibleSnapshotSection';
 import { RecipeIoSequence } from './FlowRateDisplay';
+import RecipePreferenceSnapshotList from './RecipePreferenceSnapshotList';
 import RecipeCycleArrow from './RecipeCycleArrow';
 import RecipeConstraintSnapshotList from './RecipeConstraintSnapshotList';
 import SnapshotRemoveButton from './SnapshotRemoveButton';
@@ -31,6 +32,13 @@ import {
   snapshotTargetInputSx,
 } from './workbenchStyles';
 import { useWorkbench } from './WorkbenchContext';
+import {
+  buildGlobalProliferatorPreferenceDisplayEntry,
+  buildRecipeProliferatorPreferenceDisplayEntries,
+} from './workbenchHelpers';
+
+const PROLIFERATOR_PREFERENCE_TITLE = '\u589e\u4ea7\u504f\u597d';
+const NO_PROLIFERATOR_PREFERENCE_TEXT = '\u5f53\u524d\u6ca1\u6709\u589e\u4ea7\u504f\u597d\u3002';
 
 export default function SolveSnapshotPanel() {
   const {
@@ -42,17 +50,33 @@ export default function SolveSnapshotPanel() {
     targets,
     objective,
     balancePolicy,
+    proliferatorPolicy,
+    globalProliferatorLevel,
+    setProliferatorPolicy,
+    setGlobalProliferatorLevel,
     hasTargets,
     requestSummary,
     solveError,
+    recipePreferences,
     preferredBuildings,
     updateTarget,
     removeTarget,
     removeAllowedRecipeForItem,
     removeDisabledRecipe,
     removeDisabledBuilding,
+    removeRecipePreference,
     removePreferredBuilding,
   } = useWorkbench();
+
+  const proliferatorPreferenceEntries =
+    catalog
+      ? buildRecipeProliferatorPreferenceDisplayEntries(catalog, recipePreferences, locale)
+      : [];
+  const globalProliferatorPreferenceEntry = buildGlobalProliferatorPreferenceDisplayEntry(
+    proliferatorPolicy,
+    globalProliferatorLevel,
+    locale
+  );
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
@@ -181,6 +205,36 @@ export default function SolveSnapshotPanel() {
               cycleTimeSec: setting.cycleTimeSec,
               onRemove: () => removeDisabledRecipe(setting.recipeId),
             }))}
+          />
+
+          <RecipePreferenceSnapshotList
+            title={PROLIFERATOR_PREFERENCE_TITLE}
+            emptyText={NO_PROLIFERATOR_PREFERENCE_TEXT}
+            clearTooltip={bundle.common.removeSuffix}
+            atlasIds={iconAtlasIds}
+            entries={[
+              ...(globalProliferatorPreferenceEntry
+                ? [{
+                    recipeId: globalProliferatorPreferenceEntry.recipeId,
+                    recipeName: globalProliferatorPreferenceEntry.recipeName,
+                    recipeIconKey: globalProliferatorPreferenceEntry.recipeIconKey,
+                    showIcon: false,
+                    proliferatorPreferenceLabel:
+                      globalProliferatorPreferenceEntry.proliferatorPreferenceLabel,
+                    onRemove: () => {
+                      setProliferatorPolicy('auto');
+                      setGlobalProliferatorLevel('');
+                    },
+                  }]
+                : []),
+              ...proliferatorPreferenceEntries.map(setting => ({
+                recipeId: setting.recipeId,
+                recipeName: setting.recipeName,
+                recipeIconKey: setting.recipeIconKey,
+                proliferatorPreferenceLabel: setting.proliferatorPreferenceLabel,
+                onRemove: () => removeRecipePreference(setting.recipeId),
+              })),
+            ]}
           />
 
           <CollapsibleSnapshotSection title={bundle.solveRequest.disabledBuildingsLabel}>

@@ -1,63 +1,98 @@
 import React from 'react';
+import BoltRoundedIcon from '@mui/icons-material/BoltRounded';
 import EastRoundedIcon from '@mui/icons-material/EastRounded';
-import {
-  Box,
-  Card,
-  CardContent,
-  MenuItem,
-  Select,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Card, CardContent, Typography } from '@mui/material';
 import type { ProliferatorMode } from '../../catalog';
-import { formatPower, formatProliferatorMode, formatRate } from '../../i18n';
+import { formatProliferatorMode } from '../../i18n';
 import type { PresentationModel } from '../../presentation';
-import { EntityIcon, EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
-import { openItemSliceOverlay } from '../itemSlice/itemSliceStore';
-import { buildRecipeFlowDisplay } from '../shared/recipeDisplay';
-import type { EditableRecipeStrategyOverride } from '../workbench/requestBuilder';
-import { FlowRateSequence } from './FlowRateDisplay';
-import { SelectOption } from './SelectOption';
+import { EntityIcon } from '../shared/EntityIcon';
+import {
+  RecipePlanAuxiliaryInput,
+  RecipePlanFlowSequence,
+  RecipePlanToggleButton,
+  RecipePlanToggleGroup,
+} from './RecipePlanCardParts';
 import { useWorkbench } from './WorkbenchContext';
-import { compactSelectFieldSx } from './workbenchStyles';
+import { buildRecipePlanCardDisplayModel } from './workbenchHelpers';
 
 export interface RecipePlanCardProps {
   plan: PresentationModel['recipePlans'][number];
-  override?: EditableRecipeStrategyOverride;
 }
 
-const RecipePlanCard = React.memo(function RecipePlanCard({
-  plan,
-  override,
-}: RecipePlanCardProps) {
+const BUILDING_CONTROL_LABEL = '\u5efa\u7b51\u9009\u62e9';
+const PROLIFERATOR_MODE_CONTROL_LABEL = '\u589e\u4ea7\u7b56\u7565';
+const PROLIFERATOR_LEVEL_CONTROL_LABEL = '\u589e\u4ea7\u7b49\u7ea7';
+const NONE_OPTION_LABEL = '\u2205';
+
+function AutoOptionGlyph() {
+  return (
+    <Box
+      component="span"
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '100%',
+        height: '100%',
+        fontSize: 13,
+        lineHeight: 1,
+        transform: 'translateY(0.5px)',
+      }}
+    >
+      *
+    </Box>
+  );
+}
+
+const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCardProps) {
   const {
     bundle,
     locale,
     iconAtlasIds,
     catalog,
+    recipePreferences,
+    recipeStrategyOverrides,
+    preferredBuildings,
     applyRecipeStrategyPatch,
     getRecipeBuildingOptions,
     getRecipeModeOptions,
     getRecipeLevelOptions,
+    setRecipePreferredBuilding,
+    setRecipePreferredProliferator,
   } = useWorkbench();
 
-  const { visibleInputs, auxiliaryProliferatorInput } = buildRecipeFlowDisplay(catalog, plan);
+  const displayModel = buildRecipePlanCardDisplayModel(catalog, plan, locale);
   const buildingChoices = getRecipeBuildingOptions(plan.recipeId);
   const modeChoices = getRecipeModeOptions(plan.recipeId);
   const levelChoices = getRecipeLevelOptions(plan.recipeId);
-  const selectedMode = override?.forcedProliferatorMode ?? '';
+  const preference = recipePreferences.find(entry => entry.recipeId === plan.recipeId);
+  const override = recipeStrategyOverrides.find(entry => entry.recipeId === plan.recipeId);
+  const preferredBuilding = preferredBuildings.find(entry => entry.recipeId === plan.recipeId);
+  const selectedBuildingId =
+    override?.forcedBuildingId ||
+    preferredBuilding?.buildingId ||
+    preference?.preferredBuildingId ||
+    '';
+  const selectedMode =
+    override?.forcedProliferatorMode || preference?.preferredProliferatorMode || '';
+  const selectedLevelValue =
+    typeof override?.forcedProliferatorLevel === 'number'
+      ? override.forcedProliferatorLevel
+      : typeof preference?.preferredProliferatorLevel === 'number'
+        ? preference.preferredProliferatorLevel
+        : '';
   const selectedLevel =
     selectedMode === 'none'
       ? ''
-      : typeof override?.forcedProliferatorLevel === 'number' &&
-          override.forcedProliferatorLevel > 0
-        ? String(override.forcedProliferatorLevel)
+      : typeof selectedLevelValue === 'number' && selectedLevelValue > 0
+        ? String(selectedLevelValue)
         : '';
   const levelSelectDisabled =
     levelChoices.length === 0 || selectedMode === '' || selectedMode === 'none';
 
   return (
     <Card
+      data-testid="recipe-plan-card"
       sx={{
         borderRadius: '20px',
         border: '1px solid',
@@ -66,14 +101,14 @@ const RecipePlanCard = React.memo(function RecipePlanCard({
         backgroundColor: 'rgba(255,255,255,0.68)',
         overflow: 'hidden',
         contentVisibility: 'auto',
-        containIntrinsicSize: '152px 480px',
+        containIntrinsicSize: '128px 480px',
         contain: 'layout paint style',
       }}
     >
       <CardContent
         sx={{
           display: 'grid',
-          gap: 1.5,
+          gap: 1.25,
           p: 2,
           borderRadius: '18px',
           '&:last-child': { pb: 2 },
@@ -82,207 +117,198 @@ const RecipePlanCard = React.memo(function RecipePlanCard({
         <Box
           sx={{
             display: 'flex',
+            alignItems: { xs: 'stretch', md: 'center' },
             justifyContent: 'space-between',
-            gap: 1.25,
-            flexWrap: 'wrap',
-            alignItems: 'flex-start',
+            gap: 1,
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            minWidth: 0,
           }}
         >
           <Box
             sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 1,
-              flexWrap: 'wrap',
-              alignItems: 'center',
+              flex: '1 1 auto',
               minWidth: 0,
-              width: '100%',
+              display: 'flex',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              gap: 0.875,
+              flexWrap: { xs: 'wrap', sm: 'nowrap' },
             }}
           >
             <Typography
               variant="subtitle1"
               fontWeight={700}
-              sx={{ minWidth: 0, flex: '1 1 220px' }}
+              noWrap
+              title={plan.recipeName}
+              sx={{ minWidth: 0, flex: '1 1 auto' }}
             >
-              <EntityLabel
-                label={plan.recipeName}
-                iconKey={plan.recipeIconKey}
-                atlasIds={iconAtlasIds}
-                size={20}
-                gap={8}
-                textStyle={{ fontWeight: 700 }}
-              />
+              {plan.recipeName}
             </Typography>
-            <Stack
-              direction="row"
-              useFlexGap
-              flexWrap="wrap"
-              gap={0.75}
+
+            <Box
               sx={{
-                color: 'text.secondary',
-                justifyContent: { xs: 'flex-start', md: 'flex-end' },
+                flex: '0 1 auto',
+                minWidth: 0,
+                ml: 'auto',
+                display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'flex-end',
+                flexWrap: 'wrap',
+                rowGap: 0.25,
+                columnGap: 1.375,
               }}
             >
-              <Typography variant="caption" sx={{ display: 'inline-flex', alignItems: 'center' }}>
-                <EntityLabel
-                  label={`${bundle.summary.buildingsLabel} ${plan.buildingName} X ${plan.exactBuildingCount.toFixed(2)}`}
-                  iconKey={plan.buildingIconKey}
-                  atlasIds={iconAtlasIds}
-                  size={16}
-                />
-              </Typography>
-              <Typography variant="caption">{plan.proliferatorLabel}</Typography>
-              <Typography variant="caption">
-                {bundle.overview.requestLabel} {formatRate(plan.runsPerMin, locale)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {bundle.recipePlans.powerLabel} {formatPower(plan.activePowerMW, locale)}
-              </Typography>
-            </Stack>
-          </Box>
-        </Box>
+              <RecipePlanToggleGroup
+                ariaLabel={`${plan.recipeName} ${BUILDING_CONTROL_LABEL}`}
+                value={selectedBuildingId}
+                testId="recipe-plan-building-toggle-group"
+                onChange={nextBuildingId => {
+                  const accepted = applyRecipeStrategyPatch(plan.recipeId, {
+                    forcedBuildingId: nextBuildingId,
+                  });
+                  if (accepted) {
+                    setRecipePreferredBuilding(plan.recipeId, nextBuildingId);
+                  }
+                }}
+              >
+                <RecipePlanToggleButton
+                  value=""
+                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
+                  title={bundle.common.auto}
+                  testId="recipe-plan-building-toggle-auto"
+                >
+                  <AutoOptionGlyph />
+                </RecipePlanToggleButton>
+                {buildingChoices.map(building => (
+                  <RecipePlanToggleButton
+                    key={building.buildingId}
+                    value={building.buildingId}
+                    ariaLabel={`${plan.recipeName} ${building.name}`}
+                    title={building.name}
+                    iconOnly
+                    testId={`recipe-plan-building-toggle-${building.buildingId}`}
+                  >
+                    <EntityIcon
+                      label={building.name}
+                      iconKey={building.icon}
+                      atlasIds={iconAtlasIds}
+                      size={17}
+                    />
+                  </RecipePlanToggleButton>
+                ))}
+              </RecipePlanToggleGroup>
 
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 1,
-            flexWrap: 'wrap',
-            alignItems: 'center',
-          }}
-        >
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-              {bundle.summary.buildingsLabel}
-            </Typography>
-            <Select
-              size="small"
-              displayEmpty
-              value={override?.forcedBuildingId ?? ''}
-              onChange={event =>
-                applyRecipeStrategyPatch(plan.recipeId, {
-                  forcedBuildingId: String(event.target.value),
-                })
-              }
-              sx={{
-                ...compactSelectFieldSx,
-                minWidth: 128,
-                '& .MuiSelect-select': {
-                  py: 0.75,
-                  pr: '28px !important',
-                  fontSize: 13,
-                },
-              }}
-              renderValue={selected =>
-                selected
-                  ? (
-                      <SelectOption
-                        label={
-                          buildingChoices.find(building => building.buildingId === selected)?.name ??
-                          String(selected)
-                        }
-                        iconKey={buildingChoices.find(building => building.buildingId === selected)
-                          ?.icon}
-                        size={16}
-                      />
-                    )
-                  : bundle.common.auto
-              }
-            >
-              <MenuItem value="">{bundle.common.auto}</MenuItem>
-              {buildingChoices.map(building => (
-                <MenuItem key={building.buildingId} value={building.buildingId}>
-                  <SelectOption label={building.name} iconKey={building.icon} size={16} />
-                </MenuItem>
-              ))}
-            </Select>
-          </Box>
-
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-              {bundle.solveRequest.preferredSprayModeLabel}
-            </Typography>
-            <Select
-              size="small"
-              displayEmpty
-              value={selectedMode}
-              onChange={event => {
-                const nextMode = event.target.value as '' | ProliferatorMode;
-                applyRecipeStrategyPatch(plan.recipeId, {
-                  forcedProliferatorMode: nextMode,
-                  forcedProliferatorLevel:
+              <RecipePlanToggleGroup
+                ariaLabel={`${plan.recipeName} ${PROLIFERATOR_MODE_CONTROL_LABEL}`}
+                value={selectedMode}
+                testId="recipe-plan-mode-toggle-group"
+                onChange={nextValue => {
+                  const nextMode = nextValue as '' | ProliferatorMode;
+                  const nextLevel =
                     nextMode === 'none'
                       ? 0
                       : nextMode
-                        ? typeof override?.forcedProliferatorLevel === 'number' &&
-                            override.forcedProliferatorLevel > 0
-                          ? override.forcedProliferatorLevel
+                        ? typeof selectedLevelValue === 'number' && selectedLevelValue > 0
+                          ? selectedLevelValue
                           : ''
-                        : '',
-                });
-              }}
-              sx={{
-                ...compactSelectFieldSx,
-                minWidth: 118,
-                '& .MuiSelect-select': {
-                  py: 0.75,
-                  pr: '28px !important',
-                  fontSize: 13,
-                },
-              }}
-              renderValue={selected =>
-                selected
-                  ? formatProliferatorMode(selected as ProliferatorMode, locale)
-                  : bundle.common.auto
-              }
-            >
-              <MenuItem value="">{bundle.common.auto}</MenuItem>
-              {modeChoices.map(mode => (
-                <MenuItem key={mode} value={mode}>
-                  {formatProliferatorMode(mode, locale)}
-                </MenuItem>
-              ))}
-            </Select>
+                        : '';
+                  const accepted = applyRecipeStrategyPatch(plan.recipeId, {
+                    forcedProliferatorMode: nextMode,
+                    forcedProliferatorLevel: nextLevel,
+                  });
+                  if (accepted) {
+                    setRecipePreferredProliferator(plan.recipeId, nextMode, nextLevel);
+                  }
+                }}
+              >
+                <RecipePlanToggleButton
+                  value=""
+                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
+                  title={bundle.common.auto}
+                  testId="recipe-plan-mode-toggle-auto"
+                >
+                  <AutoOptionGlyph />
+                </RecipePlanToggleButton>
+                {modeChoices.map(mode => (
+                  <RecipePlanToggleButton
+                    key={mode}
+                    value={mode}
+                    ariaLabel={`${plan.recipeName} ${formatProliferatorMode(mode, locale)}`}
+                    title={formatProliferatorMode(mode, locale)}
+                    testId={`recipe-plan-mode-toggle-${mode}`}
+                  >
+                    {mode === 'none' ? NONE_OPTION_LABEL : formatProliferatorMode(mode, locale)}
+                  </RecipePlanToggleButton>
+                ))}
+              </RecipePlanToggleGroup>
+
+              <RecipePlanToggleGroup
+                ariaLabel={`${plan.recipeName} ${PROLIFERATOR_LEVEL_CONTROL_LABEL}`}
+                value={selectedLevel}
+                testId="recipe-plan-level-toggle-group"
+                onChange={nextValue => {
+                  const nextLevel = nextValue ? Number(nextValue) : '';
+                  const accepted = applyRecipeStrategyPatch(plan.recipeId, {
+                    forcedProliferatorLevel: nextLevel,
+                  });
+                  if (accepted) {
+                    setRecipePreferredProliferator(plan.recipeId, selectedMode, nextLevel);
+                  }
+                }}
+              >
+                <RecipePlanToggleButton
+                  value=""
+                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
+                  title={bundle.common.auto}
+                  disabled={levelSelectDisabled}
+                  testId="recipe-plan-level-toggle-auto"
+                >
+                  <AutoOptionGlyph />
+                </RecipePlanToggleButton>
+                {levelChoices.map(level => (
+                  <RecipePlanToggleButton
+                    key={level}
+                    value={String(level)}
+                    ariaLabel={`${plan.recipeName} ${bundle.solveRequest.levelPrefix} ${level}`}
+                    title={`${bundle.solveRequest.levelPrefix} ${level}`}
+                    disabled={levelSelectDisabled}
+                    testId={`recipe-plan-level-toggle-${level}`}
+                  >
+                    {level}
+                  </RecipePlanToggleButton>
+                ))}
+              </RecipePlanToggleGroup>
+            </Box>
           </Box>
 
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-              {bundle.solveRequest.preferredSprayLevelLabel}
-            </Typography>
-            <Select
-              size="small"
-              displayEmpty
-              value={selectedLevel}
-              disabled={levelSelectDisabled}
-              onChange={event =>
-                applyRecipeStrategyPatch(plan.recipeId, {
-                  forcedProliferatorLevel: event.target.value
-                    ? Number(event.target.value)
-                    : '',
-                })
-              }
-              sx={{
-                ...compactSelectFieldSx,
-                minWidth: 88,
-                '& .MuiSelect-select': {
-                  py: 0.75,
-                  pr: '28px !important',
-                  fontSize: 13,
-                },
-              }}
-              renderValue={selected =>
-                selected
-                  ? `${bundle.solveRequest.levelPrefix} ${selected}`
-                  : bundle.common.auto
-              }
-            >
-              <MenuItem value="">{bundle.common.auto}</MenuItem>
-              {levelChoices.map(level => (
-                <MenuItem key={level} value={String(level)}>
-                  {`${bundle.solveRequest.levelPrefix} ${level}`}
-                </MenuItem>
-              ))}
-            </Select>
+          <Box
+            sx={{
+              flex: '0 0 auto',
+              minWidth: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: { xs: 'flex-start', md: 'flex-end' },
+              gap: 1,
+              flexWrap: 'wrap',
+              color: 'text.secondary',
+            }}
+          >
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+              <EntityIcon
+                label={plan.buildingName}
+                iconKey={plan.buildingIconKey}
+                atlasIds={iconAtlasIds}
+                size={18}
+              />
+              <Typography variant="caption" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                {displayModel.buildingCountLabel}
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375 }}>
+              <BoltRoundedIcon sx={{ fontSize: 16 }} />
+              <Typography variant="caption" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {displayModel.powerLabel}
+              </Typography>
+            </Box>
           </Box>
         </Box>
 
@@ -290,69 +316,55 @@ const RecipePlanCard = React.memo(function RecipePlanCard({
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1,
+            gap: 0.625,
             flexWrap: 'wrap',
             borderRadius: '16px',
             px: 1.25,
-            py: 1,
+            py: 0.875,
             backgroundColor: 'rgba(22, 54, 89, 0.035)',
           }}
         >
           <Box
             sx={{
+              flex: '1 1 320px',
+              minWidth: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: 0.5,
+              gap: 0.625,
               flexWrap: 'wrap',
-              flex: '1 1 260px',
-              minWidth: 0,
             }}
           >
-            <FlowRateSequence items={visibleInputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
+            <RecipePlanFlowSequence
+              items={displayModel.visibleInputs}
+              locale={locale}
+              atlasIds={iconAtlasIds}
+              noneText={bundle.common.none}
+            />
+            <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 20, flexShrink: 0 }} />
+            <RecipePlanFlowSequence
+              items={displayModel.outputs}
+              locale={locale}
+              atlasIds={iconAtlasIds}
+              noneText={bundle.common.none}
+            />
+            <RecipePlanAuxiliaryInput
+              item={displayModel.auxiliaryProliferatorInput}
+              locale={locale}
+              atlasIds={iconAtlasIds}
+            />
           </Box>
-          <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
-          <Box
+          <Typography
+            variant="caption"
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 0.5,
-              flexWrap: 'wrap',
-              flex: '1 1 220px',
-              minWidth: 0,
+              flex: '0 0 auto',
+              ml: 'auto',
+              color: 'text.secondary',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
             }}
           >
-            <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
-            {auxiliaryProliferatorInput ? (
-              <Box
-                component="span"
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  whiteSpace: 'nowrap',
-                  color: 'text.secondary',
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
-              >
-                <span>+</span>
-                <EntityLabelButton
-                  label={auxiliaryProliferatorInput.itemName}
-                  iconKey={auxiliaryProliferatorInput.iconKey}
-                  atlasIds={iconAtlasIds}
-                  size={16}
-                  gap={6}
-                  textStyle={{ fontSize: 12, fontWeight: 600 }}
-                  buttonStyle={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
-                  onClick={() => openItemSliceOverlay(auxiliaryProliferatorInput.itemId)}
-                />
-                <span>{formatRate(auxiliaryProliferatorInput.ratePerMin, locale)}</span>
-              </Box>
-            ) : null}
-          </Box>
+            {displayModel.proliferatorLabel}
+          </Typography>
         </Box>
       </CardContent>
     </Card>

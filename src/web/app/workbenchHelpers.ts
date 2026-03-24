@@ -1,5 +1,16 @@
 import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
-import type { EditableTarget } from '../workbench/requestBuilder';
+import {
+  formatPower,
+  formatPreferredProliferatorLabel,
+  type AppLocale,
+} from '../../i18n';
+import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
+import { buildRecipeFlowDisplay } from '../shared/recipeDisplay';
+import type {
+  EditableRecipePreference,
+  EditableTarget,
+  WorkbenchProliferatorPolicy,
+} from '../workbench/requestBuilder';
 import type { WorkbenchEditorState } from '../workbench/persistence';
 
 export interface WorkbenchRecipeOptionIO {
@@ -16,6 +27,22 @@ export interface WorkbenchRecipeOption {
   cycleTimeSec: number;
   inputs: WorkbenchRecipeOptionIO[];
   outputs: WorkbenchRecipeOptionIO[];
+}
+
+export interface RecipePlanCardDisplayModel {
+  buildingCountLabel: string;
+  powerLabel: string;
+  proliferatorLabel: string;
+  visibleInputs: PresentationItemRate[];
+  outputs: PresentationItemRate[];
+  auxiliaryProliferatorInput: PresentationItemRate | null;
+}
+
+export interface RecipeProliferatorPreferenceDisplayEntry {
+  recipeId: string;
+  recipeName: string;
+  recipeIconKey?: string;
+  proliferatorPreferenceLabel: string;
 }
 
 export function formatRecipeAmount(amount: number, locale: string): string {
@@ -36,6 +63,106 @@ export function formatRecipeCycleTime(seconds: number, locale: string): string {
     minimumFractionDigits: seconds < 10 && !Number.isInteger(seconds) ? 1 : 0,
     maximumFractionDigits: seconds < 10 ? 1 : 2,
   }).format(seconds);
+}
+
+export function formatRecipePlanBuildingCount(
+  exactBuildingCount: number,
+  roundedUpBuildingCount: number,
+  locale: AppLocale
+): string {
+  const roundedLabel = new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+  }).format(roundedUpBuildingCount);
+  if (Math.abs(exactBuildingCount - roundedUpBuildingCount) < 1e-9) {
+    return roundedLabel;
+  }
+
+  const exactLabel = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(exactBuildingCount);
+  return `${exactLabel}(${roundedLabel})`;
+}
+
+export function buildRecipePlanCardDisplayModel(
+  catalog: ResolvedCatalogModel | null,
+  plan: PresentationRecipePlan,
+  locale: AppLocale
+): RecipePlanCardDisplayModel {
+  const { visibleInputs, auxiliaryProliferatorInput } = buildRecipeFlowDisplay(catalog, plan);
+
+  return {
+    buildingCountLabel: formatRecipePlanBuildingCount(
+      plan.exactBuildingCount,
+      plan.roundedUpBuildingCount,
+      locale
+    ),
+    powerLabel: formatPower(plan.activePowerMW, locale),
+    proliferatorLabel: plan.proliferatorLabel,
+    visibleInputs,
+    outputs: plan.outputs,
+    auxiliaryProliferatorInput,
+  };
+}
+
+export function buildRecipeProliferatorPreferenceDisplayEntries(
+  catalog: ResolvedCatalogModel,
+  recipePreferences: EditableRecipePreference[],
+  locale: AppLocale
+): RecipeProliferatorPreferenceDisplayEntry[] {
+  return recipePreferences
+    .filter(
+      preference =>
+        Boolean(preference.recipeId) &&
+        (preference.preferredProliferatorMode !== '' ||
+          preference.preferredProliferatorLevel !== '')
+    )
+    .map(preference => {
+      const recipe = catalog.recipeMap.get(preference.recipeId);
+      const proliferatorPreferenceLabel = formatPreferredProliferatorLabel(
+        preference.preferredProliferatorMode || undefined,
+        typeof preference.preferredProliferatorLevel === 'number'
+          ? preference.preferredProliferatorLevel
+          : undefined,
+        locale
+      );
+
+      return {
+        recipeId: preference.recipeId,
+        recipeName: recipe?.name ?? preference.recipeId,
+        recipeIconKey:
+          recipe?.icon ?? (recipe?.outputs[0] ? catalog.itemMap.get(recipe.outputs[0].itemId)?.icon : undefined),
+        proliferatorPreferenceLabel: proliferatorPreferenceLabel ?? '',
+      };
+    })
+    .filter(entry => Boolean(entry.proliferatorPreferenceLabel))
+    .sort((left, right) => left.recipeName.localeCompare(right.recipeName));
+}
+
+export function buildGlobalProliferatorPreferenceDisplayEntry(
+  proliferatorPolicy: WorkbenchProliferatorPolicy,
+  globalProliferatorLevel: '' | number,
+  locale: AppLocale
+): RecipeProliferatorPreferenceDisplayEntry | null {
+  if (proliferatorPolicy === 'auto') {
+    return null;
+  }
+
+  const proliferatorPreferenceLabel = formatPreferredProliferatorLabel(
+    proliferatorPolicy === 'none' ? 'none' : proliferatorPolicy,
+    typeof globalProliferatorLevel === 'number' ? globalProliferatorLevel : undefined,
+    locale
+  );
+
+  if (!proliferatorPreferenceLabel) {
+    return null;
+  }
+
+  return {
+    recipeId: '*',
+    recipeName: '*',
+    proliferatorPreferenceLabel,
+  };
 }
 
 export function pickDefaultTarget(catalog: ResolvedCatalogModel): string {

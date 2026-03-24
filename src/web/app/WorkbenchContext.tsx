@@ -209,13 +209,19 @@ export interface WorkbenchContextValue {
   applyRecipeStrategyPatch: (
     recipeId: string,
     patch: Partial<EditableRecipeStrategyOverride>
-  ) => void;
+  ) => boolean;
   applyAllowedRecipesForItem: (
     itemId: string,
     recipeIds: string[]
   ) => { accepted: boolean; message: string };
   clearAllowedRecipesForItem: (itemId: string) => void;
   removeAllowedRecipeForItem: (itemId: string, recipeId: string) => void;
+  setRecipePreferredBuilding: (recipeId: string, buildingId: string) => void;
+  setRecipePreferredProliferator: (
+    recipeId: string,
+    mode: '' | ProliferatorMode,
+    level: '' | number
+  ) => void;
   addPreferredBuilding: (entry: EditablePreferredBuilding) => void;
   removePreferredBuilding: (index: number) => void;
   locateItemInLedger: (itemId: string) => void;
@@ -230,6 +236,86 @@ export interface WorkbenchContextValue {
 // ---------------------------------------------------------------------------
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
+
+function upsertRecipePreferenceEntry(
+  currentPreferences: EditableRecipePreference[],
+  recipeId: string,
+  patch: Partial<EditableRecipePreference>
+): EditableRecipePreference[] {
+  const currentPreference =
+    currentPreferences.find(preference => preference.recipeId === recipeId) ?? {
+      recipeId,
+      preferredBuildingId: '',
+      preferredProliferatorMode: '',
+      preferredProliferatorLevel: '',
+    };
+
+  const nextPreference: EditableRecipePreference = {
+    ...currentPreference,
+    ...patch,
+    recipeId,
+  };
+
+  if (nextPreference.preferredProliferatorMode === '') {
+    nextPreference.preferredProliferatorLevel = '';
+  } else if (nextPreference.preferredProliferatorMode === 'none') {
+    nextPreference.preferredProliferatorLevel = 0;
+  } else if (nextPreference.preferredProliferatorLevel === 0) {
+    nextPreference.preferredProliferatorLevel = '';
+  }
+
+  const remainingPreferences = currentPreferences.filter(
+    preference => preference.recipeId !== recipeId
+  );
+  const hasValue = Boolean(
+    nextPreference.preferredBuildingId ||
+    nextPreference.preferredProliferatorMode ||
+    nextPreference.preferredProliferatorLevel !== ''
+  );
+
+  return hasValue
+    ? [...remainingPreferences, nextPreference]
+    : remainingPreferences;
+}
+
+function patchRecipeStrategyOverrideEntry(
+  currentOverrides: EditableRecipeStrategyOverride[],
+  recipeId: string,
+  patch: Partial<EditableRecipeStrategyOverride>
+): EditableRecipeStrategyOverride[] {
+  const currentOverride =
+    currentOverrides.find(override => override.recipeId === recipeId) ?? {
+      recipeId,
+      forcedBuildingId: '',
+      forcedProliferatorMode: '',
+      forcedProliferatorLevel: '',
+    };
+
+  const nextOverride: EditableRecipeStrategyOverride = {
+    ...currentOverride,
+    ...patch,
+    recipeId,
+  };
+
+  if (nextOverride.forcedProliferatorMode === '') {
+    nextOverride.forcedProliferatorLevel = '';
+  } else if (nextOverride.forcedProliferatorMode === 'none') {
+    nextOverride.forcedProliferatorLevel = 0;
+  } else if (nextOverride.forcedProliferatorLevel === 0) {
+    nextOverride.forcedProliferatorLevel = '';
+  }
+
+  const remainingOverrides = currentOverrides.filter(
+    override => override.recipeId !== recipeId
+  );
+  const hasValue = Boolean(
+    nextOverride.forcedBuildingId ||
+    nextOverride.forcedProliferatorMode ||
+    nextOverride.forcedProliferatorLevel !== ''
+  );
+
+  return hasValue ? [...remainingOverrides, nextOverride] : remainingOverrides;
+}
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -681,6 +767,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       proliferatorPolicy,
       globalProliferatorLevel,
       rawInputItemIds,
+      preferredBuildings,
       recipePreferences,
       recipeStrategyOverrides,
       targets,
@@ -1072,14 +1159,50 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     patch: Partial<EditableRecipePreference>
   ) {
     setRecipePreferences(current =>
-      current.map(preference =>
-        preference.recipeId === recipeId ? { ...preference, ...patch } : preference
-      )
+      upsertRecipePreferenceEntry(current, recipeId, patch)
     );
   }
 
   function removeRecipePreference(recipeId: string) {
-    setRecipePreferences(current => current.filter(entry => entry.recipeId !== recipeId));
+    setRecipePreferences(current =>
+      upsertRecipePreferenceEntry(current, recipeId, {
+        preferredProliferatorMode: '',
+        preferredProliferatorLevel: '',
+      })
+    );
+    setRecipeStrategyOverrides(current =>
+      patchRecipeStrategyOverrideEntry(current, recipeId, {
+        forcedProliferatorMode: '',
+        forcedProliferatorLevel: '',
+      })
+    );
+  }
+
+  function setRecipePreferredBuilding(recipeId: string, buildingId: string) {
+    setRecipePreferences(current =>
+      upsertRecipePreferenceEntry(current, recipeId, {
+        preferredBuildingId: buildingId,
+      })
+    );
+    setPreferredBuildings(current => {
+      const remainingEntries = current.filter(entry => entry.recipeId !== recipeId);
+      return buildingId
+        ? [...remainingEntries, { recipeId, buildingId }]
+        : remainingEntries;
+    });
+  }
+
+  function setRecipePreferredProliferator(
+    recipeId: string,
+    mode: '' | ProliferatorMode,
+    level: '' | number
+  ) {
+    setRecipePreferences(current =>
+      upsertRecipePreferenceEntry(current, recipeId, {
+        preferredProliferatorMode: mode,
+        preferredProliferatorLevel: level,
+      })
+    );
   }
 
   function getRecipeDefinition(recipeId: string): ResolvedRecipeSpec | undefined {
@@ -1123,7 +1246,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       patch: Partial<EditableRecipeStrategyOverride>
     ) {
       if (!catalog) {
-        return;
+        return false;
       }
 
       const nextResult = tryApplyRecipeStrategyOverride({
@@ -1150,11 +1273,12 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
       if (!nextResult.accepted) {
         setRecipeStrategyWarning(nextResult.message);
-        return;
+        return false;
       }
 
       setRecipeStrategyOverrides(nextResult.nextOverrides);
       setRecipeStrategyWarning('');
+      return true;
     },
     [
       advancedOverridesText,
@@ -1288,12 +1412,43 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setPreferredBuildings(current => [...current, entry]);
+    setPreferredBuildings(current => {
+      if (!entry.recipeId) {
+        return current.some(
+          existing => !existing.recipeId && existing.buildingId === entry.buildingId
+        )
+          ? current
+          : [...current, entry];
+      }
+
+      const remainingEntries = current.filter(existing => existing.recipeId !== entry.recipeId);
+      return [...remainingEntries, entry];
+    });
   }, []);
 
   const removePreferredBuilding = useCallback(function removePreferredBuilding(index: number) {
+    const entry = preferredBuildings[index];
+    if (!entry) {
+      return;
+    }
+
     setPreferredBuildings(current => current.filter((_, i) => i !== index));
-  }, []);
+
+    if (!entry.recipeId) {
+      return;
+    }
+
+    setRecipePreferences(current =>
+      upsertRecipePreferenceEntry(current, entry.recipeId, {
+        preferredBuildingId: '',
+      })
+    );
+    setRecipeStrategyOverrides(current =>
+      patchRecipeStrategyOverrideEntry(current, entry.recipeId, {
+        forcedBuildingId: '',
+      })
+    );
+  }, [preferredBuildings]);
 
   const locateItemInLedger = useCallback(
     function locateItemInLedger(itemId: string) {
@@ -1436,6 +1591,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addRecipePreference,
       updateRecipePreference,
       removeRecipePreference,
+      setRecipePreferredBuilding,
+      setRecipePreferredProliferator,
       getRecipeDefinition,
       getRecipeBuildingOptions,
       getRecipeModeOptions,
@@ -1521,6 +1678,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       applyAllowedRecipesForItem,
       clearAllowedRecipesForItem,
       removeAllowedRecipeForItem,
+      setRecipePreferredBuilding,
+      setRecipePreferredProliferator,
       addPreferredBuilding,
       removePreferredBuilding,
       locateItemInLedger,

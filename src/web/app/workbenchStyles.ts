@@ -59,6 +59,69 @@ export const compactSelectFieldSx = {
   },
 } as const;
 
+export const recipePlanToggleGroupSx = {
+  display: 'inline-flex',
+  alignItems: 'stretch',
+  flexWrap: 'nowrap',
+  minWidth: 0,
+  overflow: 'hidden',
+  flex: '0 0 auto',
+  borderRadius: '7px',
+  border: '1px solid rgba(24, 51, 89, 0.14)',
+  backgroundColor: 'rgba(255, 255, 255, 0.78)',
+  '& .MuiToggleButtonGroup-grouped': {
+    margin: 0,
+    border: 0,
+    borderRadius: 0,
+  },
+  '& .MuiToggleButtonGroup-grouped:not(:first-of-type)': {
+    marginLeft: 0,
+    borderLeft: '1px solid rgba(24, 51, 89, 0.10)',
+  },
+} as const;
+
+export const recipePlanToggleButtonSx = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 0.125,
+  minWidth: 24,
+  height: 20,
+  px: 0.375,
+  py: 0,
+  borderRadius: 0,
+  border: 0,
+  backgroundColor: 'transparent',
+  color: '#183359',
+  fontSize: 10,
+  fontWeight: 700,
+  lineHeight: 1,
+  textTransform: 'none',
+  whiteSpace: 'nowrap',
+  verticalAlign: 'middle',
+  '&:hover': {
+    backgroundColor: 'rgba(24, 51, 89, 0.08)',
+  },
+  '&.Mui-selected': {
+    backgroundColor: 'rgba(24, 51, 89, 0.16)',
+    color: '#102743',
+  },
+  '&.Mui-selected:hover': {
+    backgroundColor: 'rgba(24, 51, 89, 0.2)',
+  },
+  '&.Mui-disabled': {
+    color: 'rgba(24, 51, 89, 0.34)',
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+  },
+} as const;
+
+export const recipePlanIconToggleButtonSx = {
+  ...recipePlanToggleButtonSx,
+  width: 22,
+  minWidth: 22,
+  px: 0,
+} as const;
+
 export const buttonStyle: React.CSSProperties = {
   minHeight: 42,
   borderRadius: 12,
