@@ -3,6 +3,7 @@ import { DEFAULT_APP_LOCALE, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import { computeWorkbenchSolve } from './autoSolve';
 import type {
+  EditablePreferredBuilding,
   EditableRecipePreference,
   EditableRecipeStrategyOverride,
   EditableTarget,
@@ -24,6 +25,7 @@ export interface TryApplyRecipeStrategyOverrideParams {
   allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
+  preferredBuildings: EditablePreferredBuilding[];
   advancedOverridesText: string;
   recipeId: string;
   patch: Partial<EditableRecipeStrategyOverride>;
@@ -122,6 +124,7 @@ export function tryApplyRecipeStrategyOverride(
     allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
+    preferredBuildings,
     advancedOverridesText,
     recipeId,
     patch,
@@ -147,6 +150,7 @@ export function tryApplyRecipeStrategyOverride(
     disabledRecipeIds,
     disabledBuildingIds,
     allowedRecipesByItem,
+    preferredBuildings,
     recipePreferences,
     recipeStrategyOverrides: nextOverrides,
     advancedOverridesText,

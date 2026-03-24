@@ -10,6 +10,7 @@ export default function DiagnosticsCard() {
   const {
     bundle,
     locale,
+    iconAtlasIds,
     model,
     fallbackModel,
     fallbackSolve,
@@ -43,13 +44,13 @@ export default function DiagnosticsCard() {
               {fallbackModel.solvedSummary?.netInputs.length ? (
                 <div>
                   <strong>{bundle.diagnostics.fallbackNetInputsLabel}</strong>{' '}
-                  <FlowRateSequence items={fallbackModel.solvedSummary.netInputs} />
+                  <FlowRateSequence items={fallbackModel.solvedSummary.netInputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
                 </div>
               ) : null}
               {fallbackModel.surplusOutputs.length ? (
                 <div>
                   <strong>{bundle.diagnostics.fallbackSurplusLabel}</strong>{' '}
-                  <FlowRateSequence items={fallbackModel.surplusOutputs} />
+                  <FlowRateSequence items={fallbackModel.surplusOutputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
                 </div>
               ) : null}
             </div>
@@ -85,6 +86,7 @@ export default function DiagnosticsCard() {
                   itemId={entry.itemId}
                   itemName={entry.itemName}
                   iconKey={entry.iconKey}
+                  atlasIds={iconAtlasIds}
                 />
               </div>
               <div style={{ fontSize: 13 }}>

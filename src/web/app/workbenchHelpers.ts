@@ -107,6 +107,7 @@ export function buildDefaultWorkbenchEditorState(
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   };
 }

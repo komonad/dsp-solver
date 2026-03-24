@@ -110,6 +110,7 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 
@@ -141,6 +142,7 @@ test('computeWorkbenchSolve surfaces advanced-override parse errors without emit
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '{',
   });
 
@@ -164,6 +166,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 
@@ -193,6 +196,7 @@ test('computeWorkbenchSolve applies allowedRecipesByItem as a hard item-level co
     allowedRecipesByItem: { '1101': ['2'] },
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 
@@ -224,6 +228,7 @@ test('computeWorkbenchSolve emits forced per-recipe strategy overrides from card
         forcedProliferatorLevel: '',
       },
     ],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 
@@ -247,6 +252,7 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 

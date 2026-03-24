@@ -41,6 +41,7 @@ export default function SummaryCard() {
                     iconKey={item.iconKey}
                     iconOnly
                     iconSize={18}
+                    atlasIds={iconAtlasIds}
                   />
                   <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
                     {formatRate(item.ratePerMin, locale)}
@@ -69,6 +70,7 @@ export default function SummaryCard() {
                     iconKey={item.iconKey}
                     iconOnly
                     iconSize={18}
+                    atlasIds={iconAtlasIds}
                   />
                   <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
                     {formatRate(item.ratePerMin, locale)}

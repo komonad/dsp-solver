@@ -16,6 +16,7 @@ import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemRate, PresentationItemSlice } from '../../presentation';
 import { EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
+import { RecipeOptionLabel, type RecipeOptionIO } from '../app/SelectOption';
 
 interface ItemSlicePanelProps {
   locale: AppLocale;
@@ -26,6 +27,9 @@ interface ItemSlicePanelProps {
     recipeId: string;
     recipeName: string;
     recipeIconKey?: string;
+    cycleTimeSec: number;
+    inputs: RecipeOptionIO[];
+    outputs: RecipeOptionIO[];
   }>;
   onSelectItem: (itemId: string) => void;
   onMarkRaw: (itemId: string) => void;
@@ -192,7 +196,17 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
                 }
               >
                 {preferredRecipeOptions.map(option => (
-                  <MenuItem key={option.recipeId} value={option.recipeId}>{option.recipeName}</MenuItem>
+                  <MenuItem key={option.recipeId} value={option.recipeId}>
+                    <RecipeOptionLabel
+                      recipeName={option.recipeName}
+                      inputs={option.inputs}
+                      outputs={option.outputs}
+                      cycleTimeSec={option.cycleTimeSec}
+                      locale={locale}
+                      atlasIds={atlasIds}
+                      highlightItemId={slice.itemId}
+                    />
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>

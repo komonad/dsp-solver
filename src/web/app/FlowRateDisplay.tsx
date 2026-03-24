@@ -1,10 +1,9 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { formatRate } from '../../i18n';
+import { formatRate, type AppLocale } from '../../i18n';
 import { EntityIcon, EntityLabelButton } from '../shared/EntityIcon';
 import { openItemSliceOverlay } from '../itemSlice/itemSliceStore';
 import { formatRecipeAmount, shouldOmitRecipeAmount } from './workbenchHelpers';
-import { useWorkbench } from './WorkbenchContext';
 
 // ---------------------------------------------------------------------------
 // FlowRateToken
@@ -15,11 +14,11 @@ export interface FlowRateTokenProps {
   itemName: string;
   iconKey?: string;
   ratePerMin: number;
+  locale: AppLocale;
+  atlasIds?: string[];
 }
 
-export function FlowRateToken({ itemId, itemName, iconKey, ratePerMin }: FlowRateTokenProps) {
-  const { locale, iconAtlasIds } = useWorkbench();
-
+export function FlowRateToken({ itemId, itemName, iconKey, ratePerMin, locale, atlasIds }: FlowRateTokenProps) {
   return (
     <Box
       sx={{
@@ -32,7 +31,7 @@ export function FlowRateToken({ itemId, itemName, iconKey, ratePerMin }: FlowRat
       <EntityLabelButton
         label={itemName}
         iconKey={iconKey}
-        atlasIds={iconAtlasIds}
+        atlasIds={atlasIds}
         size={18}
         gap={6}
         textStyle={{ fontSize: 13, fontWeight: 600 }}
@@ -61,15 +60,16 @@ export interface FlowRateSequenceProps {
     iconKey?: string;
     ratePerMin: number;
   }>;
+  locale: AppLocale;
+  atlasIds?: string[];
+  noneText: string;
 }
 
-export function FlowRateSequence({ items }: FlowRateSequenceProps) {
-  const { bundle } = useWorkbench();
-
+export function FlowRateSequence({ items, locale, atlasIds, noneText }: FlowRateSequenceProps) {
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
-        {bundle.common.none}
+        {noneText}
       </Typography>
     );
   }
@@ -96,6 +96,8 @@ export function FlowRateSequence({ items }: FlowRateSequenceProps) {
             itemName={item.itemName}
             iconKey={item.iconKey}
             ratePerMin={item.ratePerMin}
+            locale={locale}
+            atlasIds={atlasIds}
           />
         </React.Fragment>
       ))}
@@ -114,16 +116,17 @@ export interface RecipeIoSequenceProps {
     iconKey?: string;
     ratePerMin: number;
   }>;
+  locale: AppLocale;
+  atlasIds?: string[];
+  noneText: string;
   highlightItemId?: string;
 }
 
-export function RecipeIoSequence({ items, highlightItemId }: RecipeIoSequenceProps) {
-  const { locale, bundle, iconAtlasIds } = useWorkbench();
-
+export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightItemId }: RecipeIoSequenceProps) {
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
-        {bundle.common.none}
+        {noneText}
       </Typography>
     );
   }
@@ -175,7 +178,7 @@ export function RecipeIoSequence({ items, highlightItemId }: RecipeIoSequencePro
               <EntityIcon
                 label={item.itemName}
                 iconKey={item.iconKey}
-                atlasIds={iconAtlasIds}
+                atlasIds={atlasIds}
                 size={20}
               />
             </Box>

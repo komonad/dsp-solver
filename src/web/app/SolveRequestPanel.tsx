@@ -1,24 +1,18 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Box,
   Button,
   Chip,
-  FormControlLabel,
   MenuItem,
-  Select,
   Stack,
-  Switch,
   TextField,
   Typography,
 } from '@mui/material';
-import type { ProliferatorMode } from '../../catalog';
-import { formatProliferatorMode } from '../../i18n';
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import type { WorkbenchProliferatorPolicy } from '../workbench/requestBuilder';
 import ItemGridPicker from '../shared/ItemGridPicker';
-import { EntityLabel } from '../shared/EntityIcon';
-import { SelectOption } from './SelectOption';
-import { sortModeOptions, pickDefaultGlobalProliferatorLevel } from './workbenchHelpers';
+import { RecipeOptionLabel, SelectOption } from './SelectOption';
+import { pickDefaultGlobalProliferatorLevel } from './workbenchHelpers';
 import {
   cardStyle,
   collapsibleSectionStyle,
@@ -37,7 +31,6 @@ export default function SolveRequestPanel() {
     bundle,
     locale,
     catalog,
-    model,
     iconAtlasIds,
     itemOptions,
     targetDraftItemId,
@@ -50,16 +43,22 @@ export default function SolveRequestPanel() {
     globalProliferatorLevel,
     globalProliferatorLevelOptions,
     globalProliferatorLevelDisabled,
-    autoPromoteUnavailableItemsToRawInputs,
+    preferredRecipeOptionsByItem,
+    allowedRecipesByItem,
+    applyAllowedRecipesForItem,
     disabledRecipeIds,
     disabledRecipeDraftId,
     disableRecipeOptions,
     disabledBuildingIds,
     disabledBuildingDraftId,
     disableBuildingOptions,
-    recipePreferences,
-    recipePreferenceDraftId,
-    recipePreferenceOptions,
+    preferredBuildings,
+    preferredBuildingDraftBuildingId,
+    preferredBuildingDraftRecipeId,
+    setPreferredBuildingDraftBuildingId,
+    setPreferredBuildingDraftRecipeId,
+    addPreferredBuilding,
+    removePreferredBuilding,
     advancedOverridesText,
     parsedOverrides,
     setTargetPickerQuery,
@@ -69,23 +68,38 @@ export default function SolveRequestPanel() {
     setBalancePolicy,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
-    setAutoPromoteUnavailableItemsToRawInputs,
     setDisabledRecipeDraftId,
     setDisabledBuildingDraftId,
-    setRecipePreferenceDraftId,
     setAdvancedOverridesText,
     addTarget,
     addDisabledRecipe,
     removeDisabledRecipe,
     addDisabledBuilding,
     removeDisabledBuilding,
-    addRecipePreference,
-    updateRecipePreference,
-    removeRecipePreference,
-    getRecipeBuildingOptions,
-    getRecipeModeOptions,
-    getRecipeLevelOptions,
   } = useWorkbench();
+
+  // --- Allowed recipe inline add ---
+  const [allowedRecipeDraftItemId, setAllowedRecipeDraftItemId] = useState('');
+  const [allowedRecipePickerQuery, setAllowedRecipePickerQuery] = useState('');
+  const [allowedRecipeDraftRecipeId, setAllowedRecipeDraftRecipeId] = useState('');
+  const [allowedRecipeMessage, setAllowedRecipeMessage] = useState('');
+  const allowedRecipeDraftItem = catalog?.itemMap.get(allowedRecipeDraftItemId) ?? null;
+  const allowedRecipeOptions = useMemo(
+    () => (allowedRecipeDraftItemId ? (preferredRecipeOptionsByItem[allowedRecipeDraftItemId] ?? []) : []),
+    [allowedRecipeDraftItemId, preferredRecipeOptionsByItem],
+  );
+
+  const allRecipeOptions = catalog?.recipes ?? [];
+  const preferredBuildingCompatibleBuildings = useMemo(() => {
+    if (!catalog) return [];
+    if (!preferredBuildingDraftRecipeId) {
+      // Global: show all buildings
+      return catalog.buildings;
+    }
+    const recipe = catalog.recipeMap.get(preferredBuildingDraftRecipeId);
+    if (!recipe) return [];
+    return catalog.buildings.filter(b => recipe.allowedBuildingIds.includes(b.buildingId));
+  }, [catalog, preferredBuildingDraftRecipeId]);
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
@@ -110,55 +124,27 @@ export default function SolveRequestPanel() {
           >
             <Typography variant="subtitle2">{bundle.solveRequest.addTargetTitle}</Typography>
 
-            <ItemGridPicker
-              items={itemOptions}
-              selectedItemId={targetDraftItemId}
-              query={targetPickerQuery}
-              onQueryChange={setTargetPickerQuery}
-              onSelect={setTargetDraftItemId}
-              atlasIds={iconAtlasIds}
-              searchLabel={bundle.solveRequest.targetSearchLabel}
-              searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
-              emptyText={bundle.solveRequest.targetPickerEmpty}
-            />
-
             <Box
               sx={{
                 display: 'grid',
                 gap: 1,
-                gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 104px auto' },
+                gridTemplateColumns: { xs: '1fr 80px auto', sm: 'minmax(0, 1fr) 80px auto' },
                 alignItems: 'center',
               }}
             >
-              <Box
-                sx={{
-                  minHeight: 40,
-                  px: 1.25,
-                  borderRadius: '12px',
-                  border: '1px solid rgba(24, 51, 89, 0.12)',
-                  backgroundColor: 'rgba(255,255,255,0.86)',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
-                {targetDraftItemOption ? (
-                  <Stack spacing={0.2} sx={{ minWidth: 0 }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {bundle.solveRequest.selectedTargetLabel}
-                    </Typography>
-                    <EntityLabel
-                      label={targetDraftItemOption.name}
-                      iconKey={targetDraftItemOption.icon}
-                      atlasIds={iconAtlasIds}
-                      size={18}
-                    />
-                  </Stack>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    {bundle.common.notSet}
-                  </Typography>
-                )}
-              </Box>
+              <ItemGridPicker
+                items={itemOptions}
+                selectedItemId={targetDraftItemId}
+                query={targetPickerQuery}
+                onQueryChange={setTargetPickerQuery}
+                onSelect={setTargetDraftItemId}
+                atlasIds={iconAtlasIds}
+                searchLabel={bundle.solveRequest.targetSearchLabel}
+                searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
+                emptyText={bundle.solveRequest.targetPickerEmpty}
+                selectedItemName={targetDraftItemOption?.name}
+                selectedItemIcon={targetDraftItemOption?.icon}
+              />
 
               <TextField
                 type="number"
@@ -268,19 +254,6 @@ export default function SolveRequestPanel() {
             ))}
           </TextField>
         </Box>
-
-        {/* Auto promote switch */}
-        <FormControlLabel
-          control={
-            <Switch
-              checked={autoPromoteUnavailableItemsToRawInputs}
-              onChange={event =>
-                setAutoPromoteUnavailableItemsToRawInputs(event.target.checked)
-              }
-            />
-          }
-          label={bundle.solveRequest.autoPromoteUnavailableItemsLabel}
-        />
 
         {/* Disabled recipes collapsible section */}
         <details style={collapsibleSectionStyle}>
@@ -397,15 +370,107 @@ export default function SolveRequestPanel() {
           </div>
         </details>
 
-        {/* Recipe preferences collapsible section */}
+        {/* Allowed recipes collapsible section */}
         <details style={collapsibleSectionStyle}>
-          <summary style={summaryStyle}>{bundle.solveRequest.recipePreferencesLabel}</summary>
+          <summary style={summaryStyle}>{bundle.summary.forcedRecipesLabel}</summary>
           <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
             <Box
               sx={{
                 display: 'grid',
                 gap: 1,
-                gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 240px) auto' },
+                gridTemplateColumns: { xs: '1fr 1fr auto', sm: 'minmax(0, 1fr) minmax(0, 1fr) auto' },
+                alignItems: 'center',
+              }}
+            >
+              <ItemGridPicker
+                items={itemOptions}
+                selectedItemId={allowedRecipeDraftItemId}
+                query={allowedRecipePickerQuery}
+                onQueryChange={setAllowedRecipePickerQuery}
+                onSelect={itemId => {
+                  setAllowedRecipeDraftItemId(itemId);
+                  setAllowedRecipeDraftRecipeId('');
+                  setAllowedRecipeMessage('');
+                }}
+                atlasIds={iconAtlasIds}
+                searchLabel={bundle.solveRequest.targetSearchLabel}
+                searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
+                emptyText={bundle.solveRequest.targetPickerEmpty}
+                selectedItemName={allowedRecipeDraftItem?.name}
+                selectedItemIcon={allowedRecipeDraftItem?.icon}
+              />
+
+              <TextField
+                select
+                fullWidth
+                size="small"
+                sx={compactSelectFieldSx}
+                label={bundle.summary.forcedRecipesLabel}
+                value={allowedRecipeDraftRecipeId}
+                disabled={!allowedRecipeDraftItemId || allowedRecipeOptions.length === 0}
+                onChange={event => setAllowedRecipeDraftRecipeId(event.target.value)}
+              >
+                {allowedRecipeOptions.map(o => (
+                  <MenuItem
+                    key={o.recipeId}
+                    value={o.recipeId}
+                    disabled={(allowedRecipesByItem[allowedRecipeDraftItemId] ?? []).includes(o.recipeId)}
+                  >
+                    <RecipeOptionLabel
+                      recipeName={o.recipeName}
+                      inputs={o.inputs}
+                      outputs={o.outputs}
+                      cycleTimeSec={o.cycleTimeSec}
+                      locale={locale}
+                      atlasIds={iconAtlasIds}
+                      highlightItemId={allowedRecipeDraftItemId}
+                    />
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  if (!allowedRecipeDraftRecipeId || !allowedRecipeDraftItemId) return;
+                  const existing = allowedRecipesByItem[allowedRecipeDraftItemId] ?? [];
+                  if (existing.includes(allowedRecipeDraftRecipeId)) return;
+                  const result = applyAllowedRecipesForItem(
+                    allowedRecipeDraftItemId,
+                    [...existing, allowedRecipeDraftRecipeId],
+                  );
+                  if (result.accepted) {
+                    setAllowedRecipeDraftRecipeId('');
+                    setAllowedRecipeMessage('');
+                  } else {
+                    setAllowedRecipeMessage(result.message);
+                  }
+                }}
+                disabled={!allowedRecipeDraftRecipeId}
+                sx={{ minHeight: 40, px: 1.5 }}
+              >
+                {bundle.solveRequest.addTarget}
+              </Button>
+            </Box>
+
+            {allowedRecipeMessage ? (
+              <Typography variant="body2" color="warning.main">
+                {allowedRecipeMessage}
+              </Typography>
+            ) : null}
+          </div>
+        </details>
+
+        {/* Preferred buildings collapsible section */}
+        <details style={collapsibleSectionStyle}>
+          <summary style={summaryStyle}>{bundle.solveRequest.preferredBuildingsLabel}</summary>
+          <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1,
+                gridTemplateColumns: { xs: '1fr 1fr auto', sm: 'minmax(0, 200px) minmax(0, 200px) auto' },
                 alignItems: 'start',
               }}
             >
@@ -414,14 +479,35 @@ export default function SolveRequestPanel() {
                 fullWidth
                 size="small"
                 sx={compactSelectFieldSx}
-                label={bundle.solveRequest.recipePreferencesLabel}
-                value={recipePreferenceDraftId}
-                onChange={event => setRecipePreferenceDraftId(event.target.value)}
-                disabled={!catalog || recipePreferenceOptions.length === 0}
+                label={bundle.summary.recipesLabel}
+                value={preferredBuildingDraftRecipeId}
+                disabled={!catalog || allRecipeOptions.length === 0}
+                onChange={event => {
+                  setPreferredBuildingDraftRecipeId(event.target.value);
+                  setPreferredBuildingDraftBuildingId('');
+                }}
               >
-                {recipePreferenceOptions.map(recipe => (
+                <MenuItem value="">{bundle.solveRequest.preferredBuildingGlobalScope}</MenuItem>
+                {allRecipeOptions.map(recipe => (
                   <MenuItem key={recipe.recipeId} value={recipe.recipeId}>
                     <SelectOption label={recipe.name} iconKey={recipe.icon} size={18} />
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <TextField
+                select
+                fullWidth
+                size="small"
+                sx={compactSelectFieldSx}
+                label={bundle.summary.buildingsLabel}
+                value={preferredBuildingDraftBuildingId}
+                disabled={preferredBuildingCompatibleBuildings.length === 0}
+                onChange={event => setPreferredBuildingDraftBuildingId(event.target.value)}
+              >
+                {preferredBuildingCompatibleBuildings.map(building => (
+                  <MenuItem key={building.buildingId} value={building.buildingId}>
+                    <SelectOption label={building.name} iconKey={building.icon} size={18} />
                   </MenuItem>
                 ))}
               </TextField>
@@ -429,160 +515,32 @@ export default function SolveRequestPanel() {
               <Button
                 variant="outlined"
                 size="small"
-                onClick={addRecipePreference}
-                disabled={!recipePreferenceDraftId}
+                onClick={addPreferredBuilding}
+                disabled={!preferredBuildingDraftBuildingId}
                 sx={{ minHeight: 40, px: 1.5 }}
               >
-                {bundle.solveRequest.addPreference}
+                {bundle.solveRequest.addPreferredBuilding}
               </Button>
             </Box>
 
-            <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13, lineHeight: 1.5 }}>
-              {bundle.solveRequest.recipePreferencesHelp}
-            </div>
-
-            {recipePreferences.length === 0 ? (
-              <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 13 }}>{bundle.solveRequest.noRecipePreferences}</div>
-            ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {recipePreferences.map(preference => {
-                  const recipe = catalog?.recipeMap.get(preference.recipeId);
-                  const buildingChoices = getRecipeBuildingOptions(preference.recipeId);
-                  const modeChoices = getRecipeModeOptions(preference.recipeId);
-                  const levelChoices = getRecipeLevelOptions(preference.recipeId);
-                  const levelSelectDisabled =
-                    proliferatorPolicy === 'none' ||
-                    levelChoices.length === 0 ||
-                    preference.preferredProliferatorMode === 'none';
-
+            <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+              {preferredBuildings.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">{bundle.solveRequest.noPreferredBuildings}</Typography>
+              ) : (
+                preferredBuildings.map((entry, index) => {
+                  const building = catalog?.buildingMap.get(entry.buildingId);
+                  const recipe = entry.recipeId ? catalog?.recipeMap.get(entry.recipeId) : null;
+                  const label = `${building?.name ?? entry.buildingId}: ${recipe ? recipe.name : '*'}`;
                   return (
-                    <div
-                      key={preference.recipeId}
-                      style={{
-                        borderRadius: 14,
-                        border: '1px solid rgba(24, 51, 89, 0.12)',
-                        background: 'rgba(255,255,255,0.6)',
-                        padding: 12,
-                        display: 'grid',
-                        gap: 10,
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          gap: 1.5,
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <Typography fontWeight={700}>{recipe?.name ?? preference.recipeId}</Typography>
-                        <Button
-                          variant="outlined"
-                          color="inherit"
-                          size="small"
-                          onClick={() => removeRecipePreference(preference.recipeId)}
-                        >
-                          {bundle.solveRequest.removeTarget}
-                        </Button>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gap: 1,
-                          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-                        }}
-                      >
-                        <Box sx={{ display: 'grid', gap: 0.75 }}>
-                          <Typography variant="overline" color="text.secondary">
-                            {bundle.solveRequest.preferredBuildingLabel}
-                          </Typography>
-                          <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            sx={compactSelectFieldSx}
-                            value={preference.preferredBuildingId}
-                            onChange={event =>
-                              updateRecipePreference(preference.recipeId, {
-                                preferredBuildingId: event.target.value,
-                              })
-                            }
-                          >
-                            <MenuItem value="">{bundle.common.auto}</MenuItem>
-                            {buildingChoices.map(building => (
-                              <MenuItem key={building.buildingId} value={building.buildingId}>
-                                <SelectOption label={building.name} iconKey={building.icon} size={18} />
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </Box>
-
-                        <Box sx={{ display: 'grid', gap: 0.75 }}>
-                          <Typography variant="overline" color="text.secondary">
-                            {bundle.solveRequest.preferredSprayModeLabel}
-                          </Typography>
-                          <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            sx={compactSelectFieldSx}
-                            value={preference.preferredProliferatorMode}
-                            onChange={event => {
-                              const nextMode = event.target.value as '' | ProliferatorMode;
-                              updateRecipePreference(preference.recipeId, {
-                                preferredProliferatorMode: nextMode,
-                                preferredProliferatorLevel:
-                                  nextMode === 'none'
-                                    ? ''
-                                    : preference.preferredProliferatorLevel,
-                              });
-                            }}
-                            disabled={proliferatorPolicy === 'none'}
-                          >
-                            <MenuItem value="">{bundle.common.auto}</MenuItem>
-                            {modeChoices.map(mode => (
-                              <MenuItem key={mode} value={mode}>
-                                {formatProliferatorMode(mode, locale)}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </Box>
-
-                        <Box sx={{ display: 'grid', gap: 0.75 }}>
-                          <Typography variant="overline" color="text.secondary">
-                            {bundle.solveRequest.preferredSprayLevelLabel}
-                          </Typography>
-                          <TextField
-                            select
-                            fullWidth
-                            size="small"
-                            sx={compactSelectFieldSx}
-                            value={preference.preferredProliferatorLevel === '' ? '' : String(preference.preferredProliferatorLevel)}
-                            onChange={event =>
-                              updateRecipePreference(preference.recipeId, {
-                                preferredProliferatorLevel: event.target.value
-                                  ? Number(event.target.value)
-                                  : '',
-                              })
-                            }
-                            disabled={levelSelectDisabled}
-                          >
-                            <MenuItem value="">{bundle.common.auto}</MenuItem>
-                            {levelChoices.map(level => (
-                              <MenuItem key={level} value={String(level)}>
-                                {`${bundle.solveRequest.levelPrefix} ${level}`}
-                              </MenuItem>
-                            ))}
-                          </TextField>
-                        </Box>
-                      </Box>
-                    </div>
+                    <Chip
+                      key={`${entry.buildingId}:${entry.recipeId}:${index}`}
+                      label={label}
+                      onDelete={() => removePreferredBuilding(index)}
+                    />
                   );
-                })}
-              </div>
-            )}
+                })
+              )}
+            </Stack>
           </div>
         </details>
 

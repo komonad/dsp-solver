@@ -308,7 +308,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({
               minWidth: 0,
             }}
           >
-            <FlowRateSequence items={visibleInputs} />
+            <FlowRateSequence items={visibleInputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
           </Box>
           <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 22 }} />
           <Box
@@ -321,7 +321,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({
               minWidth: 0,
             }}
           >
-            <FlowRateSequence items={plan.outputs} />
+            <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
             {auxiliaryProliferatorInput ? (
               <Box
                 component="span"

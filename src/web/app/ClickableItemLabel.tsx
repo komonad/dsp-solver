@@ -1,7 +1,6 @@
 import React from 'react';
 import { EntityIcon, EntityLabelButton } from '../shared/EntityIcon';
 import { openItemSliceOverlay } from '../itemSlice/itemSliceStore';
-import { useWorkbench } from './WorkbenchContext';
 
 // ---------------------------------------------------------------------------
 // ClickableItemLabel
@@ -13,6 +12,7 @@ export interface ClickableItemLabelProps {
   iconKey?: string;
   iconOnly?: boolean;
   iconSize?: number;
+  atlasIds?: string[];
 }
 
 export function ClickableItemLabel({
@@ -21,9 +21,8 @@ export function ClickableItemLabel({
   iconKey,
   iconOnly = false,
   iconSize = 18,
+  atlasIds,
 }: ClickableItemLabelProps) {
-  const { iconAtlasIds } = useWorkbench();
-
   return (
     <button
       type="button"
@@ -46,14 +45,14 @@ export function ClickableItemLabel({
         <EntityIcon
           label={itemName}
           iconKey={iconKey}
-          atlasIds={iconAtlasIds}
+          atlasIds={atlasIds}
           size={iconSize}
         />
       ) : (
         <EntityLabelButton
           label={itemName}
           iconKey={iconKey}
-          atlasIds={iconAtlasIds}
+          atlasIds={atlasIds}
           size={iconSize}
           gap={8}
           onClick={() => openItemSliceOverlay(itemId)}

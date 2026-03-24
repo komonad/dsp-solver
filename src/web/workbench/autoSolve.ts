@@ -5,10 +5,12 @@ import { solveCatalogRequest } from '../../solver/solve';
 import {
   buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,
+  buildPreferredBuildingOverrides,
   buildPreferredRecipeOverrides,
   buildWorkbenchRequest,
   mergeAdvancedSolveOverrides,
   parseAdvancedSolveOverrides,
+  type EditablePreferredBuilding,
   type EditableRecipePreference,
   type EditableRecipeStrategyOverride,
   type EditableTarget,
@@ -29,6 +31,7 @@ export interface ComputeWorkbenchSolveParams {
   disabledRecipeIds: string[];
   disabledBuildingIds: string[];
   allowedRecipesByItem: Record<string, string[]>;
+  preferredBuildings: EditablePreferredBuilding[];
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   advancedOverridesText: string;
@@ -67,6 +70,7 @@ export function computeWorkbenchSolve(
     disabledRecipeIds,
     disabledBuildingIds,
     allowedRecipesByItem,
+    preferredBuildings,
     recipePreferences,
     recipeStrategyOverrides,
     advancedOverridesText,
@@ -101,11 +105,14 @@ export function computeWorkbenchSolve(
 
   const uiOverrides = mergeAdvancedSolveOverrides(
     mergeAdvancedSolveOverrides(
-      {
-        disabledRecipeIds,
-        disabledBuildingIds,
-        allowedRecipesByItem,
-      },
+      mergeAdvancedSolveOverrides(
+        {
+          disabledRecipeIds,
+          disabledBuildingIds,
+          allowedRecipesByItem,
+        },
+        buildPreferredBuildingOverrides(catalog, preferredBuildings)
+      ),
       buildPreferredRecipeOverrides(recipePreferences)
     ),
     mergeAdvancedSolveOverrides(

@@ -103,6 +103,7 @@ test('workbench cache stores active dataset source and editor state per dataset 
     allowedRecipesByItem: { '1101': ['1'] },
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '{"allowedRecipesByItem":{"1101":"1"}}',
   };
 
@@ -138,6 +139,7 @@ test('clearWorkbenchCache removes both active source and entries', () => {
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 
@@ -271,6 +273,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
         forcedProliferatorLevel: '',
       },
     ],
+    preferredBuildings: [],
     advancedOverridesText: '{}',
   });
 
@@ -295,6 +298,7 @@ test('sanitizeWorkbenchEditorState drops references that do not exist in the loa
       },
     ],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '{}',
   });
 });
@@ -337,6 +341,7 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
     advancedOverridesText: '',
   });
 

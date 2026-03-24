@@ -2,6 +2,7 @@ import type { ResolvedCatalogModel } from '../../catalog';
 import type { DatasetPresetId } from '../../i18n';
 import { SOLVER_VERSION, type BalancePolicy, type SolveObjective } from '../../solver';
 import type {
+  EditablePreferredBuilding,
   EditableRecipePreference,
   EditableRecipeStrategyOverride,
   EditableTarget,
@@ -31,6 +32,7 @@ export interface WorkbenchEditorState {
   allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
+  preferredBuildings: EditablePreferredBuilding[];
   advancedOverridesText: string;
 }
 
@@ -424,6 +426,24 @@ export function sanitizeWorkbenchEditorState(
         .filter((entry): entry is EditableRecipeStrategyOverride => Boolean(entry))
     : [];
 
+  const preferredBuildings = Array.isArray((state as Record<string, unknown>).preferredBuildings)
+    ? ((state as Record<string, unknown>).preferredBuildings as EditablePreferredBuilding[])
+        .filter(entry => {
+          if (!entry || typeof entry.buildingId !== 'string' || !validBuildingIds.has(entry.buildingId)) {
+            return false;
+          }
+          if (typeof entry.recipeId !== 'string') {
+            return false;
+          }
+          if (entry.recipeId) {
+            const recipe = catalog.recipeMap.get(entry.recipeId);
+            return Boolean(recipe && recipe.allowedBuildingIds.includes(entry.buildingId));
+          }
+          return true; // global entry
+        })
+        .map(entry => ({ buildingId: entry.buildingId, recipeId: entry.recipeId ?? '' }))
+    : [];
+
   const proliferatorPolicyValue = state.proliferatorPolicy;
 
   return {
@@ -462,6 +482,7 @@ export function sanitizeWorkbenchEditorState(
     allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
+    preferredBuildings,
     advancedOverridesText:
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',
   };

@@ -105,6 +105,10 @@ export interface LocaleBundle {
     preferredBuildingLabel: string;
     preferredSprayModeLabel: string;
     preferredSprayLevelLabel: string;
+    preferredBuildingsLabel: string;
+    addPreferredBuilding: string;
+    noPreferredBuildings: string;
+    preferredBuildingGlobalScope: string;
     advancedOverridesLabel: string;
     advancedOverridesHelp: string;
     autoSolveHint: string;
@@ -136,6 +140,8 @@ export interface LocaleBundle {
     disabledBuildingsLabel: string;
     advancedOverridesLabel: string;
     recipePreferencesLabel: string;
+    preferredBuildingsLabel: string;
+    removePreferredBuildingButton: string;
     loadDatasetToStart: string;
   };
   overview: {
@@ -351,6 +357,10 @@ const zhCN: LocaleBundle = {
     preferredBuildingLabel: '优先建筑',
     preferredSprayModeLabel: '优先增产剂模式',
     preferredSprayLevelLabel: '优先增产剂等级',
+    preferredBuildingsLabel: '偏好建筑',
+    addPreferredBuilding: '添加',
+    noPreferredBuildings: '当前没有偏好建筑。',
+    preferredBuildingGlobalScope: '全局 (*)',
     advancedOverridesLabel: '高级覆盖 JSON',
     advancedOverridesHelp:
       '用于填写偏好/强制建筑、配方、增产剂等高级请求字段。',
@@ -383,6 +393,8 @@ const zhCN: LocaleBundle = {
     disabledBuildingsLabel: '禁用建筑',
     advancedOverridesLabel: '高级覆盖',
     recipePreferencesLabel: '配方偏好',
+    preferredBuildingsLabel: '偏好建筑',
+    removePreferredBuildingButton: '移除偏好建筑',
     loadDatasetToStart: '先加载数据集，再开始构造求解请求。',
   },
   overview: {

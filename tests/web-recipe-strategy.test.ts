@@ -88,6 +88,7 @@ test('tryApplyRecipeStrategyOverride accepts valid forced overrides and normaliz
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: [],
+    preferredBuildings: [],
 
     advancedOverridesText: '',
     recipeId: '1',
@@ -133,6 +134,7 @@ test('tryApplyRecipeStrategyOverride rejects an override that makes the request 
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: currentOverrides,
+    preferredBuildings: [],
 
     advancedOverridesText: '',
     recipeId: '1',
@@ -170,6 +172,7 @@ test('tryApplyRecipeStrategyOverride does not carry level 0 from none into speed
     allowedRecipesByItem: {},
     recipePreferences: [],
     recipeStrategyOverrides: currentOverrides,
+    preferredBuildings: [],
 
     advancedOverridesText: '',
     recipeId: '1',

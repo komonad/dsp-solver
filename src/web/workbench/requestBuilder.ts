@@ -32,6 +32,11 @@ export interface EditableRecipeStrategyOverride {
   forcedProliferatorLevel: '' | number;
 }
 
+export interface EditablePreferredBuilding {
+  buildingId: string;
+  recipeId: string; // empty string means global ("*")
+}
+
 export type WorkbenchProliferatorPolicy = 'auto' | ProliferatorMode;
 
 export interface BuildWorkbenchRequestParams {
@@ -256,6 +261,36 @@ export function parseAdvancedSolveOverrides(
   }
 
   return { value, error: '' };
+}
+
+export function buildPreferredBuildingOverrides(
+  catalog: ResolvedCatalogModel,
+  entries: EditablePreferredBuilding[]
+): Pick<AdvancedSolveOverrides, 'preferredBuildingByRecipe'> {
+  const preferredBuildingByRecipe: Record<string, string> = {};
+
+  // Process global entries first
+  for (const entry of entries) {
+    if (!entry.buildingId || entry.recipeId) continue;
+    for (const recipe of catalog.recipes) {
+      if (recipe.allowedBuildingIds.includes(entry.buildingId)) {
+        preferredBuildingByRecipe[recipe.recipeId] = entry.buildingId;
+      }
+    }
+  }
+
+  // Per-recipe entries override globals
+  for (const entry of entries) {
+    if (!entry.buildingId || !entry.recipeId) continue;
+    preferredBuildingByRecipe[entry.recipeId] = entry.buildingId;
+  }
+
+  return {
+    preferredBuildingByRecipe:
+      Object.keys(preferredBuildingByRecipe).length > 0
+        ? preferredBuildingByRecipe
+        : undefined,
+  };
 }
 
 export function buildPreferredRecipeOverrides(
