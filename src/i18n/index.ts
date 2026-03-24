@@ -49,6 +49,7 @@ export interface LocaleBundle {
     defaultsPathPlaceholder: string;
     loadButton: string;
     loadingButton: string;
+    reloadButton: string;
     autoCacheHint: string;
     clearCacheButton: string;
     loadErrorTitle: string;
@@ -281,6 +282,7 @@ const zhCN: LocaleBundle = {
     defaultsPathPlaceholder: './Vanilla.defaults.json',
     loadButton: '加载数据集',
     loadingButton: '加载中...',
+    reloadButton: '重新加载数据集',
     autoCacheHint: '当前工作台状态会自动缓存到浏览器。',
     clearCacheButton: '清除所有缓存并重置',
     loadErrorTitle: '数据集加载失败',

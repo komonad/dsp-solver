@@ -27,6 +27,7 @@ export default function DatasetSourcePanel() {
     datasetEditorError,
     iconAtlasIds,
     onPresetChange,
+    reloadCatalog,
     loadCatalog,
     clearCachedWorkbenchState,
     setDatasetEditorText,
@@ -80,6 +81,15 @@ export default function DatasetSourcePanel() {
             sx={{ minHeight: 40, px: 1.75 }}
           >
             {isLoading ? bundle.datasetSource.loadingButton : bundle.datasetSource.loadButton}
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={reloadCatalog}
+            disabled={isLoading}
+            sx={{ minHeight: 40, px: 1.75 }}
+          >
+            {bundle.datasetSource.reloadButton}
           </Button>
           <Button
             size="small"

@@ -245,6 +245,27 @@ export function writeWorkbenchDatasetDraft(
   });
 }
 
+export function clearWorkbenchDatasetDraft(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource
+): void {
+  const payload = readCachePayload(storage);
+  if (!payload?.sourceDrafts) {
+    return;
+  }
+
+  const key = buildWorkbenchCacheKey(source);
+  if (!(key in payload.sourceDrafts)) {
+    return;
+  }
+
+  const { [key]: _, ...remainingDrafts } = payload.sourceDrafts;
+  writeCachePayload(storage, {
+    ...payload,
+    sourceDrafts: remainingDrafts,
+  });
+}
+
 export function clearWorkbenchCache(storage?: MinimalStorage): void {
   storage?.removeItem(WORKBENCH_CACHE_STORAGE_KEY);
 }

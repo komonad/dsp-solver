@@ -38,6 +38,7 @@ import {
 import {
   clearNamespacedStorage,
   clearWorkbenchCache,
+  clearWorkbenchDatasetDraft,
   readActiveWorkbenchCacheSource,
   readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
@@ -184,6 +185,7 @@ export interface WorkbenchContextValue {
     nextLabel: string,
     nextPresetId: DatasetPresetId
   ) => Promise<void>;
+  reloadCatalog: () => void;
   onPresetChange: (nextPresetId: DatasetPresetId) => void;
   clearCachedWorkbenchState: () => void;
   resetDatasetEditorToLoadedSource: () => void;
@@ -881,6 +883,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     );
   }
 
+  function reloadCatalog() {
+    const source: WorkbenchCacheSource = {
+      presetId,
+      datasetPath: datasetPath.trim(),
+      defaultConfigPath: defaultConfigPath.trim(),
+    };
+    clearWorkbenchDatasetDraft(browserStorage, source);
+    void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId);
+  }
+
   function clearCachedWorkbenchState() {
     clearNamespacedStorage(browserStorage);
     clearNamespacedStorage(browserSessionStorage);
@@ -1417,6 +1429,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       applyWorkbenchEditorState,
       buildCurrentWorkbenchEditorState,
       loadCatalog,
+      reloadCatalog,
       onPresetChange,
       clearCachedWorkbenchState,
       resetDatasetEditorToLoadedSource,
