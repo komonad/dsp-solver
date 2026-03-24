@@ -14,8 +14,9 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../i18n';
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
-import type { PresentationItemRate, PresentationItemSlice } from '../../presentation';
+import type { PresentationItemSlice } from '../../presentation';
 import { EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
+import { FlowRateSequence } from '../app/FlowRateDisplay';
 import { RecipeOptionLabel, type RecipeOptionIO } from '../app/SelectOption';
 
 interface ItemSlicePanelProps {
@@ -37,39 +38,6 @@ interface ItemSlicePanelProps {
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
   onClearPreferredRecipe: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
-}
-
-function renderRateList(
-  items: PresentationItemRate[],
-  locale: AppLocale,
-  onSelectItem: (itemId: string) => void,
-  atlasIds?: string[]
-) {
-  return (
-    <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-      {items.map(item => (
-        <Button
-          key={item.itemId}
-          variant="outlined"
-          color="inherit"
-          onClick={() => onSelectItem(item.itemId)}
-          sx={{ borderRadius: 999, gap: 1, borderColor: 'divider', backgroundColor: 'rgba(22, 54, 89, 0.04)' }}
-        >
-          <EntityLabel
-            label={item.itemName}
-            iconKey={item.iconKey}
-            atlasIds={atlasIds}
-            size={18}
-            gap={6}
-            textStyle={{ fontSize: 13, fontWeight: 700 }}
-          />
-          <Typography variant="caption" color="text.secondary">
-            {formatRate(item.ratePerMin, locale)}
-          </Typography>
-        </Button>
-      ))}
-    </Stack>
-  );
 }
 
 function buildPlanCardTitle(recipeName: string, buildingName: string) {
@@ -252,9 +220,9 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
               </Box>
               <Divider />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.inputsLabel}</Typography>
-              {renderRateList(plan.inputs, locale, onSelectItem, atlasIds)}
+              <FlowRateSequence items={plan.inputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.outputsLabel}</Typography>
-              {renderRateList(plan.outputs, locale, onSelectItem, atlasIds)}
+              <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
             </Box>
           </Card>
         )) : <Typography variant="body2" color="text.secondary">{bundle.itemSlice.noProducerPlans}</Typography>}
@@ -276,9 +244,9 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
               </Box>
               <Divider />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.inputsLabel}</Typography>
-              {renderRateList(plan.inputs, locale, onSelectItem, atlasIds)}
+              <FlowRateSequence items={plan.inputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.outputsLabel}</Typography>
-              {renderRateList(plan.outputs, locale, onSelectItem, atlasIds)}
+              <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
             </Box>
           </Card>
         )) : <Typography variant="body2" color="text.secondary">{bundle.itemSlice.noConsumerPlans}</Typography>}
