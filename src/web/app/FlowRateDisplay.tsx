@@ -114,9 +114,10 @@ export interface RecipeIoSequenceProps {
     iconKey?: string;
     ratePerMin: number;
   }>;
+  highlightItemId?: string;
 }
 
-export function RecipeIoSequence({ items }: RecipeIoSequenceProps) {
+export function RecipeIoSequence({ items, highlightItemId }: RecipeIoSequenceProps) {
   const { locale, bundle, iconAtlasIds } = useWorkbench();
 
   if (items.length === 0) {
@@ -162,12 +163,22 @@ export function RecipeIoSequence({ items }: RecipeIoSequenceProps) {
                 {formatRecipeAmount(item.ratePerMin, locale)}
               </Typography>
             )}
-            <EntityIcon
-              label={item.itemName}
-              iconKey={item.iconKey}
-              atlasIds={iconAtlasIds}
-              size={20}
-            />
+            <Box
+              sx={highlightItemId === item.itemId
+                ? {
+                    display: 'inline-flex',
+                    backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                    borderRadius: '4px',
+                  }
+                : { display: 'inline-flex' }}
+            >
+              <EntityIcon
+                label={item.itemName}
+                iconKey={item.iconKey}
+                atlasIds={iconAtlasIds}
+                size={20}
+              />
+            </Box>
           </Box>
         </React.Fragment>
       ))}

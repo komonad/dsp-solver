@@ -277,7 +277,7 @@ export default function SolveSnapshotPanel() {
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        <RecipeIoSequence items={setting.outputs} />
+                        <RecipeIoSequence items={setting.outputs} highlightItemId={setting.itemId} />
                       </Box>
                     </Box>
                   </Box>
