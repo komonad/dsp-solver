@@ -223,12 +223,12 @@ test('overview sections keep surplus outputs separate from buildings and power',
   const overview = buildPresentationOverviewSections(model);
 
   expect(overview.targetsAndExternalInputs).toEqual({
-    title: '目标与外部输�?,
+    title: '目标与外部输入',
     targets: model.targets,
     externalInputs: model.externalInputs,
   });
   expect(overview.buildingsAndPower).toEqual({
-    title: '建筑与功�?,
+    title: '建筑与功耗',
     buildingSummary: model.buildingSummary,
     activePowerMW: 4,
     roundedPlacementPowerMW: 4,
@@ -279,7 +279,7 @@ test('presentation model exposes named recipe preference summaries from the requ
         recipeIconKey: 'demo-plate',
         buildingName: 'Compact Smelter',
         buildingIconKey: 'compact-smelter',
-        proliferatorPreferenceLabel: '加�?等级 1',
+        proliferatorPreferenceLabel: '加速 等级 1',
       },
     ],
     hasAdvancedOverrides: true,

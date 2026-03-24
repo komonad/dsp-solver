@@ -9,7 +9,7 @@ import {
 } from '../i18n';
 import type { SolveRequest, SolveResult } from '../solver';
 
-const EPSILON = 1e-8;
+const EPSILON = 1e-3;
 
 export interface PresentationCatalogSummary {
   datasetLabel?: string;

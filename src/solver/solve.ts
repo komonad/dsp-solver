@@ -734,7 +734,10 @@ function buildObjectiveCoefficient(
   const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
   const surplusPenalty =
     request.balancePolicy === 'allow_surplus'
-      ? Object.values(option.outputPerRun).reduce((sum, amount) => sum + amount, 0)
+      ? Object.values(option.outputPerRun).reduce(
+          (sum, amount) => sum + amount + SURPLUS_OUTPUT_EPSILON,
+          0
+        )
       : 0;
 
   if (request.objective === 'min_buildings') {
@@ -989,7 +992,7 @@ function roundUpCount(value: number): number {
 
 function sortItemRates(itemRates: Map<string, number>): ItemRate[] {
   return Array.from(itemRates.entries())
-    .filter(([, rate]) => Math.abs(rate) > EPSILON)
+    .filter(([, rate]) => Math.abs(rate) > SURPLUS_OUTPUT_EPSILON)
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
     .map(([itemId, ratePerMin]) => ({
       itemId,
@@ -1155,7 +1158,7 @@ function buildResultFromSolution(params: {
       const consumedRatePerMin = (recipeConsumedMap.get(itemId) ?? 0) + targetRate;
       const netRatePerMin = producedRatePerMin - consumedRatePerMin;
 
-      if (request.balancePolicy === 'allow_surplus' && netRatePerMin > EPSILON) {
+      if (request.balancePolicy === 'allow_surplus' && netRatePerMin > SURPLUS_OUTPUT_EPSILON) {
         surplusOutputs.push({ itemId, ratePerMin: netRatePerMin });
       }
 
