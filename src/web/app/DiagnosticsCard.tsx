@@ -57,12 +57,16 @@ export default function DiagnosticsCard() {
         ) : null}
         {model.diagnostics &&
         model.diagnostics.messages.length === 0 &&
+        model.diagnostics.infoMessages.length === 0 &&
         model.diagnostics.unmetPreferences.length === 0 ? (
           <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.diagnostics.noDiagnostics}</div>
         ) : (
           <>
             {(model.diagnostics?.messages ?? []).map((message, index) => (
               <div key={`message-${index}`}>{message}</div>
+            ))}
+            {(model.diagnostics?.infoMessages ?? []).map((message, index) => (
+              <div key={`info-${index}`} style={{ color: 'rgba(24, 51, 89, 0.55)' }}>{message}</div>
             ))}
             {(model.diagnostics?.unmetPreferences ?? []).map((message, index) => (
               <div key={`pref-${index}`}>{message}</div>

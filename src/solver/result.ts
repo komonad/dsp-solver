@@ -11,6 +11,8 @@ export type SolveStatus = 'optimal' | 'infeasible' | 'invalid_input';
 export interface SolveDiagnostics {
   /** Validation/compiler/solver messages that explain warnings or failures. */
   messages: string[];
+  /** Informational messages that do not indicate problems (e.g. auto-promoted raw inputs). */
+  infoMessages: string[];
   /** Soft preferences that were not satisfied by the optimal solution. */
   unmetPreferences: string[];
 }

@@ -24,7 +24,6 @@ export interface TryApplyRecipeStrategyOverrideParams {
   allowedRecipesByItem: Record<string, string[]>;
   recipePreferences: EditableRecipePreference[];
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
-  currentResolvedRawInputItemIds: string[];
   advancedOverridesText: string;
   recipeId: string;
   patch: Partial<EditableRecipeStrategyOverride>;
@@ -123,7 +122,6 @@ export function tryApplyRecipeStrategyOverride(
     allowedRecipesByItem,
     recipePreferences,
     recipeStrategyOverrides,
-    currentResolvedRawInputItemIds,
     advancedOverridesText,
     recipeId,
     patch,
@@ -171,23 +169,7 @@ export function tryApplyRecipeStrategyOverride(
     return {
       accepted: false,
       nextOverrides: recipeStrategyOverrides,
-      message: diagnosticMessage || '该修改会导致当前方案无解，已撤销。',
-    };
-  }
-
-  const currentResolvedRawInputIds = new Set(currentResolvedRawInputItemIds);
-  const introducedResolvedRawInputIds = nextSolveState.result.resolvedRawInputItemIds.filter(
-    itemId => !currentResolvedRawInputIds.has(itemId)
-  );
-  if (introducedResolvedRawInputIds.length > 0) {
-    const diagnosticMessage =
-      nextSolveState.result.diagnostics.messages.find(message =>
-        message.includes(introducedResolvedRawInputIds[0])
-      ) ?? `该修改会使相关物品退化为外部输入，已撤销。`;
-    return {
-      accepted: false,
-      nextOverrides: recipeStrategyOverrides,
-      message: diagnosticMessage,
+      message: diagnosticMessage || '璇ヤ慨鏀逛細瀵艰嚧褰撳墠鏂规鏃犺В锛屽凡鎾ら攢',
     };
   }
 

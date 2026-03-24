@@ -186,7 +186,7 @@ test('overview sections keep surplus outputs separate from buildings and power',
       iconAtlasIds: [],
     },
     status: 'optimal',
-    diagnostics: { messages: [], unmetPreferences: [] },
+    diagnostics: { messages: [], infoMessages: [], unmetPreferences: [] },
     solvedSummary: {
       netInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 60 }],
       netOutputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
@@ -544,7 +544,7 @@ test('item ledger keeps internal production and consumption separate from extern
     result: {
       solverVersion: SOLVER_VERSION,
       status: 'optimal',
-      diagnostics: { messages: [], unmetPreferences: [] },
+      diagnostics: { messages: [], infoMessages: [], unmetPreferences: [] },
       resolvedRawInputItemIds: ['1120'],
       targets: [{ itemId: '1201', requestedRatePerMin: 1, actualRatePerMin: 1 }],
       recipePlans: [

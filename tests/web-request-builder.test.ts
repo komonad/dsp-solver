@@ -217,8 +217,8 @@ test('buildGlobalProliferatorOverrides disables all configurable recipes when re
   const overrides = buildGlobalProliferatorOverrides(catalog, 'none');
 
   expect(overrides).toEqual({
-    forcedProliferatorModeByRecipe: { '1': 'none' },
-    forcedProliferatorLevelByRecipe: { '1': 0 },
+    preferredProliferatorModeByRecipe: { '1': 'none' },
+    preferredProliferatorLevelByRecipe: { '1': 0 },
   });
 });
 
@@ -227,7 +227,7 @@ test('buildGlobalProliferatorOverrides applies a global mode and level to compat
   const overrides = buildGlobalProliferatorOverrides(catalog, 'speed', 1);
 
   expect(overrides).toEqual({
-    forcedProliferatorModeByRecipe: { '1': 'speed' },
-    forcedProliferatorLevelByRecipe: { '1': 1 },
+    preferredProliferatorModeByRecipe: { '1': 'speed' },
+    preferredProliferatorLevelByRecipe: { '1': 1 },
   });
 });

@@ -917,7 +917,7 @@ test('unavailable upstream items can be auto-promoted to raw inputs', () => {
     buildingId: '5001',
     runsPerMin: 60,
   });
-  expect(fallbackResult.diagnostics.messages).toContain(
+  expect(fallbackResult.diagnostics.infoMessages).toContain(
     'Unavailable item 1201 (Core) was treated as an external/raw input.'
   );
 });

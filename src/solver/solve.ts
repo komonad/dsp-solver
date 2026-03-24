@@ -20,7 +20,8 @@ import { recordSolverPerf } from './perf';
 import { SOLVER_VERSION } from './version';
 
 const EPSILON = 1e-8;
-const PREFERENCE_EPSILON = 1e-6;
+const PREFERENCE_EPSILON = 1e-3;
+const OBJECTIVE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
 
@@ -38,6 +39,7 @@ interface CompiledOptionContext {
 interface CollectRecipesResult {
   recipes: ResolvedRecipeSpec[];
   messages: string[];
+  infoMessages: string[];
   autoPromotedRawInputItemIds: string[];
 }
 
@@ -45,6 +47,7 @@ interface CompiledSolveGraph {
   recipes: ResolvedRecipeSpec[];
   options: CompiledOptionContext[];
   messages: string[];
+  infoMessages: string[];
   resolvedRawInputItemIds: string[];
 }
 
@@ -534,6 +537,7 @@ function collectUpstreamRecipes(
   getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
 ): CollectRecipesResult {
   const messages: string[] = [];
+  const infoMessages: string[] = [];
   const visitedItems = new Set<string>();
   const selectedRecipeIds = new Set<string>();
   const autoPromotedRawInputIds = new Set<string>();
@@ -571,7 +575,7 @@ function collectUpstreamRecipes(
     if (feasibleProducers.length === 0) {
       if (autoPromoteUnavailableItemsToRawInputs) {
         autoPromotedRawInputIds.add(itemId);
-        messages.push(
+        infoMessages.push(
           `Unavailable item ${itemId} (${catalog.itemMap.get(itemId)?.name ?? itemId}) was treated as an external/raw input.`
         );
       }
@@ -596,6 +600,7 @@ function collectUpstreamRecipes(
   return {
     recipes: Array.from(selectedRecipeIds, recipeId => catalog.recipeMap.get(recipeId)!).filter(Boolean),
     messages,
+    infoMessages,
     autoPromotedRawInputItemIds: Array.from(autoPromotedRawInputIds).sort((left, right) =>
       left.localeCompare(right)
     ),
@@ -614,6 +619,7 @@ function compileSolveGraph(
   const availableRecipeOutputIndex = getRecipeOutputIndexForDisabledRecipes(catalog, disabledRecipeIds);
   const anyRecipeOutputIndex = catalogSolveCache.anyRecipeOutputIndex;
   const diagnostics = new Set<string>();
+  const infoDiagnostics = new Set<string>();
   const recipeOptionCache = new Map<string, CachedRecipeOptionCompilation>();
   const getCompiledRecipeOptions = (recipe: ResolvedRecipeSpec): CompiledOptionContext[] => {
     const cached = recipeOptionCache.get(recipe.recipeId);
@@ -657,6 +663,7 @@ function compileSolveGraph(
       getCompiledRecipeOptions
     );
     collected.messages.forEach(message => diagnostics.add(message));
+    collected.infoMessages.forEach(message => infoDiagnostics.add(message));
     collected.autoPromotedRawInputItemIds.forEach(itemId =>
       effectiveRawInputItemIds.add(itemId)
     );
@@ -691,6 +698,7 @@ function compileSolveGraph(
     recipes,
     options: compiledOptions,
     messages: Array.from(diagnostics),
+    infoMessages: Array.from(infoDiagnostics),
     resolvedRawInputItemIds: Array.from(effectiveRawInputItemIds).sort((left, right) =>
       left.localeCompare(right)
     ),
@@ -713,13 +721,15 @@ function getPreferredOptionPenalty(
     penalty += 1;
   }
 
+  const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
   const preferredLevel = request.preferredProliferatorLevelByRecipe?.[recipe.recipeId];
-  if (preferredLevel !== undefined && preferredLevel !== option.proliferatorLevel) {
+  if (preferredLevel !== undefined && forcedLevel === undefined && preferredLevel !== option.proliferatorLevel) {
     penalty += 1;
   }
 
+  const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
   const preferredMode = request.preferredProliferatorModeByRecipe?.[recipe.recipeId];
-  if (preferredMode && preferredMode !== option.proliferatorMode) {
+  if (preferredMode && !forcedMode && preferredMode !== option.proliferatorMode) {
     penalty += 1;
   }
 
@@ -743,8 +753,8 @@ function buildObjectiveCoefficient(
   if (request.objective === 'min_buildings') {
     return (
       surplusPenalty +
-      option.buildingCostPerRunPerMin * SURPLUS_OUTPUT_EPSILON +
       preferencePenalty * PREFERENCE_EPSILON +
+      option.buildingCostPerRunPerMin * OBJECTIVE_EPSILON +
       option.powerCostMWPerRunPerMin * SECONDARY_EPSILON
     );
   }
@@ -752,8 +762,8 @@ function buildObjectiveCoefficient(
   if (request.objective === 'min_power') {
     return (
       surplusPenalty +
-      option.powerCostMWPerRunPerMin * SURPLUS_OUTPUT_EPSILON +
       preferencePenalty * PREFERENCE_EPSILON +
+      option.powerCostMWPerRunPerMin * OBJECTIVE_EPSILON +
       option.buildingCostPerRunPerMin * SECONDARY_EPSILON
     );
   }
@@ -1184,6 +1194,7 @@ function buildResultFromSolution(params: {
     status: 'optimal',
     diagnostics: {
       messages: [],
+      infoMessages: [],
       unmetPreferences: buildUnmetPreferences(request, recipePlans),
     },
     resolvedRawInputItemIds,
@@ -1289,6 +1300,7 @@ function solveCatalogRequestValidated(
       status: 'infeasible',
       diagnostics: {
         messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
+        infoMessages: [...compiledGraph.infoMessages],
         unmetPreferences: [],
       },
       resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
@@ -1345,6 +1357,7 @@ function solveCatalogRequestValidated(
     ...result,
     diagnostics: {
       messages: diagnostics,
+      infoMessages: compiledGraph.infoMessages,
       unmetPreferences: result.diagnostics.unmetPreferences,
     },
   };
@@ -1375,6 +1388,7 @@ export function solveCatalogRequest(
       status: 'invalid_input',
       diagnostics: {
         messages: validation.messages,
+        infoMessages: [],
         unmetPreferences: [],
       },
       resolvedRawInputItemIds: [],
