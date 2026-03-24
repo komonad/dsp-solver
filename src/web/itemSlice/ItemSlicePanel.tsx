@@ -16,8 +16,8 @@ import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemSlice } from '../../presentation';
 import { EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
-import { FlowRateSequence } from '../app/FlowRateDisplay';
-import { RecipeOptionLabel, type RecipeOptionIO } from '../app/SelectOption';
+import { FlowRateSequence } from '../app/components/FlowRateDisplay';
+import { RecipeOptionLabel, type RecipeOptionIO } from '../app/components/SelectOption';
 
 interface ItemSlicePanelProps {
   locale: AppLocale;

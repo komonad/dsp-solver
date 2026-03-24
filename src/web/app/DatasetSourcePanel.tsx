@@ -2,8 +2,8 @@ import React from 'react';
 import { Box, Button, Chip, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { type DatasetPresetId, getDatasetPresetText } from '../../i18n';
 import { DATASET_PRESETS } from '../catalog/catalogClient';
-import DatasetEditorPanel from '../catalog/DatasetEditorPanel';
-import StructuredDatasetEditor from '../catalog/StructuredDatasetEditor';
+import DatasetEditorPanel from '../catalog/editor/DatasetEditorPanel';
+import StructuredDatasetEditor from '../catalog/editor/StructuredDatasetEditor';
 import { cardStyle, compactSelectFieldSx } from './workbenchStyles';
 import { useWorkbench } from './WorkbenchContext';
 

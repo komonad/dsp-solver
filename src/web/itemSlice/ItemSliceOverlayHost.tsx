@@ -5,13 +5,13 @@ import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemSlice } from '../../presentation';
 import type { WorkbenchRecipeOption } from '../app/workbenchHelpers';
 import ItemSlicePanel from './ItemSlicePanel';
-import { recordItemSlicePerf } from './itemSlicePerf';
+import { recordItemSlicePerf } from './state/itemSlicePerf';
 import {
   closeItemSliceOverlay,
   getItemSliceOverlayState,
   openItemSliceOverlay,
   subscribeItemSliceOverlay,
-} from './itemSliceStore';
+} from './state/itemSliceStore';
 
 const itemSliceOverlayStyle: React.CSSProperties = {
   position: 'fixed',
