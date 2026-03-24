@@ -1,7 +1,11 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, InputAdornment, Popover, TextField, Typography } from '@mui/material';
 import { EntityIcon } from './EntityIcon';
 import { filterItemPickerOptions, type ItemPickerOption } from './itemPickerModel';
+import {
+  ITEM_GRID_PICKER_GRID_WIDTH_PX,
+  resolveItemGridPickerSearchWidth,
+} from './itemGridPickerLayout';
 
 interface ItemGridPickerProps {
   items: ItemPickerOption[];
@@ -35,6 +39,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
   } = props;
 
   const anchorRef = useRef<HTMLDivElement | null>(null);
+  const popoverSearchInputRef = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
@@ -71,7 +76,25 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
     [onSelect],
   );
 
-  const anchorWidth = anchorRef.current?.offsetWidth ?? 320;
+  const popoverSearchWidth = resolveItemGridPickerSearchWidth(query);
+
+  useEffect(() => {
+    if (!open || disabled) {
+      return undefined;
+    }
+
+    const frameHandle = window.requestAnimationFrame(() => {
+      const input = popoverSearchInputRef.current;
+      if (!input) {
+        return;
+      }
+      input.focus();
+      const caret = input.value.length;
+      input.setSelectionRange(caret, caret);
+    });
+
+    return () => window.cancelAnimationFrame(frameHandle);
+  }, [disabled, open]);
 
   return (
     <Box ref={anchorRef}>
@@ -81,13 +104,18 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
         label={searchLabel}
         placeholder={selectedItemName || searchPlaceholder}
         value={query}
-      onChange={event => onQueryChange(event.target.value)}
-      onFocus={() => {
-        if (!disabled) {
-          setOpen(true);
-        }
-      }}
-      disabled={disabled}
+        onChange={event => onQueryChange(event.target.value)}
+        onClick={() => {
+          if (!disabled) {
+            setOpen(true);
+          }
+        }}
+        onFocus={() => {
+          if (!disabled) {
+            setOpen(true);
+          }
+        }}
+        disabled={disabled}
         slotProps={{
           input: {
             startAdornment: selectedItemId && selectedItemIcon ? (
@@ -116,7 +144,8 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
         slotProps={{
           paper: {
             sx: {
-              width: anchorWidth,
+              width: 'fit-content',
+              maxWidth: 'calc(100vw - 32px)',
               mt: 0.5,
               p: 1.25,
               borderRadius: '12px',
@@ -125,87 +154,126 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
           },
         }}
       >
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.75, display: 'block' }}>
-          {`${filteredItems.length} / ${items.length}`}
-        </Typography>
+        <Box sx={{ display: 'grid', gap: 0.9 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 1,
+            }}
+          >
+            <Typography variant="caption" color="text.secondary">
+              {searchLabel}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {`${filteredItems.length} / ${items.length}`}
+            </Typography>
+          </Box>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 0.35,
-            maxHeight: 252,
-            overflowY: 'auto',
-          }}
-        >
-          {filteredItems.length === 0 ? (
-            <Box
-              sx={{
-                gridColumn: '1 / -1',
-                minHeight: 80,
-                display: 'grid',
-                placeItems: 'center',
-                border: '1px dashed rgba(24, 51, 89, 0.18)',
-                borderRadius: '12px',
-                color: 'text.secondary',
-              }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                {emptyText}
-              </Typography>
-            </Box>
-          ) : (
-            groupedItems.map(([groupKey, group]) => (
+          <TextField
+            size="small"
+            value={query}
+            inputRef={popoverSearchInputRef}
+            placeholder={searchPlaceholder}
+            onChange={event => onQueryChange(event.target.value)}
+            sx={{
+              width: `min(calc(100vw - 64px), ${popoverSearchWidth}px)`,
+              '& .MuiInputBase-root': {
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              },
+            }}
+            slotProps={{
+              htmlInput: {
+                'aria-label': searchLabel,
+                autoComplete: 'off',
+                spellCheck: 'false',
+              },
+            }}
+          />
+
+          <Box
+            sx={{
+              width: `min(calc(100vw - 64px), ${ITEM_GRID_PICKER_GRID_WIDTH_PX}px)`,
+              display: 'grid',
+              gap: 0.35,
+              maxHeight: 252,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+            }}
+          >
+            {filteredItems.length === 0 ? (
               <Box
-                key={groupKey}
                 sx={{
+                  gridColumn: '1 / -1',
+                  minHeight: 80,
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(28px, 28px))',
-                  gap: 0.2,
-                  alignItems: 'center',
-                  alignContent: 'start',
+                  placeItems: 'center',
+                  border: '1px dashed rgba(24, 51, 89, 0.18)',
+                  borderRadius: '12px',
+                  color: 'text.secondary',
                 }}
               >
-                {group.map(item => {
-                  const isSelected = item.itemId === selectedItemId;
-                  return (
-                    <button
-                      key={item.itemId}
-                      type="button"
-                      onClick={() => handleSelect(item.itemId)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 28,
-                        height: 28,
-                        minHeight: 28,
-                        padding: 0,
-                        borderRadius: 0,
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#183359',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        contentVisibility: 'auto',
-                        containIntrinsicSize: '28px',
-                        justifySelf: 'center',
-                        opacity: isSelected ? 1 : 0.92,
-                        filter: isSelected ? 'drop-shadow(0 0 0.75px rgba(24, 88, 163, 0.9))' : 'none',
-                      }}
-                      title={`${item.name} (${item.itemId})`}
-                    >
-                      <EntityIcon
-                        label={item.name}
-                        iconKey={item.icon}
-                        atlasIds={atlasIds}
-                        size={28}
-                      />
-                    </button>
-                  );
-                })}
+                <Typography variant="body2" color="text.secondary">
+                  {emptyText}
+                </Typography>
               </Box>
-            ))
-          )}
+            ) : (
+              groupedItems.map(([groupKey, group]) => (
+                <Box
+                  key={groupKey}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(28px, 28px))',
+                    gap: 0.2,
+                    alignItems: 'center',
+                    alignContent: 'start',
+                  }}
+                >
+                  {group.map(item => {
+                    const isSelected = item.itemId === selectedItemId;
+                    return (
+                      <button
+                        key={item.itemId}
+                        type="button"
+                        onClick={() => handleSelect(item.itemId)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 28,
+                          height: 28,
+                          minHeight: 28,
+                          padding: 0,
+                          borderRadius: 0,
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#183359',
+                          cursor: 'pointer',
+                          textAlign: 'center',
+                          contentVisibility: 'auto',
+                          containIntrinsicSize: '28px',
+                          justifySelf: 'center',
+                          opacity: isSelected ? 1 : 0.92,
+                          filter: isSelected
+                            ? 'drop-shadow(0 0 0.75px rgba(24, 88, 163, 0.9))'
+                            : 'none',
+                        }}
+                        title={`${item.name} (${item.itemId})`}
+                      >
+                        <EntityIcon
+                          label={item.name}
+                          iconKey={item.icon}
+                          atlasIds={atlasIds}
+                          size={28}
+                        />
+                      </button>
+                    );
+                  })}
+                </Box>
+              ))
+            )}
+          </Box>
         </Box>
       </Popover>
     </Box>

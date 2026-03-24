@@ -349,6 +349,13 @@ export const snapshotSectionLabelClusterSx = {
   flexWrap: 'wrap',
 } as const;
 
+export const snapshotSectionTitleSx = {
+  fontSize: 13,
+  fontWeight: 700,
+  lineHeight: 1.2,
+  letterSpacing: 0,
+} as const;
+
 export const snapshotSectionCountSx = {
   minWidth: 18,
   height: 18,

@@ -8,6 +8,7 @@ import {
   snapshotSectionLabelClusterSx,
   snapshotSectionToggleIconSx,
   snapshotSectionToggleSx,
+  snapshotSectionTitleSx,
 } from './workbenchStyles';
 
 interface CollapsibleSnapshotSectionProps {
@@ -34,7 +35,7 @@ export default function CollapsibleSnapshotSection({
   const labelContent = useMemo(
     () => (
       <Box sx={snapshotSectionLabelClusterSx}>
-        <Typography variant="overline" color="text.secondary">
+        <Typography color="text.secondary" sx={snapshotSectionTitleSx}>
           {title}
         </Typography>
         {count > 0 ? <Box component="span" sx={snapshotSectionCountSx}>{count}</Box> : null}
