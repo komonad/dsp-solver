@@ -23,7 +23,7 @@ export default function SummaryCard() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
         }}
       >
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 8, alignContent: 'start' }}>
           <div style={sectionHeadingStyle}>{bundle.itemLedger.netInputsTitle}</div>
           {(model.solvedSummary?.netInputs.length ?? 0) === 0 ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
@@ -52,7 +52,7 @@ export default function SummaryCard() {
           )}
         </div>
 
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 8, alignContent: 'start' }}>
           <div style={sectionHeadingStyle}>{bundle.itemLedger.netOutputsTitle}</div>
           {(model.solvedSummary?.netOutputs.length ?? 0) === 0 ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
