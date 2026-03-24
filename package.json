@@ -1,7 +1,7 @@
 {
   "name": "dsp-mod-calculator",
   "version": "1.0.0",
-  "description": "戴森球计划模组量化计算器 - 支持多产物配方配平、参数化增产、建筑翻倍效果",
+  "description": "戴森球计划模组量化计算器 - 支持多产物配方配平",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

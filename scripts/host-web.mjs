@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
 const DIST_DIR = resolve(process.cwd(), 'dist-web');
-const DEFAULT_HOST = process.env.HOST || '127.0.0.1';
+const DEFAULT_HOST = process.env.HOST || '0.0.0.0';
 const DEFAULT_PORT = Number(process.env.PORT || '8081');
 
 const MIME_TYPES = {
