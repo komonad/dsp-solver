@@ -207,6 +207,29 @@ test('workbench cache accepts orbitalring as a persisted dataset preset', () => 
   expect(readActiveWorkbenchCacheSource(storage)).toEqual(source);
 });
 
+test('sanitizeWorkbenchEditorState downgrades hidden min_complexity objective to min_buildings', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+
+  const sanitized = sanitizeWorkbenchEditorState(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_complexity',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'auto',
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  });
+
+  expect(sanitized.objective).toBe('min_buildings');
+});
+
 test('dataset drafts are stored per source key and cleared with the rest of the cache', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
@@ -392,27 +415,4 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
 
   expect(sanitized.proliferatorPolicy).toBe('speed');
   expect(sanitized.globalProliferatorLevel).toBe(2);
-});
-
-test('sanitizeWorkbenchEditorState preserves the min_complexity objective', () => {
-  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
-
-  const sanitized = sanitizeWorkbenchEditorState(catalog, {
-    targets: [{ itemId: '1101', ratePerMin: 60 }],
-    objective: 'min_complexity',
-    balancePolicy: 'force_balance',
-    autoPromoteUnavailableItemsToRawInputs: true,
-    proliferatorPolicy: 'auto',
-    rawInputItemIds: [],
-    disabledRawInputItemIds: [],
-    disabledRecipeIds: [],
-    disabledBuildingIds: [],
-    allowedRecipesByItem: {},
-    recipePreferences: [],
-    recipeStrategyOverrides: [],
-    preferredBuildings: [],
-    advancedOverridesText: '',
-  });
-
-  expect(sanitized.objective).toBe('min_complexity');
 });

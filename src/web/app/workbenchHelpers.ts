@@ -310,9 +310,13 @@ export function buildDefaultWorkbenchEditorState(
   catalog: ResolvedCatalogModel
 ): WorkbenchEditorState {
   const nextTargetId = pickDefaultTarget(catalog);
+  const recommendedObjective =
+    catalog.recommendedSolve.objective === 'min_complexity'
+      ? 'min_buildings'
+      : (catalog.recommendedSolve.objective ?? 'min_buildings');
   return {
     targets: nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : [],
-    objective: catalog.recommendedSolve.objective ?? 'min_buildings',
+    objective: recommendedObjective,
     balancePolicy: catalog.recommendedSolve.balancePolicy ?? 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
     proliferatorPolicy: 'auto',

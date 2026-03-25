@@ -22,6 +22,7 @@ const EPSILON = 1e-8;
 const PREFERENCE_EPSILON = 1e-3;
 const OBJECTIVE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
+const EXTERNAL_INPUT_ACTIVITY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
@@ -779,6 +780,7 @@ function buildObjectiveCoefficient(
   return (
     surplusPenalty +
     preferencePenalty * PREFERENCE_EPSILON +
+    EXTERNAL_INPUT_ACTIVITY_EPSILON +
     option.buildingCostPerRunPerMin * SECONDARY_EPSILON +
     option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON
   );

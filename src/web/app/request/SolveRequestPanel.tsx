@@ -147,7 +147,6 @@ export default function SolveRequestPanel() {
             onChange={event => setObjective(event.target.value as SolveObjective)}
           >
             <MenuItem value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</MenuItem>
-            <MenuItem value="min_complexity">{bundle.solveRequest.objectiveOptions.min_complexity}</MenuItem>
             <MenuItem value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</MenuItem>
             <MenuItem value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</MenuItem>
           </TextField>

@@ -4,6 +4,7 @@ import {
   type VanillaDatasetSpec,
 } from '../src/catalog';
 import {
+  buildDefaultWorkbenchEditorState,
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipePlanCardDisplayModel,
   buildRecipeOptionsByOutputItem,
@@ -161,6 +162,15 @@ test('buildRecipeOptionsByOutputItem groups recipe details by produced item and 
       recipeName: 'Plate Recycling',
     }),
   ]);
+});
+
+test('buildDefaultWorkbenchEditorState falls back when dataset recommends hidden min_complexity objective', () => {
+  const catalog = buildRecipeOptionCatalog();
+  catalog.recommendedSolve.objective = 'min_complexity';
+
+  const state = buildDefaultWorkbenchEditorState(catalog);
+
+  expect(state.objective).toBe('min_buildings');
 });
 
 test('recipe availability helpers hide items whose remaining recipes are fully excluded', () => {

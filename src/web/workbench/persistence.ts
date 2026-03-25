@@ -93,6 +93,14 @@ function isWorkbenchProliferatorPolicy(value: unknown): value is WorkbenchProlif
   return value === 'auto' || value === 'none' || value === 'speed' || value === 'productivity';
 }
 
+function normalizeWorkbenchObjective(value: unknown): SolveObjective {
+  if (value === 'min_complexity') {
+    return 'min_buildings';
+  }
+
+  return isSolveObjective(value) ? value : 'min_buildings';
+}
+
 function sanitizeStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) {
     return [];
@@ -529,7 +537,7 @@ export function sanitizeWorkbenchEditorState(
 
   return {
     targets,
-    objective: isSolveObjective(state.objective) ? state.objective : 'min_buildings',
+    objective: normalizeWorkbenchObjective(state.objective),
     balancePolicy: isBalancePolicy(state.balancePolicy) ? state.balancePolicy : 'force_balance',
     autoPromoteUnavailableItemsToRawInputs:
       typeof state.autoPromoteUnavailableItemsToRawInputs === 'boolean'

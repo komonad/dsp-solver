@@ -632,6 +632,10 @@ function DefaultsEditor(props: {
 }) {
   const { source, onSourceTextsChange } = props;
   const defaults = source.defaultConfig;
+  const recommendedObjectiveValue =
+    defaults.recommendedSolve?.objective === 'min_complexity'
+      ? ''
+      : (defaults.recommendedSolve?.objective ?? '');
 
   function updateDefaults(patch: Partial<CatalogDefaultConfigSpec>) {
     const nextSource: EditableCatalogSource = {
@@ -657,7 +661,7 @@ function DefaultsEditor(props: {
       </DetailField>
       <DetailField label="recommendedSolve.objective">
         <select
-          value={defaults.recommendedSolve?.objective ?? ''}
+          value={recommendedObjectiveValue}
           onChange={event =>
             updateDefaults({
               recommendedSolve: {
@@ -672,7 +676,6 @@ function DefaultsEditor(props: {
         >
           <option value="">auto</option>
           <option value="min_buildings">min_buildings</option>
-          <option value="min_complexity">min_complexity</option>
           <option value="min_power">min_power</option>
           <option value="min_external_input">min_external_input</option>
         </select>
