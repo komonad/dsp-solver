@@ -180,7 +180,9 @@ test.each([
     expectedRecipeCount: 366,
     expectedBuildingCount: 21,
     expectedIconAtlasIds: ['OrbitalRing'],
-    expectedRecommendedSolve: {},
+    expectedRecommendedSolve: {
+      objective: 'min_power',
+    },
   },
 ])(
   'loadResolvedCatalogFromFiles supports scenario dataset $datasetPath',
@@ -234,7 +236,8 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
     buildingId: '2304',
     speedMultiplier: 2,
   });
-  expect(resolved.recommendedDisabledRecipeIds).toEqual(['510']);
+  expect(resolved.recommendedDisabledRecipeIds).toEqual(['510', '517', '705', '776']);
+  expect(resolved.recommendedDisabledBuildingIds).toEqual(['6215']);
   expect(resolved.rawItemIds).toEqual(
     expect.arrayContaining(['1005', '1116', '6251', '6519', '7015', '7101'])
   );

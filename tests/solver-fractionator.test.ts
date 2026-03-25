@@ -174,3 +174,25 @@ test('OrbitalRing heavy-water fractionation uses the configured probability and 
     'Fractionation recipe 106 skips building 6215 because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.'
   );
 });
+
+test('disabled buildings suppress unrelated fractionation skip diagnostics', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    './data/OrbitalRing.json',
+    './data/OrbitalRing.defaults.json'
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '7018', ratePerMin: 72 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    rawInputItemIds: ['1000', '1143'],
+    disabledBuildingIds: ['6215'],
+    allowedRecipesByItem: { '7018': ['106'] },
+    forcedProliferatorModeByRecipe: { '106': 'speed' },
+    forcedProliferatorLevelByRecipe: { '106': 3 },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.diagnostics.messages).not.toContain(
+    'Fractionation recipe 106 skips building 6215 because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.'
+  );
+});

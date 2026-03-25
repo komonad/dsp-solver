@@ -56,6 +56,16 @@ interface CompiledSolveGraph {
   resolvedRawInputItemIds: string[];
 }
 
+interface StaticCompilationMessage {
+  message: string;
+  buildingId?: string;
+}
+
+interface StaticRecipeOptionCompilation {
+  options: CompiledOptionContext[];
+  messages: StaticCompilationMessage[];
+}
+
 interface CachedRecipeOptionCompilation {
   options: CompiledOptionContext[];
   messages: string[];
@@ -64,7 +74,7 @@ interface CachedRecipeOptionCompilation {
 interface CatalogSolveCache {
   anyRecipeOutputIndex: Map<string, ResolvedRecipeSpec[]>;
   recipeOutputIndexByDisabledSetKey: Map<string, Map<string, ResolvedRecipeSpec[]>>;
-  staticRecipeOptionCompilations: Map<string, CachedRecipeOptionCompilation>;
+  staticRecipeOptionCompilations: Map<string, StaticRecipeOptionCompilation>;
   solvedRequestResults: Map<string, SolveResult>;
 }
 
@@ -349,7 +359,7 @@ function getCatalogSolveCache(catalog: ResolvedCatalogModel): CatalogSolveCache 
     recipeOutputIndexByDisabledSetKey: new Map<string, Map<string, ResolvedRecipeSpec[]>>([
       ['', anyRecipeOutputIndex],
     ]),
-    staticRecipeOptionCompilations: new Map<string, CachedRecipeOptionCompilation>(),
+    staticRecipeOptionCompilations: new Map<string, StaticRecipeOptionCompilation>(),
     solvedRequestResults: new Map<string, SolveResult>(),
   };
   catalogSolveCaches.set(catalog, nextCache);
@@ -375,27 +385,31 @@ function getRecipeOutputIndexForDisabledRecipes(
 function getStaticRecipeOptionCompilation(
   catalog: ResolvedCatalogModel,
   recipe: ResolvedRecipeSpec
-): CachedRecipeOptionCompilation {
+): StaticRecipeOptionCompilation {
   const cache = getCatalogSolveCache(catalog);
   const cached = cache.staticRecipeOptionCompilations.get(recipe.recipeId);
   if (cached) {
     return cached;
   }
 
-  const messages: string[] = [];
+  const messages: StaticCompilationMessage[] = [];
   const options: CompiledOptionContext[] = [];
 
   for (const buildingId of recipe.allowedBuildingIds) {
     const building = catalog.buildingMap.get(buildingId);
     if (!building) {
-      messages.push(`Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`);
+      messages.push({
+        buildingId,
+        message: `Unknown building ${buildingId} referenced by recipe ${recipe.recipeId}.`,
+      });
       continue;
     }
 
     if (isFractionationRecipe(recipe) && !hasFractionationBuildingThroughputConfig(building)) {
-      messages.push(
-        `Fractionation recipe ${recipe.recipeId} skips building ${building.buildingId} because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.`
-      );
+      messages.push({
+        buildingId: building.buildingId,
+        message: `Fractionation recipe ${recipe.recipeId} skips building ${building.buildingId} because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.`,
+      });
       continue;
     }
 
@@ -504,7 +518,6 @@ function compileRecipeOptions(
   messages?: string[]
 ): CompiledOptionContext[] {
   const staticCompilation = getStaticRecipeOptionCompilation(catalog, recipe);
-  messages?.push(...staticCompilation.messages);
 
   let allowedBuildingIds = recipe.allowedBuildingIds.filter(
     buildingId => !disabledBuildingIds.has(buildingId)
@@ -522,9 +535,23 @@ function compileRecipeOptions(
   }
 
   if (allowedBuildingIds.length === 0) {
+    messages?.push(
+      ...staticCompilation.messages
+        .filter(entry => entry.buildingId === undefined)
+        .map(entry => entry.message)
+    );
     messages?.push(`Recipe ${recipe.recipeId} has no available buildings after filtering.`);
     return [];
   }
+
+  const allowedBuildingIdSet = new Set(allowedBuildingIds);
+  messages?.push(
+    ...staticCompilation.messages
+      .filter(
+        entry => entry.buildingId === undefined || allowedBuildingIdSet.has(entry.buildingId)
+      )
+      .map(entry => entry.message)
+  );
 
   const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
   const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
@@ -544,7 +571,6 @@ function compileRecipeOptions(
     return [];
   }
 
-  const allowedBuildingIdSet = new Set(allowedBuildingIds);
   const compiledOptions = staticCompilation.options.filter(
     ({ option }) =>
       allowedBuildingIdSet.has(option.buildingId) && isOptionAllowedByForce(option, recipe, request)
