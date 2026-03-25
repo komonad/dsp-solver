@@ -32,10 +32,10 @@ Fallback behavior:
 
 The web app now includes two in-browser editing surfaces:
 
-- Panel component: [DatasetEditorPanel.tsx](/D:/dsp-dev/dspcalc/src/web/DatasetEditorPanel.tsx)
-- Structured editor: [StructuredDatasetEditor.tsx](/D:/dsp-dev/dspcalc/src/web/StructuredDatasetEditor.tsx)
-- Pure helper layer: [catalogEditor.ts](/D:/dsp-dev/dspcalc/src/web/catalogEditor.ts)
-- Parse/resolve path: [catalogClient.ts](/D:/dsp-dev/dspcalc/src/web/catalogClient.ts)
+- Panel component: [DatasetEditorPanel.tsx](../src/web/catalog/editor/DatasetEditorPanel.tsx)
+- Structured editor: [StructuredDatasetEditor.tsx](../src/web/catalog/editor/StructuredDatasetEditor.tsx)
+- Pure helper layer: [catalogEditor.ts](../src/web/catalog/editor/catalogEditor.ts)
+- Parse/resolve path: [catalogClient.ts](../src/web/catalog/catalogClient.ts)
 
 Current scope:
 
@@ -105,7 +105,7 @@ Useful findings:
 License handling:
 
 - Upstream repo license: Mulan PSL v2
-- Local copy: [dsp-calc.MulanPSL2.LICENSE](/D:/dsp-dev/dspcalc/third_party/dsp-calc.MulanPSL2.LICENSE)
+- Local copy: [dsp-calc.MulanPSL2.LICENSE](../third_party/dsp-calc.MulanPSL2.LICENSE)
 
 ## DSP data-dump research
 

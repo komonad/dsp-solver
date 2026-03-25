@@ -17,7 +17,6 @@ import type {
   SolveResult,
 } from './result';
 import { recordSolverPerf } from './perf';
-import { SOLVER_VERSION } from './version';
 
 const EPSILON = 1e-8;
 const PREFERENCE_EPSILON = 1e-3;
@@ -1254,7 +1253,6 @@ function buildResultFromSolution(params: {
     }));
 
   return {
-    solverVersion: SOLVER_VERSION,
     status: 'optimal',
     diagnostics: {
       messages: [],
@@ -1360,7 +1358,6 @@ function solveCatalogRequestValidated(
       recordedAt: Date.now(),
     });
     return {
-      solverVersion: SOLVER_VERSION,
       status: 'infeasible',
       diagnostics: {
         messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
@@ -1448,7 +1445,6 @@ export function solveCatalogRequest(
   const validation = validateSolveRequest(catalog, request);
   if (!validation.valid) {
     return {
-      solverVersion: SOLVER_VERSION,
       status: 'invalid_input',
       diagnostics: {
         messages: validation.messages,

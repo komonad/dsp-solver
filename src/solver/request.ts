@@ -39,8 +39,6 @@ export interface SolveTarget {
  * `preferred*` fields are soft preferences used for tie-breaking.
  */
 export interface SolveRequest {
-  /** Solver version stamp attached by the active client/build. */
-  solverVersion?: string;
   /** One or more requested output targets. */
   targets: SolveTarget[];
   /** Primary optimization objective. */

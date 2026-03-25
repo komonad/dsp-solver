@@ -131,7 +131,6 @@ export interface LocaleBundle {
     objectiveLabel: string;
     balanceLabel: string;
     sprayLabel: string;
-    solverVersionLabel: string;
     statusLabel: string;
     targetsLabel: string;
     rawOverridesLabel: string;
@@ -406,7 +405,6 @@ const zhCN: LocaleBundle = {
     objectiveLabel: '目标函数',
     balanceLabel: '配平策略',
     sprayLabel: '增产剂',
-    solverVersionLabel: '求解器',
     statusLabel: '求解状态',
     targetsLabel: '目标',
     rawOverridesLabel: '原矿覆盖',

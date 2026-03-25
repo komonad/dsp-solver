@@ -62,7 +62,7 @@ type VanillaRecipeRecord = {
 
 ## Default config
 
-Each dataset may optionally ship with a companion default config file such as [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json).
+Each dataset may optionally ship with a companion default config file such as [Vanilla.defaults.json](../data/Vanilla.defaults.json).
 
 Its role is:
 

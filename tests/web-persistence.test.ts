@@ -1,5 +1,4 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
-import { SOLVER_VERSION } from '../src/solver';
 import {
   buildWorkbenchCacheKey,
   clearNamespacedStorage,
@@ -154,7 +153,7 @@ test('clearWorkbenchCache removes both active source and entries', () => {
 
 test('clearNamespacedStorage removes every dspcalc.* key and leaves unrelated keys intact', () => {
   const storage = createMemoryStorage();
-  const currentCacheKey = `dspcalc.workbench.${SOLVER_VERSION}`;
+  const currentCacheKey = 'dspcalc.workbench.v1';
   storage.setItem(currentCacheKey, '{"version":1}');
   storage.setItem('dspcalc.perfLog', '1');
   storage.setItem('dspcalc.solverPerfLog', '1');
@@ -173,7 +172,7 @@ test('clearNamespacedStorage removes every dspcalc.* key and leaves unrelated ke
   expect(storage.getItem('unrelated')).toBe('keep');
 });
 
-test('workbench cache ignores stale solver-version cache keys', () => {
+test('workbench cache ignores legacy versioned cache keys', () => {
   const storage = createMemoryStorage();
   storage.setItem(
     'dspcalc.workbench.older-version',

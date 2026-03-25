@@ -2,6 +2,7 @@ import vanillaAtlas from '../../../data/icons/vanillaAtlas.json';
 import genesisBookAtlas from '../../../data/icons/GenesisBook.json';
 import moreMegaStructureAtlas from '../../../data/icons/MoreMegaStructure.json';
 import orbitalRingAtlas from '../../../data/icons/OrbitalRing.json';
+import { ICON_ATLAS_IMAGE_PATHS } from './webAssetPaths';
 
 export interface IconSpriteDefinition {
   x: number;
@@ -25,19 +26,19 @@ export interface ResolvedIconSprite {
 
 const ICON_ATLASES: Record<string, IconAtlasDefinition> = {
   Vanilla: {
-    src: './icons/Vanilla.png',
+    src: ICON_ATLAS_IMAGE_PATHS.Vanilla,
     atlas: vanillaAtlas as Record<string, IconSpriteDefinition>,
   },
   GenesisBook: {
-    src: './icons/GenesisBook.png',
+    src: ICON_ATLAS_IMAGE_PATHS.GenesisBook,
     atlas: genesisBookAtlas as Record<string, IconSpriteDefinition>,
   },
   MoreMegaStructure: {
-    src: './icons/MoreMegaStructure.png',
+    src: ICON_ATLAS_IMAGE_PATHS.MoreMegaStructure,
     atlas: moreMegaStructureAtlas as Record<string, IconSpriteDefinition>,
   },
   OrbitalRing: {
-    src: './icons/OrbitalRing.png',
+    src: ICON_ATLAS_IMAGE_PATHS.OrbitalRing,
     atlas: orbitalRingAtlas as Record<string, IconSpriteDefinition>,
   },
 };

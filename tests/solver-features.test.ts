@@ -756,7 +756,6 @@ test('orbital ring request honors forced graphite recipe instead of delayed coki
   );
 
   const result = solveCatalogRequest(catalog, {
-    solverVersion: '2026.03.20.1',
     targets: [{ itemId: '6003', ratePerMin: 120 }],
     objective: 'min_power',
     balancePolicy: 'allow_surplus',
@@ -1040,6 +1039,5 @@ test('vanilla proliferator items can be produced through their own recipe chain'
   );
   expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
 });
-
 
 

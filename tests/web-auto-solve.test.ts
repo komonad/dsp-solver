@@ -1,6 +1,5 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { getLocaleBundle } from '../src/i18n';
-import { SOLVER_VERSION } from '../src/solver';
 import { computeWorkbenchSolve } from '../src/web/workbench/autoSolve';
 
 function workEnergyForMW(megawatts: number): number {
@@ -116,7 +115,6 @@ test('computeWorkbenchSolve auto-builds the request and solver result from edito
 
   expect(autoSolve.error).toBe('');
   expect(autoSolve.request).toEqual({
-    solverVersion: SOLVER_VERSION,
     targets: [{ itemId: '1101', ratePerMin: 60 }],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
@@ -171,7 +169,6 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
   });
 
   expect(autoSolve.request).toEqual({
-    solverVersion: SOLVER_VERSION,
     targets: [],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
@@ -265,5 +262,4 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
     { itemId: '1201', ratePerMin: 60 },
   ]);
 });
-
 

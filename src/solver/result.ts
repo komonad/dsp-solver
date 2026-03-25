@@ -114,8 +114,6 @@ export interface ItemBalanceEntry {
  * without re-deriving hidden business formulas.
  */
 export interface SolveResult {
-  /** Solver version stamp that produced this result. */
-  solverVersion: string;
   /** Final solve status. */
   status: SolveStatus;
   /** Warnings, validation issues, and unmet soft preferences. */

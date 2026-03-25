@@ -6,8 +6,8 @@ It is not a product dataset.
 
 ## Fixture files
 
-- [MinimalVanilla.json](/D:/dsp-dev/dspcalc/tests/fixtures/MinimalVanilla.json)
-- [Minimal.defaults.json](/D:/dsp-dev/dspcalc/tests/fixtures/Minimal.defaults.json)
+- [MinimalVanilla.json](../tests/fixtures/MinimalVanilla.json)
+- [Minimal.defaults.json](../tests/fixtures/Minimal.defaults.json)
 
 ## Why it exists
 

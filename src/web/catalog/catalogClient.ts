@@ -1,6 +1,7 @@
 import { resolveCatalogModel } from '../../catalog/resolve';
 import type { CatalogDefaultConfigSpec, ResolvedCatalogModel, VanillaDatasetSpec } from '../../catalog/spec';
 import type { DatasetPresetId } from '../../i18n';
+import { BUNDLED_DATASET_PATHS } from '../shared/webAssetPaths';
 
 export interface DatasetPresetDefinition {
   id: DatasetPresetId;
@@ -11,28 +12,28 @@ export interface DatasetPresetDefinition {
 export const DATASET_PRESETS: DatasetPresetDefinition[] = [
   {
     id: 'vanilla',
-    datasetPath: './Vanilla.json',
-    defaultConfigPath: './Vanilla.defaults.json',
+    datasetPath: BUNDLED_DATASET_PATHS.vanilla.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.vanilla.defaultConfigPath,
   },
   {
     id: 'demo-smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    datasetPath: BUNDLED_DATASET_PATHS.demoSmelting.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.demoSmelting.defaultConfigPath,
   },
   {
     id: 'refinery-balance',
-    datasetPath: './RefineryBalance.json',
-    defaultConfigPath: './RefineryBalance.defaults.json',
+    datasetPath: BUNDLED_DATASET_PATHS.refineryBalance.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.refineryBalance.defaultConfigPath,
   },
   {
     id: 'fullerene-loop',
-    datasetPath: './FullereneLoop.json',
-    defaultConfigPath: './FullereneLoop.defaults.json',
+    datasetPath: BUNDLED_DATASET_PATHS.fullereneLoop.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.fullereneLoop.defaultConfigPath,
   },
   {
     id: 'orbitalring',
-    datasetPath: './OrbitalRing.json',
-    defaultConfigPath: './OrbitalRing.defaults.json',
+    datasetPath: BUNDLED_DATASET_PATHS.orbitalRing.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.orbitalRing.defaultConfigPath,
   },
   {
     id: 'custom',

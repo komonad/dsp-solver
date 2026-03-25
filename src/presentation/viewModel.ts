@@ -68,7 +68,6 @@ export interface PresentationDisabledRecipeSetting {
 }
 
 export interface PresentationRequestSummary {
-  solverVersion?: string;
   objective: SolveRequest['objective'];
   balancePolicy: SolveRequest['balancePolicy'];
   proliferatorPolicyLabel: string;
@@ -966,7 +965,6 @@ export function buildPresentationModel(
   } = params;
   const requestSummary: PresentationRequestSummary | undefined = request
     ? {
-        solverVersion: request.solverVersion,
         objective: request.objective,
         balancePolicy: request.balancePolicy,
         proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request, locale),

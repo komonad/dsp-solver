@@ -1,156 +1,101 @@
 # dspcalc
 
-This repository is being rebuilt around a strict split between:
+`dspcalc` 是一个面向《戴森球计划》及其模组数据集的产线求解器与静态 Web 工作台。仓库当前强调四层分离：
 
-- raw dataset files
-- default dataset configuration
-- solver input/output specs
-- presentation/web rendering
+- 原始数据集
+- 数据集默认配置
+- 求解器输入/输出 spec
+- 纯展示与 Web 渲染
 
-The current goal is a linear-programming-based production solver for Dyson Sphere Program and its mods, with browser rendering that never invents business logic on its own.
+前端不应在渲染阶段重新发明业务逻辑，所有展示结果都应该能从可测试的数据模型独立推出。
 
-Recent web workbench additions:
+## 目录
 
-- automatic solve on any input change
-- persisted workbench state in the browser, plus a reset button
-- persisted dataset-editor drafts per dataset source
-- configurable icon atlas pack lookup with deterministic fallback badges for datasets without icon assets
-- an in-browser dataset/default-config editor for session-local experimentation
-- a structured browser editor for items, recipes, building rules, and key default-config fields
-- per-item slice inspection, with raw-input toggles and item-level recipe preference entry points
+- [`src/catalog`](src/catalog): 数据集格式、默认配置格式、加载与 resolve
+- [`src/solver`](src/solver): 求解器输入、输出与 LP 求解逻辑
+- [`src/presentation`](src/presentation): 面向展示层的纯 view model
+- [`src/web`](src/web): 当前 Web 工作台
+- [`tools/dsp-runtime-exporter`](tools/dsp-runtime-exporter): 运行时导出工具
 
-## Current structure
+## 数据文件
 
-- [src/catalog](/D:/dsp-dev/dspcalc/src/catalog): dataset format, default config format, loading, and resolution into the internal catalog model
-- [src/solver](/D:/dsp-dev/dspcalc/src/solver): solver request/result types
-- [src/presentation](/D:/dsp-dev/dspcalc/src/presentation): pure presentation-facing view models
-- [src/web](/D:/dsp-dev/dspcalc/src/web): current web entry
-- [tools/dsp-runtime-exporter](/D:/dsp-dev/dspcalc/tools/dsp-runtime-exporter): minimal BepInEx mod for exporting runtime-loaded items and recipes
+- [`data/Vanilla.json`](data/Vanilla.json)
+- [`data/Vanilla.defaults.json`](data/Vanilla.defaults.json)
+- [`data/RefineryBalance.json`](data/RefineryBalance.json)
+- [`data/RefineryBalance.defaults.json`](data/RefineryBalance.defaults.json)
+- [`data/FullereneLoop.json`](data/FullereneLoop.json)
+- [`data/FullereneLoop.defaults.json`](data/FullereneLoop.defaults.json)
+- [`data/OrbitalRing.json`](data/OrbitalRing.json)
+- [`data/OrbitalRing.defaults.json`](data/OrbitalRing.defaults.json)
 
-## Data files
+测试用的最小样例在 [`tests/fixtures`](tests/fixtures)。
 
-- [Vanilla.json](/D:/dsp-dev/dspcalc/data/Vanilla.json): raw dataset in the external vanilla-compatible format
-- [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json): optional default configuration for that dataset
-- [RefineryBalance.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.json): refinery balancing scenario
-- [RefineryBalance.defaults.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.defaults.json): defaults for the refinery scenario
-- [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json): fullerene methane loop plus the fullersilver/fullerol cycle
-- [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json): defaults for the fullerene loop scenario
-
-Minimal examples used only for tests live under [tests/fixtures](/D:/dsp-dev/dspcalc/tests/fixtures).
-
-## Tests kept during refactor
-
-- [catalog-vanilla-format.test.ts](/D:/dsp-dev/dspcalc/tests/catalog-vanilla-format.test.ts)
-- [catalog-resolve.test.ts](/D:/dsp-dev/dspcalc/tests/catalog-resolve.test.ts)
-- [minimal-abstract-config.test.ts](/D:/dsp-dev/dspcalc/tests/minimal-abstract-config.test.ts)
-- [minimal-file-load.test.ts](/D:/dsp-dev/dspcalc/tests/minimal-file-load.test.ts)
-
-## Common commands
-
-```bash
-npm run build
-npm run typecheck
-npm test -- --runInBand
-npx webpack --config webpack.config.js
-```
-
-## Web hosting
-
-The current web app is a static frontend bundle. There is no backend service yet.
-
-### Local hosting
-
-1. Install dependencies:
+## 常用命令
 
 ```bash
 npm install
-```
-
-2. Build the web bundle:
-
-```bash
+npm run build
+npm run typecheck
+npm test -- --runInBand
 npm run build:web
-```
-
-3. Host the generated `dist-web` directory:
-
-```bash
 npm run host
 ```
 
-By default this serves [dist-web](/D:/dsp-dev/dspcalc/dist-web) at `http://127.0.0.1:8081`.
+## Web 开发
 
-You can override host and port:
+本项目的 Web 端是纯静态前端，没有后端服务。
+
+本地开发：
 
 ```bash
-npm run host -- --host 0.0.0.0 --port 8081
+npm run build:web
+npm run host
 ```
 
-For a watch-and-host workflow during frontend development:
+默认会把 [`dist-web`](dist-web) 目录托管到 `http://127.0.0.1:8081`。
+
+需要 watch 模式时可以使用：
 
 ```bash
 npm run dev:web
 ```
 
-### Static deployment
+## 静态部署
 
-For deployment, build [dist-web](/D:/dsp-dev/dspcalc/dist-web) and publish it with any static file server such as Nginx, Caddy, IIS, or a simple internal file host.
+构建产物在 [`dist-web`](dist-web)。该目录中的 `bundle.js`、数据集 JSON、默认配置 JSON 和图标 atlas 都使用相对路径，可直接部署到静态文件服务器，也适合放在 GitHub Pages 这类子路径站点下。
 
 ```bash
 npm run build:web
 ```
 
-Deploy the contents of [dist-web](/D:/dsp-dev/dspcalc/dist-web) as the web root.
+部署时发布整个 `dist-web/` 目录内容即可。
 
-### Dataset file placement
+如果你要在 GitHub Pages 上托管：
 
-The browser loads dataset JSON files through `fetch`, so dataset paths must be reachable from the same hosted web root.
+1. 运行 `npm run build:web`
+2. 发布 `dist-web/` 目录内容到 Pages 对应分支或发布目录
+3. 保持数据集与图标文件和 `index.html` 处于同一个静态站点根下
 
-Bundled files currently copied into [dist-web](/D:/dsp-dev/dspcalc/dist-web) include:
+浏览器中的数据集路径通过 `fetch` 加载，因此自定义数据集也应放在同一个静态站点里，并在 UI 中填写相对路径。
 
-- [Vanilla.json](/D:/dsp-dev/dspcalc/data/Vanilla.json)
-- [Vanilla.defaults.json](/D:/dsp-dev/dspcalc/data/Vanilla.defaults.json)
-- [DemoSmelting.json](/D:/dsp-dev/dspcalc/data/DemoSmelting.json)
-- [DemoSmelting.defaults.json](/D:/dsp-dev/dspcalc/data/DemoSmelting.defaults.json)
-- [RefineryBalance.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.json)
-- [RefineryBalance.defaults.json](/D:/dsp-dev/dspcalc/data/RefineryBalance.defaults.json)
-- [FullereneLoop.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.json)
-- [FullereneLoop.defaults.json](/D:/dsp-dev/dspcalc/data/FullereneLoop.defaults.json)
-- [Vanilla.png](/D:/dsp-dev/dspcalc/data/icons/Vanilla.png)
-- [GenesisBook.png](/D:/dsp-dev/dspcalc/data/icons/GenesisBook.png)
-- [MoreMegaStructure.png](/D:/dsp-dev/dspcalc/data/icons/MoreMegaStructure.png)
+## 关键文档
 
-If you want to use a custom dataset in the browser, place that dataset JSON and its optional defaults JSON under the hosted web root and then point the UI at those relative paths.
+- [`docs/data-format.md`](docs/data-format.md)
+- [`docs/solver-spec.md`](docs/solver-spec.md)
+- [`docs/minimal-test-config.md`](docs/minimal-test-config.md)
+- [`docs/asset-and-frontend-research.md`](docs/asset-and-frontend-research.md)
+- [`docs/runtime-exporter.md`](docs/runtime-exporter.md)
 
-## Key docs
+## 第三方资源
 
-- [data-format.md](/D:/dsp-dev/dspcalc/docs/data-format.md)
-- [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
-- [minimal-test-config.md](/D:/dsp-dev/dspcalc/docs/minimal-test-config.md)
-- [asset-and-frontend-research.md](/D:/dsp-dev/dspcalc/docs/asset-and-frontend-research.md)
-- [runtime-exporter.md](/D:/dsp-dev/dspcalc/docs/runtime-exporter.md)
+当前随 Web 一起打包的 vanilla 图标 atlas 来源于公开仓库 `DSPCalculator/dsp-calc`。
 
-The runtime exporter plugin GUID is `com.comonad.dspcalc.runtime-exporter`, and
-its build path convention now follows
-[MinimalDSPModTemplate](/D:/dsp-dev/MinimalDSPModTemplate) through a local
-`Local.props` file.
+- 上游仓库: [DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc)
+- 本地许可证副本: [`third_party/dsp-calc.MulanPSL2.LICENSE`](third_party/dsp-calc.MulanPSL2.LICENSE)
 
-The runtime exporter also supports:
-
-- exporting item PNG icons next to the dataset
-- validating exported item icons with tolerant missing-icon handling
-- building an offline item atlas PNG/JSON pair from the exported PNG files
-- validating the generated atlas against the export manifest
-
-## Third-party assets
-
-The vanilla icon atlas currently shipped in the web bundle is sourced from the public `DSPCalculator/dsp-calc` repository.
-
-- upstream repo: [DSPCalculator/dsp-calc](https://github.com/DSPCalculator/dsp-calc)
-- local license copy: [dsp-calc.MulanPSL2.LICENSE](/D:/dsp-dev/dspcalc/third_party/dsp-calc.MulanPSL2.LICENSE)
-
-Additional atlas packs currently wired into the frontend:
+当前接入的 atlas pack：
 
 - `Vanilla`
 - `GenesisBook`
 - `MoreMegaStructure`
+- `OrbitalRing`

@@ -51,13 +51,6 @@ export default function SolveSnapshotSummaryChips({
   const metricDescriptions = getSnapshotMetricDescription(bundle);
   return (
     <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
-      {requestSummary?.solverVersion ? (
-        <Chip
-          size="small"
-          variant="outlined"
-          label={`${bundle.summary.solverVersionLabel}: ${requestSummary.solverVersion}`}
-        />
-      ) : null}
       {renderMetricChip(
         'objective',
         `${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`,

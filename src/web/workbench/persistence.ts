@@ -1,6 +1,6 @@
 import type { ResolvedCatalogModel } from '../../catalog';
 import type { DatasetPresetId } from '../../i18n';
-import { SOLVER_VERSION, type BalancePolicy, type SolveObjective } from '../../solver';
+import type { BalancePolicy, SolveObjective } from '../../solver';
 import type {
   EditablePreferredBuilding,
   EditableRecipePreference,
@@ -11,7 +11,7 @@ import type {
 import type { WorkbenchSnapshotSectionState } from './snapshotSections';
 
 const DSPCALC_STORAGE_PREFIX = 'dspcalc.';
-const WORKBENCH_CACHE_STORAGE_KEY = `dspcalc.workbench.${SOLVER_VERSION}`;
+const WORKBENCH_CACHE_STORAGE_KEY = 'dspcalc.workbench.v1';
 
 export interface WorkbenchCacheSource {
   presetId: DatasetPresetId;

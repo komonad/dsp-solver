@@ -4,8 +4,8 @@ This file is intentionally non-authoritative during the rebuild.
 
 The current authoritative documents are:
 
-- [data-format.md](/D:/dsp-dev/dspcalc/docs/data-format.md)
-- [solver-spec.md](/D:/dsp-dev/dspcalc/docs/solver-spec.md)
+- [data-format.md](data-format.md)
+- [solver-spec.md](solver-spec.md)
 
 Important current proliferator defaults for the vanilla dataset are:
 
