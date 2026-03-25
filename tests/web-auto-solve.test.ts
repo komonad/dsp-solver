@@ -294,7 +294,7 @@ test('computeWorkbenchSolve emits forced per-recipe strategy overrides from card
   expect(autoSolve.result?.status).toBe('optimal');
 });
 
-test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance is infeasible', () => {
+test('computeWorkbenchSolve automatically falls back to allow_surplus when force_balance is infeasible', () => {
   const catalog = resolveCatalogModel(buildSurplusDataset(), buildDemoDefaults());
   const autoSolve = computeWorkbenchSolve({
     catalog,
@@ -314,13 +314,36 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
   });
 
   expect(autoSolve.error).toBe('');
-  expect(autoSolve.result?.status).toBe('infeasible');
-  expect(autoSolve.fallback).toBeDefined();
-  expect(autoSolve.fallback?.request.balancePolicy).toBe('allow_surplus');
-  expect(autoSolve.fallback?.result.status).toBe('optimal');
-  expect(autoSolve.fallback?.result.surplusOutputs).toEqual([
+  expect(autoSolve.request?.balancePolicy).toBe('allow_surplus');
+  expect(autoSolve.result?.status).toBe('optimal');
+  expect(autoSolve.fallback).toBeUndefined();
+  expect(autoSolve.result?.surplusOutputs).toEqual([
     { itemId: '1201', ratePerMin: 60 },
   ]);
+});
+
+test('computeWorkbenchSolve still prefers force_balance when cached editor state requests allow_surplus', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const autoSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'allow_surplus',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  });
+
+  expect(autoSolve.error).toBe('');
+  expect(autoSolve.request?.balancePolicy).toBe('force_balance');
+  expect(autoSolve.result?.status).toBe('optimal');
 });
 
 test('computeWorkbenchSolve expands the global proliferator policy into hard per-recipe overrides', () => {

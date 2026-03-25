@@ -6,7 +6,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import type { BalancePolicy, SolveObjective } from '../../../solver';
+import type { SolveObjective } from '../../../solver';
 import type { WorkbenchProliferatorPolicy } from '../../workbench/requestBuilder';
 import ItemGridPicker from '../../shared/ItemGridPicker';
 import { pickDefaultGlobalProliferatorLevel } from '../workbenchHelpers';
@@ -37,7 +37,6 @@ export default function SolveRequestPanel() {
     targetPickerQuery,
     targetDraftItemOption,
     objective,
-    balancePolicy,
     proliferatorPolicy,
     globalProliferatorLevel,
     globalProliferatorLevelOptions,
@@ -48,7 +47,6 @@ export default function SolveRequestPanel() {
     setTargetDraftItemId,
     setTargetDraftRatePerMin,
     setObjective,
-    setBalancePolicy,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
     setAdvancedOverridesText,
@@ -77,18 +75,6 @@ export default function SolveRequestPanel() {
             <MenuItem value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</MenuItem>
             <MenuItem value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</MenuItem>
             <MenuItem value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</MenuItem>
-          </TextField>
-
-          <TextField
-            select
-            size="small"
-            sx={{ ...compactSelectFieldSx, minWidth: 120 }}
-            label={bundle.summary.balanceLabel}
-            value={balancePolicy}
-            onChange={event => setBalancePolicy(event.target.value as BalancePolicy)}
-          >
-            <MenuItem value="force_balance">{bundle.solveRequest.balancePolicyOptions.force_balance}</MenuItem>
-            <MenuItem value="allow_surplus">{bundle.solveRequest.balancePolicyOptions.allow_surplus}</MenuItem>
           </TextField>
 
           <TextField

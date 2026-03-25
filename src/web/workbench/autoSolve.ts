@@ -61,7 +61,6 @@ export function computeWorkbenchSolve(
     catalog,
     targets,
     objective,
-    balancePolicy,
     proliferatorPolicy,
     globalProliferatorLevel,
     autoPromoteUnavailableItemsToRawInputs,
@@ -123,7 +122,7 @@ export function computeWorkbenchSolve(
   const request = buildWorkbenchRequest({
     targets,
     objective,
-    balancePolicy,
+    balancePolicy: 'force_balance',
     autoPromoteUnavailableItemsToRawInputs,
     rawInputItemIds,
     disabledRawInputItemIds,
@@ -152,20 +151,19 @@ export function computeWorkbenchSolve(
   }
 
   try {
-    const result = solveCatalogRequest(catalog, request);
-    let fallback: WorkbenchSolveState['fallback'];
-    if (request.balancePolicy === 'force_balance' && result.status === 'infeasible') {
-      const fallbackRequest: SolveRequest = {
+    const strictResult = solveCatalogRequest(catalog, request);
+    let effectiveRequest = request;
+    let effectiveResult = strictResult;
+
+    if (strictResult.status !== 'optimal') {
+      const relaxedRequest: SolveRequest = {
         ...request,
         balancePolicy: 'allow_surplus',
       };
-      const fallbackResult = solveCatalogRequest(catalog, fallbackRequest);
-      if (fallbackResult.status === 'optimal') {
-        fallback = {
-          request: fallbackRequest,
-          result: fallbackResult,
-          reason: 'force_balance_infeasible',
-        };
+      const relaxedResult = solveCatalogRequest(catalog, relaxedRequest);
+      if (relaxedResult.status === 'optimal') {
+        effectiveRequest = relaxedRequest;
+        effectiveResult = relaxedResult;
       }
     }
     const finishedAt =
@@ -174,17 +172,17 @@ export function computeWorkbenchSolve(
         : Date.now();
     recordWorkbenchPerf({
       phase: 'solve',
-      status: result.status,
+      status: effectiveResult.status,
       durationMs: finishedAt - startedAt,
       requestBuildMs,
       solveMs: finishedAt - requestBuiltAt,
       recordedAt: Date.now(),
     });
     return {
-      request,
-      result,
+      request: effectiveRequest,
+      result: effectiveResult,
       error: '',
-      fallback,
+      fallback: undefined,
     };
   } catch (error) {
     const finishedAt =
@@ -207,4 +205,3 @@ export function computeWorkbenchSolve(
     };
   }
 }
-

@@ -46,7 +46,6 @@ export default function SolveSnapshotPanel() {
     model,
     targets,
     objective,
-    balancePolicy,
     proliferatorPolicy,
     globalProliferatorLevel,
     setProliferatorPolicy,
@@ -157,7 +156,7 @@ export default function SolveSnapshotPanel() {
             locale={locale}
             requestSummary={requestSummary}
             objective={objective}
-            balancePolicy={balancePolicy}
+            balancePolicy={requestSummary.balancePolicy}
             sprayLabel={requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet}
             status={model?.status ?? null}
           />
