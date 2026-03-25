@@ -2,6 +2,10 @@
 
 `DSP Production Solver` 是一个面向《戴森球计划》的配方量化求解器，所有代码均使用 GPT-5.4 和 Claude Opus 4.6 进行开发。
 
+在线版本（GitHub Pages）：
+
+- [https://komonad.github.io/dsp-solver/](https://komonad.github.io/dsp-solver/)
+
 当前特性：
 
 - 支持 原版 与 MOD 星环+更多巨构 两套内置数据集，并可以通过静态路径加载自定义数据集
@@ -13,9 +17,9 @@
 - 附带运行时导出器，可从游戏运行时导出 `items`、`recipes` 和逐物品 icon PNG，再离线打包 atlas 接入 Web
 
 TODO：
-- [] 添加其它 MOD 支持，例如 GenesisBook
-- [] 支持按照建筑卡顿或者矿物稀缺度进行加权的求解惩罚
-- [] 提供基于产线复杂度的求解目标，在出现冗余产物时能自动简化冗余物品
+- [ ] 添加其它 MOD 支持，例如 GenesisBook
+- [ ] 支持按照建筑卡顿或者矿物稀缺度进行加权的求解惩罚
+- [ ] 提供基于产线复杂度的求解目标，在出现冗余产物时能自动简化冗余物品
 
 
 文档入口：
