@@ -24,6 +24,9 @@ const OBJECTIVE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
 const EXTERNAL_INPUT_ACTIVITY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
+const ALLOW_SURPLUS_SYNC_BUDGET_MS = 200;
+const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 3;
+const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 64;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
 
@@ -65,8 +68,28 @@ interface CatalogSolveCache {
   solvedRequestResults: Map<string, SolveResult>;
 }
 
+interface SurplusSolutionMetrics {
+  activeItemIds: string[];
+  itemRateMap: Map<string, number>;
+  totalRatePerMin: number;
+}
+
+interface LinearSolveCandidate {
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  solution: Solution<string>;
+  surplus: SurplusSolutionMetrics;
+  primaryObjectiveValue: number;
+}
+
 const MAX_SOLVED_REQUEST_CACHE_SIZE = 48;
 const catalogSolveCaches = new WeakMap<ResolvedCatalogModel, CatalogSolveCache>();
+
+function currentTimeMs(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
 
 function aggregateTargetRates(request: SolveRequest): Map<string, number> {
   const targetRates = new Map<string, number>();
@@ -751,17 +774,9 @@ function buildObjectiveCoefficient(
   option: CompiledOption
 ): number {
   const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
-  const surplusPenalty =
-    request.balancePolicy === 'allow_surplus'
-      ? Object.values(option.outputPerRun).reduce(
-          (sum, amount) => sum + amount + SURPLUS_OUTPUT_EPSILON,
-          0
-        )
-      : 0;
 
   if (request.objective === 'min_buildings') {
     return (
-      surplusPenalty +
       preferencePenalty * PREFERENCE_EPSILON +
       option.buildingCostPerRunPerMin * OBJECTIVE_EPSILON +
       option.powerCostMWPerRunPerMin * SECONDARY_EPSILON
@@ -770,7 +785,6 @@ function buildObjectiveCoefficient(
 
   if (request.objective === 'min_power') {
     return (
-      surplusPenalty +
       preferencePenalty * PREFERENCE_EPSILON +
       option.powerCostMWPerRunPerMin * OBJECTIVE_EPSILON +
       option.buildingCostPerRunPerMin * SECONDARY_EPSILON
@@ -778,12 +792,19 @@ function buildObjectiveCoefficient(
   }
 
   return (
-    surplusPenalty +
     preferencePenalty * PREFERENCE_EPSILON +
     EXTERNAL_INPUT_ACTIVITY_EPSILON +
     option.buildingCostPerRunPerMin * SECONDARY_EPSILON +
     option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON
   );
+}
+
+function buildExternalInputObjectiveCoefficient(request: SolveRequest): number {
+  if (request.objective !== 'min_external_input') {
+    return 0;
+  }
+
+  return request.balancePolicy === 'allow_surplus' ? OBJECTIVE_EPSILON : 1;
 }
 
 function buildComplexityPowerCoefficient(
@@ -792,17 +813,9 @@ function buildComplexityPowerCoefficient(
   option: CompiledOption
 ): number {
   const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
-  const surplusPenalty =
-    request.balancePolicy === 'allow_surplus'
-      ? Object.values(option.outputPerRun).reduce(
-          (sum, amount) => sum + amount + SURPLUS_OUTPUT_EPSILON,
-          0
-        )
-      : 0;
 
   return (
     option.powerCostMWPerRunPerMin +
-    surplusPenalty * OBJECTIVE_EPSILON +
     preferencePenalty * SECONDARY_EPSILON +
     option.buildingCostPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON
   );
@@ -1022,21 +1035,18 @@ function collectInvolvedItemIds(
   return Array.from(itemIds);
 }
 
-function buildItemBalanceConstraints(
-  request: SolveRequest,
-  compiledOptions: CompiledOptionContext[],
-  targetRateMap: Map<string, number>,
-  externalItemIds: Set<string>
+function buildSurplusVariableName(itemId: string): string {
+  return `__surplus:${itemId}`;
+}
+
+function buildExactItemBalanceConstraints(
+  involvedItemIds: string[],
+  targetRateMap: Map<string, number>
 ): Record<string, { equal?: number; min?: number; max?: number }> {
   const constraints: Record<string, { equal?: number; min?: number; max?: number }> = {};
-  const involvedItemIds = collectInvolvedItemIds(compiledOptions, targetRateMap, externalItemIds);
 
   for (const itemId of involvedItemIds) {
-    const targetRate = targetRateMap.get(itemId);
-    constraints[itemId] =
-      request.balancePolicy === 'force_balance'
-        ? { equal: targetRate ?? 0 }
-        : { min: targetRate ?? 0 };
+    constraints[itemId] = { equal: targetRateMap.get(itemId) ?? 0 };
   }
 
   return constraints;
@@ -1162,15 +1172,12 @@ function buildLinearModel(
   request: SolveRequest,
   compiledOptions: CompiledOptionContext[],
   targetRateMap: Map<string, number>,
-  externalItemIds: Set<string>
+  externalItemIds: Set<string>,
+  surplusWeights?: ReadonlyMap<string, number>
 ): { model: Model<string, string>; activeOptions: CompiledOptionContext[] } {
   const activeOptions = collectModelOptions(request, compiledOptions);
-  const constraints = buildItemBalanceConstraints(
-    request,
-    activeOptions,
-    targetRateMap,
-    externalItemIds
-  );
+  const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
+  const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
   const variables: Record<string, Record<string, number>> = {};
 
   for (const { option, recipe } of activeOptions) {
@@ -1192,8 +1199,17 @@ function buildLinearModel(
   for (const itemId of externalItemIds) {
     variables[`ext:${itemId}`] = {
       [itemId]: 1,
-      __objective__: request.objective === 'min_external_input' ? 1 : 0,
+      __objective__: buildExternalInputObjectiveCoefficient(request),
     };
+  }
+
+  if (request.balancePolicy === 'allow_surplus') {
+    for (const itemId of involvedItemIds) {
+      variables[buildSurplusVariableName(itemId)] = {
+        [itemId]: -1,
+        __objective__: surplusWeights?.get(itemId) ?? 1,
+      };
+    }
   }
 
   return {
@@ -1224,12 +1240,8 @@ function buildComplexityModel(params: {
     linkUpperBound,
   } = params;
   const activeOptions = collectModelOptions(request, compiledOptions);
-  const constraints = buildItemBalanceConstraints(
-    request,
-    activeOptions,
-    targetRateMap,
-    externalItemIds
-  );
+  const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
+  const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
   const variables: Record<string, Record<string, number>> = {};
   const binaries = new Set<string>();
   const totalPowerCoefficient = activeOptions.reduce(
@@ -1263,6 +1275,15 @@ function buildComplexityModel(params: {
     variables[`ext:${itemId}`] = {
       [itemId]: 1,
     };
+  }
+
+  if (request.balancePolicy === 'allow_surplus') {
+    for (const itemId of involvedItemIds) {
+      variables[buildSurplusVariableName(itemId)] = {
+        [itemId]: -1,
+        __complexity__: powerTieBreakScale * OBJECTIVE_EPSILON,
+      };
+    }
   }
 
   const ensureUsageVariable = (variableName: string) => {
@@ -1375,6 +1396,119 @@ function sortItemRates(itemRates: Map<string, number>): ItemRate[] {
       itemId,
       ratePerMin,
     }));
+}
+
+function collectSurplusSolutionMetrics(
+  solutionVariables: Iterable<[string, number]>
+): SurplusSolutionMetrics {
+  const itemRateMap = new Map<string, number>();
+  let totalRatePerMin = 0;
+
+  for (const [variableName, value] of solutionVariables) {
+    if (!variableName.startsWith('__surplus:') || value <= SURPLUS_OUTPUT_EPSILON) {
+      continue;
+    }
+
+    const itemId = variableName.slice('__surplus:'.length);
+    itemRateMap.set(itemId, value);
+    totalRatePerMin += value;
+  }
+
+  return {
+    activeItemIds: Array.from(itemRateMap.keys()).sort((left, right) => left.localeCompare(right)),
+    itemRateMap,
+    totalRatePerMin,
+  };
+}
+
+function buildPrimaryObjectiveValue(
+  request: SolveRequest,
+  activeOptions: CompiledOptionContext[],
+  solutionVariables: Iterable<[string, number]>
+): number {
+  const optionById = new Map(activeOptions.map(entry => [entry.option.optionId, entry.option]));
+  let total = 0;
+
+  for (const [variableName, value] of solutionVariables) {
+    if (value <= EPSILON) {
+      continue;
+    }
+
+    if (variableName.startsWith('ext:')) {
+      if (request.objective === 'min_external_input') {
+        total += value;
+      }
+      continue;
+    }
+
+    const option = optionById.get(variableName);
+    if (!option) {
+      continue;
+    }
+
+    if (request.objective === 'min_buildings') {
+      total += option.buildingCostPerRunPerMin * value;
+    } else if (request.objective === 'min_power') {
+      total += option.powerCostMWPerRunPerMin * value;
+    }
+  }
+
+  return total;
+}
+
+function compareLinearSolveCandidates(left: LinearSolveCandidate, right: LinearSolveCandidate): number {
+  if (left.surplus.activeItemIds.length !== right.surplus.activeItemIds.length) {
+    return left.surplus.activeItemIds.length - right.surplus.activeItemIds.length;
+  }
+
+  if (
+    Math.abs(left.surplus.totalRatePerMin - right.surplus.totalRatePerMin) > SURPLUS_OUTPUT_EPSILON
+  ) {
+    return left.surplus.totalRatePerMin - right.surplus.totalRatePerMin;
+  }
+
+  if (Math.abs(left.primaryObjectiveValue - right.primaryObjectiveValue) > OBJECTIVE_EPSILON) {
+    return left.primaryObjectiveValue - right.primaryObjectiveValue;
+  }
+
+  return 0;
+}
+
+function buildReweightedSurplusWeights(
+  metrics: SurplusSolutionMetrics
+): ReadonlyMap<string, number> | undefined {
+  if (metrics.activeItemIds.length <= 1 || metrics.totalRatePerMin <= SURPLUS_OUTPUT_EPSILON) {
+    return undefined;
+  }
+
+  const weights = new Map<string, number>();
+  for (const itemId of metrics.activeItemIds) {
+    const rate = metrics.itemRateMap.get(itemId) ?? 0;
+    weights.set(
+      itemId,
+      Math.max(
+        1,
+        Math.min(ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR, metrics.totalRatePerMin / Math.max(rate, EPSILON))
+      )
+    );
+  }
+  return weights;
+}
+
+function buildLinearSolveCandidate(params: {
+  request: SolveRequest;
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  solution: Solution<string>;
+}): LinearSolveCandidate {
+  const { request, model, activeOptions, solution } = params;
+  return {
+    model,
+    activeOptions,
+    solution,
+    surplus: collectSurplusSolutionMetrics(solution.variables),
+    primaryObjectiveValue: buildPrimaryObjectiveValue(request, activeOptions, solution.variables),
+  };
 }
 
 function buildUnmetPreferences(
@@ -1617,10 +1751,7 @@ function solveCatalogRequestValidated(
   catalog: ResolvedCatalogModel,
   request: SolveRequest
 ): SolveResult {
-  const solveStartedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const solveStartedAt = currentTimeMs();
   const targetRateMap = aggregateTargetRates(request);
   const disabledRawInputItemIds = new Set(request.disabledRawInputItemIds ?? []);
   const rawInputItemIds = new Set<string>(
@@ -1638,10 +1769,7 @@ function solveCatalogRequestValidated(
     disabledRecipeIds,
     disabledBuildingIds
   );
-  const graphFinishedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const graphFinishedAt = currentTimeMs();
   recordSolverPerf({
     phase: 'graph',
     durationMs: graphFinishedAt - solveStartedAt,
@@ -1659,19 +1787,43 @@ function solveCatalogRequestValidated(
   let model: Model<string, string>;
   let activeOptions: CompiledOptionContext[];
   let solution: Solution<string>;
+  let modelDurationMs = 0;
+  let lpDurationMs = 0;
+
+  const buildLinear = (surplusWeights?: ReadonlyMap<string, number>) => {
+    const startedAt = currentTimeMs();
+    const build = buildLinearModel(
+      request,
+      compiledGraph.options,
+      targetRateMap,
+      externalItemIds,
+      surplusWeights
+    );
+    modelDurationMs += currentTimeMs() - startedAt;
+    return build;
+  };
+
+  const solveModel = (candidateModel: Model<string, string>) => {
+    const startedAt = currentTimeMs();
+    const candidateSolution = solveLinearProgram(candidateModel);
+    lpDurationMs += currentTimeMs() - startedAt;
+    return candidateSolution;
+  };
 
   if (request.objective === 'min_complexity') {
     const seedRequest: SolveRequest = {
       ...request,
       objective: 'min_power',
     };
+    const seedBuildStartedAt = currentTimeMs();
     const seedBuild = buildLinearModel(
       seedRequest,
       compiledGraph.options,
       targetRateMap,
       externalItemIds
     );
-    const seedSolution = solveLinearProgram(seedBuild.model);
+    modelDurationMs += currentTimeMs() - seedBuildStartedAt;
+    const seedSolution = solveModel(seedBuild.model);
     if (seedSolution.status !== 'optimal') {
       return buildInfeasibleSolveResult({
         targetRateMap,
@@ -1697,6 +1849,7 @@ function solveCatalogRequestValidated(
 
     for (const multiplier of COMPLEXITY_LINK_BOUND_MULTIPLIERS) {
       const linkUpperBound = baseLinkUpperBound * multiplier;
+      const buildStartedAt = currentTimeMs();
       const complexityBuild = buildComplexityModel({
         catalog,
         request,
@@ -1705,7 +1858,8 @@ function solveCatalogRequestValidated(
         externalItemIds,
         linkUpperBound,
       });
-      const candidateSolution = solveLinearProgram(complexityBuild.model);
+      modelDurationMs += currentTimeMs() - buildStartedAt;
+      const candidateSolution = solveModel(complexityBuild.model);
       if (candidateSolution.status !== 'optimal') {
         lastFailureMessage = `Complexity MILP failed with status ${candidateSolution.status}.`;
         continue;
@@ -1732,34 +1886,77 @@ function solveCatalogRequestValidated(
     activeOptions = complexityOptions;
     solution = complexitySolution;
   } else {
-    const linearBuild = buildLinearModel(
-      request,
-      compiledGraph.options,
-      targetRateMap,
-      externalItemIds
-    );
+    const linearBuild = buildLinear();
     model = linearBuild.model;
     activeOptions = linearBuild.activeOptions;
-    solution = solveLinearProgram(model);
+    solution = solveModel(model);
+
+    if (request.balancePolicy === 'allow_surplus' && solution.status === 'optimal') {
+      let bestCandidate = buildLinearSolveCandidate({
+        request,
+        model,
+        activeOptions,
+        solution,
+      });
+      let previousCandidate = bestCandidate;
+      const deadline = solveStartedAt + ALLOW_SURPLUS_SYNC_BUDGET_MS;
+      let solveCount = 1;
+
+      while (solveCount < ALLOW_SURPLUS_MAX_LINEAR_SOLVES && currentTimeMs() < deadline) {
+        const surplusWeights = buildReweightedSurplusWeights(previousCandidate.surplus);
+        if (!surplusWeights) {
+          break;
+        }
+
+        const weightedBuild = buildLinear(surplusWeights);
+        if (currentTimeMs() >= deadline) {
+          break;
+        }
+
+        const weightedSolution = solveModel(weightedBuild.model);
+        solveCount += 1;
+        if (weightedSolution.status !== 'optimal') {
+          break;
+        }
+
+        const candidate = buildLinearSolveCandidate({
+          request,
+          model: weightedBuild.model,
+          activeOptions: weightedBuild.activeOptions,
+          solution: weightedSolution,
+        });
+
+        if (compareLinearSolveCandidates(candidate, bestCandidate) < 0) {
+          bestCandidate = candidate;
+        }
+
+        const sameSupport =
+          candidate.surplus.activeItemIds.length === previousCandidate.surplus.activeItemIds.length &&
+          candidate.surplus.activeItemIds.every(
+            (itemId, index) => itemId === previousCandidate.surplus.activeItemIds[index]
+          );
+        previousCandidate = candidate;
+        if (sameSupport) {
+          break;
+        }
+      }
+
+      model = bestCandidate.model;
+      activeOptions = bestCandidate.activeOptions;
+      solution = bestCandidate.solution;
+    }
   }
-  const modelFinishedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const solveFinishedAt = currentTimeMs();
   recordSolverPerf({
     phase: 'model',
-    durationMs: modelFinishedAt - graphFinishedAt,
+    durationMs: modelDurationMs,
     constraintCount: Object.keys(model.constraints).length,
     variableCount: Object.keys(model.variables).length,
     recordedAt: Date.now(),
   });
-  const lpFinishedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
   recordSolverPerf({
     phase: 'lp',
-    durationMs: lpFinishedAt - modelFinishedAt,
+    durationMs: lpDurationMs,
     constraintCount: Object.keys(model.constraints).length,
     variableCount: Object.keys(model.variables).length,
     status: solution.status,
@@ -1769,7 +1966,7 @@ function solveCatalogRequestValidated(
   if (solution.status !== 'optimal') {
     recordSolverPerf({
       phase: 'total',
-      durationMs: lpFinishedAt - solveStartedAt,
+      durationMs: solveFinishedAt - solveStartedAt,
       recipeCount: compiledGraph.recipes.length,
       optionCount: compiledGraph.options.length,
       constraintCount: Object.keys(model.constraints).length,
@@ -1796,13 +1993,10 @@ function solveCatalogRequestValidated(
       left.localeCompare(right)
     ),
   });
-  const resultFinishedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const resultFinishedAt = currentTimeMs();
   recordSolverPerf({
     phase: 'result',
-    durationMs: resultFinishedAt - lpFinishedAt,
+    durationMs: resultFinishedAt - solveFinishedAt,
     recipeCount: result.recipePlans.length,
     recordedAt: Date.now(),
   });

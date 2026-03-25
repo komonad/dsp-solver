@@ -397,7 +397,7 @@ export function buildGlobalProliferatorOverrides(
   level?: '' | number
 ): Pick<
   AdvancedSolveOverrides,
-  'preferredProliferatorModeByRecipe' | 'preferredProliferatorLevelByRecipe'
+  'forcedProliferatorModeByRecipe' | 'forcedProliferatorLevelByRecipe'
 > {
   if (policy === 'auto') {
     return {};
@@ -412,10 +412,10 @@ export function buildGlobalProliferatorOverrides(
   if (policy === 'none') {
     const affectedRecipeIds = affectedRecipes.map(recipe => recipe.recipeId);
     return {
-      preferredProliferatorModeByRecipe: Object.fromEntries(
+      forcedProliferatorModeByRecipe: Object.fromEntries(
         affectedRecipeIds.map(recipeId => [recipeId, 'none'])
       ),
-      preferredProliferatorLevelByRecipe: Object.fromEntries(
+      forcedProliferatorLevelByRecipe: Object.fromEntries(
         affectedRecipeIds.map(recipeId => [recipeId, 0])
       ),
     };
@@ -437,10 +437,10 @@ export function buildGlobalProliferatorOverrides(
   }
 
   return {
-    preferredProliferatorModeByRecipe: Object.fromEntries(
+    forcedProliferatorModeByRecipe: Object.fromEntries(
       compatibleRecipeIds.map(recipeId => [recipeId, policy])
     ),
-    preferredProliferatorLevelByRecipe: Object.fromEntries(
+    forcedProliferatorLevelByRecipe: Object.fromEntries(
       compatibleRecipeIds.map(recipeId => [recipeId, level])
     ),
   };

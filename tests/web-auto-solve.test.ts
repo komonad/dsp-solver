@@ -94,6 +94,66 @@ function buildSurplusDataset(): VanillaDatasetSpec {
   };
 }
 
+function buildProliferatorDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 2 },
+      { ID: 1141, Type: 5, Name: 'Proliferator Mk.I', IconName: 'spray-1', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Smelter',
+        IconName: 'smelter',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForMW(1),
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Ore to Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 3,
+        IconName: 'plate',
+      },
+    ],
+  };
+}
+
+function buildProliferatorDefaults(): CatalogDefaultConfigSpec {
+  return {
+    proliferatorLevels: [
+      {
+        Level: 1,
+        ItemID: 1141,
+        SprayCount: 13,
+        SpeedMultiplier: 1.25,
+        ProductivityMultiplier: 1.125,
+        PowerMultiplier: 1.3,
+      },
+    ],
+    buildingRules: [{ ID: 5001, Category: 'smelter' }],
+    recipeModifierRules: [
+      { Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 },
+      {
+        Code: 3,
+        Kind: 'proliferator',
+        SupportedModes: ['none', 'speed', 'productivity'],
+        MaxLevel: 1,
+      },
+    ],
+    recommendedRawItemTypeIds: [1],
+  };
+}
+
 test('computeWorkbenchSolve auto-builds the request and solver result from editor state', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
   const autoSolve = computeWorkbenchSolve({
@@ -263,3 +323,30 @@ test('computeWorkbenchSolve returns an allow_surplus fallback when force_balance
   ]);
 });
 
+test('computeWorkbenchSolve expands the global proliferator policy into hard per-recipe overrides', () => {
+  const catalog = resolveCatalogModel(buildProliferatorDataset(), buildProliferatorDefaults());
+  const autoSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    proliferatorPolicy: 'speed',
+    globalProliferatorLevel: 1,
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  });
+
+  expect(autoSolve.error).toBe('');
+  expect(autoSolve.request?.forcedProliferatorModeByRecipe).toEqual({ '1': 'speed' });
+  expect(autoSolve.request?.forcedProliferatorLevelByRecipe).toEqual({ '1': 1 });
+  expect(autoSolve.result?.status).toBe('optimal');
+  expect(autoSolve.result?.recipePlans[0].proliferatorMode).toBe('speed');
+  expect(autoSolve.result?.recipePlans[0].proliferatorLevel).toBe(1);
+});

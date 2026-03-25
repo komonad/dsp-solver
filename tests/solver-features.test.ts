@@ -844,6 +844,83 @@ test('allow_surplus still minimizes unnecessary byproduct magnitude and variety'
   expect(result.surplusOutputs).toEqual([]);
 });
 
+test('allow_surplus prefers consolidating surplus into fewer item types before lower power', () => {
+  const dataset: VanillaDatasetSpec = {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Target Plate', IconName: 'plate', GridIndex: 2 },
+      { ID: 1201, Type: 2, Name: 'Byproduct A', IconName: 'by-a', GridIndex: 3 },
+      { ID: 1202, Type: 2, Name: 'Byproduct B', IconName: 'by-b', GridIndex: 4 },
+      { ID: 1203, Type: 2, Name: 'Byproduct C', IconName: 'by-c', GridIndex: 5 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Low-Power Smelter',
+        IconName: 'smelter-low',
+        GridIndex: 6,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+      {
+        ID: 5002,
+        Type: 6,
+        Name: 'High-Power Smelter',
+        IconName: 'smelter-high',
+        GridIndex: 7,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW * 2,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Split Byproducts',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1201, 1202],
+        ResultCounts: [1, 1, 1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-a',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5002],
+        Name: 'Single Byproduct',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1203],
+        ResultCounts: [1, 2],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-c',
+      },
+    ],
+  };
+  const catalog = resolveCatalogModel(dataset, {
+    buildingRules: [
+      { ID: 5001, Category: 'smelter' },
+      { ID: 5002, Category: 'smelter' },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].recipeId).toBe('2');
+  expect(result.surplusOutputs).toEqual([{ itemId: '1203', ratePerMin: 120 }]);
+});
+
 test('orbital ring request honors forced graphite recipe instead of delayed coking', () => {
   const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
   const defaultsText = readFileSync(

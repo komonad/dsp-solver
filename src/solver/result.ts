@@ -130,7 +130,7 @@ export interface SolveResult {
   powerSummary: PowerSummary;
   /** External/raw inputs required by the plan. */
   externalInputs: ItemRate[];
-  /** Explicit surplus outputs when balancePolicy allows surplus. */
+  /** Explicit final net surplus outputs after target demand and recipe consumption. */
   surplusOutputs: ItemRate[];
   /** Full item-balance table for auditing and testing. */
   itemBalance: ItemBalanceEntry[];

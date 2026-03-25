@@ -1,10 +1,77 @@
 import React from 'react';
-import { formatRate, formatPower } from '../../../i18n';
+import { formatRate, formatPower, type AppLocale } from '../../../i18n';
 import { EntityLabel } from '../../shared/EntityIcon';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
-import { FlowRateSequence } from '../components/FlowRateDisplay';
 import { useWorkbench } from '../WorkbenchContext';
 import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
+
+const summarySectionStyle: React.CSSProperties = {
+  border: '1px solid rgba(24, 51, 89, 0.10)',
+  borderRadius: 16,
+  padding: 14,
+  display: 'grid',
+  gap: 8,
+  alignContent: 'start',
+};
+
+const summaryRateListStyle: React.CSSProperties = {
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  alignItems: 'center',
+};
+
+const summaryRateTextStyle: React.CSSProperties = {
+  fontSize: 12,
+  color: 'rgba(24, 51, 89, 0.72)',
+  whiteSpace: 'nowrap',
+};
+
+const surplusGroupLabelStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'rgba(24, 51, 89, 0.62)',
+  whiteSpace: 'nowrap',
+};
+
+export interface SummaryItemRateListProps {
+  items: Array<{
+    itemId: string;
+    itemName: string;
+    iconKey?: string;
+    ratePerMin: number;
+  }>;
+  locale: AppLocale;
+  atlasIds: string[];
+}
+
+export function SummaryItemRateList({
+  items,
+  locale,
+  atlasIds,
+}: SummaryItemRateListProps) {
+  return (
+    <div style={summaryRateListStyle}>
+      {items.map(item => (
+        <div
+          key={item.itemId}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+          title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
+        >
+          <ClickableItemLabel
+            itemId={item.itemId}
+            itemName={item.itemName}
+            iconKey={item.iconKey}
+            iconOnly
+            iconSize={18}
+            atlasIds={atlasIds}
+          />
+          <span style={summaryRateTextStyle}>{formatRate(item.ratePerMin, locale)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function SummaryCard() {
   const { bundle, locale, iconAtlasIds, model } = useWorkbench();
@@ -12,6 +79,18 @@ export default function SummaryCard() {
   if (!model) {
     return null;
   }
+
+  const netInputItems = model.solvedSummary?.netInputs ?? [];
+  const targetOutputItems = model.solvedSummary
+    ? model.targets.map(target => ({
+        itemId: target.itemId,
+        itemName: target.itemName,
+        iconKey: target.iconKey,
+        ratePerMin: target.actualRatePerMin,
+      }))
+    : [];
+  const surplusOutputItems = model.solvedSummary ? model.surplusOutputs : [];
+  const hasNetOutputs = targetOutputItems.length > 0 || surplusOutputItems.length > 0;
 
   return (
     <article style={cardStyle}>
@@ -23,69 +102,48 @@ export default function SummaryCard() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
         }}
       >
-        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 8, alignContent: 'start' }}>
+        <div style={summarySectionStyle}>
           <div style={sectionHeadingStyle}>{bundle.itemLedger.netInputsTitle}</div>
-          {(model.solvedSummary?.netInputs.length ?? 0) === 0 ? (
+          {netInputItems.length === 0 ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              {model.solvedSummary?.netInputs.map(item => (
-                <div
-                  key={item.itemId}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
-                >
-                  <ClickableItemLabel
-                    itemId={item.itemId}
-                    itemName={item.itemName}
-                    iconKey={item.iconKey}
-                    iconOnly
-                    iconSize={18}
-                    atlasIds={iconAtlasIds}
-                  />
-                  <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
-                    {formatRate(item.ratePerMin, locale)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <SummaryItemRateList items={netInputItems} locale={locale} atlasIds={iconAtlasIds} />
           )}
         </div>
 
-        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 8, alignContent: 'start' }}>
+        <div style={summarySectionStyle}>
           <div style={sectionHeadingStyle}>{bundle.itemLedger.netOutputsTitle}</div>
-          {(model.solvedSummary?.netOutputs.length ?? 0) === 0 ? (
+          {!hasNetOutputs ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
           ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-              {model.solvedSummary?.netOutputs.map(item => (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {targetOutputItems.length > 0 ? (
+                <SummaryItemRateList items={targetOutputItems} locale={locale} atlasIds={iconAtlasIds} />
+              ) : null}
+              {surplusOutputItems.length > 0 ? (
                 <div
-                  key={item.itemId}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                  title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
+                  style={{
+                    display: 'grid',
+                    gap: 8,
+                    borderTop: targetOutputItems.length > 0 ? '1px solid rgba(24, 51, 89, 0.12)' : undefined,
+                    paddingTop: targetOutputItems.length > 0 ? 8 : 0,
+                  }}
                 >
-                  <ClickableItemLabel
-                    itemId={item.itemId}
-                    itemName={item.itemName}
-                    iconKey={item.iconKey}
-                    iconOnly
-                    iconSize={18}
+                  <div style={surplusGroupLabelStyle}>{bundle.overview.surplusOutputsTitle}</div>
+                  <SummaryItemRateList
+                    items={surplusOutputItems}
+                    locale={locale}
                     atlasIds={iconAtlasIds}
                   />
-                  <span style={{ fontSize: 12, color: 'rgba(24, 51, 89, 0.72)', whiteSpace: 'nowrap' }}>
-                    {formatRate(item.ratePerMin, locale)}
-                  </span>
                 </div>
-              ))}
+              ) : null}
             </div>
           )}
         </div>
 
         <div
           style={{
-            border: '1px solid rgba(24, 51, 89, 0.10)',
-            borderRadius: 16,
-            padding: 14,
+            ...summarySectionStyle,
             display: 'grid',
             gap: 10,
             alignContent: 'start',
@@ -136,7 +194,7 @@ export default function SummaryCard() {
           </div>
         </div>
 
-        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+        <div style={{ ...summarySectionStyle, gap: 6 }}>
           <div style={sectionHeadingStyle}>{bundle.overview.powerLabel}</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>
             {formatPower(model.solvedSummary?.roundedPlacementPowerMW ?? 0, locale)}
@@ -146,7 +204,7 @@ export default function SummaryCard() {
           </div>
         </div>
 
-        <div style={{ border: '1px solid rgba(24, 51, 89, 0.10)', borderRadius: 16, padding: 14, display: 'grid', gap: 6, alignContent: 'start' }}>
+        <div style={{ ...summarySectionStyle, gap: 6 }}>
           <div style={sectionHeadingStyle}>{bundle.summary.recipesLabel}</div>
           <div style={{ fontSize: 20, fontWeight: 700 }}>{model.solvedSummary?.recipeTypeCount ?? 0}</div>
           <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>{bundle.recipePlans.title}</div>
