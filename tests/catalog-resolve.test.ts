@@ -285,4 +285,18 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
     supportsProliferatorModes: ['none', 'speed'],
     maxProliferatorLevel: 3,
   });
+  expect(resolved.recipeMap.get('106')).toMatchObject({
+    recipeId: '106',
+    fractionationProbability: 0.01,
+    modifierCode: 1,
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('115')).toMatchObject({
+    recipeId: '115',
+    fractionationProbability: 0.01,
+    modifierCode: 1,
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 3,
+  });
 });

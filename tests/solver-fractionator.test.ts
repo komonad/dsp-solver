@@ -1,4 +1,5 @@
 import {
+  loadResolvedCatalogFromFiles,
   resolveCatalogModel,
   type CatalogDefaultConfigSpec,
   type VanillaDatasetSpec,
@@ -140,4 +141,36 @@ test('fractionation recipes reject forced productivity because they are speed-on
 
   expect(result.status).toBe('infeasible');
   expect(result.recipePlans).toEqual([]);
+});
+
+test('OrbitalRing heavy-water fractionation uses the configured probability and ignores universal buildings without throughput config', async () => {
+  const catalog = await loadResolvedCatalogFromFiles(
+    './data/OrbitalRing.json',
+    './data/OrbitalRing.defaults.json'
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '7018', ratePerMin: 72 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    rawInputItemIds: ['1000', '1143'],
+    allowedRecipesByItem: { '7018': ['106'] },
+    forcedProliferatorModeByRecipe: { '106': 'speed' },
+    forcedProliferatorLevelByRecipe: { '106': 3 },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '106',
+    buildingId: '2314',
+    proliferatorMode: 'speed',
+    proliferatorLevel: 3,
+    runsPerMin: 72,
+  });
+  expect(result.recipePlans[0].exactBuildingCount).toBeCloseTo(0.5, 6);
+  expect(result.recipePlans[0].inputs[0]).toEqual({ itemId: '1000', ratePerMin: 72 });
+  expect(result.recipePlans[0].outputs[0]).toEqual({ itemId: '7018', ratePerMin: 72 });
+  expect(result.diagnostics.messages).toContain(
+    'Fractionation recipe 106 skips building 6215 because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.'
+  );
 });

@@ -367,6 +367,13 @@ function getStaticRecipeOptionCompilation(
       continue;
     }
 
+    if (isFractionationRecipe(recipe) && !hasFractionationBuildingThroughputConfig(building)) {
+      messages.push(
+        `Fractionation recipe ${recipe.recipeId} skips building ${building.buildingId} because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.`
+      );
+      continue;
+    }
+
     options.push({
       option: buildNoneVariant(recipe, building),
       recipe,
@@ -808,6 +815,17 @@ function buildSingleBuildingBaseRunsPerMin(
   }
 
   return beltSpeed * maxStack * recipe.fractionationProbability!;
+}
+
+function hasFractionationBuildingThroughputConfig(building: ResolvedBuildingSpec): boolean {
+  return Boolean(
+    Number.isFinite(building.fractionatorBeltSpeedItemsPerMin) &&
+    building.fractionatorBeltSpeedItemsPerMin !== undefined &&
+    building.fractionatorBeltSpeedItemsPerMin > 0 &&
+    Number.isFinite(building.fractionatorMaxItemStack) &&
+    building.fractionatorMaxItemStack !== undefined &&
+    building.fractionatorMaxItemStack > 0
+  );
 }
 
 function buildInputPerRun(recipe: ResolvedRecipeSpec): Record<string, number> {
