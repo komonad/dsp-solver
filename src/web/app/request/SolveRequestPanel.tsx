@@ -15,6 +15,8 @@ import {
   collapsibleSectionStyle,
   compactSelectFieldSx,
   inputStyle,
+  inlineSectionLabelSx,
+  inlineSectionLayoutSx,
   inlineConstraintSectionGroupSx,
   summaryStyle,
 } from '../workbenchStyles';
@@ -57,80 +59,6 @@ export default function SolveRequestPanel() {
     <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
       <Typography variant="h6">{bundle.solveRequest.title}</Typography>
       <div style={{ display: 'grid', gap: 16 }}>
-        <div style={{ display: 'grid', gap: 10 }}>
-          <Typography variant="body2" color="text.secondary">
-            {bundle.solveRequest.editTargetsHint}
-          </Typography>
-
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 1.25,
-              p: 1.75,
-              borderRadius: '16px',
-              border: '1px dashed',
-              borderColor: 'divider',
-              backgroundColor: 'rgba(22, 54, 89, 0.03)',
-            }}
-          >
-            <Typography variant="subtitle2">{bundle.solveRequest.addTargetTitle}</Typography>
-
-            <Box
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-                alignItems: 'end',
-              }}
-            >
-              <Box sx={{ minWidth: 0, flex: '1 1 160px', maxWidth: 320 }}>
-                <ItemGridPicker
-                  items={itemOptions}
-                  selectedItemId={targetDraftItemId}
-                  query={targetPickerQuery}
-                  onQueryChange={setTargetPickerQuery}
-                  onSelect={setTargetDraftItemId}
-                  atlasIds={iconAtlasIds}
-                  searchLabel={bundle.solveRequest.targetSearchLabel}
-                  searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
-                  emptyText={bundle.solveRequest.targetPickerEmpty}
-                  selectedItemName={targetDraftItemOption?.name}
-                  selectedItemIcon={targetDraftItemOption?.icon}
-                />
-              </Box>
-
-              <TextField
-                type="number"
-                size="small"
-                label={bundle.overview.requestLabel}
-                value={targetDraftRatePerMin}
-                inputProps={{ min: 0, step: 1 }}
-                onChange={event => setTargetDraftRatePerMin(Number(event.target.value) || 0)}
-                sx={{ width: 88 }}
-              />
-
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() =>
-                  addTarget({
-                    itemId: targetDraftItemId,
-                    ratePerMin: targetDraftRatePerMin,
-                  })
-                }
-                disabled={!catalog || !targetDraftItemId}
-                sx={{
-                  minHeight: 40,
-                  px: 1.5,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {bundle.solveRequest.addTarget}
-              </Button>
-            </Box>
-          </Box>
-        </div>
-
         <Box
           sx={{
             display: 'flex',
@@ -207,6 +135,76 @@ export default function SolveRequestPanel() {
           </TextField>
           )}
         </Box>
+
+        <div style={{ display: 'grid', gap: 8 }}>
+          <section style={collapsibleSectionStyle}>
+            <Box sx={inlineSectionLayoutSx}>
+              <Typography variant="subtitle2" sx={inlineSectionLabelSx}>
+                {bundle.solveRequest.addTargetTitle}
+              </Typography>
+
+              <Box
+                sx={{
+                  minWidth: 0,
+                  flex: '1 1 0',
+                  display: 'grid',
+                  gap: 1,
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'minmax(0, 1fr) minmax(88px, auto) auto',
+                  },
+                  alignItems: 'start',
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <ItemGridPicker
+                    items={itemOptions}
+                    selectedItemId={targetDraftItemId}
+                    query={targetPickerQuery}
+                    onQueryChange={setTargetPickerQuery}
+                    onSelect={setTargetDraftItemId}
+                    atlasIds={iconAtlasIds}
+                    searchLabel={bundle.solveRequest.targetSearchLabel}
+                    searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
+                    emptyText={bundle.solveRequest.targetPickerEmpty}
+                    selectedItemName={targetDraftItemOption?.name}
+                    selectedItemIcon={targetDraftItemOption?.icon}
+                  />
+                </Box>
+
+                <TextField
+                  type="number"
+                  size="small"
+                  label={bundle.overview.requestLabel}
+                  value={targetDraftRatePerMin}
+                  inputProps={{ min: 0, step: 1 }}
+                  onChange={event => setTargetDraftRatePerMin(Number(event.target.value) || 0)}
+                  sx={{ width: 88 }}
+                />
+
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() =>
+                    addTarget({
+                      itemId: targetDraftItemId,
+                      ratePerMin: targetDraftRatePerMin,
+                    })
+                  }
+                  disabled={!catalog || !targetDraftItemId}
+                  sx={{
+                    minHeight: 40,
+                    px: 1.5,
+                    whiteSpace: 'nowrap',
+                    justifySelf: 'start',
+                  }}
+                >
+                  {bundle.solveRequest.addTarget}
+                </Button>
+              </Box>
+            </Box>
+          </section>
+        </div>
 
         <Box sx={inlineConstraintSectionGroupSx}>
           <DisabledRecipesSection />
