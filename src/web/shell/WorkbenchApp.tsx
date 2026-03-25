@@ -29,6 +29,7 @@ function WorkbenchLayout() {
     applyAllowedRecipesForItem,
     clearAllowedRecipesForItem,
     locateItemInLedger,
+    revealRecipePlan,
     locale,
   } = useWorkbench();
 
@@ -137,6 +138,7 @@ function WorkbenchLayout() {
           onApplyPreferredRecipes={applyAllowedRecipesForItem}
           onClearAllowedRecipes={clearAllowedRecipesForItem}
           onLocateInLedger={locateItemInLedger}
+          onRevealRecipePlan={revealRecipePlan}
         />
         <StrategyWarningSnackbar />
       </Container>

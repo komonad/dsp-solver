@@ -35,6 +35,7 @@ interface ItemSliceOverlayHostProps {
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
   onClearAllowedRecipes: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
+  onRevealRecipePlan: (planKey: string) => void;
 }
 
 export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
@@ -49,6 +50,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     onApplyPreferredRecipes,
     onClearAllowedRecipes,
     onLocateInLedger,
+    onRevealRecipePlan,
   } = props;
   const workbenchExtra = useMemo(() => getWorkbenchExtraBundle(locale), [locale]);
   const overlayState = useSyncExternalStore(
@@ -209,6 +211,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             onApplyPreferredRecipes={onApplyPreferredRecipes}
             onClearPreferredRecipe={onClearAllowedRecipes}
             onLocateInLedger={onLocateInLedger}
+            onRevealRecipePlan={onRevealRecipePlan}
           />
         </Box>
       </Paper>

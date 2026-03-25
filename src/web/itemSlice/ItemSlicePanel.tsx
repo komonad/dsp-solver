@@ -15,7 +15,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../i18n';
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemSlice } from '../../presentation';
-import { EntityLabel, EntityLabelButton } from '../shared/EntityIcon';
+import { EntityLabelButton } from '../shared/EntityIcon';
+import { buildRecipePlanRevealKey } from '../shared/recipePlanReveal';
 import { FlowRateSequence } from '../app/components/FlowRateDisplay';
 import { RecipeOptionLabel, type RecipeOptionIO } from '../app/components/SelectOption';
 
@@ -38,6 +39,7 @@ interface ItemSlicePanelProps {
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
   onClearPreferredRecipe: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
+  onRevealRecipePlan: (planKey: string) => void;
 }
 
 function buildPlanCardTitle(recipeName: string, buildingName: string) {
@@ -57,6 +59,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
     onApplyPreferredRecipes,
     onClearPreferredRecipe,
     onLocateInLedger,
+    onRevealRecipePlan,
   } = props;
   const bundle = getWorkbenchExtraBundle(locale);
   const localeBundle = getLocaleBundle(locale);
@@ -209,8 +212,21 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
         {slice.producerPlans.length > 0 ? slice.producerPlans.map(plan => (
           <Card key={`producer-${slice.itemId}-${plan.recipeId}-${plan.buildingId}-${plan.proliferatorLabel}`} sx={{ borderRadius: '18px', overflow: 'hidden' }}>
             <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
-              <Box>
-                <EntityLabel label={buildPlanCardTitle(plan.recipeName, plan.buildingName)} iconKey={plan.recipeIconKey} atlasIds={atlasIds} size={22} gap={8} textStyle={{ fontWeight: 700 }} />
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+                  <EntityLabelButton
+                    label={buildPlanCardTitle(plan.recipeName, plan.buildingName)}
+                    iconKey={plan.recipeIconKey}
+                    atlasIds={atlasIds}
+                    size={22}
+                    gap={8}
+                    textStyle={{ fontWeight: 700 }}
+                    onClick={() => onRevealRecipePlan(buildRecipePlanRevealKey(plan))}
+                  />
+                  <Button size="small" onClick={() => onRevealRecipePlan(buildRecipePlanRevealKey(plan))}>
+                    {bundle.itemSlice.revealPlanButton}
+                  </Button>
+                </Box>
                 <Stack direction="row" useFlexGap flexWrap="wrap" gap={1} sx={{ mt: 1, color: 'text.secondary' }}>
                   <Typography variant="caption">产出 {formatRate(plan.itemRatePerMin, locale)}</Typography>
                   <Typography variant="caption">{plan.proliferatorLabel}</Typography>
@@ -233,8 +249,21 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
         {slice.consumerPlans.length > 0 ? slice.consumerPlans.map(plan => (
           <Card key={`consumer-${slice.itemId}-${plan.recipeId}-${plan.buildingId}-${plan.proliferatorLabel}`} sx={{ borderRadius: '18px', overflow: 'hidden' }}>
             <Box sx={{ p: 2, display: 'grid', gap: 1.5 }}>
-              <Box>
-                <EntityLabel label={buildPlanCardTitle(plan.recipeName, plan.buildingName)} iconKey={plan.recipeIconKey} atlasIds={atlasIds} size={22} gap={8} textStyle={{ fontWeight: 700 }} />
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1, flexWrap: 'wrap' }}>
+                  <EntityLabelButton
+                    label={buildPlanCardTitle(plan.recipeName, plan.buildingName)}
+                    iconKey={plan.recipeIconKey}
+                    atlasIds={atlasIds}
+                    size={22}
+                    gap={8}
+                    textStyle={{ fontWeight: 700 }}
+                    onClick={() => onRevealRecipePlan(buildRecipePlanRevealKey(plan))}
+                  />
+                  <Button size="small" onClick={() => onRevealRecipePlan(buildRecipePlanRevealKey(plan))}>
+                    {bundle.itemSlice.revealPlanButton}
+                  </Button>
+                </Box>
                 <Stack direction="row" useFlexGap flexWrap="wrap" gap={1} sx={{ mt: 1, color: 'text.secondary' }}>
                   <Typography variant="caption">消耗 {formatRate(plan.itemRatePerMin, locale)}</Typography>
                   <Typography variant="caption">{plan.proliferatorLabel}</Typography>

@@ -1,6 +1,7 @@
 import React from 'react';
 import RecipePlanCard from './RecipePlanCard';
 import { useWorkbench } from '../WorkbenchContext';
+import { buildRecipePlanRevealKey } from '../../shared/recipePlanReveal';
 
 export default function RecipePlanList() {
   const { model } = useWorkbench();
@@ -12,7 +13,7 @@ export default function RecipePlanList() {
   return (
     <>
       {model.recipePlans.map(plan => (
-        <RecipePlanCard key={`${plan.recipeId}:${plan.buildingId}:${plan.proliferatorLabel}`} plan={plan} />
+        <RecipePlanCard key={buildRecipePlanRevealKey(plan)} plan={plan} />
       ))}
     </>
   );

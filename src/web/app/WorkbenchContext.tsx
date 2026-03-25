@@ -169,6 +169,8 @@ export interface WorkbenchContextValue {
   disableBuildingOptions: ResolvedCatalogModel['buildings'];
   recipePreferenceOptions: ResolvedRecipeSpec[];
   globalProliferatorLevelDisabled: boolean;
+  revealedRecipePlanKey: string;
+  revealedRecipePlanNonce: number;
 
   // Event handlers
   applyWorkbenchEditorState: (
@@ -225,6 +227,7 @@ export interface WorkbenchContextValue {
   addPreferredBuilding: (entry: EditablePreferredBuilding) => void;
   removePreferredBuilding: (index: number) => void;
   locateItemInLedger: (itemId: string) => void;
+  revealRecipePlan: (planKey: string) => void;
   scrollItemLedgerToTop: () => void;
   scrollItemLedgerToBottom: () => void;
   scrollItemLedgerToSection: (sectionKey: string) => void;
@@ -394,6 +397,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [recipeStrategyWarning, setRecipeStrategyWarning] = useState('');
   const [preferredBuildings, setPreferredBuildings] = useState<EditablePreferredBuilding[]>([]);
+  const [revealedRecipePlanKey, setRevealedRecipePlanKey] = useState('');
+  const [revealedRecipePlanNonce, setRevealedRecipePlanNonce] = useState(0);
 
   // -------------------------------------------------------------------------
   // Refs
@@ -1466,6 +1471,15 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [model, scrollItemLedgerToSection]
   );
 
+  const revealRecipePlan = useCallback(function revealRecipePlan(planKey: string) {
+    if (!planKey) {
+      return;
+    }
+
+    setRevealedRecipePlanKey(planKey);
+    setRevealedRecipePlanNonce(current => current + 1);
+  }, []);
+
   // -------------------------------------------------------------------------
   // Context value
   // -------------------------------------------------------------------------
@@ -1568,6 +1582,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       disableBuildingOptions,
       recipePreferenceOptions,
       globalProliferatorLevelDisabled,
+      revealedRecipePlanKey,
+      revealedRecipePlanNonce,
 
       // Event handlers
       applyWorkbenchEditorState,
@@ -1604,6 +1620,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addPreferredBuilding,
       removePreferredBuilding,
       locateItemInLedger,
+      revealRecipePlan,
       scrollItemLedgerToTop,
       scrollItemLedgerToBottom,
       scrollItemLedgerToSection,
@@ -1672,6 +1689,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       disableBuildingOptions,
       recipePreferenceOptions,
       globalProliferatorLevelDisabled,
+      revealedRecipePlanKey,
+      revealedRecipePlanNonce,
       markItemAsRawInput,
       unmarkItemAsRawInput,
       applyRecipeStrategyPatch,
@@ -1683,6 +1702,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addPreferredBuilding,
       removePreferredBuilding,
       locateItemInLedger,
+      revealRecipePlan,
       scrollItemLedgerToTop,
       scrollItemLedgerToBottom,
       scrollItemLedgerToSection,

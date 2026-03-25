@@ -6,6 +6,7 @@ import type { ProliferatorMode } from '../../../catalog';
 import { formatProliferatorMode } from '../../../i18n';
 import type { PresentationModel } from '../../../presentation';
 import { EntityIcon } from '../../shared/EntityIcon';
+import { buildRecipePlanRevealKey } from '../../shared/recipePlanReveal';
 import {
   RecipePlanAuxiliaryInput,
   RecipePlanFlowSequence,
@@ -59,9 +60,14 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
     getRecipeLevelOptions,
     setRecipePreferredBuilding,
     setRecipePreferredProliferator,
+    revealedRecipePlanKey,
+    revealedRecipePlanNonce,
   } = useWorkbench();
 
   const displayModel = buildRecipePlanCardDisplayModel(catalog, plan, locale);
+  const recipePlanRevealKey = buildRecipePlanRevealKey(plan);
+  const isRevealed = recipePlanRevealKey === revealedRecipePlanKey;
+  const cardRef = React.useRef<HTMLDivElement | null>(null);
   const buildingChoices = getRecipeBuildingOptions(plan.recipeId);
   const modeChoices = getRecipeModeOptions(plan.recipeId);
   const levelChoices = getRecipeLevelOptions(plan.recipeId);
@@ -90,16 +96,26 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
   const levelSelectDisabled =
     levelChoices.length === 0 || selectedMode === '' || selectedMode === 'none';
 
+  React.useEffect(() => {
+    if (!isRevealed || revealedRecipePlanNonce === 0) {
+      return;
+    }
+
+    cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [isRevealed, revealedRecipePlanNonce]);
+
   return (
     <Card
+      ref={cardRef}
       data-testid="recipe-plan-card"
       sx={{
         borderRadius: '20px',
         border: '1px solid',
-        borderColor: 'divider',
-        boxShadow: 'none',
-        backgroundColor: 'rgba(255,255,255,0.68)',
+        borderColor: isRevealed ? 'warning.main' : 'divider',
+        boxShadow: isRevealed ? '0 0 0 2px rgba(244, 194, 102, 0.28)' : 'none',
+        backgroundColor: isRevealed ? 'rgba(255, 246, 220, 0.92)' : 'rgba(255,255,255,0.68)',
         overflow: 'hidden',
+        scrollMarginTop: 24,
         contentVisibility: 'auto',
         containIntrinsicSize: '128px 480px',
         contain: 'layout paint style',

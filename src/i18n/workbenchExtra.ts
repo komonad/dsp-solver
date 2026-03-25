@@ -17,6 +17,7 @@ export interface WorkbenchExtraBundle {
     noProducerPlans: string;
     noConsumerPlans: string;
     openInLedgerButton: string;
+    revealPlanButton: string;
     closeButton: string;
   };
 }
@@ -39,6 +40,7 @@ const zhCN: WorkbenchExtraBundle = {
     noProducerPlans: '当前没有生产该物品的已用方案。',
     noConsumerPlans: '当前没有消耗该物品的已用方案。',
     openInLedgerButton: '在总表中定位',
+    revealPlanButton: '在配方方案中显示',
     closeButton: '关闭',
   },
 };
