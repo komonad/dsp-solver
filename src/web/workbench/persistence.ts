@@ -77,7 +77,12 @@ function isDatasetPresetId(value: unknown): value is DatasetPresetId {
 }
 
 function isSolveObjective(value: unknown): value is SolveObjective {
-  return value === 'min_buildings' || value === 'min_power' || value === 'min_external_input';
+  return (
+    value === 'min_buildings' ||
+    value === 'min_complexity' ||
+    value === 'min_power' ||
+    value === 'min_external_input'
+  );
 }
 
 function isBalancePolicy(value: unknown): value is BalancePolicy {

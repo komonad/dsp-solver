@@ -29,7 +29,7 @@ LDBTool/CommonAPI. This exporter reads the loaded runtime data instead.
 You need a local Dyson Sphere Program install plus BepInEx already installed
 into that game directory.
 
-The recommended setup matches `D:\dsp-dev\MinimalDSPModTemplate`:
+The recommended setup mirrors a typical `MinimalDSPModTemplate`-style local setup:
 
 - copy `Local.props.example` to `Local.props`
 - fill in `DSPManagedPath`

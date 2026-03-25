@@ -5,10 +5,16 @@ import type { ProliferatorMode } from '../catalog';
  *
  * - `min_buildings`: minimize exact continuous building usage, with small
  *   secondary tie-breaks
+ * - `min_complexity`: minimize the total number of involved item types,
+ *   recipe types, and building types, then break ties by power
  * - `min_power`: minimize working power
  * - `min_external_input`: minimize external/raw input usage
  */
-export type SolveObjective = 'min_buildings' | 'min_power' | 'min_external_input';
+export type SolveObjective =
+  | 'min_buildings'
+  | 'min_complexity'
+  | 'min_power'
+  | 'min_external_input';
 
 /**
  * Material-balance policy for non-target items.

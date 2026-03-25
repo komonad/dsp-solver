@@ -246,7 +246,7 @@ export interface CatalogRecipeUniversalBuildingExclusionRuleSpec {
  */
 export interface CatalogRecommendedSolveSpec {
   /** Optional recommended primary optimization objective. */
-  objective?: 'min_buildings' | 'min_power' | 'min_external_input';
+  objective?: 'min_buildings' | 'min_complexity' | 'min_power' | 'min_external_input';
   /** Optional recommended material-balance policy. */
   balancePolicy?: 'allow_surplus' | 'force_balance';
 }
@@ -795,7 +795,12 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
   const modifierCodes = new Set<number>();
   const modeSet = new Set<ProliferatorMode>(['none', 'speed', 'productivity']);
   const kindSet = new Set<RecipeModifierKind>(['none', 'proliferator', 'special']);
-  const objectiveSet = new Set(['min_buildings', 'min_power', 'min_external_input']);
+  const objectiveSet = new Set([
+    'min_buildings',
+    'min_complexity',
+    'min_power',
+    'min_external_input',
+  ]);
   const balancePolicySet = new Set(['allow_surplus', 'force_balance']);
 
   if (config.recommendedSolve !== undefined) {
@@ -806,7 +811,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
       pushIssue(
         errors,
         '$.recommendedSolve.objective',
-        'objective must be one of min_buildings, min_power, or min_external_input.'
+        'objective must be one of min_buildings, min_complexity, min_power, or min_external_input.'
       );
     }
 

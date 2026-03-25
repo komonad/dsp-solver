@@ -1,5 +1,5 @@
 import { solve as solveLinearProgram } from 'yalps';
-import type { Model } from 'yalps';
+import type { Model, Solution } from 'yalps';
 import type {
   ProliferatorMode,
   ResolvedBuildingSpec,
@@ -23,6 +23,8 @@ const PREFERENCE_EPSILON = 1e-3;
 const OBJECTIVE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
+const COMPLEXITY_LINK_BOUND_FLOOR = 64;
+const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
 
 interface ValidateResult {
   valid: boolean;
@@ -782,6 +784,50 @@ function buildObjectiveCoefficient(
   );
 }
 
+function buildComplexityPowerCoefficient(
+  request: SolveRequest,
+  recipe: ResolvedRecipeSpec,
+  option: CompiledOption
+): number {
+  const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
+  const surplusPenalty =
+    request.balancePolicy === 'allow_surplus'
+      ? Object.values(option.outputPerRun).reduce(
+          (sum, amount) => sum + amount + SURPLUS_OUTPUT_EPSILON,
+          0
+        )
+      : 0;
+
+  return (
+    option.powerCostMWPerRunPerMin +
+    surplusPenalty * OBJECTIVE_EPSILON +
+    preferencePenalty * SECONDARY_EPSILON +
+    option.buildingCostPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON
+  );
+}
+
+function isOptionFilteredByAllowedRecipes(
+  request: SolveRequest,
+  recipe: ResolvedRecipeSpec,
+  option: CompiledOption
+): boolean {
+  return Object.entries(request.allowedRecipesByItem ?? {}).some(
+    ([itemId, allowedRecipeIds]) =>
+      allowedRecipeIds.length > 0 &&
+      !allowedRecipeIds.includes(recipe.recipeId) &&
+      (option.outputPerRun[itemId] ?? 0) > EPSILON
+  );
+}
+
+function collectModelOptions(
+  request: SolveRequest,
+  compiledOptions: CompiledOptionContext[]
+): CompiledOptionContext[] {
+  return compiledOptions.filter(
+    ({ option, recipe }) => !isOptionFilteredByAllowedRecipes(request, recipe, option)
+  );
+}
+
 function isFractionationRecipe(recipe: ResolvedRecipeSpec): boolean {
   return (
     typeof recipe.fractionationProbability === 'number' &&
@@ -974,6 +1020,120 @@ function collectInvolvedItemIds(
   return Array.from(itemIds);
 }
 
+function buildItemBalanceConstraints(
+  request: SolveRequest,
+  compiledOptions: CompiledOptionContext[],
+  targetRateMap: Map<string, number>,
+  externalItemIds: Set<string>
+): Record<string, { equal?: number; min?: number; max?: number }> {
+  const constraints: Record<string, { equal?: number; min?: number; max?: number }> = {};
+  const involvedItemIds = collectInvolvedItemIds(compiledOptions, targetRateMap, externalItemIds);
+
+  for (const itemId of involvedItemIds) {
+    const targetRate = targetRateMap.get(itemId);
+    constraints[itemId] =
+      request.balancePolicy === 'force_balance'
+        ? { equal: targetRate ?? 0 }
+        : { min: targetRate ?? 0 };
+  }
+
+  return constraints;
+}
+
+function ensureVariableCoefficients(
+  variables: Record<string, Record<string, number>>,
+  variableName: string
+): Record<string, number> {
+  const existing = variables[variableName];
+  if (existing) {
+    return existing;
+  }
+
+  const created: Record<string, number> = {};
+  variables[variableName] = created;
+  return created;
+}
+
+function addVariableCoefficient(
+  variables: Record<string, Record<string, number>>,
+  variableName: string,
+  coefficientName: string,
+  amount: number
+): void {
+  const coefficients = ensureVariableCoefficients(variables, variableName);
+  coefficients[coefficientName] = (coefficients[coefficientName] ?? 0) + amount;
+}
+
+function buildComplexityUsageVariableName(
+  kind: 'recipe' | 'building' | 'item',
+  id: string
+): string {
+  return `__use:${kind}:${id}`;
+}
+
+function isComplexityUsageVariable(variableName: string): boolean {
+  return variableName.startsWith('__use:');
+}
+
+function collectComplexityTrackedItemIds(
+  catalog: ResolvedCatalogModel,
+  compiledOptions: CompiledOptionContext[],
+  externalItemIds: Set<string>
+): string[] {
+  const itemIds = new Set<string>();
+
+  for (const { option } of compiledOptions) {
+    for (const itemId of Object.keys(option.inputPerRun)) {
+      if (catalog.itemMap.has(itemId)) {
+        itemIds.add(itemId);
+      }
+    }
+
+    for (const itemId of Object.keys(option.outputPerRun)) {
+      if (catalog.itemMap.has(itemId)) {
+        itemIds.add(itemId);
+      }
+    }
+  }
+
+  for (const itemId of externalItemIds) {
+    if (catalog.itemMap.has(itemId)) {
+      itemIds.add(itemId);
+    }
+  }
+
+  return Array.from(itemIds).sort((left, right) => left.localeCompare(right));
+}
+
+function estimateComplexityLinkUpperBound(
+  solutionVariables: Iterable<[string, number]>,
+  targetRateMap: Map<string, number>
+): number {
+  let totalSolvedRate = 0;
+  let maxSolvedRate = 0;
+
+  for (const [variableName, value] of solutionVariables) {
+    if (value <= EPSILON || isComplexityUsageVariable(variableName)) {
+      continue;
+    }
+
+    totalSolvedRate += value;
+    maxSolvedRate = Math.max(maxSolvedRate, value);
+  }
+
+  const targetRates = Array.from(targetRateMap.values()).filter(rate => rate > EPSILON);
+  const totalTargetRate = targetRates.reduce((sum, rate) => sum + rate, 0);
+  const maxTargetRate = targetRates.reduce((maxRate, rate) => Math.max(maxRate, rate), 0);
+
+  return Math.max(
+    COMPLEXITY_LINK_BOUND_FLOOR,
+    totalSolvedRate * 2,
+    maxSolvedRate * 8,
+    totalTargetRate * 8,
+    maxTargetRate * 16
+  );
+}
+
 function collectExternalItemIds(
   rawInputItemIds: Set<string>,
   compiledOptions: CompiledOptionContext[],
@@ -996,35 +1156,22 @@ function collectExternalItemIds(
   return externalItemIds;
 }
 
-function buildModel(
+function buildLinearModel(
   request: SolveRequest,
   compiledOptions: CompiledOptionContext[],
   targetRateMap: Map<string, number>,
   externalItemIds: Set<string>
-): Model<string, string> {
-  const constraints: Record<string, { equal?: number; min?: number }> = {};
+): { model: Model<string, string>; activeOptions: CompiledOptionContext[] } {
+  const activeOptions = collectModelOptions(request, compiledOptions);
+  const constraints = buildItemBalanceConstraints(
+    request,
+    activeOptions,
+    targetRateMap,
+    externalItemIds
+  );
   const variables: Record<string, Record<string, number>> = {};
-  const involvedItemIds = collectInvolvedItemIds(compiledOptions, targetRateMap, externalItemIds);
 
-  for (const itemId of involvedItemIds) {
-    const targetRate = targetRateMap.get(itemId);
-    constraints[itemId] =
-      request.balancePolicy === 'force_balance'
-        ? { equal: targetRate ?? 0 }
-        : { min: targetRate ?? 0 };
-  }
-
-  for (const { option, recipe } of compiledOptions) {
-    const violatesAllowedItemOutput = Object.entries(request.allowedRecipesByItem ?? {}).some(
-      ([itemId, allowedRecipeIds]) =>
-        allowedRecipeIds.length > 0 &&
-        !allowedRecipeIds.includes(recipe.recipeId) &&
-        (option.outputPerRun[itemId] ?? 0) > EPSILON
-    );
-    if (violatesAllowedItemOutput) {
-      continue;
-    }
-
+  for (const { option, recipe } of activeOptions) {
     const coefficients: Record<string, number> = {
       __objective__: buildObjectiveCoefficient(request, recipe, option),
     };
@@ -1048,10 +1195,165 @@ function buildModel(
   }
 
   return {
-    direction: 'minimize',
-    objective: '__objective__',
-    constraints,
-    variables,
+    model: {
+      direction: 'minimize',
+      objective: '__objective__',
+      constraints,
+      variables,
+    },
+    activeOptions,
+  };
+}
+
+function buildComplexityModel(params: {
+  catalog: ResolvedCatalogModel;
+  request: SolveRequest;
+  compiledOptions: CompiledOptionContext[];
+  targetRateMap: Map<string, number>;
+  externalItemIds: Set<string>;
+  linkUpperBound: number;
+}): { model: Model<string, string>; activeOptions: CompiledOptionContext[] } {
+  const {
+    catalog,
+    request,
+    compiledOptions,
+    targetRateMap,
+    externalItemIds,
+    linkUpperBound,
+  } = params;
+  const activeOptions = collectModelOptions(request, compiledOptions);
+  const constraints = buildItemBalanceConstraints(
+    request,
+    activeOptions,
+    targetRateMap,
+    externalItemIds
+  );
+  const variables: Record<string, Record<string, number>> = {};
+  const binaries = new Set<string>();
+  const totalPowerCoefficient = activeOptions.reduce(
+    (sum, { option, recipe }) => sum + buildComplexityPowerCoefficient(request, recipe, option),
+    0
+  );
+  const powerTieBreakScale =
+    totalPowerCoefficient > 0
+      ? 0.5 / (linkUpperBound * totalPowerCoefficient + 1)
+      : 0;
+
+  for (const { option, recipe } of activeOptions) {
+    const scaledPowerCoefficient =
+      buildComplexityPowerCoefficient(request, recipe, option) * powerTieBreakScale;
+    const coefficients: Record<string, number> = {
+      __complexity__: scaledPowerCoefficient,
+    };
+
+    for (const [itemId, amount] of Object.entries(option.outputPerRun)) {
+      coefficients[itemId] = (coefficients[itemId] ?? 0) + amount;
+    }
+
+    for (const [itemId, amount] of Object.entries(option.inputPerRun)) {
+      coefficients[itemId] = (coefficients[itemId] ?? 0) - amount;
+    }
+
+    variables[option.optionId] = coefficients;
+  }
+
+  for (const itemId of externalItemIds) {
+    variables[`ext:${itemId}`] = {
+      [itemId]: 1,
+    };
+  }
+
+  const ensureUsageVariable = (variableName: string) => {
+    const coefficients = ensureVariableCoefficients(variables, variableName);
+    coefficients.__complexity__ = 1;
+    binaries.add(variableName);
+  };
+
+  const recipeUsageMap = new Map<string, string[]>();
+  const buildingUsageMap = new Map<string, string[]>();
+  const itemUsageMap = new Map<string, string[]>();
+
+  for (const { option, recipe } of activeOptions) {
+    const recipeOptionIds = recipeUsageMap.get(recipe.recipeId) ?? [];
+    recipeOptionIds.push(option.optionId);
+    recipeUsageMap.set(recipe.recipeId, recipeOptionIds);
+
+    const buildingOptionIds = buildingUsageMap.get(option.buildingId) ?? [];
+    buildingOptionIds.push(option.optionId);
+    buildingUsageMap.set(option.buildingId, buildingOptionIds);
+
+    const touchedItemIds = new Set<string>();
+    for (const itemId of Object.keys(option.inputPerRun)) {
+      if (catalog.itemMap.has(itemId)) {
+        touchedItemIds.add(itemId);
+      }
+    }
+    for (const itemId of Object.keys(option.outputPerRun)) {
+      if (catalog.itemMap.has(itemId)) {
+        touchedItemIds.add(itemId);
+      }
+    }
+    for (const itemId of touchedItemIds) {
+      const itemVariableIds = itemUsageMap.get(itemId) ?? [];
+      itemVariableIds.push(option.optionId);
+      itemUsageMap.set(itemId, itemVariableIds);
+    }
+  }
+
+  for (const itemId of collectComplexityTrackedItemIds(catalog, activeOptions, externalItemIds)) {
+    const itemVariableIds = itemUsageMap.get(itemId) ?? [];
+    if (externalItemIds.has(itemId)) {
+      itemVariableIds.push(`ext:${itemId}`);
+    }
+    itemUsageMap.set(itemId, itemVariableIds);
+  }
+
+  for (const [recipeId, optionIds] of recipeUsageMap.entries()) {
+    const constraintName = `__complexity_link:recipe:${recipeId}`;
+    constraints[constraintName] = { max: 0 };
+    for (const optionId of optionIds) {
+      addVariableCoefficient(variables, optionId, constraintName, 1);
+    }
+    const usageVariable = buildComplexityUsageVariableName('recipe', recipeId);
+    ensureUsageVariable(usageVariable);
+    addVariableCoefficient(variables, usageVariable, constraintName, -linkUpperBound);
+  }
+
+  for (const [buildingId, optionIds] of buildingUsageMap.entries()) {
+    const constraintName = `__complexity_link:building:${buildingId}`;
+    constraints[constraintName] = { max: 0 };
+    for (const optionId of optionIds) {
+      addVariableCoefficient(variables, optionId, constraintName, 1);
+    }
+    const usageVariable = buildComplexityUsageVariableName('building', buildingId);
+    ensureUsageVariable(usageVariable);
+    addVariableCoefficient(variables, usageVariable, constraintName, -linkUpperBound);
+  }
+
+  for (const [itemId, variableIds] of itemUsageMap.entries()) {
+    if (variableIds.length === 0) {
+      continue;
+    }
+
+    const constraintName = `__complexity_link:item:${itemId}`;
+    constraints[constraintName] = { max: 0 };
+    for (const variableId of variableIds) {
+      addVariableCoefficient(variables, variableId, constraintName, 1);
+    }
+    const usageVariable = buildComplexityUsageVariableName('item', itemId);
+    ensureUsageVariable(usageVariable);
+    addVariableCoefficient(variables, usageVariable, constraintName, -linkUpperBound);
+  }
+
+  return {
+    model: {
+      direction: 'minimize',
+      objective: '__complexity__',
+      constraints,
+      variables,
+      binaries,
+    },
+    activeOptions,
   };
 }
 
@@ -1108,6 +1410,39 @@ function buildUnmetPreferences(
   }
 
   return unmet;
+}
+
+function buildInfeasibleSolveResult(params: {
+  targetRateMap: Map<string, number>;
+  resolvedRawInputItemIds: string[];
+  diagnostics: string[];
+  infoMessages: string[];
+}): SolveResult {
+  const { targetRateMap, resolvedRawInputItemIds, diagnostics, infoMessages } = params;
+
+  return {
+    status: 'infeasible',
+    diagnostics: {
+      messages: diagnostics,
+      infoMessages,
+      unmetPreferences: [],
+    },
+    resolvedRawInputItemIds,
+    targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
+      itemId,
+      requestedRatePerMin,
+      actualRatePerMin: 0,
+    })),
+    recipePlans: [],
+    buildingSummary: [],
+    powerSummary: {
+      activePowerMW: 0,
+      roundedPlacementPowerMW: 0,
+    },
+    externalInputs: [],
+    surplusOutputs: [],
+    itemBalance: [],
+  };
 }
 
 function buildResultFromSolution(params: {
@@ -1319,8 +1654,92 @@ function solveCatalogRequestValidated(
     getCatalogSolveCache(catalog).anyRecipeOutputIndex
   );
   const diagnostics = [...compiledGraph.messages];
+  let model: Model<string, string>;
+  let activeOptions: CompiledOptionContext[];
+  let solution: Solution<string>;
 
-  const model = buildModel(request, compiledGraph.options, targetRateMap, externalItemIds);
+  if (request.objective === 'min_complexity') {
+    const seedRequest: SolveRequest = {
+      ...request,
+      objective: 'min_power',
+    };
+    const seedBuild = buildLinearModel(
+      seedRequest,
+      compiledGraph.options,
+      targetRateMap,
+      externalItemIds
+    );
+    const seedSolution = solveLinearProgram(seedBuild.model);
+    if (seedSolution.status !== 'optimal') {
+      return buildInfeasibleSolveResult({
+        targetRateMap,
+        resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
+          left.localeCompare(right)
+        ),
+        diagnostics: [
+          ...diagnostics,
+          `Complexity seed solve failed with status ${seedSolution.status}.`,
+        ],
+        infoMessages: [...compiledGraph.infoMessages],
+      });
+    }
+
+    const baseLinkUpperBound = estimateComplexityLinkUpperBound(
+      seedSolution.variables,
+      targetRateMap
+    );
+    let complexityModel: Model<string, string> | null = null;
+    let complexityOptions: CompiledOptionContext[] | null = null;
+    let complexitySolution: Solution<string> | null = null;
+    let lastFailureMessage = 'Complexity MILP solve did not produce an optimal solution.';
+
+    for (const multiplier of COMPLEXITY_LINK_BOUND_MULTIPLIERS) {
+      const linkUpperBound = baseLinkUpperBound * multiplier;
+      const complexityBuild = buildComplexityModel({
+        catalog,
+        request,
+        compiledOptions: compiledGraph.options,
+        targetRateMap,
+        externalItemIds,
+        linkUpperBound,
+      });
+      const candidateSolution = solveLinearProgram(complexityBuild.model);
+      if (candidateSolution.status !== 'optimal') {
+        lastFailureMessage = `Complexity MILP failed with status ${candidateSolution.status}.`;
+        continue;
+      }
+
+      complexityModel = complexityBuild.model;
+      complexityOptions = complexityBuild.activeOptions;
+      complexitySolution = candidateSolution;
+      break;
+    }
+
+    if (!complexityModel || !complexityOptions || !complexitySolution) {
+      return buildInfeasibleSolveResult({
+        targetRateMap,
+        resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
+          left.localeCompare(right)
+        ),
+        diagnostics: [...diagnostics, lastFailureMessage],
+        infoMessages: [...compiledGraph.infoMessages],
+      });
+    }
+
+    model = complexityModel;
+    activeOptions = complexityOptions;
+    solution = complexitySolution;
+  } else {
+    const linearBuild = buildLinearModel(
+      request,
+      compiledGraph.options,
+      targetRateMap,
+      externalItemIds
+    );
+    model = linearBuild.model;
+    activeOptions = linearBuild.activeOptions;
+    solution = solveLinearProgram(model);
+  }
   const modelFinishedAt =
     typeof performance !== 'undefined' && typeof performance.now === 'function'
       ? performance.now()
@@ -1332,7 +1751,6 @@ function solveCatalogRequestValidated(
     variableCount: Object.keys(model.variables).length,
     recordedAt: Date.now(),
   });
-  const solution = solveLinearProgram(model);
   const lpFinishedAt =
     typeof performance !== 'undefined' && typeof performance.now === 'function'
       ? performance.now()
@@ -1357,37 +1775,20 @@ function solveCatalogRequestValidated(
       status: solution.status,
       recordedAt: Date.now(),
     });
-    return {
-      status: 'infeasible',
-      diagnostics: {
-        messages: [...diagnostics, `LP solve failed with status ${solution.status}.`],
-        infoMessages: [...compiledGraph.infoMessages],
-        unmetPreferences: [],
-      },
+    return buildInfeasibleSolveResult({
+      targetRateMap,
       resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
         left.localeCompare(right)
       ),
-      targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
-        itemId,
-        requestedRatePerMin,
-        actualRatePerMin: 0,
-      })),
-      recipePlans: [],
-      buildingSummary: [],
-      powerSummary: {
-        activePowerMW: 0,
-        roundedPlacementPowerMW: 0,
-      },
-      externalInputs: [],
-      surplusOutputs: [],
-      itemBalance: [],
-    };
+      diagnostics: [...diagnostics, `LP solve failed with status ${solution.status}.`],
+      infoMessages: [...compiledGraph.infoMessages],
+    });
   }
 
   const result = buildResultFromSolution({
     request,
     targetRateMap,
-    compiledOptions: compiledGraph.options,
+    compiledOptions: activeOptions,
     solutionVariables: new Map<string, number>(solution.variables),
     resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
       left.localeCompare(right)

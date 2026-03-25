@@ -262,6 +262,75 @@ function buildAlternativeRecipeDataset(): VanillaDatasetSpec {
   };
 }
 
+function buildComplexityTradeoffDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1201, Type: 2, Name: 'Intermediate', IconName: 'intermediate', GridIndex: 2 },
+      { ID: 1301, Type: 2, Name: 'Target', IconName: 'target', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Efficient Assembler',
+        IconName: 'assembler-efficient',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+      {
+        ID: 5002,
+        Type: 6,
+        Name: 'Direct Synthesizer',
+        IconName: 'assembler-direct',
+        GridIndex: 5,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW * 5,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5002],
+        Name: 'Direct Target',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1301],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'target',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Ore to Intermediate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1201],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'intermediate',
+      },
+      {
+        ID: 3,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Intermediate to Target',
+        Items: [1201],
+        ItemCounts: [1],
+        Results: [1301],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'target',
+      },
+    ],
+  };
+}
+
 function buildPartialPreferredRecipeDataset(): VanillaDatasetSpec {
   return {
     items: [
@@ -463,6 +532,37 @@ test('preferred proliferator mode breaks ties when the objective is otherwise eq
     proliferatorLevel: 2,
   });
   expect(result.diagnostics.unmetPreferences).toEqual([]);
+});
+
+test('min_complexity prefers the shorter production chain before lower power', () => {
+  const catalog = resolveCatalogModel(buildComplexityTradeoffDataset(), {
+    buildingRules: [
+      { ID: 5001, Category: 'assembler' },
+      { ID: 5002, Category: 'assembler' },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const lowPowerResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1301', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'force_balance',
+  });
+  expect(lowPowerResult.status).toBe('optimal');
+  expect(lowPowerResult.recipePlans.map(plan => plan.recipeId)).toEqual(['2', '3']);
+
+  const lowComplexityResult = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1301', ratePerMin: 60 }],
+    objective: 'min_complexity',
+    balancePolicy: 'force_balance',
+  });
+  expect(lowComplexityResult.status).toBe('optimal');
+  expect(lowComplexityResult.recipePlans).toHaveLength(1);
+  expect(lowComplexityResult.recipePlans[0].recipeId).toBe('1');
+  expect(lowComplexityResult.powerSummary.activePowerMW).toBeGreaterThan(
+    lowPowerResult.powerSummary.activePowerMW
+  );
 });
 
 test('solver supports multiple target item rates in one request', () => {
@@ -1039,5 +1139,3 @@ test('vanilla proliferator items can be produced through their own recipe chain'
   );
   expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
 });
-
-

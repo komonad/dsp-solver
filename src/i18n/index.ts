@@ -247,6 +247,7 @@ const zhCN: LocaleBundle = {
   enums: {
     objective: {
       min_buildings: '最少建筑',
+      min_complexity: '复杂度优先',
       min_power: '最低功耗',
       min_external_input: '最少外部输入',
     },
@@ -350,6 +351,7 @@ const zhCN: LocaleBundle = {
     removeTarget: '移除',
     objectiveOptions: {
       min_buildings: '最少建筑',
+      min_complexity: '复杂度优先',
       min_power: '最低功耗',
       min_external_input: '最少外部输入',
     },
@@ -437,7 +439,7 @@ const zhCN: LocaleBundle = {
     },
     metricDescription: {
       objective:
-        '目标函数：定义求解器在满足全部约束后所最小化的主目标，例如建筑数、功耗或外部输入。',
+        '目标函数：定义求解器在满足全部约束后所最小化的主目标，例如建筑数、复杂度、功耗或外部输入。复杂度优先会先最小化整条链路涉及的物品种类、配方种类与建筑种类，再在此基础上偏向更低功耗。',
       balance:
         '配平策略：定义中间产物流的守恒约束形式。强制配平要求内部流量严格守恒；允许盈余则允许产生未被继续消费的剩余输出。',
       spray:

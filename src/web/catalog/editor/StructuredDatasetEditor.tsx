@@ -672,6 +672,7 @@ function DefaultsEditor(props: {
         >
           <option value="">auto</option>
           <option value="min_buildings">min_buildings</option>
+          <option value="min_complexity">min_complexity</option>
           <option value="min_power">min_power</option>
           <option value="min_external_input">min_external_input</option>
         </select>

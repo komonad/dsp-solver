@@ -12,6 +12,7 @@ import {
 test('i18n formatters emit zh-CN UI labels', () => {
   expect(formatRate(60)).toBe('60.00 / 分');
   expect(formatPower(12.5)).toBe('12.50 MW');
+  expect(formatSolveObjective('min_complexity')).toBe('复杂度优先');
   expect(formatSolveObjective('min_buildings')).toBe('最少建筑');
   expect(formatBalancePolicy('allow_surplus')).toBe('允许冗余产物');
   expect(formatSolveStatus('optimal')).toBe('最优');

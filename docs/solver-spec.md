@@ -4,7 +4,8 @@ This document captures the current architecture decisions for the rebuild.
 
 ## Goals
 
-- solve multi-product, multi-recipe balancing problems with linear programming
+- solve multi-product, multi-recipe balancing problems with linear programming,
+  with a mixed-integer extension for the complexity-first objective
 - keep solver input and output explicit and testable
 - ensure every number shown in the browser can be reproduced from solver output in tests
 - keep the web layer free from self-invented business logic
@@ -159,7 +160,7 @@ The request shape still targets explicit constraints and user overrides:
 ```ts
 type SolveRequest = {
   targets: Array<{ itemId: string; ratePerMin: number }>;
-  objective: 'min_buildings' | 'min_power' | 'min_external_input';
+  objective: 'min_buildings' | 'min_complexity' | 'min_power' | 'min_external_input';
   balancePolicy: 'allow_surplus' | 'force_balance';
   rawInputItemIds?: string[];
   disabledRecipeIds?: string[];
@@ -176,6 +177,11 @@ type SolveRequest = {
 ```
 
 User input is expected to override dataset defaults whenever both are present.
+
+`min_complexity` is interpreted lexicographically:
+
+- first minimize the count of involved item IDs, recipe IDs, and building IDs
+- then, among equally complex solutions, minimize total working power
 
 ## Solver result
 
