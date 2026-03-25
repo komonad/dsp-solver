@@ -125,10 +125,14 @@ export default function ProducedRecipeSelector({
         fullWidth
         size="small"
         sx={compactSelectFieldSx}
-        label={recipeLabel}
         value={selectedRecipeId}
         disabled={disabled || !selectedItemId || recipeOptions.length === 0}
         onChange={event => onSelectedRecipeChange(event.target.value)}
+        slotProps={{
+          htmlInput: {
+            'aria-label': recipeLabel,
+          },
+        }}
       >
         <MenuItem value="">{emptySelectionLabel}</MenuItem>
         {recipeOptions.map(option => (

@@ -4,7 +4,7 @@ import { EntityIcon } from './EntityIcon';
 import { filterItemPickerOptions, type ItemPickerOption } from './itemPickerModel';
 import {
   ITEM_GRID_PICKER_GRID_WIDTH_PX,
-  resolveItemGridPickerSearchWidth,
+  resolveItemGridPickerPopoverWidth,
 } from './itemGridPickerLayout';
 
 interface ItemGridPickerProps {
@@ -76,7 +76,8 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
     [onSelect],
   );
 
-  const popoverSearchWidth = resolveItemGridPickerSearchWidth(query);
+  const popoverContentWidth = resolveItemGridPickerPopoverWidth(query);
+  const popoverPaperWidth = popoverContentWidth + 20;
 
   useEffect(() => {
     if (!open || disabled) {
@@ -144,7 +145,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
         slotProps={{
           paper: {
             sx: {
-              width: 'fit-content',
+              width: `min(calc(100vw - 32px), ${popoverPaperWidth}px)`,
               maxWidth: 'calc(100vw - 32px)',
               mt: 0.5,
               p: 1.25,
@@ -154,7 +155,13 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
           },
         }}
       >
-        <Box sx={{ display: 'grid', gap: 0.9 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 0.9,
+            width: `min(calc(100vw - 64px), ${popoverContentWidth}px)`,
+          }}
+        >
           <Box
             sx={{
               display: 'flex',
@@ -178,7 +185,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
             placeholder={searchPlaceholder}
             onChange={event => onQueryChange(event.target.value)}
             sx={{
-              width: `min(calc(100vw - 64px), ${popoverSearchWidth}px)`,
+              width: '100%',
               '& .MuiInputBase-root': {
                 backgroundColor: 'rgba(255, 255, 255, 0.9)',
               },
@@ -194,7 +201,8 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
 
           <Box
             sx={{
-              width: `min(calc(100vw - 64px), ${ITEM_GRID_PICKER_GRID_WIDTH_PX}px)`,
+              width: `min(100%, ${ITEM_GRID_PICKER_GRID_WIDTH_PX}px)`,
+              justifySelf: 'start',
               display: 'grid',
               gap: 0.35,
               maxHeight: 252,

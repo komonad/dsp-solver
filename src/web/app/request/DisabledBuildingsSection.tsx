@@ -40,10 +40,14 @@ export default function DisabledBuildingsSection() {
             fullWidth
             size="small"
             sx={compactSelectFieldSx}
-            label={bundle.solveRequest.disabledBuildingsLabel}
             value={disabledBuildingDraftId}
             onChange={event => setDisabledBuildingDraftId(event.target.value)}
             disabled={!catalog || disableBuildingOptions.length === 0}
+            slotProps={{
+              htmlInput: {
+                'aria-label': bundle.solveRequest.disabledBuildingsLabel,
+              },
+            }}
           >
             {disableBuildingOptions.map(building => (
               <MenuItem key={building.buildingId} value={building.buildingId}>

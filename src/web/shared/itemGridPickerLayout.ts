@@ -1,4 +1,4 @@
-export const ITEM_GRID_PICKER_GRID_WIDTH_PX = 332;
+export const ITEM_GRID_PICKER_GRID_WIDTH_PX = 388;
 
 const ITEM_GRID_PICKER_SEARCH_MIN_WIDTH_PX = ITEM_GRID_PICKER_GRID_WIDTH_PX;
 const ITEM_GRID_PICKER_SEARCH_MAX_WIDTH_PX = 520;
@@ -19,4 +19,8 @@ export function resolveItemGridPickerSearchWidth(query: string): number {
     ITEM_GRID_PICKER_SEARCH_MAX_WIDTH_PX,
     Math.max(ITEM_GRID_PICKER_SEARCH_MIN_WIDTH_PX, estimatedWidth)
   );
+}
+
+export function resolveItemGridPickerPopoverWidth(query: string): number {
+  return Math.max(ITEM_GRID_PICKER_GRID_WIDTH_PX, resolveItemGridPickerSearchWidth(query));
 }
