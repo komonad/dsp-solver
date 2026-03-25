@@ -77,37 +77,36 @@ export default function SolveRequestPanel() {
 
             <Box
               sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: {
-                  xs: 'minmax(0, 1fr) 88px',
-                  lg: 'minmax(0, 1fr) 88px auto',
-                },
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
                 alignItems: 'end',
               }}
             >
-              <ItemGridPicker
-                items={itemOptions}
-                selectedItemId={targetDraftItemId}
-                query={targetPickerQuery}
-                onQueryChange={setTargetPickerQuery}
-                onSelect={setTargetDraftItemId}
-                atlasIds={iconAtlasIds}
-                searchLabel={bundle.solveRequest.targetSearchLabel}
-                searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
-                emptyText={bundle.solveRequest.targetPickerEmpty}
-                selectedItemName={targetDraftItemOption?.name}
-                selectedItemIcon={targetDraftItemOption?.icon}
-              />
+              <Box sx={{ minWidth: 0, flex: '1 1 160px', maxWidth: 320 }}>
+                <ItemGridPicker
+                  items={itemOptions}
+                  selectedItemId={targetDraftItemId}
+                  query={targetPickerQuery}
+                  onQueryChange={setTargetPickerQuery}
+                  onSelect={setTargetDraftItemId}
+                  atlasIds={iconAtlasIds}
+                  searchLabel={bundle.solveRequest.targetSearchLabel}
+                  searchPlaceholder={bundle.solveRequest.targetSearchPlaceholder}
+                  emptyText={bundle.solveRequest.targetPickerEmpty}
+                  selectedItemName={targetDraftItemOption?.name}
+                  selectedItemIcon={targetDraftItemOption?.icon}
+                />
+              </Box>
 
               <TextField
                 type="number"
-                fullWidth
                 size="small"
                 label={bundle.overview.requestLabel}
                 value={targetDraftRatePerMin}
                 inputProps={{ min: 0, step: 1 }}
                 onChange={event => setTargetDraftRatePerMin(Number(event.target.value) || 0)}
+                sx={{ width: 88 }}
               />
 
               <Button
@@ -123,8 +122,6 @@ export default function SolveRequestPanel() {
                 sx={{
                   minHeight: 40,
                   px: 1.5,
-                  gridColumn: { xs: '1 / -1', lg: 'auto' },
-                  justifySelf: 'start',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -136,15 +133,15 @@ export default function SolveRequestPanel() {
 
         <Box
           sx={{
-            display: 'grid',
+            display: 'flex',
+            flexWrap: 'wrap',
             gap: 1,
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
           }}
         >
           <TextField
             select
             size="small"
-            sx={compactSelectFieldSx}
+            sx={{ ...compactSelectFieldSx, minWidth: 120 }}
             label={bundle.summary.objectiveLabel}
             value={objective}
             onChange={event => setObjective(event.target.value as SolveObjective)}
@@ -157,7 +154,7 @@ export default function SolveRequestPanel() {
           <TextField
             select
             size="small"
-            sx={compactSelectFieldSx}
+            sx={{ ...compactSelectFieldSx, minWidth: 120 }}
             label={bundle.summary.balanceLabel}
             value={balancePolicy}
             onChange={event => setBalancePolicy(event.target.value as BalancePolicy)}
@@ -169,7 +166,7 @@ export default function SolveRequestPanel() {
           <TextField
             select
             size="small"
-            sx={compactSelectFieldSx}
+            sx={{ ...compactSelectFieldSx, minWidth: 120 }}
             label={bundle.summary.sprayLabel}
             value={proliferatorPolicy}
             onChange={event => {
@@ -193,7 +190,7 @@ export default function SolveRequestPanel() {
           <TextField
             select
             size="small"
-            sx={compactSelectFieldSx}
+            sx={{ ...compactSelectFieldSx, minWidth: 120 }}
             label={bundle.solveRequest.preferredSprayLevelLabel}
             value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
             disabled={globalProliferatorLevelDisabled}

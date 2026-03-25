@@ -33,7 +33,7 @@ export default function DisabledRecipesSection() {
             flex: '1 1 0',
             display: 'grid',
             gap: 1,
-            gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1fr) auto' },
+            gridTemplateColumns: 'minmax(0, 1fr) auto',
             alignItems: 'start',
           }}
         >

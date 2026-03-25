@@ -23,7 +23,7 @@ import {
   getBrowserStorage,
 } from '../workbenchHelpers';
 import {
-  SNAPSHOT_SECTION_DESCRIPTION,
+  getSnapshotSectionDescription,
   type SnapshotSectionId,
 } from './solveSnapshotMetadata';
 import {
@@ -35,9 +35,6 @@ import {
   resolveWorkbenchSnapshotSectionState,
 } from '../../workbench/snapshotSections';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
-
-const PROLIFERATOR_PREFERENCE_TITLE = '增产偏好';
-const NO_PROLIFERATOR_PREFERENCE_TEXT = '当前没有增产偏好。';
 
 export default function SolveSnapshotPanel() {
   const {
@@ -69,6 +66,7 @@ export default function SolveSnapshotPanel() {
   } = useWorkbench();
 
   const browserStorage = useMemo(() => getBrowserStorage(), []);
+  const sectionDescriptions = useMemo(() => getSnapshotSectionDescription(bundle), [bundle]);
   const [sectionState, setSectionState] = useState(DEFAULT_WORKBENCH_SNAPSHOT_SECTION_STATE);
 
   useEffect(() => {
@@ -169,7 +167,7 @@ export default function SolveSnapshotPanel() {
           <CollapsibleSnapshotSection
             title={bundle.summary.targetsLabel}
             count={requestSummary.targets.length}
-            description={SNAPSHOT_SECTION_DESCRIPTION.targets}
+            description={sectionDescriptions.targets}
             expanded={sectionState.targets}
             onExpandedChange={expanded => setSectionExpanded('targets', expanded)}
           >
@@ -220,7 +218,7 @@ export default function SolveSnapshotPanel() {
 
           <RecipeConstraintSnapshotList
             title={bundle.summary.forcedRecipesLabel}
-            description={SNAPSHOT_SECTION_DESCRIPTION.allowedRecipes}
+            description={sectionDescriptions.allowedRecipes}
             emptyText={bundle.common.none}
             clearTooltip={bundle.summary.clearForcedRecipeButton}
             noneText={bundle.common.none}
@@ -241,7 +239,7 @@ export default function SolveSnapshotPanel() {
 
           <RecipeConstraintSnapshotList
             title={bundle.summary.disabledRecipesLabel}
-            description={SNAPSHOT_SECTION_DESCRIPTION.disabledRecipes}
+            description={sectionDescriptions.disabledRecipes}
             emptyText={bundle.common.none}
             clearTooltip={bundle.common.removeSuffix}
             noneText={bundle.common.none}
@@ -260,9 +258,9 @@ export default function SolveSnapshotPanel() {
           />
 
           <RecipePreferenceSnapshotList
-            title={PROLIFERATOR_PREFERENCE_TITLE}
-            description={SNAPSHOT_SECTION_DESCRIPTION.proliferatorPreferences}
-            emptyText={NO_PROLIFERATOR_PREFERENCE_TEXT}
+            title={bundle.summary.proliferatorPreferencesLabel}
+            description={sectionDescriptions.proliferatorPreferences}
+            emptyText={bundle.summary.noProliferatorPreferences}
             clearTooltip={bundle.common.removeSuffix}
             atlasIds={iconAtlasIds}
             entries={displayedProliferatorEntries}
@@ -273,7 +271,7 @@ export default function SolveSnapshotPanel() {
           <CollapsibleSnapshotSection
             title={bundle.solveRequest.disabledBuildingsLabel}
             count={requestSummary.disabledBuildings.length}
-            description={SNAPSHOT_SECTION_DESCRIPTION.disabledBuildings}
+            description={sectionDescriptions.disabledBuildings}
             expanded={sectionState.disabledBuildings}
             onExpandedChange={expanded => setSectionExpanded('disabledBuildings', expanded)}
           >
@@ -314,7 +312,7 @@ export default function SolveSnapshotPanel() {
           <CollapsibleSnapshotSection
             title={bundle.summary.preferredBuildingsLabel}
             count={preferredBuildings.length}
-            description={SNAPSHOT_SECTION_DESCRIPTION.preferredBuildings}
+            description={sectionDescriptions.preferredBuildings}
             expanded={sectionState.preferredBuildings}
             onExpandedChange={expanded => setSectionExpanded('preferredBuildings', expanded)}
           >

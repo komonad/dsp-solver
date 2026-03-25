@@ -29,10 +29,10 @@ export const cardStyle: React.CSSProperties = {
 
 export const inputStyle: React.CSSProperties = {
   width: '100%',
-  minHeight: 42,
-  borderRadius: 12,
+  minHeight: 34,
+  borderRadius: 6,
   border: '1px solid rgba(24, 51, 89, 0.18)',
-  padding: '10px 12px',
+  padding: '6px 10px',
   fontSize: 14,
   fontFamily: 'inherit',
   background: 'rgba(255,255,255,0.94)',
@@ -405,7 +405,7 @@ export const inlineSectionLayoutSx = {
 export const inlineConstraintSectionGroupSx = {
   display: 'grid',
   gap: 1.25,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
   alignItems: 'start',
 } as const;
 

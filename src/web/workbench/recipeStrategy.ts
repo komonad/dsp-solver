@@ -1,5 +1,5 @@
-import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
-import { DEFAULT_APP_LOCALE, type AppLocale } from '../../i18n';
+import type { ResolvedCatalogModel } from '../../catalog';
+import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import { computeWorkbenchSolve } from './autoSolve';
 import type {
@@ -173,7 +173,7 @@ export function tryApplyRecipeStrategyOverride(
     return {
       accepted: false,
       nextOverrides: recipeStrategyOverrides,
-      message: diagnosticMessage || '该修改会导致当前方案无解，已撤销',
+      message: diagnosticMessage || getLocaleBundle(locale).recipeStrategy.infeasibleFallback,
     };
   }
 

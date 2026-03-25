@@ -9,7 +9,7 @@ import {
 import type { PresentationModel } from '../../../presentation';
 import type { BalancePolicy, SolveObjective, SolveStatus } from '../../../solver';
 import type { SnapshotMetricId } from './solveSnapshotMetadata';
-import { SNAPSHOT_METRIC_DESCRIPTION } from './solveSnapshotMetadata';
+import { getSnapshotMetricDescription } from './solveSnapshotMetadata';
 import { snapshotFormalTooltipSlotProps } from '../workbenchStyles';
 
 export interface SolveSnapshotSummaryChipsProps {
@@ -25,12 +25,13 @@ export interface SolveSnapshotSummaryChipsProps {
 function renderMetricChip(
   metricId: SnapshotMetricId,
   label: string,
+  descriptions: Record<SnapshotMetricId, string>,
   color?: 'default' | 'success'
 ) {
   return (
     <Tooltip
       key={metricId}
-      title={SNAPSHOT_METRIC_DESCRIPTION[metricId]}
+      title={descriptions[metricId]}
       slotProps={snapshotFormalTooltipSlotProps}
     >
       <Chip size="small" variant="outlined" color={color} label={label} />
@@ -47,6 +48,7 @@ export default function SolveSnapshotSummaryChips({
   sprayLabel,
   status,
 }: SolveSnapshotSummaryChipsProps) {
+  const metricDescriptions = getSnapshotMetricDescription(bundle);
   return (
     <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
       {requestSummary?.solverVersion ? (
@@ -58,19 +60,23 @@ export default function SolveSnapshotSummaryChips({
       ) : null}
       {renderMetricChip(
         'objective',
-        `${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`
+        `${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`,
+        metricDescriptions
       )}
       {renderMetricChip(
         'balance',
-        `${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`
+        `${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`,
+        metricDescriptions
       )}
       {renderMetricChip(
         'spray',
-        `${bundle.summary.sprayLabel}: ${sprayLabel || bundle.common.notSet}`
+        `${bundle.summary.sprayLabel}: ${sprayLabel || bundle.common.notSet}`,
+        metricDescriptions
       )}
       {renderMetricChip(
         'status',
         `${bundle.summary.statusLabel}: ${formatSolveStatus(status, locale)}`,
+        metricDescriptions,
         status === 'optimal' ? 'success' : 'default'
       )}
     </Stack>

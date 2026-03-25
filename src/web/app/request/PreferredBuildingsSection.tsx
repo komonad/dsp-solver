@@ -54,8 +54,7 @@ export default function PreferredBuildingsSection() {
             gap: 1,
             gridTemplateColumns: {
               xs: '1fr',
-              sm: 'auto minmax(0, 1fr)',
-              xl: 'auto minmax(0, 1.45fr) minmax(168px, 0.75fr) auto',
+              sm: 'auto minmax(0, 1fr) minmax(140px, auto) auto',
             },
             alignItems: 'start',
           }}

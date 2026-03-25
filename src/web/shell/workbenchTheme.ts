@@ -33,9 +33,10 @@ export const workbenchTheme = createTheme({
     divider: 'rgba(22, 54, 89, 0.12)',
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 10,
   },
   typography: {
+    // fontSize: 13,
     fontFamily: '"IBM Plex Sans", "Noto Sans SC", "Segoe UI", sans-serif',
     h3: {
       fontWeight: 700,
@@ -50,6 +51,7 @@ export const workbenchTheme = createTheme({
     },
     h6: {
       fontWeight: 700,
+      fontSize: '1.1rem',
     },
     overline: {
       fontWeight: 700,

@@ -4,16 +4,16 @@
 
 The web app now uses a sprite-atlas pipeline with dataset-configurable pack order:
 
-- Atlas metadata: [vanillaAtlas.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/vanillaAtlas.json)
-- Atlas image: [Vanilla.png](/D:/dsp-dev/dspcalc/data/icons/Vanilla.png)
+- Atlas metadata: [vanillaAtlas.json](../data/icons/vanillaAtlas.json)
+- Atlas image: [Vanilla.png](../data/icons/Vanilla.png)
 - Additional atlas metadata:
-  - [GenesisBook.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/GenesisBook.json)
-  - [MoreMegaStructure.json](/D:/dsp-dev/dspcalc/src/web/iconAtlas/MoreMegaStructure.json)
+  - [GenesisBook.json](../data/icons/GenesisBook.json)
+  - [MoreMegaStructure.json](../data/icons/MoreMegaStructure.json)
 - Additional atlas images:
-  - [GenesisBook.png](/D:/dsp-dev/dspcalc/data/icons/GenesisBook.png)
-  - [MoreMegaStructure.png](/D:/dsp-dev/dspcalc/data/icons/MoreMegaStructure.png)
-- Runtime registry: [iconRegistry.ts](/D:/dsp-dev/dspcalc/src/web/iconRegistry.ts)
-- React rendering: [EntityIcon.tsx](/D:/dsp-dev/dspcalc/src/web/EntityIcon.tsx)
+  - [GenesisBook.png](../data/icons/GenesisBook.png)
+  - [MoreMegaStructure.png](../data/icons/MoreMegaStructure.png)
+- Runtime registry: [iconRegistry.ts](../src/web/shared/iconRegistry.ts)
+- React rendering: [EntityIcon.tsx](../src/web/shared/EntityIcon.tsx)
 
 Lookup key:
 

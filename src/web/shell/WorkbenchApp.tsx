@@ -44,7 +44,7 @@ function WorkbenchLayout() {
       <Container maxWidth={false} sx={{ maxWidth: 1560, py: 3, display: 'grid', gap: 3 }}>
         <Box sx={{ px: 0.5 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            DSP 产线求解工作台
+            {bundle.page.heading}
           </Typography>
         </Box>
         <section style={{ display: 'grid', gap: 20 }}>
@@ -71,8 +71,7 @@ function WorkbenchLayout() {
                   gap: 2,
                   gridTemplateColumns: {
                     xs: '1fr',
-                    lg: 'minmax(260px, 0.95fr) minmax(0, 1.65fr)',
-                    xl: 'minmax(260px, 0.95fr) minmax(0, 1.65fr) minmax(260px, 0.95fr)',
+                    lg: 'minmax(260px, 0.95fr) minmax(0, 1.65fr) minmax(260px, 0.95fr)',
                   },
                   alignItems: 'start',
                 }}
@@ -88,8 +87,7 @@ function WorkbenchLayout() {
                     minWidth: 0,
                     gridColumn: {
                       xs: '1',
-                      lg: '1 / -1',
-                      xl: '3',
+                      lg: '3',
                     },
                   }}
                 >
