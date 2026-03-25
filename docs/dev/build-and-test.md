@@ -38,6 +38,18 @@ npm run dev:web
 - `npm run host`: 本地托管 `dist-web/`
 - `npm run dev:web`: 并行启动 Web watch 和本地静态托管
 
+## GitHub Actions
+
+仓库里建议保留两份 workflow：
+
+- `.github/workflows/ci.yml`: 在 `ubuntu-latest` 和 `windows-latest` 上跑 `npm ci`、`npm run typecheck`、`npm test -- --runInBand`、`npm run build:web`
+- `.github/workflows/pages.yml`: 只在默认分支 push 时构建 `dist-web/`，并发布到 GitHub Pages
+
+这样可以同时满足两件事：
+
+- Web / TypeScript 代码持续保持跨平台
+- GitHub Pages 的发布始终来自真实构建产物，而不是手工上传
+
 ## 日常修改流程
 
 ### 只改文档或注释
