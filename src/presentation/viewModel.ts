@@ -333,6 +333,232 @@ function mapRecipeIoAmounts(
   }));
 }
 
+function getPlanItemRate(
+  items: PresentationItemRate[],
+  itemId: string
+): number {
+  return items.find(item => item.itemId === itemId)?.ratePerMin ?? 0;
+}
+
+const RECIPE_PLAN_WEIGHT_DECAY = 0.72;
+const MIN_PROPAGATED_INPUT_SHARE = 0.2;
+
+function sortPresentationRecipePlans(
+  result: SolveResult,
+  plans: PresentationRecipePlan[]
+): PresentationRecipePlan[] {
+  if (plans.length <= 1) {
+    return plans;
+  }
+
+  const planIndexesByOutputItemId = new Map<string, number[]>();
+
+  plans.forEach((plan, index) => {
+    plan.outputs.forEach(output => {
+      const indexes = planIndexesByOutputItemId.get(output.itemId);
+      if (indexes) {
+        indexes.push(index);
+      } else {
+        planIndexesByOutputItemId.set(output.itemId, [index]);
+      }
+    });
+  });
+
+  for (const [itemId, indexes] of planIndexesByOutputItemId.entries()) {
+    indexes.sort((leftIndex, rightIndex) => {
+      const leftPlan = plans[leftIndex];
+      const rightPlan = plans[rightIndex];
+      const outputRateDelta =
+        getPlanItemRate(rightPlan.outputs, itemId) -
+        getPlanItemRate(leftPlan.outputs, itemId);
+
+      if (Math.abs(outputRateDelta) > EPSILON) {
+        return outputRateDelta;
+      }
+
+      const throughputDelta =
+        Math.max(
+          rightPlan.runsPerMin,
+          rightPlan.exactBuildingCount,
+          rightPlan.roundedUpBuildingCount
+        ) -
+        Math.max(
+          leftPlan.runsPerMin,
+          leftPlan.exactBuildingCount,
+          leftPlan.roundedUpBuildingCount
+        );
+      if (Math.abs(throughputDelta) > EPSILON) {
+        return throughputDelta;
+      }
+
+      const recipeNameDelta = leftPlan.recipeName.localeCompare(rightPlan.recipeName);
+      if (recipeNameDelta !== 0) {
+        return recipeNameDelta;
+      }
+
+      return leftPlan.buildingName.localeCompare(rightPlan.buildingName);
+    });
+  }
+
+  const bestItemDepthById = new Map<string, number>();
+  const planDepthByIndex = new Map<number, number>();
+  const planWeightByIndex = new Map<number, number>();
+  const planVisitOrderByIndex = new Map<number, number>();
+  let frontierWeights = new Map<string, number>();
+  let frontierOrderByItemId = new Map<string, number>();
+  let nextFrontierItemOrder = 0;
+  let nextVisitOrder = 0;
+
+  result.targets.forEach(target => {
+    const seedWeight = Math.max(target.actualRatePerMin, target.requestedRatePerMin, 0);
+    if (seedWeight <= EPSILON) {
+      return;
+    }
+
+    frontierWeights.set(target.itemId, (frontierWeights.get(target.itemId) ?? 0) + seedWeight);
+    if (!frontierOrderByItemId.has(target.itemId)) {
+      frontierOrderByItemId.set(target.itemId, nextFrontierItemOrder);
+      nextFrontierItemOrder += 1;
+    }
+    bestItemDepthById.set(target.itemId, 0);
+  });
+
+  for (
+    let depth = 0;
+    frontierWeights.size > 0;
+    depth += 1
+  ) {
+    const orderedFrontierEntries = Array.from(frontierWeights.entries()).sort(
+      ([leftItemId, leftWeight], [rightItemId, rightWeight]) => {
+        const weightDelta = rightWeight - leftWeight;
+        if (Math.abs(weightDelta) > EPSILON) {
+          return weightDelta;
+        }
+
+        return (
+          (frontierOrderByItemId.get(leftItemId) ?? Number.MAX_SAFE_INTEGER) -
+          (frontierOrderByItemId.get(rightItemId) ?? Number.MAX_SAFE_INTEGER)
+        );
+      }
+    );
+    const nextFrontierWeights = new Map<string, number>();
+    const nextFrontierOrderByItemId = new Map<string, number>();
+
+    orderedFrontierEntries.forEach(([itemId, itemWeight]) => {
+      const knownDepth = bestItemDepthById.get(itemId);
+      if (knownDepth === undefined || depth > knownDepth) {
+        return;
+      }
+
+      const producerIndexes = planIndexesByOutputItemId.get(itemId) ?? [];
+      producerIndexes.forEach(planIndex => {
+        const existingPlanDepth = planDepthByIndex.get(planIndex);
+        if (existingPlanDepth === undefined || depth < existingPlanDepth) {
+          planDepthByIndex.set(planIndex, depth);
+        }
+
+        if (!planVisitOrderByIndex.has(planIndex)) {
+          planVisitOrderByIndex.set(planIndex, nextVisitOrder);
+          nextVisitOrder += 1;
+        }
+
+        planWeightByIndex.set(
+          planIndex,
+          (planWeightByIndex.get(planIndex) ?? 0) + itemWeight
+        );
+
+        const plan = plans[planIndex];
+        const dominantInputRate = plan.inputs.reduce(
+          (maxRate, input) => Math.max(maxRate, input.ratePerMin),
+          0
+        );
+
+        plan.inputs.forEach(input => {
+          const inputShare =
+            dominantInputRate > EPSILON ? input.ratePerMin / dominantInputRate : 1;
+          const propagatedWeight =
+            itemWeight *
+            RECIPE_PLAN_WEIGHT_DECAY *
+            Math.max(inputShare, MIN_PROPAGATED_INPUT_SHARE);
+          if (propagatedWeight <= EPSILON) {
+            return;
+          }
+
+          const nextDepth = depth + 1;
+          const knownInputDepth = bestItemDepthById.get(input.itemId);
+          if (knownInputDepth !== undefined && knownInputDepth < nextDepth) {
+            return;
+          }
+
+          if (knownInputDepth === undefined || nextDepth < knownInputDepth) {
+            bestItemDepthById.set(input.itemId, nextDepth);
+          }
+
+          nextFrontierWeights.set(
+            input.itemId,
+            (nextFrontierWeights.get(input.itemId) ?? 0) + propagatedWeight
+          );
+          if (!nextFrontierOrderByItemId.has(input.itemId)) {
+            nextFrontierOrderByItemId.set(input.itemId, nextFrontierItemOrder);
+            nextFrontierItemOrder += 1;
+          }
+        });
+      });
+    });
+
+    frontierWeights = nextFrontierWeights;
+    frontierOrderByItemId = nextFrontierOrderByItemId;
+  }
+
+  return plans
+    .map((plan, index) => ({
+      plan,
+      originalIndex: index,
+      depth: planDepthByIndex.get(index) ?? Number.MAX_SAFE_INTEGER,
+      visitOrder: planVisitOrderByIndex.get(index) ?? Number.MAX_SAFE_INTEGER,
+      propagatedWeight: planWeightByIndex.get(index) ?? 0,
+      throughputRate: Math.max(
+        plan.runsPerMin,
+        ...plan.inputs.map(input => input.ratePerMin),
+        ...plan.outputs.map(output => output.ratePerMin)
+      ),
+    }))
+    .sort((left, right) => {
+      const depthDelta = left.depth - right.depth;
+      if (depthDelta !== 0) {
+        return depthDelta;
+      }
+
+      const weightDelta = right.propagatedWeight - left.propagatedWeight;
+      if (Math.abs(weightDelta) > EPSILON) {
+        return weightDelta;
+      }
+
+      const visitOrderDelta = left.visitOrder - right.visitOrder;
+      if (visitOrderDelta !== 0) {
+        return visitOrderDelta;
+      }
+
+      const throughputDelta = right.throughputRate - left.throughputRate;
+      if (Math.abs(throughputDelta) > EPSILON) {
+        return throughputDelta;
+      }
+
+      const recipeNameDelta = left.plan.recipeName.localeCompare(right.plan.recipeName);
+      if (recipeNameDelta !== 0) {
+        return recipeNameDelta;
+      }
+
+      const buildingNameDelta = left.plan.buildingName.localeCompare(right.plan.buildingName);
+      if (buildingNameDelta !== 0) {
+        return buildingNameDelta;
+      }
+
+      return left.originalIndex - right.originalIndex;
+    })
+    .map(entry => entry.plan);
+}
+
 function buildEffectiveRawInputSet(
   catalog: ResolvedCatalogModel,
   request: SolveRequest | undefined,
@@ -870,24 +1096,31 @@ export function buildPresentationModel(
     };
   }
 
-  const recipePlans = result.recipePlans.map(plan => ({
-    recipeId: plan.recipeId,
-    recipeName: getRecipeName(catalog, plan.recipeId),
-    recipeIconKey: getRecipeIcon(catalog, plan.recipeId),
-    buildingId: plan.buildingId,
-    buildingName: getBuildingName(catalog, plan.buildingId),
-    buildingIconKey: getBuildingIcon(catalog, plan.buildingId),
-    proliferatorLevel: plan.proliferatorLevel,
-    proliferatorMode: plan.proliferatorMode,
-    proliferatorLabel: formatProliferatorLabel(plan.proliferatorMode, plan.proliferatorLevel, locale),
-    runsPerMin: plan.runsPerMin,
-    exactBuildingCount: plan.exactBuildingCount,
-    roundedUpBuildingCount: plan.roundedUpBuildingCount,
-    activePowerMW: plan.activePowerMW,
-    roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
-    inputs: mapItemRates(catalog, plan.inputs),
-    outputs: mapItemRates(catalog, plan.outputs),
-  }));
+  const recipePlans = sortPresentationRecipePlans(
+    result,
+    result.recipePlans.map(plan => ({
+      recipeId: plan.recipeId,
+      recipeName: getRecipeName(catalog, plan.recipeId),
+      recipeIconKey: getRecipeIcon(catalog, plan.recipeId),
+      buildingId: plan.buildingId,
+      buildingName: getBuildingName(catalog, plan.buildingId),
+      buildingIconKey: getBuildingIcon(catalog, plan.buildingId),
+      proliferatorLevel: plan.proliferatorLevel,
+      proliferatorMode: plan.proliferatorMode,
+      proliferatorLabel: formatProliferatorLabel(
+        plan.proliferatorMode,
+        plan.proliferatorLevel,
+        locale
+      ),
+      runsPerMin: plan.runsPerMin,
+      exactBuildingCount: plan.exactBuildingCount,
+      roundedUpBuildingCount: plan.roundedUpBuildingCount,
+      activePowerMW: plan.activePowerMW,
+      roundedPlacementPowerMW: plan.roundedPlacementPowerMW,
+      inputs: mapItemRates(catalog, plan.inputs),
+      outputs: mapItemRates(catalog, plan.outputs),
+    }))
+  );
   const itemLedgerSections = buildPresentationItemLedgerSections(catalog, request, result, locale);
 
   return {
