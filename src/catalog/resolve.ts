@@ -4,6 +4,7 @@ import {
   type CatalogRecipeBuildingExpansionGroupSpec,
   type CatalogRecipeModifierPolicySpec,
   type CatalogRecipeRuleSpec,
+  type CatalogRecipeUniversalBuildingExclusionRuleSpec,
   type ItemKind,
   type ProliferatorMode,
   type RecipeModifierRuleSpec,
@@ -43,6 +44,12 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
     recipeBuildingUniversalIds: defaultConfig.recipeBuildingUniversalIds
       ? [...defaultConfig.recipeBuildingUniversalIds]
       : undefined,
+    recipeBuildingUniversalExclusionRules: defaultConfig.recipeBuildingUniversalExclusionRules?.map(
+      rule => ({
+        MatchBaseBuildingIds: [...rule.MatchBaseBuildingIds],
+        UniversalBuildingIds: [...rule.UniversalBuildingIds],
+      })
+    ),
     recipeModifierRules: defaultConfig.recipeModifierRules?.map(rule => ({
       ...rule,
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
@@ -246,10 +253,13 @@ function deriveBuildingCategory(rule?: CatalogBuildingRuleSpec): string {
 function expandAllowedBuildingIds(
   baseBuildingIds: number[],
   expansionGroups: CatalogRecipeBuildingExpansionGroupSpec[],
-  universalBuildingIds: number[]
+  universalBuildingIds: number[],
+  universalExclusionRules: CatalogRecipeUniversalBuildingExclusionRuleSpec[]
 ): number[] {
   const expanded = [...baseBuildingIds];
   const expandedSet = new Set(expanded);
+  const baseBuildingIdSet = new Set(baseBuildingIds);
+  const excludedUniversalBuildingIds = new Set<number>();
 
   for (const group of expansionGroups) {
     if (!group.BuildingIds.some(buildingId => expandedSet.has(buildingId))) {
@@ -265,8 +275,18 @@ function expandAllowedBuildingIds(
     }
   }
 
+  for (const rule of universalExclusionRules) {
+    if (!rule.MatchBaseBuildingIds.some(buildingId => baseBuildingIdSet.has(buildingId))) {
+      continue;
+    }
+
+    for (const buildingId of rule.UniversalBuildingIds) {
+      excludedUniversalBuildingIds.add(buildingId);
+    }
+  }
+
   for (const buildingId of universalBuildingIds) {
-    if (expandedSet.has(buildingId)) {
+    if (expandedSet.has(buildingId) || excludedUniversalBuildingIds.has(buildingId)) {
       continue;
     }
     expanded.push(buildingId);
@@ -347,6 +367,8 @@ export function resolveCatalogModel(
   );
   const recipeBuildingExpansionGroups = resolvedDefaultConfig.recipeBuildingExpansionGroups ?? [];
   const recipeBuildingUniversalIds = resolvedDefaultConfig.recipeBuildingUniversalIds ?? [];
+  const recipeBuildingUniversalExclusionRules =
+    resolvedDefaultConfig.recipeBuildingUniversalExclusionRules ?? [];
   const recipeModifierPolicy = resolvedDefaultConfig.recipeModifierPolicy;
   const modifierRuleMap = new Map<number, RecipeModifierRuleSpec>(
     (resolvedDefaultConfig.recipeModifierRules ?? []).map(rule => [rule.Code, rule])
@@ -405,7 +427,8 @@ export function resolveCatalogModel(
     const allowedBuildingIds = expandAllowedBuildingIds(
       recipeRule?.AllowedBuildingIds ?? recipe.Factories,
       recipeBuildingExpansionGroups,
-      recipeBuildingUniversalIds
+      recipeBuildingUniversalIds,
+      recipeBuildingUniversalExclusionRules
     );
     const { isSynthetic, tags } = buildRecipeTags({
       recipeName: recipe.Name,

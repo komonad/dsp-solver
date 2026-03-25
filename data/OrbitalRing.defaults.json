@@ -1622,6 +1622,7 @@
       "BuildingIds": [
         2303,
         2304,
+        2305,
         2318
       ]
     },
@@ -1635,6 +1636,16 @@
   ],
   "recipeBuildingUniversalIds": [
     6215
+  ],
+  "recipeBuildingUniversalExclusionRules": [
+    {
+      "MatchBaseBuildingIds": [
+        6257
+      ],
+      "UniversalBuildingIds": [
+        6215
+      ]
+    }
   ],
   "recommendedDisabledRecipeIds": [
     510

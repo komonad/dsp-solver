@@ -220,6 +220,25 @@ export interface CatalogRecipeBuildingExpansionGroupSpec {
 }
 
 /**
+ * Conditional exclusion rule for globally appended recipe buildings.
+ *
+ * When a recipe's authoritative base building list contains any ID from
+ * `MatchBaseBuildingIds`, the listed `UniversalBuildingIds` are not appended
+ * during allowed-building expansion.
+ */
+export interface CatalogRecipeUniversalBuildingExclusionRuleSpec {
+  /**
+   * Base building IDs checked before symmetric expansion or universal appends.
+   *
+   * These come from `recipeRules.AllowedBuildingIds` when present, otherwise
+   * from the raw dataset recipe `Factories` field.
+   */
+  MatchBaseBuildingIds: number[];
+  /** Universal building IDs that should be skipped for matching recipes. */
+  UniversalBuildingIds: number[];
+}
+
+/**
  * Optional dataset-level recommended solve settings.
  *
  * These are not hard constraints. They describe the request defaults that a
@@ -251,8 +270,13 @@ export interface CatalogDefaultConfigSpec {
   recipeModifierPolicy?: CatalogRecipeModifierPolicySpec;
   /** Optional symmetric expansion groups for recipe allowed-building inference. */
   recipeBuildingExpansionGroups?: CatalogRecipeBuildingExpansionGroupSpec[];
-  /** Optional building IDs appended to every recipe as globally available factories. */
+  /**
+   * Optional building IDs appended to every recipe as globally available
+   * factories, unless excluded by `recipeBuildingUniversalExclusionRules`.
+   */
   recipeBuildingUniversalIds?: number[];
+  /** Optional conditional exclusions for globally appended recipe buildings. */
+  recipeBuildingUniversalExclusionRules?: CatalogRecipeUniversalBuildingExclusionRuleSpec[];
   /** Optional mapping from raw modifier codes to internal meaning. */
   recipeModifierRules?: RecipeModifierRuleSpec[];
   /** Optional recommended solve defaults for UI/request initialization. */
@@ -699,6 +723,17 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     );
   }
 
+  if (
+    value.recipeBuildingUniversalExclusionRules !== undefined &&
+    !Array.isArray(value.recipeBuildingUniversalExclusionRules)
+  ) {
+    pushIssue(
+      errors,
+      '$.recipeBuildingUniversalExclusionRules',
+      'recipeBuildingUniversalExclusionRules must be an array when present.'
+    );
+  }
+
   if (value.recipeModifierRules !== undefined && !Array.isArray(value.recipeModifierRules)) {
     pushIssue(errors, '$.recipeModifierRules', 'recipeModifierRules must be an array when present.');
   }
@@ -920,6 +955,31 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         errors,
         `${path}.BuildingIds`,
         'BuildingIds must be a non-empty number array.'
+      );
+    }
+  });
+
+  (config.recipeBuildingUniversalExclusionRules ?? []).forEach((rule, index) => {
+    const path = `$.recipeBuildingUniversalExclusionRules[${index}]`;
+
+    if (!isRecord(rule)) {
+      pushIssue(errors, path, 'Recipe universal building exclusion rule must be an object.');
+      return;
+    }
+
+    if (!isNumberArray(rule.MatchBaseBuildingIds) || rule.MatchBaseBuildingIds.length === 0) {
+      pushIssue(
+        errors,
+        `${path}.MatchBaseBuildingIds`,
+        'MatchBaseBuildingIds must be a non-empty number array.'
+      );
+    }
+
+    if (!isNumberArray(rule.UniversalBuildingIds) || rule.UniversalBuildingIds.length === 0) {
+      pushIssue(
+        errors,
+        `${path}.UniversalBuildingIds`,
+        'UniversalBuildingIds must be a non-empty number array.'
       );
     }
   });
