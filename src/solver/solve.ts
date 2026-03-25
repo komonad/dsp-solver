@@ -776,18 +776,72 @@ function buildObjectiveCoefficient(
   );
 }
 
+function isFractionationRecipe(recipe: ResolvedRecipeSpec): boolean {
+  return (
+    typeof recipe.fractionationProbability === 'number' &&
+    Number.isFinite(recipe.fractionationProbability) &&
+    recipe.fractionationProbability > 0
+  );
+}
+
+function buildSingleBuildingBaseRunsPerMin(
+  recipe: ResolvedRecipeSpec,
+  building: ResolvedBuildingSpec
+): number {
+  if (!isFractionationRecipe(recipe)) {
+    return (60 / recipe.cycleTimeSec) * building.speedMultiplier;
+  }
+
+  const beltSpeed = building.fractionatorBeltSpeedItemsPerMin;
+  const maxStack = building.fractionatorMaxItemStack;
+  if (
+    !Number.isFinite(beltSpeed) ||
+    beltSpeed === undefined ||
+    beltSpeed <= 0 ||
+    !Number.isFinite(maxStack) ||
+    maxStack === undefined ||
+    maxStack <= 0
+  ) {
+    throw new Error(
+      `Fractionation recipe ${recipe.recipeId} requires FractionatorBeltSpeedItemsPerMin and FractionatorMaxItemStack on building ${building.buildingId}.`
+    );
+  }
+
+  return beltSpeed * maxStack * recipe.fractionationProbability!;
+}
+
+function buildInputPerRun(recipe: ResolvedRecipeSpec): Record<string, number> {
+  return Object.fromEntries(
+    recipe.inputs.map(input => [input.itemId, isFractionationRecipe(recipe) ? 1 : input.amount])
+  );
+}
+
+function buildOutputPerRun(
+  recipe: ResolvedRecipeSpec,
+  building: ResolvedBuildingSpec,
+  productivityModeMultiplier = 1
+): Record<string, number> {
+  if (isFractionationRecipe(recipe)) {
+    return Object.fromEntries(recipe.outputs.map(output => [output.itemId, 1]));
+  }
+
+  return Object.fromEntries(
+    recipe.outputs.map(output => [
+      output.itemId,
+      output.amount *
+        (1 + building.intrinsicProductivityBonus) *
+        productivityModeMultiplier,
+    ])
+  );
+}
+
 function buildNoneVariant(
   recipe: ResolvedRecipeSpec,
   building: ResolvedBuildingSpec
 ): CompiledOption {
-  const singleBuildingRunsPerMin = (60 / recipe.cycleTimeSec) * building.speedMultiplier;
-  const outputPerRun = Object.fromEntries(
-    recipe.outputs.map(output => [
-      output.itemId,
-      output.amount * (1 + building.intrinsicProductivityBonus),
-    ])
-  );
-  const inputPerRun = Object.fromEntries(recipe.inputs.map(input => [input.itemId, input.amount]));
+  const singleBuildingRunsPerMin = buildSingleBuildingBaseRunsPerMin(recipe, building);
+  const outputPerRun = buildOutputPerRun(recipe, building);
+  const inputPerRun = buildInputPerRun(recipe);
 
   return {
     optionId: `${recipe.recipeId}:${building.buildingId}:none:0`,
@@ -810,26 +864,18 @@ function buildProliferatorVariant(
   level: ResolvedProliferatorLevelSpec,
   mode: Exclude<ProliferatorMode, 'none'>
 ): CompiledOption {
-  const baseRunsPerMin = 60 / recipe.cycleTimeSec;
+  const baseRunsPerMin = buildSingleBuildingBaseRunsPerMin(recipe, building);
   const speedModeMultiplier = mode === 'speed' ? level.speedMultiplier : 1;
   const productivityModeMultiplier = mode === 'productivity' ? level.productivityMultiplier : 1;
   const powerMultiplier = level.powerMultiplier;
-  const singleBuildingRunsPerMin =
-    baseRunsPerMin * building.speedMultiplier * speedModeMultiplier;
-  const inputPerRun = Object.fromEntries(recipe.inputs.map(input => [input.itemId, input.amount]));
-  const totalInputAmountPerRun = recipe.inputs.reduce((sum, input) => sum + input.amount, 0);
+  const singleBuildingRunsPerMin = baseRunsPerMin * speedModeMultiplier;
+  const inputPerRun = buildInputPerRun(recipe);
+  const totalInputAmountPerRun = Object.values(inputPerRun).reduce((sum, amount) => sum + amount, 0);
   const proliferatorItemId = createProliferatorItemId(level);
   inputPerRun[proliferatorItemId] =
     (inputPerRun[proliferatorItemId] ?? 0) + totalInputAmountPerRun / (level.sprayCount ?? 1);
 
-  const outputPerRun = Object.fromEntries(
-    recipe.outputs.map(output => [
-      output.itemId,
-      output.amount *
-        (1 + building.intrinsicProductivityBonus) *
-        productivityModeMultiplier,
-    ])
-  );
+  const outputPerRun = buildOutputPerRun(recipe, building, productivityModeMultiplier);
 
   return {
     optionId: `${recipe.recipeId}:${building.buildingId}:${mode}:${level.level}`,
@@ -1407,4 +1453,3 @@ export function solveCatalogRequest(
 
   return solveCatalogRequestValidatedCached(catalog, request);
 }
-

@@ -85,10 +85,16 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   expect(resolved.syntheticRecipeIds).toHaveLength(78);
 
   const assembler4 = resolved.buildingMap.get('2318');
+  const fractionator = resolved.buildingMap.get('2314');
   expect(assembler4).toBeDefined();
   expect(assembler4?.category).toBe('assembler');
   expect(assembler4?.speedMultiplier).toBe(3);
   expect(assembler4?.workPowerMW).toBeCloseTo(2.7, 6);
+  expect(fractionator).toMatchObject({
+    category: 'fractionator',
+    fractionatorBeltSpeedItemsPerMin: 1800,
+    fractionatorMaxItemStack: 4,
+  });
 
   const ironSmelting = resolved.recipeMap.get('1');
   expect(ironSmelting).toBeDefined();
@@ -101,6 +107,7 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
 
   const fractionation = resolved.recipeMap.get('115');
   expect(fractionation).toBeDefined();
+  expect(fractionation?.fractionationProbability).toBe(0.01);
   expect(fractionation?.modifierCode).toBe(1);
   expect(fractionation?.supportsProliferatorModes).toEqual(['none', 'speed']);
   expect(fractionation?.maxProliferatorLevel).toBe(3);

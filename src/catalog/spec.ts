@@ -135,6 +135,16 @@ export interface CatalogBuildingRuleSpec {
   SpeedMultiplierOverride?: number;
   /** Optional override when raw dataset work power cannot be used directly. */
   WorkPowerMWOverride?: number;
+  /**
+   * Optional conveyor throughput in items per minute used by fractionation-like
+   * recipes on this building.
+   */
+  FractionatorBeltSpeedItemsPerMin?: number;
+  /**
+   * Optional maximum cargo stack size used by fractionation-like recipes on
+   * this building.
+   */
+  FractionatorMaxItemStack?: number;
   /** Optional free-form tags for presentation or grouping. */
   Tags?: string[];
 }
@@ -168,6 +178,14 @@ export interface CatalogRecipeRuleSpec {
   AllowedBuildingIds?: number[];
   /** Optional effective modifier code override for this recipe. */
   ModifierCodeOverride?: number;
+  /**
+   * Optional per-pass success probability for fractionation-like recipes.
+   *
+   * When present, the solver interprets the recipe as a 1:1 conveyor-fed
+   * conversion whose throughput is derived from:
+   * `FractionatorBeltSpeedItemsPerMin * FractionatorMaxItemStack * FractionationProbability`.
+   */
+  FractionationProbability?: number;
 }
 
 /**
@@ -309,6 +327,13 @@ export interface ResolvedRecipeSpec {
   cycleTimeSec: number;
   /** Original upstream duration in ticks. */
   timeSpend: number;
+  /**
+   * Optional per-pass success probability for fractionation-like solver math.
+   *
+   * When present, the solver ignores raw per-run count magnitudes and treats
+   * the recipe as a 1:1 conversion driven by building conveyor throughput.
+   */
+  fractionationProbability?: number;
   /** Per-run inputs. */
   inputs: RecipeIOItem[];
   /** Per-run outputs. */
@@ -354,6 +379,10 @@ export interface ResolvedBuildingSpec {
   speedMultiplier: number;
   /** Working power in MW at base load, before proliferator power multipliers. */
   workPowerMW: number;
+  /** Optional conveyor throughput in items per minute for fractionation-like recipes. */
+  fractionatorBeltSpeedItemsPerMin?: number;
+  /** Optional maximum cargo stack size for fractionation-like recipes. */
+  fractionatorMaxItemStack?: number;
   /** Optional idle power metadata in MW. */
   idlePowerMW?: number;
   /** Built-in output bonus applied multiplicatively to recipe outputs. */
@@ -801,6 +830,8 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     if (rule.IntrinsicProductivityBonus !== undefined && (!isFiniteNumber(rule.IntrinsicProductivityBonus) || rule.IntrinsicProductivityBonus < 0)) pushIssue(errors, `${path}.IntrinsicProductivityBonus`, 'IntrinsicProductivityBonus must be a non-negative finite number when present.');
     if (rule.SpeedMultiplierOverride !== undefined && (!isFiniteNumber(rule.SpeedMultiplierOverride) || rule.SpeedMultiplierOverride <= 0)) pushIssue(errors, `${path}.SpeedMultiplierOverride`, 'SpeedMultiplierOverride must be a positive finite number when present.');
     if (rule.WorkPowerMWOverride !== undefined && (!isFiniteNumber(rule.WorkPowerMWOverride) || rule.WorkPowerMWOverride < 0)) pushIssue(errors, `${path}.WorkPowerMWOverride`, 'WorkPowerMWOverride must be a non-negative finite number when present.');
+    if (rule.FractionatorBeltSpeedItemsPerMin !== undefined && (!isFiniteNumber(rule.FractionatorBeltSpeedItemsPerMin) || rule.FractionatorBeltSpeedItemsPerMin <= 0)) pushIssue(errors, `${path}.FractionatorBeltSpeedItemsPerMin`, 'FractionatorBeltSpeedItemsPerMin must be a positive finite number when present.');
+    if (rule.FractionatorMaxItemStack !== undefined && (!isFiniteNumber(rule.FractionatorMaxItemStack) || rule.FractionatorMaxItemStack <= 0)) pushIssue(errors, `${path}.FractionatorMaxItemStack`, 'FractionatorMaxItemStack must be a positive finite number when present.');
     if (rule.Tags !== undefined && !isStringArray(rule.Tags)) pushIssue(errors, `${path}.Tags`, 'Tags must be a string array when present.');
 
     if (isFiniteNumber(rule.ID)) {
@@ -840,6 +871,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         'ModifierCodeOverride must be a non-negative finite number when present.'
       );
     }
+    if (rule.FractionationProbability !== undefined && (!isFiniteNumber(rule.FractionationProbability) || rule.FractionationProbability <= 0 || rule.FractionationProbability > 1)) pushIssue(errors, `${path}.FractionationProbability`, 'FractionationProbability must be a finite number in the range (0, 1].');
 
     if (isFiniteNumber(rule.ID)) {
       if (recipeRuleIds.has(rule.ID)) {

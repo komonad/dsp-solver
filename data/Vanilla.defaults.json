@@ -23,7 +23,12 @@
     { "ID": 2308, "Category": "refinery" },
     { "ID": 2309, "Category": "chemical" },
     { "ID": 2310, "Category": "particle" },
-    { "ID": 2314, "Category": "fractionator" },
+    {
+      "ID": 2314,
+      "Category": "fractionator",
+      "FractionatorBeltSpeedItemsPerMin": 1800,
+      "FractionatorMaxItemStack": 4
+    },
     { "ID": 2315, "Category": "smelter" },
     { "ID": 2316, "Category": "mining" },
     { "ID": 2317, "Category": "chemical", "Tags": ["quantum-chemical-plant"] },
@@ -31,6 +36,9 @@
     { "ID": 2319, "Category": "smelter" },
     { "ID": 2901, "Category": "lab" },
     { "ID": 2902, "Category": "lab" }
+  ],
+  "recipeRules": [
+    { "ID": 115, "FractionationProbability": 0.01 }
   ],
   "recipeModifierRules": [
     { "Code": 0, "Kind": "none", "SupportedModes": ["none"], "MaxLevel": 0 },

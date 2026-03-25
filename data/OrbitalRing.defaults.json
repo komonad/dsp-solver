@@ -50,7 +50,9 @@
     {
       "ID": 2314,
       "Category": "fractionator",
-      "SpeedMultiplierOverride": 1
+      "SpeedMultiplierOverride": 1,
+      "FractionatorBeltSpeedItemsPerMin": 1800,
+      "FractionatorMaxItemStack": 4
     },
     {
       "ID": 2315,
@@ -614,7 +616,8 @@
     },
     {
       "ID": 115,
-      "ModifierCodeOverride": 3
+      "ModifierCodeOverride": 1,
+      "FractionationProbability": 0.01
     },
     {
       "ID": 116,

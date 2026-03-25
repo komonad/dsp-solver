@@ -426,6 +426,7 @@ export function resolveCatalogModel(
       icon: recipe.IconName,
       cycleTimeSec: recipe.TimeSpend / 60,
       timeSpend: recipe.TimeSpend,
+      fractionationProbability: recipeRule?.FractionationProbability,
       inputs: recipe.Items.map((itemId, index) => ({
         itemId: itemId.toString(),
         amount: recipe.ItemCounts[index] ?? 0,
@@ -464,6 +465,8 @@ export function resolveCatalogModel(
       category: deriveBuildingCategory(rule),
       speedMultiplier: deriveSpeedMultiplier(item, rule),
       workPowerMW: deriveWorkPowerMW(item, rule),
+      fractionatorBeltSpeedItemsPerMin: rule?.FractionatorBeltSpeedItemsPerMin,
+      fractionatorMaxItemStack: rule?.FractionatorMaxItemStack,
       idlePowerMW: rule?.IdlePowerMW,
       intrinsicProductivityBonus: rule?.IntrinsicProductivityBonus ?? 0,
       tags: rule?.Tags ? [...rule.Tags] : undefined,
