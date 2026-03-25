@@ -85,15 +85,15 @@ export const recipePlanToggleButtonSx = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 0.125,
-  minWidth: 24,
-  height: 20,
-  px: 0.375,
+  minWidth: 28,
+  height: 26,
+  px: 0.5,
   py: 0,
   borderRadius: 0,
   border: 0,
   backgroundColor: 'transparent',
   color: '#183359',
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 700,
   lineHeight: 1,
   textTransform: 'none',
@@ -117,8 +117,8 @@ export const recipePlanToggleButtonSx = {
 
 export const recipePlanIconToggleButtonSx = {
   ...recipePlanToggleButtonSx,
-  width: 22,
-  minWidth: 22,
+  width: 28,
+  minWidth: 28,
   px: 0,
 } as const;
 

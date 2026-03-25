@@ -187,13 +187,13 @@ export default function SolveRequestPanel() {
             <MenuItem value="productivity">{bundle.solveRequest.proliferatorPolicyOptions.productivity}</MenuItem>
           </TextField>
 
+          {!globalProliferatorLevelDisabled && (
           <TextField
             select
             size="small"
             sx={{ ...compactSelectFieldSx, minWidth: 120 }}
             label={bundle.solveRequest.preferredSprayLevelLabel}
             value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
-            disabled={globalProliferatorLevelDisabled}
             onChange={event =>
               setGlobalProliferatorLevel(event.target.value ? Number(event.target.value) : '')
             }
@@ -205,6 +205,7 @@ export default function SolveRequestPanel() {
               </MenuItem>
             ))}
           </TextField>
+          )}
         </Box>
 
         <Box sx={inlineConstraintSectionGroupSx}>

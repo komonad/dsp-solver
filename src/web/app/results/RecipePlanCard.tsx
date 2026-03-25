@@ -34,7 +34,7 @@ function AutoOptionGlyph() {
         justifyContent: 'center',
         width: '100%',
         height: '100%',
-        fontSize: 13,
+        fontSize: 15,
         lineHeight: 1,
         transform: 'translateY(0.5px)',
       }}
@@ -191,12 +191,13 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                       label={building.name}
                       iconKey={building.icon}
                       atlasIds={iconAtlasIds}
-                      size={17}
+                      size={22}
                     />
                   </RecipePlanToggleButton>
                 ))}
               </RecipePlanToggleGroup>
 
+              {modeChoices.length > 0 && (
               <RecipePlanToggleGroup
                 ariaLabel={`${plan.recipeName} ${PROLIFERATOR_MODE_CONTROL_LABEL}`}
                 value={selectedMode}
@@ -240,7 +241,9 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   </RecipePlanToggleButton>
                 ))}
               </RecipePlanToggleGroup>
+              )}
 
+              {modeChoices.length > 0 && !levelSelectDisabled && (
               <RecipePlanToggleGroup
                 ariaLabel={`${plan.recipeName} ${PROLIFERATOR_LEVEL_CONTROL_LABEL}`}
                 value={selectedLevel}
@@ -259,7 +262,6 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   value=""
                   ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
                   title={bundle.common.auto}
-                  disabled={levelSelectDisabled}
                   testId="recipe-plan-level-toggle-auto"
                 >
                   <AutoOptionGlyph />
@@ -270,13 +272,13 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                     value={String(level)}
                     ariaLabel={`${plan.recipeName} ${bundle.solveRequest.levelPrefix} ${level}`}
                     title={`${bundle.solveRequest.levelPrefix} ${level}`}
-                    disabled={levelSelectDisabled}
                     testId={`recipe-plan-level-toggle-${level}`}
                   >
                     {level}
                   </RecipePlanToggleButton>
                 ))}
               </RecipePlanToggleGroup>
+              )}
             </Box>
           </Box>
 
