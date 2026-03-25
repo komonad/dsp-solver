@@ -4,9 +4,6 @@ import type { BalancePolicy, SolveObjective, SolveStatus } from '../solver';
 export type AppLocale = 'zh-CN';
 export type DatasetPresetId =
   | 'vanilla'
-  | 'demo-smelting'
-  | 'refinery-balance'
-  | 'fullerene-loop'
   | 'orbitalring'
   | 'custom';
 export type WorkbenchProliferatorPolicyLabel = 'auto' | 'none' | 'speed' | 'productivity';
@@ -276,18 +273,6 @@ const zhCN: LocaleBundle = {
     vanilla: {
       label: '原版',
       description: '完整的原版兼容数据集，以及配套的默认配置。',
-    },
-    'demo-smelting': {
-      label: '演示冶炼',
-      description: '用于快速前端检查的最小双建筑冶炼数据集。',
-    },
-    'refinery-balance': {
-      label: '炼油配平',
-      description: '通过两条炼油配方闭合重油副产的轻油场景。',
-    },
-    'fullerene-loop': {
-      label: '富勒烯回环',
-      description: '富勒烯甲烷回环，以及富勒银/富勒醇出口循环场景。',
     },
     orbitalring: {
       label: '星环组合',

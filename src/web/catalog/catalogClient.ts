@@ -16,21 +16,6 @@ export const DATASET_PRESETS: DatasetPresetDefinition[] = [
     defaultConfigPath: BUNDLED_DATASET_PATHS.vanilla.defaultConfigPath,
   },
   {
-    id: 'demo-smelting',
-    datasetPath: BUNDLED_DATASET_PATHS.demoSmelting.datasetPath,
-    defaultConfigPath: BUNDLED_DATASET_PATHS.demoSmelting.defaultConfigPath,
-  },
-  {
-    id: 'refinery-balance',
-    datasetPath: BUNDLED_DATASET_PATHS.refineryBalance.datasetPath,
-    defaultConfigPath: BUNDLED_DATASET_PATHS.refineryBalance.defaultConfigPath,
-  },
-  {
-    id: 'fullerene-loop',
-    datasetPath: BUNDLED_DATASET_PATHS.fullereneLoop.datasetPath,
-    defaultConfigPath: BUNDLED_DATASET_PATHS.fullereneLoop.defaultConfigPath,
-  },
-  {
     id: 'orbitalring',
     datasetPath: BUNDLED_DATASET_PATHS.orbitalRing.datasetPath,
     defaultConfigPath: BUNDLED_DATASET_PATHS.orbitalRing.defaultConfigPath,

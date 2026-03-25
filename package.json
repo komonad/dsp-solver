@@ -1,7 +1,7 @@
 {
-  "name": "dsp-mod-calculator",
+  "name": "dsp-production-solver",
   "version": "1.0.0",
-  "description": "戴森球计划模组量化计算器 - 支持多产物配方配平",
+  "description": "Static web solver and dataset workbench for Dyson Sphere Program production chains.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -16,7 +16,7 @@
     "host": "node scripts/host-web.mjs",
     "host:web": "node scripts/host-web.mjs",
     "serve:web": "node scripts/host-web.mjs",
-    "dev:web": "powershell -Command \"$watch = Start-Process cmd.exe -ArgumentList '/c','npm.cmd run watch:web' -PassThru; try { node scripts/host-web.mjs } finally { if ($watch -and !$watch.HasExited) { Stop-Process -Id $watch.Id -Force } }\""
+    "dev:web": "node scripts/dev-web.mjs"
   },
   "keywords": [
     "dyson-sphere-program",

@@ -68,9 +68,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isDatasetPresetId(value: unknown): value is DatasetPresetId {
   return (
     value === 'vanilla' ||
-    value === 'demo-smelting' ||
-    value === 'refinery-balance' ||
-    value === 'fullerene-loop' ||
     value === 'orbitalring' ||
     value === 'custom'
   );

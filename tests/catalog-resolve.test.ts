@@ -153,8 +153,8 @@ test('resolveCatalogModel still returns a valid fallback model without default c
 
 test.each([
   {
-    datasetPath: './data/RefineryBalance.json',
-    defaultsPath: './data/RefineryBalance.defaults.json',
+    datasetPath: './tests/fixtures/scenarios/RefineryBalance.json',
+    defaultsPath: './tests/fixtures/scenarios/RefineryBalance.defaults.json',
     expectedRecipeCount: 2,
     expectedBuildingCount: 1,
     expectedIconAtlasIds: ['Vanilla'],
@@ -164,8 +164,8 @@ test.each([
     },
   },
   {
-    datasetPath: './data/FullereneLoop.json',
-    defaultsPath: './data/FullereneLoop.defaults.json',
+    datasetPath: './tests/fixtures/scenarios/FullereneLoop.json',
+    defaultsPath: './tests/fixtures/scenarios/FullereneLoop.defaults.json',
     expectedRecipeCount: 4,
     expectedBuildingCount: 3,
     expectedIconAtlasIds: ['Vanilla'],

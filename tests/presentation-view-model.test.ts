@@ -73,14 +73,14 @@ test('presentation model carries frontend-visible names and totals from a solved
     request,
     result,
     datasetLabel: 'Demo Smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   });
 
   expect(model.catalogSummary).toEqual({
     datasetLabel: 'Demo Smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
     itemCount: 4,
     recipeCount: 1,
     buildingCount: 2,
@@ -160,8 +160,8 @@ test('presentation model still exposes catalog summary before solving', () => {
   const model = buildPresentationModel({
     catalog,
     datasetLabel: 'Demo Smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   });
 
   expect(model.status).toBeNull();

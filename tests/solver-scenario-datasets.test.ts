@@ -1,10 +1,10 @@
 import { loadResolvedCatalogFromFiles } from '../src/catalog';
 import { solveCatalogRequest, type SolveResult } from '../src/solver';
 
-const refineryBalanceDatasetPath = './data/RefineryBalance.json';
-const refineryBalanceDefaultsPath = './data/RefineryBalance.defaults.json';
-const fullereneLoopDatasetPath = './data/FullereneLoop.json';
-const fullereneLoopDefaultsPath = './data/FullereneLoop.defaults.json';
+const refineryBalanceDatasetPath = './tests/fixtures/scenarios/RefineryBalance.json';
+const refineryBalanceDefaultsPath = './tests/fixtures/scenarios/RefineryBalance.defaults.json';
+const fullereneLoopDatasetPath = './tests/fixtures/scenarios/FullereneLoop.json';
+const fullereneLoopDefaultsPath = './tests/fixtures/scenarios/FullereneLoop.defaults.json';
 const orbitalRingDatasetPath = './data/OrbitalRing.json';
 const orbitalRingDefaultsPath = './data/OrbitalRing.defaults.json';
 

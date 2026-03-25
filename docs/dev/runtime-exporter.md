@@ -2,7 +2,7 @@
 
 This repository now includes a minimal BepInEx runtime exporter subproject at:
 
-- [tools/dsp-runtime-exporter](../tools/dsp-runtime-exporter)
+- [tools/dsp-runtime-exporter](../../tools/dsp-runtime-exporter)
 
 Its purpose is narrow:
 
@@ -46,7 +46,7 @@ dataset shape still does not need to change.
 
 The exporter now follows the same local-path pattern as `MinimalDSPModTemplate`:
 
-- copy [Local.props.example](../tools/dsp-runtime-exporter/Local.props.example)
+- copy [Local.props.example](../../tools/dsp-runtime-exporter/Local.props.example)
   to `Local.props`
 - fill in `DSPManagedPath`
 - fill in `BepInExDllPath`
@@ -62,7 +62,7 @@ The plugin GUID is `com.comonad.dspcalc.runtime-exporter`.
 
 The exporter writes a JSON file matching the current raw dataset schema:
 
-- [src/catalog/spec.ts](../src/catalog/spec.ts)
+- [src/catalog/spec.ts](../../src/catalog/spec.ts)
 
 That means the main project can consume the exported file directly through the
 existing loader and resolver pipeline.
@@ -73,7 +73,7 @@ It also writes:
 - `CurrentGame.icons.manifest.json`
 
 Then the offline tooling under
-[tools/dsp-runtime-exporter/scripts](../tools/dsp-runtime-exporter/scripts)
+[tools/dsp-runtime-exporter/scripts](../../tools/dsp-runtime-exporter/scripts)
 can build:
 
 - `CurrentGame.items.atlas.png`

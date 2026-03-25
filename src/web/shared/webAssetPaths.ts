@@ -7,18 +7,6 @@ export const BUNDLED_DATASET_PATHS = {
     datasetPath: normalizeBundledAssetPath('Vanilla.json'),
     defaultConfigPath: normalizeBundledAssetPath('Vanilla.defaults.json'),
   },
-  demoSmelting: {
-    datasetPath: normalizeBundledAssetPath('DemoSmelting.json'),
-    defaultConfigPath: normalizeBundledAssetPath('DemoSmelting.defaults.json'),
-  },
-  refineryBalance: {
-    datasetPath: normalizeBundledAssetPath('RefineryBalance.json'),
-    defaultConfigPath: normalizeBundledAssetPath('RefineryBalance.defaults.json'),
-  },
-  fullereneLoop: {
-    datasetPath: normalizeBundledAssetPath('FullereneLoop.json'),
-    defaultConfigPath: normalizeBundledAssetPath('FullereneLoop.defaults.json'),
-  },
   orbitalRing: {
     datasetPath: normalizeBundledAssetPath('OrbitalRing.json'),
     defaultConfigPath: normalizeBundledAssetPath('OrbitalRing.defaults.json'),
@@ -31,4 +19,3 @@ export const ICON_ATLAS_IMAGE_PATHS = {
   MoreMegaStructure: normalizeBundledAssetPath('icons/MoreMegaStructure.png'),
   OrbitalRing: normalizeBundledAssetPath('icons/OrbitalRing.png'),
 } as const;
-

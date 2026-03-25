@@ -1,30 +1,20 @@
-# 开发规范
+# 开发元指令
 
-## 前端展示要求
-1. 所有前端展示的求解结果数据，一定要能够独立地进行测试。
-2. 禁止出现测试结果与用户浏览器实际展示结果不一致的情况。
-3. 功能修改完成后必须进行实际验证，确保功能符合预期。
-4. 修改前端代码后，必须运行 `npx webpack` 重新打包 `bundle.js`，否则浏览器加载的还是旧代码。
-5. 右侧栏、弹窗、抽屉等带内部滚动区域的布局，必须显式提供可用的高度约束与 `min-height: 0`/内部滚动容器约束；禁止只写 `max-height` 然后假设内部滚动会自然生效。
-6. 涉及右侧栏或内部滚动区域的前端改动后，必须实际验证两件事：内部区域可以滚动，且内部跳转不会修改页面主滚动位置。
+## 总则
+1. `src/` 下的 TypeScript 与 Web 代码默认按跨平台维护；不要引入 PowerShell 专用命令、Windows 盘符路径或只在 Windows 能跑通的开发脚本。
+2. `tools/dsp-runtime-exporter` 及其配套脚本属于游戏运行时导出工具，可以继续按 Windows 环境维护。
+3. 与数据格式、求解器输入、求解器输出相关的权威说明优先写在对应 TypeScript 类型定义的文档注释里；`docs/dev` 只保留高层流程文档。
 
-## Spec 维护要求
-1. 与数据格式、求解器输入、求解器输出相关的 spec，优先写在对应 TypeScript 类型定义文件的文档注释里，而不是只写在独立 Markdown 文件中。
-2. 当修改某个 spec 文件时，必须检查并同步更新该文件中同一层级的其它相关导出类型，禁止只补一部分类型、留下同文件内其它裸类型没有语义说明。
-3. 文档注释必须明确写清单位、字段来源、是否为原始字段、是否为解析后字段、是否允许用户覆盖，以及该字段是否直接参与求解。
+## 前端
+1. 所有前端展示的求解结果数据都必须能独立测试；不要把业务计算塞进 React 渲染代码里。
+2. 修改前端代码后必须执行：相关测试、`npm run typecheck`、`npx webpack --config webpack.config.js`、真实浏览器验证。
+3. 浏览器验证至少要确认：页面加载正常、改动路径符合预期、控制台无错误。涉及右侧栏、抽屉、弹窗或内部滚动区域时，还要确认内部区域可滚动，且内部跳转不会带动页面主滚动。
+4. 右侧栏、弹窗、抽屉等带内部滚动区域的布局，必须显式提供高度约束以及 `min-height: 0`。
+5. 全局共享状态继续通过 `src/web/app/WorkbenchContext.tsx` 管理；不引入外部状态管理库。
+6. 单个组件文件原则上不超过 400 行；超过时拆分组件或提取逻辑到 helper / hook。
+7. 纯展示型 helper 放在 `src/web/app/workbenchHelpers.ts`，样式常量放在 `src/web/app/workbenchStyles.ts`，渲染开销大的列表项组件继续使用 `React.memo`。
 
-## 前端代码组织规范
-1. 单个组件文件不应超过 400 行；超过时应按功能拆分为独立子组件或提取逻辑到 hooks/helpers。
-2. 全局共享状态通过 `WorkbenchContext`（`src/web/app/WorkbenchContext.tsx`）管理，子组件通过 `useWorkbench()` hook 消费；不引入外部状态管理库。
-3. 纯展示型辅助函数（如格式化、排序、默认值选取）放在 `src/web/app/workbenchHelpers.ts`；样式常量放在 `src/web/app/workbenchStyles.ts`。
-4. 新增 UI 组件放在 `src/web/app/` 目录下，按功能命名（PascalCase `.tsx`）；可复用的非业务组件放在 `src/web/shared/`。
-5. 渲染开销大的列表项组件（如 `RecipePlanCard`、`ItemLedgerSection`）须用 `React.memo` 包裹，避免上层 Context 变化触发不必要的重渲染。
-6. 将 render helper 函数（`renderXxx`）转为独立的 React 组件导出，而不是在组件内部定义闭包函数。
-7. 仅在组件真正需要的粒度消费 Context 值；纯 UI 草稿状态（如搜索关键词、下拉草稿选中值）应保留为组件本地 `useState`，不放入 Context。
-
-## 编码与文件写入要求（Windows）
-1. 本仓库所有文本文件默认统一使用 UTF-8 编码；修改现有文件时禁止擅自改变编码、BOM 形式或换行风格。
-2. 在 Windows / PowerShell 环境下，禁止使用会隐式重编码或整文件重写的写法直接回写源码文件，例如 `Set-Content`、`Out-File`、`>`、`>>` 等；优先使用 `apply_patch` 做最小修改。
-3. 如必须通过脚本写文件，必须先确认输入与输出均为 UTF-8，并避免把 UTF-8 文件误写成 UTF-16、GBK/ANSI，或写入额外 BOM。
-4. 修改包含中文文案的 TypeScript、TSX、Markdown、JSON 文件后，必须额外检查是否出现乱码、截断字符串、异常替换字符或整段文本损坏。
-5. 在 Windows 上批量替换文本前，必须先确认目标文件当前编码与补丁范围；禁止在未确认编码状态时做整文件批量替换。
+## 文本与文件写入
+1. 仓库文本文件统一保持 UTF-8；修改现有文件时不要改变 BOM、编码或换行风格。
+2. 在 Windows / PowerShell 下不要用 `Set-Content`、`Out-File`、`>`、`>>` 这类可能隐式重编码的方式直接回写源码；优先使用 `apply_patch` 做最小修改。
+3. 修改包含中文文案的 TypeScript、TSX、Markdown、JSON 文件后，要额外检查是否出现乱码、截断或异常替换字符。

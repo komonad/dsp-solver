@@ -87,9 +87,9 @@ function createMemoryStorage() {
 test('workbench cache stores active dataset source and editor state per dataset key', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
-    presetId: 'demo-smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   };
   const editorState: WorkbenchEditorState = {
     targets: [{ itemId: '1101', ratePerMin: 60 }],
@@ -114,16 +114,16 @@ test('workbench cache stores active dataset source and editor state per dataset 
   expect(readActiveWorkbenchCacheSource(storage)).toEqual(source);
   expect(readWorkbenchEditorState(storage, source)).toEqual(editorState);
   expect(buildWorkbenchCacheKey(source)).toBe(
-    './DemoSmelting.json::./DemoSmelting.defaults.json'
+    './tests/fixtures/scenarios/DemoSmelting.json::./tests/fixtures/scenarios/DemoSmelting.defaults.json'
   );
 });
 
 test('clearWorkbenchCache removes both active source and entries', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
-    presetId: 'demo-smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   };
 
   writeActiveWorkbenchCacheSource(storage, source);
@@ -179,12 +179,12 @@ test('workbench cache ignores legacy versioned cache keys', () => {
     JSON.stringify({
       version: 1,
       activeSource: {
-        presetId: 'demo-smelting',
-        datasetPath: './DemoSmelting.json',
-        defaultConfigPath: './DemoSmelting.defaults.json',
+        presetId: 'custom',
+        datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+        defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
       },
       entries: {
-        './DemoSmelting.json::./DemoSmelting.defaults.json': {
+        './tests/fixtures/scenarios/DemoSmelting.json::./tests/fixtures/scenarios/DemoSmelting.defaults.json': {
           targets: [{ itemId: '1101', ratePerMin: 60 }],
         },
       },
@@ -233,9 +233,9 @@ test('sanitizeWorkbenchEditorState downgrades hidden min_complexity objective to
 test('dataset drafts are stored per source key and cleared with the rest of the cache', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
-    presetId: 'demo-smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   };
   const draft: WorkbenchDatasetDraft = {
     datasetText: '{"items":[],"recipes":[]}',
@@ -252,9 +252,9 @@ test('dataset drafts are stored per source key and cleared with the rest of the 
 test('snapshot section states are stored per source key and preserved alongside editor state', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
-    presetId: 'demo-smelting',
-    datasetPath: './DemoSmelting.json',
-    defaultConfigPath: './DemoSmelting.defaults.json',
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
   };
 
   writeWorkbenchSnapshotSectionState(storage, source, {
