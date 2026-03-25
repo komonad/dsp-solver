@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Box,
   Button,
+  InputAdornment,
   MenuItem,
   TextField,
   Typography,
@@ -27,6 +28,7 @@ import DisabledRecipesSection from './DisabledRecipesSection';
 import PreferredBuildingsSection from './PreferredBuildingsSection';
 
 export default function SolveRequestPanel() {
+  const rateUnitLabel = '/\u5206';
   const {
     bundle,
     catalog,
@@ -159,13 +161,25 @@ export default function SolveRequestPanel() {
                 </Box>
 
                 <TextField
-                  type="number"
+                  type="text"
                   size="small"
                   label={bundle.overview.requestLabel}
                   value={targetDraftRatePerMin}
-                  inputProps={{ min: 0, step: 1 }}
+                  inputProps={{
+                    inputMode: 'decimal',
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">{rateUnitLabel}</InputAdornment>
+                    ),
+                  }}
                   onChange={event => setTargetDraftRatePerMin(Number(event.target.value) || 0)}
-                  sx={{ width: 88 }}
+                  sx={{
+                    width: 116,
+                    '& .MuiInputBase-input': {
+                      textAlign: 'right',
+                    },
+                  }}
                 />
 
                 <Button

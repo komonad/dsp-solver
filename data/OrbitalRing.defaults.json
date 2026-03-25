@@ -1648,8 +1648,17 @@
     }
   ],
   "recommendedDisabledRecipeIds": [
-    510
+    510,
+    517,
+    705,
+    776
   ],
+  "recommendedDisabledBuildingIds": [
+    6215
+  ],
+  "recommendedSolve": {
+    "objective": "min_power"
+  },
   "recommendedRawItemIds": [
     1005,
     1013,

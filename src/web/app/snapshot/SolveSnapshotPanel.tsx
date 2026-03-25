@@ -37,6 +37,7 @@ import {
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 
 export default function SolveSnapshotPanel() {
+  const rateUnitLabel = '/\u5206';
   const {
     bundle,
     locale,
@@ -192,7 +193,7 @@ export default function SolveSnapshotPanel() {
                       component="input"
                       type="text"
                       inputMode="decimal"
-                      aria-label={bundle.overview.requestLabel}
+                      aria-label={`${bundle.overview.requestLabel} (\u6bcf\u5206\u949f)`}
                       sx={snapshotTargetInputSx}
                       value={targets[index]?.ratePerMin ?? target.ratePerMin}
                       onChange={event =>
@@ -201,6 +202,21 @@ export default function SolveSnapshotPanel() {
                         })
                       }
                     />
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      sx={{
+                        flex: '0 0 auto',
+                        minWidth: 0,
+                        pr: 0.625,
+                        color: 'rgba(24, 51, 89, 0.72)',
+                        fontSize: 11,
+                        lineHeight: 1,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {rateUnitLabel}
+                    </Typography>
                   </Box>
                   <Box component="span" sx={snapshotEntryActionSegmentSx}>
                     <SnapshotRemoveButton
