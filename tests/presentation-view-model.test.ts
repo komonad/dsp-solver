@@ -393,8 +393,8 @@ test('presentation model detects global proliferator disable requests', () => {
       objective: 'min_buildings',
       balancePolicy: 'force_balance',
       rawInputItemIds: [],
-      forcedProliferatorModeByRecipe: { '1': 'none' },
-      forcedProliferatorLevelByRecipe: { '1': 0 },
+      globalForcedProliferatorMode: 'none',
+      globalForcedProliferatorLevel: 0,
     },
   });
 

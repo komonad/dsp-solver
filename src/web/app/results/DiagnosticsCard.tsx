@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button } from '@mui/material';
 import { formatRate } from '../../../i18n';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
@@ -19,10 +19,49 @@ export default function DiagnosticsCard() {
     result,
     applyAllowSurplusFallback,
   } = useWorkbench();
+  const requestJsonText = useMemo(
+    () => (lastRequest ? JSON.stringify(lastRequest, null, 2) : ''),
+    [lastRequest]
+  );
+  const [copyRequestState, setCopyRequestState] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  const copySolveRequestJson = useCallback(async () => {
+    if (!requestJsonText) {
+      return;
+    }
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+        throw new Error('clipboard unavailable');
+      }
+      await navigator.clipboard.writeText(requestJsonText);
+      setCopyRequestState('copied');
+    } catch {
+      setCopyRequestState('failed');
+    }
+  }, [requestJsonText]);
+
+  useEffect(() => {
+    setCopyRequestState('idle');
+  }, [requestJsonText]);
+
+  useEffect(() => {
+    if (copyRequestState === 'idle') {
+      return undefined;
+    }
+    const timeoutId = window.setTimeout(() => setCopyRequestState('idle'), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyRequestState]);
 
   if (!model) {
     return null;
   }
+
+  const copyRequestButtonLabel =
+    copyRequestState === 'copied'
+      ? bundle.diagnostics.copySolveRequestJsonDone
+      : copyRequestState === 'failed'
+        ? bundle.diagnostics.copySolveRequestJsonFailed
+        : bundle.diagnostics.copySolveRequestJson;
 
   return (
     <article style={cardStyle}>
@@ -101,9 +140,21 @@ export default function DiagnosticsCard() {
 
       <details style={{ marginTop: 12 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{bundle.diagnostics.solveRequestJson}</summary>
-        <pre style={{ marginTop: 12, padding: 12, borderRadius: 14, background: 'rgba(24, 51, 89, 0.06)', overflow: 'auto', fontSize: 13 }}>
-          {JSON.stringify(lastRequest, null, 2)}
-        </pre>
+        <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={copySolveRequestJson}
+              disabled={!requestJsonText}
+            >
+              {copyRequestButtonLabel}
+            </Button>
+          </div>
+          <pre style={{ margin: 0, padding: 12, borderRadius: 14, background: 'rgba(24, 51, 89, 0.06)', overflow: 'auto', fontSize: 13 }}>
+            {requestJsonText}
+          </pre>
+        </div>
       </details>
       <details style={{ marginTop: 12 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{bundle.diagnostics.solveResultJson}</summary>

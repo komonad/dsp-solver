@@ -211,6 +211,9 @@ export interface LocaleBundle {
     producedLabel: string;
     consumedLabel: string;
     netLabel: string;
+    copySolveRequestJson: string;
+    copySolveRequestJsonDone: string;
+    copySolveRequestJsonFailed: string;
     solveRequestJson: string;
     solveResultJson: string;
     audit: {
@@ -260,7 +263,9 @@ export interface LocaleBundle {
     mustBeJsonObject: string;
     stringArray: (key: string) => string;
     stringRecord: (key: string) => string;
+    numberValue: (key: string) => string;
     numberRecord: (key: string) => string;
+    modeValue: (key: string) => string;
     modeRecord: (key: string) => string;
   };
 }
@@ -521,6 +526,9 @@ const zhCN: LocaleBundle = {
     producedLabel: '生成',
     consumedLabel: '消耗',
     netLabel: '净值',
+    copySolveRequestJson: '复制',
+    copySolveRequestJsonDone: '已复制',
+    copySolveRequestJsonFailed: '复制失败',
     solveRequestJson: '求解请求 JSON',
     solveResultJson: '求解结果 JSON',
     audit: {
@@ -566,7 +574,9 @@ const zhCN: LocaleBundle = {
     mustBeJsonObject: '高级覆盖必须是一个 JSON 对象。',
     stringArray: key => `${key} 在提供时必须是字符串数组。`,
     stringRecord: key => `${key} 在提供时必须是值为字符串的对象。`,
+    numberValue: key => `${key} 在提供时必须是有限数字。`,
     numberRecord: key => `${key} 在提供时必须是值为有限数字的对象。`,
+    modeValue: key => `${key} 在提供时必须是 none、speed 或 productivity。`,
     modeRecord: key => `${key} 在提供时必须是值为 none、speed 或 productivity 的对象。`,
   },
 };

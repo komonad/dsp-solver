@@ -862,6 +862,20 @@ function inferGlobalProliferatorPolicyLabel(
   locale: AppLocale
 ): string {
   const bundle = getLocaleBundle(locale);
+  const globalMode = request.globalForcedProliferatorMode;
+  const globalLevel = request.globalForcedProliferatorLevel;
+
+  if (globalMode === 'none') {
+    return formatWorkbenchProliferatorPolicy('none', locale);
+  }
+
+  if (globalMode) {
+    if (typeof globalLevel === 'number' && Number.isFinite(globalLevel) && globalLevel > 0) {
+      return formatProliferatorLabel(globalMode, globalLevel, locale);
+    }
+    return formatWorkbenchProliferatorPolicy(globalMode, locale);
+  }
+
   const affectedRecipes = catalog.recipes.filter(
     recipe =>
       recipe.maxProliferatorLevel > 0 ||

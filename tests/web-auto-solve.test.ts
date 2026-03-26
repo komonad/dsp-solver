@@ -346,7 +346,7 @@ test('computeWorkbenchSolve still prefers force_balance when cached editor state
   expect(autoSolve.result?.status).toBe('optimal');
 });
 
-test('computeWorkbenchSolve expands the global proliferator policy into hard per-recipe overrides', () => {
+test('computeWorkbenchSolve keeps the global proliferator policy as request-level fields', () => {
   const catalog = resolveCatalogModel(buildProliferatorDataset(), buildProliferatorDefaults());
   const autoSolve = computeWorkbenchSolve({
     catalog,
@@ -367,8 +367,10 @@ test('computeWorkbenchSolve expands the global proliferator policy into hard per
   });
 
   expect(autoSolve.error).toBe('');
-  expect(autoSolve.request?.forcedProliferatorModeByRecipe).toEqual({ '1': 'speed' });
-  expect(autoSolve.request?.forcedProliferatorLevelByRecipe).toEqual({ '1': 1 });
+  expect(autoSolve.request?.globalForcedProliferatorMode).toEqual('speed');
+  expect(autoSolve.request?.globalForcedProliferatorLevel).toEqual(1);
+  expect(autoSolve.request?.forcedProliferatorModeByRecipe).toBeUndefined();
+  expect(autoSolve.request?.forcedProliferatorLevelByRecipe).toBeUndefined();
   expect(autoSolve.result?.status).toBe('optimal');
   expect(autoSolve.result?.recipePlans[0].proliferatorMode).toBe('speed');
   expect(autoSolve.result?.recipePlans[0].proliferatorLevel).toBe(1);

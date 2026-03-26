@@ -115,7 +115,7 @@ export function computeWorkbenchSolve(
       buildPreferredRecipeOverrides(recipePreferences)
     ),
     mergeAdvancedSolveOverrides(
-      buildGlobalProliferatorOverrides(catalog, proliferatorPolicy, globalProliferatorLevel),
+      buildGlobalProliferatorOverrides(proliferatorPolicy, globalProliferatorLevel),
       buildForcedRecipeStrategyOverrides(recipeStrategyOverrides)
     )
   );

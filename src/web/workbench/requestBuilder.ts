@@ -146,6 +146,23 @@ function readOptionalNumberRecord(
   return value;
 }
 
+function readOptionalNumber(
+  source: Record<string, unknown>,
+  key: keyof AdvancedSolveOverrides,
+  errors: string[],
+  locale: AppLocale
+): number | undefined {
+  const value = source[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    errors.push(getLocaleBundle(locale).advancedOverrides.numberValue(String(key)));
+    return undefined;
+  }
+  return value;
+}
+
 function readOptionalModeRecord(
   source: Record<string, unknown>,
   key: keyof AdvancedSolveOverrides,
@@ -161,6 +178,23 @@ function readOptionalModeRecord(
     return undefined;
   }
   return value;
+}
+
+function readOptionalMode(
+  source: Record<string, unknown>,
+  key: keyof AdvancedSolveOverrides,
+  errors: string[],
+  locale: AppLocale
+): ProliferatorMode | undefined {
+  const value = source[key];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== 'string' || !['none', 'speed', 'productivity'].includes(value)) {
+    errors.push(getLocaleBundle(locale).advancedOverrides.modeValue(String(key)));
+    return undefined;
+  }
+  return value as ProliferatorMode;
 }
 
 function mergeUniqueStringArrays(left?: string[], right?: string[]): string[] | undefined {
@@ -229,6 +263,18 @@ export function parseAdvancedSolveOverrides(
     allowedRecipesByItem: readOptionalStringArrayRecord(source, 'allowedRecipesByItem', errors, locale),
     forcedBuildingByRecipe: readOptionalStringRecord(source, 'forcedBuildingByRecipe', errors, locale),
     preferredBuildingByRecipe: readOptionalStringRecord(source, 'preferredBuildingByRecipe', errors, locale),
+    globalForcedProliferatorLevel: readOptionalNumber(
+      source,
+      'globalForcedProliferatorLevel',
+      errors,
+      locale
+    ),
+    globalForcedProliferatorMode: readOptionalMode(
+      source,
+      'globalForcedProliferatorMode',
+      errors,
+      locale
+    ),
     forcedProliferatorLevelByRecipe: readOptionalNumberRecord(
       source,
       'forcedProliferatorLevelByRecipe',
@@ -392,32 +438,20 @@ export function buildForcedRecipeStrategyOverrides(
 }
 
 export function buildGlobalProliferatorOverrides(
-  catalog: ResolvedCatalogModel,
   policy: WorkbenchProliferatorPolicy,
   level?: '' | number
 ): Pick<
   AdvancedSolveOverrides,
-  'forcedProliferatorModeByRecipe' | 'forcedProliferatorLevelByRecipe'
+  'globalForcedProliferatorMode' | 'globalForcedProliferatorLevel'
 > {
   if (policy === 'auto') {
     return {};
   }
 
-  const affectedRecipes = catalog.recipes.filter(
-    recipe =>
-      recipe.maxProliferatorLevel > 0 ||
-      recipe.supportsProliferatorModes.some(mode => mode !== 'none')
-  );
-
   if (policy === 'none') {
-    const affectedRecipeIds = affectedRecipes.map(recipe => recipe.recipeId);
     return {
-      forcedProliferatorModeByRecipe: Object.fromEntries(
-        affectedRecipeIds.map(recipeId => [recipeId, 'none'])
-      ),
-      forcedProliferatorLevelByRecipe: Object.fromEntries(
-        affectedRecipeIds.map(recipeId => [recipeId, 0])
-      ),
+      globalForcedProliferatorMode: 'none',
+      globalForcedProliferatorLevel: 0,
     };
   }
 
@@ -425,24 +459,9 @@ export function buildGlobalProliferatorOverrides(
     return {};
   }
 
-  const compatibleRecipeIds = affectedRecipes
-    .filter(
-      recipe =>
-        recipe.supportsProliferatorModes.includes(policy) && recipe.maxProliferatorLevel >= level
-    )
-    .map(recipe => recipe.recipeId);
-
-  if (compatibleRecipeIds.length === 0) {
-    return {};
-  }
-
   return {
-    forcedProliferatorModeByRecipe: Object.fromEntries(
-      compatibleRecipeIds.map(recipeId => [recipeId, policy])
-    ),
-    forcedProliferatorLevelByRecipe: Object.fromEntries(
-      compatibleRecipeIds.map(recipeId => [recipeId, level])
-    ),
+    globalForcedProliferatorMode: policy,
+    globalForcedProliferatorLevel: level,
   };
 }
 
@@ -490,6 +509,18 @@ export function mergeAdvancedSolveOverrides(
   );
   if (preferredBuildingByRecipe) {
     merged.preferredBuildingByRecipe = preferredBuildingByRecipe;
+  }
+
+  if (override.globalForcedProliferatorLevel !== undefined) {
+    merged.globalForcedProliferatorLevel = override.globalForcedProliferatorLevel;
+  } else if (base.globalForcedProliferatorLevel !== undefined) {
+    merged.globalForcedProliferatorLevel = base.globalForcedProliferatorLevel;
+  }
+
+  if (override.globalForcedProliferatorMode !== undefined) {
+    merged.globalForcedProliferatorMode = override.globalForcedProliferatorMode;
+  } else if (base.globalForcedProliferatorMode !== undefined) {
+    merged.globalForcedProliferatorMode = base.globalForcedProliferatorMode;
   }
 
   const forcedProliferatorLevelByRecipe = mergeRecord(

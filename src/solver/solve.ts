@@ -32,6 +32,7 @@ const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 3;
 const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 64;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
+const VALID_PROLIFERATOR_MODES: ProliferatorMode[] = ['none', 'speed', 'productivity'];
 
 interface ValidateResult {
   valid: boolean;
@@ -271,6 +272,18 @@ function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveReque
     )
   );
 
+  if (
+    request.globalForcedProliferatorLevel !== undefined &&
+    !(
+      request.globalForcedProliferatorLevel >= 0 &&
+      Number.isInteger(request.globalForcedProliferatorLevel) &&
+      (request.globalForcedProliferatorLevel === 0 ||
+        catalog.proliferatorLevelMap.has(request.globalForcedProliferatorLevel))
+    )
+  ) {
+    messages.push('globalForcedProliferatorLevel must be 0 or a known proliferator level.');
+  }
+
   messages.push(
     ...validateNumericRecordMap(
       catalog,
@@ -292,6 +305,13 @@ function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveReque
     )
   );
 
+  if (
+    request.globalForcedProliferatorMode !== undefined &&
+    !VALID_PROLIFERATOR_MODES.includes(request.globalForcedProliferatorMode)
+  ) {
+    messages.push('globalForcedProliferatorMode must be none, speed, or productivity.');
+  }
+
   messages.push(
     ...validateModeRecordMap(
       catalog,
@@ -304,6 +324,57 @@ function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveReque
     valid: messages.length === 0,
     messages,
   };
+}
+
+function getForcedProliferatorModeForRecipe(
+  request: SolveRequest,
+  recipe: ResolvedRecipeSpec
+): ProliferatorMode | undefined {
+  const perRecipeMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
+  if (perRecipeMode) {
+    return perRecipeMode;
+  }
+
+  const globalMode = request.globalForcedProliferatorMode;
+  if (!globalMode) {
+    return undefined;
+  }
+
+  if (globalMode === 'none' || recipe.supportsProliferatorModes.includes(globalMode)) {
+    return globalMode;
+  }
+
+  return undefined;
+}
+
+function getForcedProliferatorLevelForRecipe(
+  request: SolveRequest,
+  recipe: ResolvedRecipeSpec
+): number | undefined {
+  const perRecipeLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
+  if (perRecipeLevel !== undefined) {
+    return perRecipeLevel;
+  }
+
+  const globalLevel = request.globalForcedProliferatorLevel;
+  if (globalLevel === undefined) {
+    return undefined;
+  }
+
+  const globalMode = request.globalForcedProliferatorMode;
+  if (
+    globalMode &&
+    globalMode !== 'none' &&
+    !recipe.supportsProliferatorModes.includes(globalMode)
+  ) {
+    return undefined;
+  }
+
+  if (globalLevel > recipe.maxProliferatorLevel) {
+    return undefined;
+  }
+
+  return globalLevel;
 }
 
 function buildRecipeOutputIndex(
@@ -589,8 +660,8 @@ function compileRecipeOptions(
       .map(entry => entry.message)
   );
 
-  const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
-  const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
+  const forcedLevel = getForcedProliferatorLevelForRecipe(request, recipe);
+  const forcedMode = getForcedProliferatorModeForRecipe(request, recipe);
   const allowedModes = new Set(recipe.supportsProliferatorModes);
 
   if (forcedMode && !allowedModes.has(forcedMode)) {
@@ -829,13 +900,13 @@ function getPreferredOptionPenalty(
     penalty += 1;
   }
 
-  const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
+  const forcedLevel = getForcedProliferatorLevelForRecipe(request, recipe);
   const preferredLevel = request.preferredProliferatorLevelByRecipe?.[recipe.recipeId];
   if (preferredLevel !== undefined && forcedLevel === undefined && preferredLevel !== option.proliferatorLevel) {
     penalty += 1;
   }
 
-  const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
+  const forcedMode = getForcedProliferatorModeForRecipe(request, recipe);
   const preferredMode = request.preferredProliferatorModeByRecipe?.[recipe.recipeId];
   if (preferredMode && !forcedMode && preferredMode !== option.proliferatorMode) {
     penalty += 1;
@@ -1129,8 +1200,8 @@ function isOptionAllowedByForce(
   recipe: ResolvedRecipeSpec,
   request: SolveRequest
 ): boolean {
-  const forcedLevel = request.forcedProliferatorLevelByRecipe?.[recipe.recipeId];
-  const forcedMode = request.forcedProliferatorModeByRecipe?.[recipe.recipeId];
+  const forcedLevel = getForcedProliferatorLevelForRecipe(request, recipe);
+  const forcedMode = getForcedProliferatorModeForRecipe(request, recipe);
 
   if (forcedLevel !== undefined && option.proliferatorLevel !== forcedLevel) {
     return false;

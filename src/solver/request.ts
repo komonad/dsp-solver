@@ -84,6 +84,20 @@ export interface SolveRequest {
   forcedBuildingByRecipe?: Record<string, string>;
   /** Soft per-recipe building preference. */
   preferredBuildingByRecipe?: Record<string, string>;
+  /**
+   * Hard global proliferator level request. Use `0` for none.
+   *
+   * This is a request-level default. Per-recipe `forcedProliferatorLevelByRecipe`
+   * takes precedence when both are present.
+   */
+  globalForcedProliferatorLevel?: number;
+  /**
+   * Hard global proliferator mode request.
+   *
+   * This is a request-level default. Per-recipe `forcedProliferatorModeByRecipe`
+   * takes precedence when both are present.
+   */
+  globalForcedProliferatorMode?: ProliferatorMode;
   /** Hard per-recipe proliferator level selection. Use `0` for none. */
   forcedProliferatorLevelByRecipe?: Record<string, number>;
   /** Soft per-recipe proliferator level preference. */

@@ -94,6 +94,8 @@ test('parseAdvancedSolveOverrides accepts supported override fields', () => {
     "disabledRecipeIds": ["1"],
     "disabledBuildingIds": ["5001"],
     "forcedBuildingByRecipe": { "2": "5002" },
+    "globalForcedProliferatorMode": "none",
+    "globalForcedProliferatorLevel": 0,
     "preferredProliferatorModeByRecipe": { "2": "speed" },
     "forcedProliferatorLevelByRecipe": { "2": 3 }
   }`);
@@ -103,6 +105,8 @@ test('parseAdvancedSolveOverrides accepts supported override fields', () => {
     disabledRecipeIds: ['1'],
     disabledBuildingIds: ['5001'],
     forcedBuildingByRecipe: { '2': '5002' },
+    globalForcedProliferatorMode: 'none',
+    globalForcedProliferatorLevel: 0,
     preferredProliferatorModeByRecipe: { '2': 'speed' },
     forcedProliferatorLevelByRecipe: { '2': 3 },
   });
@@ -189,6 +193,8 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
       disabledRecipeIds: ['2'],
       disabledBuildingIds: ['5002'],
       preferredBuildingByRecipe: { '2': '5002' },
+      globalForcedProliferatorMode: 'speed',
+      globalForcedProliferatorLevel: 1,
       preferredProliferatorModeByRecipe: { '1': 'productivity' },
       preferredProliferatorLevelByRecipe: { '1': 3 },
     }
@@ -201,6 +207,8 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
       '1': '5001',
       '2': '5002',
     },
+    globalForcedProliferatorMode: 'speed',
+    globalForcedProliferatorLevel: 1,
     preferredProliferatorModeByRecipe: {
       '1': 'productivity',
     },
@@ -211,21 +219,19 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
 });
 
 test('buildGlobalProliferatorOverrides disables all configurable recipes when requested', () => {
-  const catalog = buildProliferatorDemoCatalog();
-  const overrides = buildGlobalProliferatorOverrides(catalog, 'none');
+  const overrides = buildGlobalProliferatorOverrides('none');
 
   expect(overrides).toEqual({
-    forcedProliferatorModeByRecipe: { '1': 'none' },
-    forcedProliferatorLevelByRecipe: { '1': 0 },
+    globalForcedProliferatorMode: 'none',
+    globalForcedProliferatorLevel: 0,
   });
 });
 
-test('buildGlobalProliferatorOverrides applies a global mode and level to compatible recipes only', () => {
-  const catalog = buildProliferatorDemoCatalog();
-  const overrides = buildGlobalProliferatorOverrides(catalog, 'speed', 1);
+test('buildGlobalProliferatorOverrides emits compact global proliferator fields', () => {
+  const overrides = buildGlobalProliferatorOverrides('speed', 1);
 
   expect(overrides).toEqual({
-    forcedProliferatorModeByRecipe: { '1': 'speed' },
-    forcedProliferatorLevelByRecipe: { '1': 1 },
+    globalForcedProliferatorMode: 'speed',
+    globalForcedProliferatorLevel: 1,
   });
 });
