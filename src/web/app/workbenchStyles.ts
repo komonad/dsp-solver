@@ -157,10 +157,9 @@ export const resultSideColumnStyle: React.CSSProperties = {
   position: 'sticky',
   top: 24,
   alignSelf: 'start',
-  // Keep the side column height constrained to the viewport. Without an
-  // explicit height, the ledger card will expand to content height and the
-  // inner ledger scroller stops working.
-  height: 'calc(100vh - 24px)',
+  // Constrain max-height to the viewport so the inner ledger scroller works
+  // when content overflows, but allow the column to shrink when content is
+  // sparse (using max-height instead of height avoids extra blank space).
   maxHeight: 'calc(100vh - 24px)',
   minHeight: 0,
   minWidth: 0,

@@ -25,7 +25,6 @@ export default function ItemLedgerPanel() {
         style={{
           ...cardStyle,
           padding: 16,
-          height: '100%',
           maxHeight: '100%',
           minHeight: 0,
           overflow: 'hidden',
