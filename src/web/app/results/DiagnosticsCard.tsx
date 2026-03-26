@@ -24,6 +24,7 @@ export default function DiagnosticsCard() {
     [lastRequest]
   );
   const [copyRequestState, setCopyRequestState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [requestJsonHovered, setRequestJsonHovered] = useState(false);
 
   const copySolveRequestJson = useCallback(async () => {
     if (!requestJsonText) {
@@ -62,6 +63,7 @@ export default function DiagnosticsCard() {
       : copyRequestState === 'failed'
         ? bundle.diagnostics.copySolveRequestJsonFailed
         : bundle.diagnostics.copySolveRequestJson;
+  const showCopyRequestButton = requestJsonHovered || copyRequestState !== 'idle';
 
   return (
     <article style={cardStyle}>
@@ -140,13 +142,29 @@ export default function DiagnosticsCard() {
 
       <details style={{ marginTop: 12 }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{bundle.diagnostics.solveRequestJson}</summary>
-        <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div
+          style={{ marginTop: 12, position: 'relative' }}
+          onMouseEnter={() => setRequestJsonHovered(true)}
+          onMouseLeave={() => setRequestJsonHovered(false)}
+        >
+          <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }}>
             <Button
-              variant="outlined"
+              variant="contained"
               size="small"
               onClick={copySolveRequestJson}
               disabled={!requestJsonText}
+              sx={{
+                minWidth: 0,
+                px: 1.1,
+                py: 0.25,
+                fontSize: 12,
+                lineHeight: 1.4,
+                boxShadow: 'none',
+                opacity: showCopyRequestButton ? 1 : 0,
+                transform: showCopyRequestButton ? 'translateY(0)' : 'translateY(-4px)',
+                pointerEvents: showCopyRequestButton ? 'auto' : 'none',
+                transition: 'opacity 120ms ease, transform 120ms ease',
+              }}
             >
               {copyRequestButtonLabel}
             </Button>
