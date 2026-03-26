@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button } from '@mui/material';
 import { formatRate } from '../../../i18n';
+import { copyText } from '../../shared/copyText';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import { FlowRateSequence } from '../components/FlowRateDisplay';
 import { useWorkbench } from '../WorkbenchContext';
@@ -30,13 +31,9 @@ export default function DiagnosticsCard() {
     if (!requestJsonText) {
       return;
     }
-    try {
-      if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-        throw new Error('clipboard unavailable');
-      }
-      await navigator.clipboard.writeText(requestJsonText);
+    if (await copyText(requestJsonText)) {
       setCopyRequestState('copied');
-    } catch {
+    } else {
       setCopyRequestState('failed');
     }
   }, [requestJsonText]);
