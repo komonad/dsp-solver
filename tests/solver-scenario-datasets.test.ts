@@ -172,7 +172,7 @@ test('orbitalring fullersilver-embedded recipe chain is feasible when dataset de
   expect(result.surplusOutputs).toEqual([]);
 });
 
-test('orbitalring keeps the feasible fullerol proliferator preference even if another preferred recipe is infeasible', async () => {
+test('orbitalring auto-promotes an infeasible constrained proliferator intermediate when allowed', async () => {
   const catalog = await loadResolvedCatalogFromFiles(
     orbitalRingDatasetPath,
     orbitalRingDefaultsPath
@@ -189,7 +189,12 @@ test('orbitalring keeps the feasible fullerol proliferator preference even if an
     },
   });
 
-  expect(result.status).toBe('infeasible');
+  expect(result.status).toBe('optimal');
+  expect(getPlan(result, '510')).toBeUndefined();
+  expect(getExternalRate(result, '6522')).toBeGreaterThan(0);
+  expect(
+    result.diagnostics.infoMessages.some(message => message.includes('6522'))
+  ).toBe(true);
 });
 
 test('orbitalring can still enforce the fullerol proliferator recipe when pure silver is solved internally', async () => {

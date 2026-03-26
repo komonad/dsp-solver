@@ -727,9 +727,16 @@ function collectUpstreamRecipes(
         : availableProducers;
 
     if (allowedRecipeIds && allowedRecipeIds.size > 0 && producers.length === 0) {
-      messages.push(
-        `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} for item ${itemId} do not exist.`
-      );
+      if (autoPromoteUnavailableItemsToRawInputs) {
+        autoPromotedRawInputIds.add(itemId);
+        infoMessages.push(
+          `Unavailable item ${itemId} (${catalog.itemMap.get(itemId)?.name ?? itemId}) was treated as an external/raw input.`
+        );
+      } else {
+        messages.push(
+          `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} for item ${itemId} do not exist.`
+        );
+      }
       continue;
     }
 
@@ -738,9 +745,16 @@ function collectUpstreamRecipes(
       allowedRecipeIds.size > 0 &&
       !producers.some(recipe => recipe.outputs.some(output => output.itemId === itemId))
     ) {
-      messages.push(
-        `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} do not produce item ${itemId}.`
-      );
+      if (autoPromoteUnavailableItemsToRawInputs) {
+        autoPromotedRawInputIds.add(itemId);
+        infoMessages.push(
+          `Unavailable item ${itemId} (${catalog.itemMap.get(itemId)?.name ?? itemId}) was treated as an external/raw input.`
+        );
+      } else {
+        messages.push(
+          `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} do not produce item ${itemId}.`
+        );
+      }
       continue;
     }
 
@@ -980,10 +994,11 @@ function isOptionFilteredByAllowedRecipes(
   }
 
   for (const [itemId, allowedRecipeIds] of allowedRecipeSetMap.entries()) {
+    const netProducedAmount = (option.outputPerRun[itemId] ?? 0) - (option.inputPerRun[itemId] ?? 0);
     if (
       allowedRecipeIds.size > 0 &&
       !allowedRecipeIds.has(recipe.recipeId) &&
-      (option.outputPerRun[itemId] ?? 0) > EPSILON
+      netProducedAmount > EPSILON
     ) {
       return true;
     }

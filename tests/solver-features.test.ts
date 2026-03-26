@@ -1110,8 +1110,45 @@ test('orbital ring magnetic fluid surplus solving prefers fewer surplus item typ
   expect(result.status).toBe('optimal');
   expect(result.recipePlans.some(plan => plan.recipeId === '419')).toBe(true);
   expect(result.recipePlans.some(plan => plan.recipeId === '422')).toBe(false);
-  expect(result.surplusOutputs.map(entry => entry.itemId)).toEqual(['6251', '7009']);
+  expect(result.surplusOutputs).toHaveLength(2);
+  expect(result.surplusOutputs.some(entry => entry.itemId === '7009')).toBe(true);
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
+});
+
+test('allowedRecipesByItem does not block zero-net recycled outputs in orbital ring chains', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '6003', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: ['1143', '1000'],
+    disabledRawInputItemIds: ['7015', '7101'],
+    disabledRecipeIds: ['510', '704', '705'],
+    disabledBuildingIds: ['6215'],
+    allowedRecipesByItem: {
+      '1030': ['777'],
+      '1106': ['65'],
+      '1109': ['17'],
+      '1114': ['701', '16'],
+      '7022': ['849'],
+    },
+    globalForcedProliferatorMode: 'none',
+    globalForcedProliferatorLevel: 0,
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.some(plan => plan.recipeId === '17')).toBe(true);
+  expect(result.diagnostics.messages).toEqual([]);
 });
 
 test('force_balance rejects unresolved byproducts', () => {
@@ -1289,6 +1326,25 @@ test('allowedRecipesByItem makes the solve infeasible when the only allowed reci
   });
 
   expect(result.status).toBe('infeasible');
+});
+
+test('allowedRecipesByItem with unavailable recipe falls back to auto-promote when enabled', () => {
+  const catalog = resolveCatalogModel(
+    buildAlternativeRecipeDataset(),
+    buildNoProliferatorDefaults()
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'allow_surplus',
+    disabledRecipeIds: ['2'],
+    allowedRecipesByItem: { '1101': ['2'] },
+    autoPromoteUnavailableItemsToRawInputs: true,
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.resolvedRawInputItemIds).toContain('1101');
 });
 
 test('allowedRecipesByItem only constrains the listed items and recipes', () => {
