@@ -933,6 +933,84 @@ test('allow_surplus prefers consolidating surplus into fewer item types before l
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
+test('allow_surplus can trade higher total surplus for fewer surplus item types when reweighting', () => {
+  const dataset: VanillaDatasetSpec = {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Target Plate', IconName: 'plate', GridIndex: 2 },
+      { ID: 1201, Type: 2, Name: 'Byproduct A', IconName: 'by-a', GridIndex: 3 },
+      { ID: 1202, Type: 2, Name: 'Byproduct B', IconName: 'by-b', GridIndex: 4 },
+      { ID: 1203, Type: 2, Name: 'Byproduct C', IconName: 'by-c', GridIndex: 5 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Efficient Splitter',
+        IconName: 'smelter-low',
+        GridIndex: 6,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+      },
+      {
+        ID: 5002,
+        Type: 6,
+        Name: 'Single-Surplus Furnace',
+        IconName: 'smelter-high',
+        GridIndex: 7,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW * 2,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Two Surplus Types',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1201, 1202],
+        ResultCounts: [1, 1, 1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-a',
+      },
+      {
+        ID: 2,
+        Type: 1,
+        Factories: [5002],
+        Name: 'One Large Surplus Type',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101, 1203],
+        ResultCounts: [1, 5],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'by-c',
+      },
+    ],
+  };
+  const catalog = resolveCatalogModel(dataset, {
+    buildingRules: [
+      { ID: 5001, Category: 'smelter' },
+      { ID: 5002, Category: 'smelter' },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].recipeId).toBe('2');
+  expect(result.surplusOutputs).toEqual([{ itemId: '1203', ratePerMin: 300 }]);
+  expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
+});
+
 test('orbital ring request honors forced graphite recipe instead of delayed coking', () => {
   const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
   const defaultsText = readFileSync(
@@ -998,6 +1076,42 @@ test('orbital ring request honors forced graphite recipe instead of delayed coki
 
   expect(result.status).toBe('optimal');
   expect(result.recipePlans.some(plan => plan.recipeId === '423')).toBe(false);
+});
+
+test('orbital ring magnetic fluid surplus solving prefers fewer surplus item types over lower total surplus', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '7705', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: ['1143', '1007', '1000'],
+    disabledRawInputItemIds: ['7015', '7101'],
+    disabledRecipeIds: ['510', '704', '705'],
+    disabledBuildingIds: ['6215'],
+    allowedRecipesByItem: {
+      '1030': ['777'],
+      '1114': ['701', '16'],
+      '7022': ['849'],
+    },
+    globalForcedProliferatorMode: 'none',
+    globalForcedProliferatorLevel: 0,
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.some(plan => plan.recipeId === '419')).toBe(true);
+  expect(result.recipePlans.some(plan => plan.recipeId === '422')).toBe(false);
+  expect(result.surplusOutputs.map(entry => entry.itemId)).toEqual(['6251', '7009']);
+  expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
 test('force_balance rejects unresolved byproducts', () => {

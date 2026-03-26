@@ -28,8 +28,10 @@ const SECONDARY_EPSILON = 1e-9;
 const EXTERNAL_INPUT_ACTIVITY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
 const ALLOW_SURPLUS_SYNC_BUDGET_MS = 200;
-const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 3;
-const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 64;
+const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 5;
+const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 256;
+const ALLOW_SURPLUS_REWEIGHT_MAX_EXPONENT = 4;
+const ALLOW_SURPLUS_INACTIVE_WEIGHT_MULTIPLIER = 1.25;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
 const VALID_PROLIFERATOR_MODES: ProliferatorMode[] = ['none', 'speed', 'productivity'];
@@ -1765,22 +1767,37 @@ function compareLinearSolveCandidates(left: LinearSolveCandidate, right: LinearS
 }
 
 function buildReweightedSurplusWeights(
-  metrics: SurplusSolutionMetrics
+  metrics: SurplusSolutionMetrics,
+  candidateItemIds: readonly string[],
+  round: number
 ): ReadonlyMap<string, number> | undefined {
   if (metrics.activeItemIds.length <= 1 || metrics.totalRatePerMin <= SURPLUS_OUTPUT_EPSILON) {
     return undefined;
   }
 
+  const exponent = Math.min(ALLOW_SURPLUS_REWEIGHT_MAX_EXPONENT, 2 + round);
   const weights = new Map<string, number>();
   for (const itemId of metrics.activeItemIds) {
     const rate = metrics.itemRateMap.get(itemId) ?? 0;
+    const baseWeight = metrics.totalRatePerMin / Math.max(rate, EPSILON);
     weights.set(
       itemId,
       Math.max(
         1,
-        Math.min(ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR, metrics.totalRatePerMin / Math.max(rate, EPSILON))
+        Math.min(ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR, Math.pow(baseWeight, exponent))
       )
     );
+  }
+  if (round <= 0 || weights.size === 0) {
+    return weights;
+  }
+
+  const inactiveWeightFloor =
+    Math.max(...weights.values()) * ALLOW_SURPLUS_INACTIVE_WEIGHT_MULTIPLIER;
+  for (const itemId of candidateItemIds) {
+    if (!weights.has(itemId)) {
+      weights.set(itemId, inactiveWeightFloor);
+    }
   }
   return weights;
 }
@@ -2275,10 +2292,15 @@ function solveCatalogRequestValidated(
       });
       let previousCandidate = bestCandidate;
       const deadline = solveStartedAt + ALLOW_SURPLUS_SYNC_BUDGET_MS;
-      let solveCount = 1;
+      let stagnantRounds = 0;
+      const maxReweightedRounds = Math.max(0, ALLOW_SURPLUS_MAX_LINEAR_SOLVES - 1);
 
-      while (solveCount < ALLOW_SURPLUS_MAX_LINEAR_SOLVES && currentTimeMs() < deadline) {
-        const surplusWeights = buildReweightedSurplusWeights(previousCandidate.surplus);
+      for (let round = 0; round < maxReweightedRounds && currentTimeMs() < deadline; round += 1) {
+        const surplusWeights = buildReweightedSurplusWeights(
+          bestCandidate.surplus,
+          compiledGraph.itemIds,
+          round
+        );
         if (!surplusWeights) {
           break;
         }
@@ -2289,11 +2311,10 @@ function solveCatalogRequestValidated(
         }
 
         const weightedSolve = solveModel(weightedBuild.model);
-        solveCount += 1;
         auditAttempts.push(
           buildSolveAuditAttempt({
             phase: 'reweighted_lp',
-            round: auditAttempts.filter(entry => entry.phase === 'reweighted_lp').length,
+            round,
             modelKind: 'lp',
             itemCount: weightedBuild.involvedItemCount,
             recipeCount: weightedBuild.activeRecipeCount,
@@ -2324,13 +2345,15 @@ function solveCatalogRequestValidated(
           bestCandidate = candidate;
         }
 
+        const candidateDelta = compareLinearSolveCandidates(candidate, previousCandidate);
         const sameSupport =
           candidate.surplus.activeItemIds.length === previousCandidate.surplus.activeItemIds.length &&
           candidate.surplus.activeItemIds.every(
             (itemId, index) => itemId === previousCandidate.surplus.activeItemIds[index]
           );
+        stagnantRounds = sameSupport && candidateDelta === 0 ? stagnantRounds + 1 : 0;
         previousCandidate = candidate;
-        if (sameSupport) {
+        if (stagnantRounds >= 3) {
           break;
         }
       }
