@@ -1661,11 +1661,10 @@
     "objective": "min_power"
   },
   "recommendedRawItemIds": [
+    1000,
     1005,
     1013,
     1116,
-    6251,
-    7015,
-    7101
+    6251
   ]
 }

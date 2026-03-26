@@ -167,8 +167,6 @@ test('orbitalring fullersilver-embedded recipe chain is feasible when dataset de
   expect(getPlan(result, '716')?.runsPerMin).toBeGreaterThan(0);
   expect(getPlan(result, '717')?.runsPerMin).toBeGreaterThan(0);
   expect(getExternalRate(result, '6519')).toBeGreaterThan(0);
-  expect(getExternalRate(result, '7015')).toBeGreaterThan(0);
-  expect(getExternalRate(result, '7101')).toBeGreaterThan(0);
   expect(result.surplusOutputs).toEqual([]);
 });
 

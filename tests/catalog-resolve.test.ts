@@ -239,8 +239,10 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
   expect(resolved.recommendedDisabledRecipeIds).toEqual(['510', '517', '705', '776']);
   expect(resolved.recommendedDisabledBuildingIds).toEqual(['6215']);
   expect(resolved.rawItemIds).toEqual(
-    expect.arrayContaining(['1005', '1116', '6251', '6519', '7015', '7101'])
+    expect.arrayContaining(['1005', '1116', '6251', '6519'])
   );
+  expect(resolved.rawItemIds).not.toContain('7015');
+  expect(resolved.rawItemIds).not.toContain('7101');
   expect(resolved.recipeMap.get('32')).toMatchObject({
     recipeId: '32',
     allowedBuildingIds: ['2309', '7823', '2317', '6215'],
