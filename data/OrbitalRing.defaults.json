@@ -846,7 +846,8 @@
     },
     {
       "ID": 405,
-      "ModifierCodeOverride": 3
+      "ModifierCodeOverride": 3,
+      "FractionationProbability": 0.007
     },
     {
       "ID": 406,
