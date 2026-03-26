@@ -154,6 +154,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
                 multiple
                 value={draftRecipeIds}
                 label={bundle.itemSlice.forcedRecipeLabel}
+                MenuProps={{ disableScrollLock: true }}
                 onChange={event =>
                   setDraftRecipeIds(
                     (Array.isArray(event.target.value) ? event.target.value : [String(event.target.value)]).filter(Boolean)
