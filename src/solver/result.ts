@@ -209,6 +209,8 @@ export interface SolveResult {
  *
  * This is solver-internal rather than a public API shape.
  */
+export type CompiledItemAmountEntry = readonly [itemId: string, amount: number];
+
 export interface CompiledOption {
   /** Stable internal LP variable/option ID. */
   optionId: string;
@@ -232,6 +234,14 @@ export interface CompiledOption {
   powerCostMWPerRunPerMin: number;
   /** Per-run consumed items for this option. */
   inputPerRun: Record<string, number>;
+  /** Precompiled consumed-item entries for fast iteration. */
+  inputEntries: CompiledItemAmountEntry[];
   /** Per-run produced items for this option. */
   outputPerRun: Record<string, number>;
+  /** Precompiled produced-item entries for fast iteration. */
+  outputEntries: CompiledItemAmountEntry[];
+  /** Precompiled net coefficients written into item-balance constraints. */
+  netItemEntries: CompiledItemAmountEntry[];
+  /** Precompiled unique item IDs touched by this option. */
+  touchedItemIds: string[];
 }

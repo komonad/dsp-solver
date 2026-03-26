@@ -10,6 +10,7 @@ import type {
 import type { SolveRequest } from './request';
 import type {
   BuildingSummary,
+  CompiledItemAmountEntry,
   CompiledOption,
   ItemBalanceEntry,
   ItemRate,
@@ -330,6 +331,38 @@ function buildSetKey(values: Iterable<string>): string {
   return Array.from(new Set(values)).sort((left, right) => left.localeCompare(right)).join('|');
 }
 
+function haveSameStringSet(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  if (left.size !== right.size) {
+    return false;
+  }
+
+  for (const value of left) {
+    if (!right.has(value)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function buildAllowedRecipeSetMap(
+  allowedRecipesByItem: Record<string, string[]> | undefined
+): Map<string, ReadonlySet<string>> {
+  const allowedRecipeSetMap = new Map<string, ReadonlySet<string>>();
+
+  if (!allowedRecipesByItem) {
+    return allowedRecipeSetMap;
+  }
+
+  for (const [itemId, recipeIds] of Object.entries(allowedRecipesByItem)) {
+    if (recipeIds.length > 0) {
+      allowedRecipeSetMap.set(itemId, new Set(recipeIds));
+    }
+  }
+
+  return allowedRecipeSetMap;
+}
+
 function stableSerialize(value: unknown): string {
   if (value === undefined) {
     return 'undefined';
@@ -594,7 +627,7 @@ function collectUpstreamRecipes(
   rawInputItemIds: Set<string>,
   recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>,
   autoPromoteUnavailableItemsToRawInputs: boolean,
-  allowedRecipesByItem: Record<string, string[]>,
+  allowedRecipeSetMap: ReadonlyMap<string, ReadonlySet<string>>,
   getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
 ): CollectRecipesResult {
   const messages: string[] = [];
@@ -603,31 +636,38 @@ function collectUpstreamRecipes(
   const selectedRecipeIds = new Set<string>();
   const autoPromotedRawInputIds = new Set<string>();
   const queue = [...targetItemIds];
+  let queueIndex = 0;
 
-  while (queue.length > 0) {
-    const itemId = queue.shift()!;
+  while (queueIndex < queue.length) {
+    const itemId = queue[queueIndex];
+    queueIndex += 1;
     if (visitedItems.has(itemId) || rawInputItemIds.has(itemId) || autoPromotedRawInputIds.has(itemId)) {
       continue;
     }
     visitedItems.add(itemId);
 
-    const allowedRecipeIds = allowedRecipesByItem[itemId];
+    const allowedRecipeIds = allowedRecipeSetMap.get(itemId);
     const availableProducers = recipeOutputIndex.get(itemId) ?? [];
-    const producers = allowedRecipeIds && allowedRecipeIds.length > 0
-      ? availableProducers.filter(recipe => allowedRecipeIds.includes(recipe.recipeId))
-      : availableProducers;
+    const producers =
+      allowedRecipeIds && allowedRecipeIds.size > 0
+        ? availableProducers.filter(recipe => allowedRecipeIds.has(recipe.recipeId))
+        : availableProducers;
 
-    if (allowedRecipeIds && allowedRecipeIds.length > 0 && producers.length === 0) {
-      messages.push(`Allowed recipes ${allowedRecipeIds.join(', ')} for item ${itemId} do not exist.`);
+    if (allowedRecipeIds && allowedRecipeIds.size > 0 && producers.length === 0) {
+      messages.push(
+        `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} for item ${itemId} do not exist.`
+      );
       continue;
     }
 
     if (
       allowedRecipeIds &&
-      allowedRecipeIds.length > 0 &&
+      allowedRecipeIds.size > 0 &&
       !producers.some(recipe => recipe.outputs.some(output => output.itemId === itemId))
     ) {
-      messages.push(`Allowed recipes ${allowedRecipeIds.join(', ')} do not produce item ${itemId}.`);
+      messages.push(
+        `Allowed recipes ${Array.from(allowedRecipeIds).join(', ')} do not produce item ${itemId}.`
+      );
       continue;
     }
 
@@ -682,6 +722,7 @@ function compileSolveGraph(
   const diagnostics = new Set<string>();
   const infoDiagnostics = new Set<string>();
   const recipeOptionCache = new Map<string, CachedRecipeOptionCompilation>();
+  const allowedRecipeSetMap = buildAllowedRecipeSetMap(request.allowedRecipesByItem);
   const getCompiledRecipeOptions = (recipe: ResolvedRecipeSpec): CompiledOptionContext[] => {
     const cached = recipeOptionCache.get(recipe.recipeId);
     if (cached) {
@@ -693,22 +734,13 @@ function compileSolveGraph(
     recipeOptionCache.set(recipe.recipeId, { options, messages });
     return options;
   };
-  const collectCachedCompilationMessages = (recipes: ResolvedRecipeSpec[]): string[] => {
-    const messages: string[] = [];
-    for (const recipe of recipes) {
-      const cached = recipeOptionCache.get(recipe.recipeId);
-      if (!cached) {
-        continue;
-      }
-      messages.push(...cached.messages);
-    }
-    return messages;
-  };
   const effectiveRawInputItemIds = new Set(initialRawInputItemIds);
   let requiredItemIds = new Set(targetItemIds);
   let recipes: ResolvedRecipeSpec[] = [];
   let compiledOptions: CompiledOptionContext[] = [];
-  let previousStateKey = '';
+  let previousRecipeIdSet = new Set<string>();
+  let previousRequiredItemIds = new Set<string>();
+  let previousRawInputItemIds = new Set<string>(initialRawInputItemIds);
 
   const maxIterations =
     catalog.items.length + catalog.recipes.length + catalog.proliferatorLevels.length + 8;
@@ -720,7 +752,7 @@ function compileSolveGraph(
       effectiveRawInputItemIds,
       availableRecipeOutputIndex,
       Boolean(request.autoPromoteUnavailableItemsToRawInputs),
-      request.allowedRecipesByItem ?? {},
+      allowedRecipeSetMap,
       getCompiledRecipeOptions
     );
     collected.messages.forEach(message => diagnostics.add(message));
@@ -729,29 +761,39 @@ function compileSolveGraph(
       effectiveRawInputItemIds.add(itemId)
     );
 
-    collectCachedCompilationMessages(collected.recipes).forEach(message => diagnostics.add(message));
-    const compiled = compileOptions(collected.recipes, getCompiledRecipeOptions);
-    compiled.messages.forEach(message => diagnostics.add(message));
+    for (const recipe of collected.recipes) {
+      const cached = recipeOptionCache.get(recipe.recipeId);
+      if (!cached) {
+        continue;
+      }
+      cached.messages.forEach(message => diagnostics.add(message));
+    }
+    const compiledOptionsForRecipes: CompiledOptionContext[] = [];
+    for (const recipe of collected.recipes) {
+      compiledOptionsForRecipes.push(...getCompiledRecipeOptions(recipe));
+    }
 
     const auxiliaryItemIds = collectResolvableAuxiliaryItemIds(
-      compiled.options,
+      compiledOptionsForRecipes,
       anyRecipeOutputIndex
     );
     const nextRequiredItemIds = new Set([...targetItemIds, ...auxiliaryItemIds]);
-    const stateKey = [
-      buildSetKey(collected.recipes.map(recipe => recipe.recipeId)),
-      buildSetKey(nextRequiredItemIds),
-      buildSetKey(effectiveRawInputItemIds),
-    ].join('||');
+    const nextRecipeIdSet = new Set(collected.recipes.map(recipe => recipe.recipeId));
 
     recipes = collected.recipes;
-    compiledOptions = compiled.options;
+    compiledOptions = compiledOptionsForRecipes;
 
-    if (stateKey === previousStateKey) {
+    if (
+      haveSameStringSet(previousRecipeIdSet, nextRecipeIdSet) &&
+      haveSameStringSet(previousRequiredItemIds, nextRequiredItemIds) &&
+      haveSameStringSet(previousRawInputItemIds, effectiveRawInputItemIds)
+    ) {
       break;
     }
 
-    previousStateKey = stateKey;
+    previousRecipeIdSet = nextRecipeIdSet;
+    previousRequiredItemIds = nextRequiredItemIds;
+    previousRawInputItemIds = new Set(effectiveRawInputItemIds);
     requiredItemIds = nextRequiredItemIds;
   }
 
@@ -856,24 +898,34 @@ function buildComplexityPowerCoefficient(
 }
 
 function isOptionFilteredByAllowedRecipes(
-  request: SolveRequest,
+  allowedRecipeSetMap: ReadonlyMap<string, ReadonlySet<string>>,
   recipe: ResolvedRecipeSpec,
   option: CompiledOption
 ): boolean {
-  return Object.entries(request.allowedRecipesByItem ?? {}).some(
-    ([itemId, allowedRecipeIds]) =>
-      allowedRecipeIds.length > 0 &&
-      !allowedRecipeIds.includes(recipe.recipeId) &&
+  if (allowedRecipeSetMap.size === 0) {
+    return false;
+  }
+
+  for (const [itemId, allowedRecipeIds] of allowedRecipeSetMap.entries()) {
+    if (
+      allowedRecipeIds.size > 0 &&
+      !allowedRecipeIds.has(recipe.recipeId) &&
       (option.outputPerRun[itemId] ?? 0) > EPSILON
-  );
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function collectModelOptions(
   request: SolveRequest,
   compiledOptions: CompiledOptionContext[]
 ): CompiledOptionContext[] {
+  const allowedRecipeSetMap = buildAllowedRecipeSetMap(request.allowedRecipesByItem);
   return compiledOptions.filter(
-    ({ option, recipe }) => !isOptionFilteredByAllowedRecipes(request, recipe, option)
+    ({ option, recipe }) => !isOptionFilteredByAllowedRecipes(allowedRecipeSetMap, recipe, option)
   );
 }
 
@@ -947,6 +999,72 @@ function buildOutputPerRun(
   );
 }
 
+function buildCompiledItemEntries(perRun: Record<string, number>): CompiledItemAmountEntry[] {
+  const entries: CompiledItemAmountEntry[] = [];
+
+  for (const itemId in perRun) {
+    if (Object.prototype.hasOwnProperty.call(perRun, itemId)) {
+      entries.push([itemId, perRun[itemId]] as const);
+    }
+  }
+
+  return entries;
+}
+
+function buildTouchedItemIds(
+  inputEntries: readonly CompiledItemAmountEntry[],
+  outputEntries: readonly CompiledItemAmountEntry[],
+  proliferatorItemId?: string
+): string[] {
+  const itemIds = new Set<string>();
+
+  for (const [itemId] of inputEntries) {
+    itemIds.add(itemId);
+  }
+
+  for (const [itemId] of outputEntries) {
+    itemIds.add(itemId);
+  }
+
+  if (proliferatorItemId) {
+    itemIds.add(proliferatorItemId);
+  }
+
+  return Array.from(itemIds);
+}
+
+function buildNetItemEntries(
+  inputEntries: readonly CompiledItemAmountEntry[],
+  outputEntries: readonly CompiledItemAmountEntry[]
+): CompiledItemAmountEntry[] {
+  const netByItem = new Map<string, number>();
+
+  for (const [itemId, amount] of outputEntries) {
+    netByItem.set(itemId, (netByItem.get(itemId) ?? 0) + amount);
+  }
+
+  for (const [itemId, amount] of inputEntries) {
+    netByItem.set(itemId, (netByItem.get(itemId) ?? 0) - amount);
+  }
+
+  return Array.from(netByItem.entries()).map(([itemId, amount]) => [itemId, amount] as const);
+}
+
+function finalizeCompiledOption(
+  option: Omit<CompiledOption, 'inputEntries' | 'outputEntries' | 'netItemEntries' | 'touchedItemIds'>
+): CompiledOption {
+  const inputEntries = buildCompiledItemEntries(option.inputPerRun);
+  const outputEntries = buildCompiledItemEntries(option.outputPerRun);
+
+  return {
+    ...option,
+    inputEntries,
+    outputEntries,
+    netItemEntries: buildNetItemEntries(inputEntries, outputEntries),
+    touchedItemIds: buildTouchedItemIds(inputEntries, outputEntries, option.proliferatorItemId),
+  };
+}
+
 function buildNoneVariant(
   recipe: ResolvedRecipeSpec,
   building: ResolvedBuildingSpec
@@ -955,7 +1073,7 @@ function buildNoneVariant(
   const outputPerRun = buildOutputPerRun(recipe, building);
   const inputPerRun = buildInputPerRun(recipe);
 
-  return {
+  return finalizeCompiledOption({
     optionId: `${recipe.recipeId}:${building.buildingId}:none:0`,
     recipeId: recipe.recipeId,
     buildingId: building.buildingId,
@@ -967,7 +1085,7 @@ function buildNoneVariant(
     powerCostMWPerRunPerMin: building.workPowerMW / singleBuildingRunsPerMin,
     inputPerRun,
     outputPerRun,
-  };
+  });
 }
 
 function buildProliferatorVariant(
@@ -989,7 +1107,7 @@ function buildProliferatorVariant(
 
   const outputPerRun = buildOutputPerRun(recipe, building, productivityModeMultiplier);
 
-  return {
+  return finalizeCompiledOption({
     optionId: `${recipe.recipeId}:${building.buildingId}:${mode}:${level.level}`,
     recipeId: recipe.recipeId,
     buildingId: building.buildingId,
@@ -1003,7 +1121,7 @@ function buildProliferatorVariant(
       (building.workPowerMW * powerMultiplier) / singleBuildingRunsPerMin,
     inputPerRun,
     outputPerRun,
-  };
+  });
 }
 
 function isOptionAllowedByForce(
@@ -1025,22 +1143,6 @@ function isOptionAllowedByForce(
   return true;
 }
 
-function compileOptions(
-  recipes: ResolvedRecipeSpec[],
-  getCompiledRecipeOptions: (recipe: ResolvedRecipeSpec) => CompiledOptionContext[]
-): { options: CompiledOptionContext[]; messages: string[] } {
-  const compiledOptions: CompiledOptionContext[] = [];
-
-  for (const recipe of recipes) {
-    compiledOptions.push(...getCompiledRecipeOptions(recipe));
-  }
-
-  return {
-    options: compiledOptions,
-    messages: [],
-  };
-}
-
 function collectInvolvedItemIds(
   compiledOptions: CompiledOptionContext[],
   targetRateMap: Map<string, number>,
@@ -1057,11 +1159,7 @@ function collectInvolvedItemIds(
   }
 
   for (const { option } of compiledOptions) {
-    for (const itemId of Object.keys(option.inputPerRun)) {
-      itemIds.add(itemId);
-    }
-
-    for (const itemId of Object.keys(option.outputPerRun)) {
+    for (const itemId of option.touchedItemIds) {
       itemIds.add(itemId);
     }
   }
@@ -1129,13 +1227,7 @@ function collectComplexityTrackedItemIds(
   const itemIds = new Set<string>();
 
   for (const { option } of compiledOptions) {
-    for (const itemId of Object.keys(option.inputPerRun)) {
-      if (catalog.itemMap.has(itemId)) {
-        itemIds.add(itemId);
-      }
-    }
-
-    for (const itemId of Object.keys(option.outputPerRun)) {
+    for (const itemId of option.touchedItemIds) {
       if (catalog.itemMap.has(itemId)) {
         itemIds.add(itemId);
       }
@@ -1222,16 +1314,8 @@ function collectCompiledGraphItemIds(
   }
 
   for (const { option } of compiledOptions) {
-    for (const itemId of Object.keys(option.inputPerRun)) {
+    for (const itemId of option.touchedItemIds) {
       itemIds.add(itemId);
-    }
-
-    for (const itemId of Object.keys(option.outputPerRun)) {
-      itemIds.add(itemId);
-    }
-
-    if (option.proliferatorItemId) {
-      itemIds.add(option.proliferatorItemId);
     }
   }
 
@@ -1324,12 +1408,8 @@ function buildLinearModel(
       __objective__: buildObjectiveCoefficient(request, recipe, option),
     };
 
-    for (const [itemId, amount] of Object.entries(option.outputPerRun)) {
-      coefficients[itemId] = (coefficients[itemId] ?? 0) + amount;
-    }
-
-    for (const [itemId, amount] of Object.entries(option.inputPerRun)) {
-      coefficients[itemId] = (coefficients[itemId] ?? 0) - amount;
+    for (const [itemId, amount] of option.netItemEntries) {
+      coefficients[itemId] = amount;
     }
 
     variables[option.optionId] = coefficients;
@@ -1406,12 +1486,8 @@ function buildComplexityModel(params: {
       __complexity__: scaledPowerCoefficient,
     };
 
-    for (const [itemId, amount] of Object.entries(option.outputPerRun)) {
-      coefficients[itemId] = (coefficients[itemId] ?? 0) + amount;
-    }
-
-    for (const [itemId, amount] of Object.entries(option.inputPerRun)) {
-      coefficients[itemId] = (coefficients[itemId] ?? 0) - amount;
+    for (const [itemId, amount] of option.netItemEntries) {
+      coefficients[itemId] = amount;
     }
 
     variables[option.optionId] = coefficients;
@@ -1452,12 +1528,7 @@ function buildComplexityModel(params: {
     buildingUsageMap.set(option.buildingId, buildingOptionIds);
 
     const touchedItemIds = new Set<string>();
-    for (const itemId of Object.keys(option.inputPerRun)) {
-      if (catalog.itemMap.has(itemId)) {
-        touchedItemIds.add(itemId);
-      }
-    }
-    for (const itemId of Object.keys(option.outputPerRun)) {
+    for (const itemId of option.touchedItemIds) {
       if (catalog.itemMap.has(itemId)) {
         touchedItemIds.add(itemId);
       }
@@ -1779,11 +1850,11 @@ function buildResultFromSolution(params: {
     const roundedUpBuildingCount = roundUpCount(exactBuildingCount);
     const powerMW = roundedUpBuildingCount * building.workPowerMW * option.powerMultiplier;
 
-    const inputs = Object.entries(option.inputPerRun).map(([itemId, amount]) => ({
+    const inputs = option.inputEntries.map(([itemId, amount]) => ({
       itemId,
       ratePerMin: amount * value,
     }));
-    const outputs = Object.entries(option.outputPerRun).map(([itemId, amount]) => ({
+    const outputs = option.outputEntries.map(([itemId, amount]) => ({
       itemId,
       ratePerMin: amount * value,
     }));
