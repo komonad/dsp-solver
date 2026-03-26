@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AppLocale, LocaleBundle } from '../../../i18n';
+import type { SolveObjective } from '../../../solver/request';
 import type { SolveAudit } from '../../../solver';
 
 function formatCount(value: number, locale: AppLocale): string {
@@ -39,6 +40,9 @@ function formatAttemptStatus(bundle: LocaleBundle, status: string): string {
   if (status === 'invalid_input') {
     return bundle.diagnostics.audit.invalidInputStatusLabel;
   }
+  if (status === 'timedout') {
+    return bundle.diagnostics.audit.timedoutStatusLabel;
+  }
   return status;
 }
 
@@ -50,6 +54,9 @@ function formatAttemptContext(
   if (attempt.phase === 'reweighted_lp') {
     return bundle.diagnostics.audit.reweightedAttemptTitle(index + 1);
   }
+  if (attempt.phase === 'surplus_type_milp') {
+    return bundle.diagnostics.audit.surplusTypeMilpAttemptTitle;
+  }
   if (attempt.phase === 'complexity_seed_lp') {
     return bundle.diagnostics.audit.complexitySeedAttemptTitle;
   }
@@ -59,15 +66,41 @@ function formatAttemptContext(
   return bundle.diagnostics.audit.initialAttemptTitle(index + 1);
 }
 
+function formatReweightTermination(
+  bundle: LocaleBundle,
+  reason: SolveAudit['surplusReweightTermination']
+): string | null {
+  switch (reason) {
+    case 'converged':
+      return bundle.diagnostics.audit.reweightTerminationConverged;
+    case 'stagnant':
+      return bundle.diagnostics.audit.reweightTerminationStagnant;
+    case 'max_rounds':
+      return bundle.diagnostics.audit.reweightTerminationMaxRounds;
+    case 'deadline':
+      return bundle.diagnostics.audit.reweightTerminationDeadline;
+    case 'infeasible':
+      return bundle.diagnostics.audit.reweightTerminationInfeasible;
+    default:
+      return null;
+  }
+}
+
 export default function SolveAuditSection(props: {
   locale: AppLocale;
   bundle: LocaleBundle;
   solveAudit?: SolveAudit | null;
+  objective?: SolveObjective;
 }) {
-  const { locale, bundle, solveAudit } = props;
+  const { locale, bundle, solveAudit, objective } = props;
   if (!solveAudit) {
     return null;
   }
+
+  const terminationText = formatReweightTermination(
+    bundle,
+    solveAudit.surplusReweightTermination
+  );
 
   return (
     <section
@@ -125,15 +158,6 @@ export default function SolveAuditSection(props: {
                 )}
               </div>
               <div style={{ color: 'rgba(24, 51, 89, 0.72)', fontSize: 12, lineHeight: 1.5 }}>
-                {bundle.diagnostics.audit.attemptModelSummary(
-                  formatCount(attempt.itemCount, locale),
-                  formatCount(attempt.recipeCount, locale),
-                  formatCount(attempt.optionCount, locale),
-                  formatCount(attempt.constraintCount, locale),
-                  formatCount(attempt.variableCount, locale)
-                )}
-              </div>
-              <div style={{ color: 'rgba(24, 51, 89, 0.72)', fontSize: 12, lineHeight: 1.5 }}>
                 {bundle.diagnostics.audit.attemptTimings(
                   formatDurationMs(attempt.buildDurationMs, locale),
                   formatDurationMs(attempt.solveDurationMs, locale),
@@ -148,8 +172,23 @@ export default function SolveAuditSection(props: {
                   )}
                 </div>
               ) : null}
+              {attempt.phase === 'reweighted_lp' &&
+              attempt.primaryObjectiveValue !== undefined &&
+              objective ? (
+                <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 12, lineHeight: 1.5 }}>
+                  {bundle.diagnostics.audit.attemptObjectiveCost(
+                    bundle.enums.objective[objective],
+                    formatRate(attempt.primaryObjectiveValue, locale)
+                  )}
+                </div>
+              ) : null}
             </div>
           ))}
+          {terminationText ? (
+            <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 12, lineHeight: 1.5 }}>
+              {terminationText}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

@@ -23,7 +23,7 @@ export interface SolveDiagnostics {
  */
 export interface SolveAuditAttempt {
   /** Stable phase identifier for this attempt. */
-  phase: 'initial_lp' | 'reweighted_lp' | 'complexity_seed_lp' | 'complexity_milp';
+  phase: 'initial_lp' | 'reweighted_lp' | 'surplus_type_milp' | 'complexity_seed_lp' | 'complexity_milp';
   /** Zero-based round index within the phase family when applicable. */
   round?: number;
   /** Model family used for this attempt. */
@@ -38,6 +38,8 @@ export interface SolveAuditAttempt {
   constraintCount: number;
   /** Count of decision variables passed to the solver. */
   variableCount: number;
+  /** Count of binary (integer) variables in a MILP attempt. */
+  binaryCount?: number;
   /** Time spent constructing the model in milliseconds. */
   buildDurationMs: number;
   /** Time spent inside the solver in milliseconds. */
@@ -50,6 +52,14 @@ export interface SolveAuditAttempt {
   surplusItemCount?: number;
   /** Final total surplus rate in items per minute observed on this attempt, when relevant. */
   surplusRatePerMin?: number;
+  /** Primary objective value (power/buildings/etc.) for this attempt, when relevant. */
+  primaryObjectiveValue?: number;
+  /** Per-item surplus weights applied in this reweighted LP round. */
+  surplusWeights?: Record<string, number>;
+  /** Whether this round's solution became the new best candidate. */
+  isBestCandidate?: boolean;
+  /** Consecutive stagnant round count after this round. */
+  stagnantRounds?: number;
 }
 
 /**
@@ -80,6 +90,13 @@ export interface SolveAudit {
   totalDurationMs: number;
   /** Chronological list of model/solve attempts made for this request. */
   attempts: SolveAuditAttempt[];
+  /** Why the surplus reweighting loop terminated, when applicable. */
+  surplusReweightTermination?:
+    | 'converged'
+    | 'stagnant'
+    | 'max_rounds'
+    | 'deadline'
+    | 'infeasible';
 }
 
 /**

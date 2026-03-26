@@ -1115,6 +1115,93 @@ test('orbital ring magnetic fluid surplus solving prefers fewer surplus item typ
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
+test('orbital ring magnetic fluid surplus type milp finds magma+light oil over titanium cascade', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '7705', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: ['1143', '1000', '1007'],
+    disabledRawInputItemIds: ['7015', '7101'],
+    disabledRecipeIds: ['510', '704', '705'],
+    disabledBuildingIds: ['6215', '2319'],
+    allowedRecipesByItem: {
+      '1030': ['777'],
+      '1114': ['701', '16'],
+      '7022': ['849'],
+      '7708': ['506'],
+    },
+    globalForcedProliferatorLevel: 0,
+    globalForcedProliferatorMode: 'none',
+  });
+
+  expect(result.status).toBe('optimal');
+  // MILP should find recipe 419 (direct magma→magnets) over recipe 422 (titanium co-production)
+  expect(result.recipePlans.some(plan => plan.recipeId === '419')).toBe(true);
+  expect(result.recipePlans.some(plan => plan.recipeId === '422')).toBe(false);
+  // Surplus: magma (6251) + light oil (7009), not magnets/titanium crystal
+  expect(result.surplusOutputs).toHaveLength(2);
+  expect(result.surplusOutputs.map(s => s.itemId).sort()).toEqual(['6251', '7009']);
+  // The surplus_type_milp phase must have been used to discover this
+  expect(result.solveAudit?.attempts.some(a => a.phase === 'surplus_type_milp')).toBe(true);
+  const milpAttempt = result.solveAudit?.attempts.find(a => a.phase === 'surplus_type_milp');
+  expect(milpAttempt?.isBestCandidate).toBe(true);
+  expect(milpAttempt?.surplusItemCount).toBe(2);
+});
+
+test('orbital ring solar sail surplus milp avoids excessive recipe chains to consume byproducts', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '6003', ratePerMin: 120 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: ['1143', '1000', '1007'],
+    disabledRawInputItemIds: ['7015', '7101'],
+    disabledRecipeIds: ['510', '704', '705'],
+    disabledBuildingIds: ['6215', '2319'],
+    allowedRecipesByItem: {
+      '1030': ['777'],
+      '1114': ['701', '16'],
+      '7022': ['849'],
+      '7708': ['506'],
+    },
+    globalForcedProliferatorLevel: 0,
+    globalForcedProliferatorMode: 'none',
+  });
+
+  expect(result.status).toBe('optimal');
+  // The MILP with recipe-usage penalties should avoid adding the full
+  // bio-chain (糖料作物, 共生繁育, 辐射诱变, etc.) just to consume small
+  // byproduct surpluses.  It should use far fewer recipes and less power
+  // than the naive LP solution (which used 19 recipes at ~242 MW).
+  expect(result.recipePlans.length).toBeLessThanOrEqual(15);
+  expect(result.powerSummary.activePowerMW).toBeLessThan(100);
+  // The surplus_type_milp phase should have run and been accepted
+  const milpAttempt = result.solveAudit?.attempts.find(a => a.phase === 'surplus_type_milp');
+  expect(milpAttempt).toBeDefined();
+  expect(milpAttempt?.isBestCandidate).toBe(true);
+});
+
 test('allowedRecipesByItem does not block zero-net recycled outputs in orbital ring chains', () => {
   const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
   const defaultsText = readFileSync(

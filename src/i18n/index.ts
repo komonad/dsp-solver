@@ -234,6 +234,7 @@ export interface LocaleBundle {
       attemptsTitle: string;
       initialAttemptTitle: (index: number) => string;
       reweightedAttemptTitle: (index: number) => string;
+      surplusTypeMilpAttemptTitle: string;
       complexitySeedAttemptTitle: string;
       complexityAttemptTitle: (round: number) => string;
       linearProgramLabel: string;
@@ -241,6 +242,7 @@ export interface LocaleBundle {
       optimalStatusLabel: string;
       infeasibleStatusLabel: string;
       invalidInputStatusLabel: string;
+      timedoutStatusLabel: string;
       attemptHeading: (context: string, modelKind: string, status: string) => string;
       attemptModelSummary: (
         itemCount: string,
@@ -251,6 +253,12 @@ export interface LocaleBundle {
       ) => string;
       attemptTimings: (build: string, solve: string, total: string) => string;
       attemptSurplus: (itemCount: string, rate: string) => string;
+      attemptObjectiveCost: (objectiveLabel: string, value: string) => string;
+      reweightTerminationConverged: string;
+      reweightTerminationStagnant: string;
+      reweightTerminationMaxRounds: string;
+      reweightTerminationDeadline: string;
+      reweightTerminationInfeasible: string;
     };
   };
   ready: {
@@ -541,6 +549,7 @@ const zhCN: LocaleBundle = {
       initialAttemptTitle: index => `第 ${index} 次求解`,
       reweightedAttemptTitle: index =>
         `第 ${index} 次求解（按上一轮冗余结果重新加权）`,
+      surplusTypeMilpAttemptTitle: '冗余种类最小化（混合整数规划）',
       complexitySeedAttemptTitle: '复杂度预求解',
       complexityAttemptTitle: round => `复杂度主求解第 ${round} 轮`,
       linearProgramLabel: '线性规划',
@@ -548,6 +557,7 @@ const zhCN: LocaleBundle = {
       optimalStatusLabel: '已找到最优解',
       infeasibleStatusLabel: '无可行解',
       invalidInputStatusLabel: '输入无效',
+      timedoutStatusLabel: '超时（近似解）',
       attemptHeading: (context, modelKind, status) =>
         `${context}：${modelKind}，${status}。`,
       attemptModelSummary: (
@@ -562,6 +572,13 @@ const zhCN: LocaleBundle = {
         `本轮耗时：建模 ${build}，求解 ${solve}，小计 ${total}。`,
       attemptSurplus: (itemCount, rate) =>
         `本轮冗余：${itemCount} 种，合计 ${rate} / 分。`,
+      attemptObjectiveCost: (objectiveLabel, value) =>
+        `本轮${objectiveLabel}代价 ${value}。`,
+      reweightTerminationConverged: '冗余产物已收敛至 1 种以下，无需继续加权。',
+      reweightTerminationStagnant: '连续多轮结果未变化，停止迭代。',
+      reweightTerminationMaxRounds: '已达到最大迭代轮数。',
+      reweightTerminationDeadline: '已超出时间预算。',
+      reweightTerminationInfeasible: '加权后求解未能找到可行解。',
     },
   },
   ready: {

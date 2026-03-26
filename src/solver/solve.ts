@@ -1,5 +1,5 @@
 import { solve as solveLinearProgram } from 'yalps';
-import type { Model, Solution } from 'yalps';
+import type { Model, Options as SolverOptions, Solution } from 'yalps';
 import type {
   ProliferatorMode,
   ResolvedBuildingSpec,
@@ -31,9 +31,10 @@ const ALLOW_SURPLUS_SYNC_BUDGET_MS = 200;
 const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 5;
 const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 256;
 const ALLOW_SURPLUS_REWEIGHT_MAX_EXPONENT = 4;
-const ALLOW_SURPLUS_INACTIVE_WEIGHT_MULTIPLIER = 1.25;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
+const SURPLUS_MILP_TIMEOUT_MS = 500;
+const SURPLUS_MILP_TOLERANCE = 0.10;
 const VALID_PROLIFERATOR_MODES: ProliferatorMode[] = ['none', 'speed', 'productivity'];
 
 interface ValidateResult {
@@ -1434,11 +1435,16 @@ function buildSolveAuditAttempt(params: {
   optionCount: number;
   constraintCount: number;
   variableCount: number;
+  binaryCount?: number;
   buildDurationMs: number;
   solveDurationMs: number;
   status: string;
   surplusItemCount?: number;
   surplusRatePerMin?: number;
+  primaryObjectiveValue?: number;
+  surplusWeights?: ReadonlyMap<string, number>;
+  isBestCandidate?: boolean;
+  stagnantRounds?: number;
 }): SolveAuditAttempt {
   const {
     phase,
@@ -1449,11 +1455,16 @@ function buildSolveAuditAttempt(params: {
     optionCount,
     constraintCount,
     variableCount,
+    binaryCount,
     buildDurationMs,
     solveDurationMs,
     status,
     surplusItemCount,
     surplusRatePerMin,
+    primaryObjectiveValue,
+    surplusWeights,
+    isBestCandidate,
+    stagnantRounds,
   } = params;
 
   return {
@@ -1465,12 +1476,17 @@ function buildSolveAuditAttempt(params: {
     optionCount,
     constraintCount,
     variableCount,
+    binaryCount,
     buildDurationMs,
     solveDurationMs,
     totalDurationMs: buildDurationMs + solveDurationMs,
     status,
     surplusItemCount,
     surplusRatePerMin,
+    primaryObjectiveValue,
+    surplusWeights: surplusWeights ? Object.fromEntries(surplusWeights) : undefined,
+    isBestCandidate,
+    stagnantRounds,
   };
 }
 
@@ -1687,6 +1703,268 @@ function buildComplexityModel(params: {
   };
 }
 
+/** Weight for recipe-usage binary indicators in the surplus-type MILP.
+ *  Surplus type indicators have weight 1 (integer), so recipe count is a
+ *  secondary tiebreaker: 100 recipes = 1 surplus type.  Typical recipe
+ *  counts are < 50, so surplus type count always dominates. */
+const SURPLUS_MILP_RECIPE_WEIGHT = 1e-2;
+
+function buildSurplusTypeMilpModel(params: {
+  request: SolveRequest;
+  compiledOptions: CompiledOptionContext[];
+  targetRateMap: Map<string, number>;
+  externalItemIds: Set<string>;
+  surplusUpperBound: number;
+  recipeLinkUpperBound: number;
+  /** Option IDs with non-zero rates in the LP solution — only recipes
+   *  that are actually used get binary indicators, dramatically reducing
+   *  the number of binaries for the branch-and-bound solver. */
+  activeOptionIds: ReadonlySet<string>;
+  /** Item IDs that could potentially accumulate surplus if the MILP
+   *  changes recipe usage.  Includes LP surplus items plus all output
+   *  items of LP-active recipes. */
+  surplusCandidateItemIds: ReadonlySet<string>;
+}): {
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  involvedItemCount: number;
+  activeRecipeCount: number;
+  binaryCount: number;
+} {
+  const {
+    request,
+    compiledOptions,
+    targetRateMap,
+    externalItemIds,
+    surplusUpperBound,
+    recipeLinkUpperBound,
+    activeOptionIds,
+    surplusCandidateItemIds,
+  } = params;
+
+  const activeOptions = collectModelOptions(request, compiledOptions);
+  const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
+  const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
+  const variables: Record<string, Record<string, number>> = {};
+  const binaries = new Set<string>();
+
+  // Build recipe → option mapping for recipe-usage linking constraints.
+  const recipeUsageMap = new Map<string, string[]>();
+
+  // For each item, collect the set of recipes that produce it (positive net
+  // output) and whether any recipe consumes it.  Used to identify:
+  // (a) items that can never have surplus (no producer exists)
+  // (b) required recipes (sole producer of a consumed/target item)
+  const itemProducerRecipes = new Map<string, Set<string>>();
+  const itemIsConsumed = new Set<string>();
+
+  for (const { option, recipe } of activeOptions) {
+    const coefficients: Record<string, number> = {
+      __objective__: buildObjectiveCoefficient(request, recipe, option),
+    };
+    for (const [itemId, amount] of option.netItemEntries) {
+      coefficients[itemId] = amount;
+      if (amount > EPSILON) {
+        let producers = itemProducerRecipes.get(itemId);
+        if (!producers) {
+          producers = new Set();
+          itemProducerRecipes.set(itemId, producers);
+        }
+        producers.add(recipe.recipeId);
+      } else if (amount < -EPSILON) {
+        itemIsConsumed.add(itemId);
+      }
+    }
+    variables[option.optionId] = coefficients;
+
+    const optionIds = recipeUsageMap.get(recipe.recipeId) ?? [];
+    optionIds.push(option.optionId);
+    recipeUsageMap.set(recipe.recipeId, optionIds);
+  }
+
+  // A recipe is required if it is the sole producer of any item that must
+  // be produced (target item or consumed by another recipe).  Its binary
+  // indicator can be fixed to 1 (i.e. omitted), reducing the MILP search
+  // space without changing the feasible set.
+  const requiredRecipeIds = new Set<string>();
+  for (const itemId of involvedItemIds) {
+    const producers = itemProducerRecipes.get(itemId);
+    if (!producers || producers.size !== 1) {
+      continue;
+    }
+    const isTarget = (targetRateMap.get(itemId) ?? 0) > EPSILON;
+    if (isTarget || itemIsConsumed.has(itemId)) {
+      requiredRecipeIds.add(producers.values().next().value!);
+    }
+  }
+
+  // Items that have no producing recipe can never accumulate surplus —
+  // their surplus variable will always be zero.  Skip their binary
+  // indicator to shrink the MILP.
+  //
+  // Additionally, if ALL recipes that touch an item (produce or consume)
+  // are required, the MILP cannot change that item's supply/demand balance,
+  // so it can never gain surplus either.
+  const itemConsumerRecipes = new Map<string, Set<string>>();
+  for (const { option, recipe } of activeOptions) {
+    for (const [itemId, amount] of option.netItemEntries) {
+      if (amount < -EPSILON) {
+        let consumers = itemConsumerRecipes.get(itemId);
+        if (!consumers) {
+          consumers = new Set();
+          itemConsumerRecipes.set(itemId, consumers);
+        }
+        consumers.add(recipe.recipeId);
+      }
+    }
+  }
+
+  const itemCanHaveSurplus = new Set<string>();
+  for (const itemId of involvedItemIds) {
+    const producers = itemProducerRecipes.get(itemId);
+    if (!producers) {
+      continue; // no producer → surplus always 0
+    }
+    // Check if any producer or consumer is non-required (i.e. the MILP
+    // could toggle it, potentially disrupting this item's balance).
+    let hasToggleableRecipe = false;
+    for (const recipeId of producers) {
+      if (!requiredRecipeIds.has(recipeId)) {
+        hasToggleableRecipe = true;
+        break;
+      }
+    }
+    if (!hasToggleableRecipe) {
+      const consumers = itemConsumerRecipes.get(itemId);
+      if (consumers) {
+        for (const recipeId of consumers) {
+          if (!requiredRecipeIds.has(recipeId)) {
+            hasToggleableRecipe = true;
+            break;
+          }
+        }
+      }
+    }
+    if (hasToggleableRecipe) {
+      itemCanHaveSurplus.add(itemId);
+    }
+  }
+
+  for (const itemId of externalItemIds) {
+    variables[`ext:${itemId}`] = {
+      [itemId]: 1,
+      __objective__: buildExternalInputObjectiveCoefficient(request),
+    };
+  }
+
+  for (const itemId of involvedItemIds) {
+    const linkConstraint = `__surplus_type_link:${itemId}`;
+    constraints[linkConstraint] = { min: 0 };
+
+    // Surplus variable: absorbs excess production, no direct objective cost.
+    variables[buildSurplusVariableName(itemId)] = {
+      [itemId]: -1,
+      [linkConstraint]: -1,
+    };
+
+    // Binary indicator: y_i = 1 iff item i has any surplus.
+    // Only add for items that (a) have a producing recipe and (b) had
+    // non-zero surplus in the LP solution.  Other items can still
+    // accumulate surplus via the continuous variable, but won't incur
+    // the binary indicator cost in the MILP objective.
+    if (itemCanHaveSurplus.has(itemId) && surplusCandidateItemIds.has(itemId)) {
+      const indicatorName = `__surplus_type:${itemId}`;
+      variables[indicatorName] = {
+        [linkConstraint]: surplusUpperBound,
+        __objective__: 1,
+      };
+      binaries.add(indicatorName);
+    }
+  }
+
+  // Recipe-usage binary indicators: penalise the number of distinct recipes
+  // used.  This prevents the solver from adding entire production chains
+  // (e.g. bio-chain) solely to consume a small byproduct surplus.
+  // Only add indicators for recipes that:
+  // - have at least one option active in the LP solution (unused recipes
+  //   already contribute 0 and don't need binary tracking)
+  // - are NOT required (sole producer of some needed item — their binary
+  //   would always be 1, so tracking them wastes branch-and-bound effort)
+  for (const [recipeId, optionIds] of recipeUsageMap.entries()) {
+    if (requiredRecipeIds.has(recipeId)) {
+      continue;
+    }
+    const hasActiveOption = optionIds.some(id => activeOptionIds.has(id));
+    if (!hasActiveOption) {
+      continue;
+    }
+    const constraintName = `__surplus_recipe_link:${recipeId}`;
+    constraints[constraintName] = { max: 0 };
+    for (const optionId of optionIds) {
+      addVariableCoefficient(variables, optionId, constraintName, 1);
+    }
+    const usageVariable = `__surplus_recipe:${recipeId}`;
+    const coefficients = ensureVariableCoefficients(variables, usageVariable);
+    coefficients.__objective__ = SURPLUS_MILP_RECIPE_WEIGHT;
+    binaries.add(usageVariable);
+    addVariableCoefficient(variables, usageVariable, constraintName, -recipeLinkUpperBound);
+  }
+
+  return {
+    model: {
+      direction: 'minimize',
+      objective: '__objective__',
+      constraints,
+      variables,
+      binaries,
+    },
+    activeOptions,
+    involvedItemCount: involvedItemIds.length,
+    activeRecipeCount: countActiveRecipeIds(activeOptions),
+    binaryCount: binaries.size,
+  };
+}
+
+function estimateSurplusUpperBound(
+  solutionVariables: Iterable<[string, number]>,
+  targetRateMap: Map<string, number>
+): number {
+  let totalRate = 0;
+  let maxRate = 0;
+
+  for (const [variableName, value] of solutionVariables) {
+    if (value <= EPSILON || variableName.startsWith('__')) {
+      continue;
+    }
+    totalRate += value;
+    maxRate = Math.max(maxRate, value);
+  }
+
+  const totalTargetRate = Array.from(targetRateMap.values())
+    .filter(rate => rate > EPSILON)
+    .reduce((sum, rate) => sum + rate, 0);
+
+  return Math.max(COMPLEXITY_LINK_BOUND_FLOOR, totalRate * 2, maxRate * 8, totalTargetRate * 8);
+}
+
+/** Estimate a tight big-M for recipe-usage linking constraints.
+ *  Only needs to bound the maximum rate of any single option variable —
+ *  much smaller than the surplus upper bound. */
+function estimateRecipeLinkUpperBound(
+  solutionVariables: Iterable<[string, number]>
+): number {
+  let maxRate = 0;
+  for (const [variableName, value] of solutionVariables) {
+    if (value <= EPSILON || variableName.startsWith('__')) {
+      continue;
+    }
+    maxRate = Math.max(maxRate, value);
+  }
+  // Use 4× the max observed option rate as headroom for the MILP to
+  // explore alternative recipe combinations.
+  return Math.max(COMPLEXITY_LINK_BOUND_FLOOR, maxRate * 4);
+}
+
 function roundUpCount(value: number): number {
   if (value <= EPSILON) {
     return 0;
@@ -1783,7 +2061,6 @@ function compareLinearSolveCandidates(left: LinearSolveCandidate, right: LinearS
 
 function buildReweightedSurplusWeights(
   metrics: SurplusSolutionMetrics,
-  candidateItemIds: readonly string[],
   round: number
 ): ReadonlyMap<string, number> | undefined {
   if (metrics.activeItemIds.length <= 1 || metrics.totalRatePerMin <= SURPLUS_OUTPUT_EPSILON) {
@@ -1802,17 +2079,6 @@ function buildReweightedSurplusWeights(
         Math.min(ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR, Math.pow(baseWeight, exponent))
       )
     );
-  }
-  if (round <= 0 || weights.size === 0) {
-    return weights;
-  }
-
-  const inactiveWeightFloor =
-    Math.max(...weights.values()) * ALLOW_SURPLUS_INACTIVE_WEIGHT_MULTIPLIER;
-  for (const itemId of candidateItemIds) {
-    if (!weights.has(itemId)) {
-      weights.set(itemId, inactiveWeightFloor);
-    }
   }
   return weights;
 }
@@ -2120,6 +2386,7 @@ function solveCatalogRequestValidated(
   let solution: Solution<string>;
   let modelDurationMs = 0;
   let lpDurationMs = 0;
+  let surplusReweightTermination: SolveAudit['surplusReweightTermination'];
   const buildSolveAudit = (resultDurationMs: number, totalDurationMs: number): SolveAudit => ({
     prunedItemCount: compiledGraph.itemIds.length,
     prunedRecipeCount: compiledGraph.recipes.length,
@@ -2131,9 +2398,12 @@ function solveCatalogRequestValidated(
     resultDurationMs,
     totalDurationMs,
     attempts: auditAttempts,
+    surplusReweightTermination,
   });
 
-  const buildLinear = (surplusWeights?: ReadonlyMap<string, number>) => {
+  const buildLinear = (
+    surplusWeights?: ReadonlyMap<string, number>
+  ) => {
     const startedAt = currentTimeMs();
     const build = buildLinearModel(
       request,
@@ -2150,9 +2420,9 @@ function solveCatalogRequestValidated(
     };
   };
 
-  const solveModel = (candidateModel: Model<string, string>) => {
+  const solveModel = (candidateModel: Model<string, string>, options?: SolverOptions) => {
     const startedAt = currentTimeMs();
-    const candidateSolution = solveLinearProgram(candidateModel);
+    const candidateSolution = solveLinearProgram(candidateModel, options);
     const durationMs = currentTimeMs() - startedAt;
     lpDurationMs += durationMs;
     return {
@@ -2295,6 +2565,10 @@ function solveCatalogRequestValidated(
           request.balancePolicy === 'allow_surplus'
             ? collectSurplusSolutionMetrics(initialSolve.solution.variables).totalRatePerMin
             : undefined,
+        primaryObjectiveValue:
+          request.balancePolicy === 'allow_surplus' && initialSolve.solution.status === 'optimal'
+            ? buildPrimaryObjectiveValue(request, activeOptions, initialSolve.solution.variables)
+            : undefined,
       })
     );
 
@@ -2310,22 +2584,76 @@ function solveCatalogRequestValidated(
       let stagnantRounds = 0;
       const maxReweightedRounds = Math.max(0, ALLOW_SURPLUS_MAX_LINEAR_SOLVES - 1);
 
-      for (let round = 0; round < maxReweightedRounds && currentTimeMs() < deadline; round += 1) {
+      for (let round = 0; round < maxReweightedRounds; round += 1) {
+        if (currentTimeMs() >= deadline) {
+          surplusReweightTermination = 'deadline';
+          break;
+        }
+
         const surplusWeights = buildReweightedSurplusWeights(
           bestCandidate.surplus,
-          compiledGraph.itemIds,
           round
         );
         if (!surplusWeights) {
+          surplusReweightTermination = 'converged';
           break;
         }
 
         const weightedBuild = buildLinear(surplusWeights);
         if (currentTimeMs() >= deadline) {
+          surplusReweightTermination = 'deadline';
           break;
         }
 
         const weightedSolve = solveModel(weightedBuild.model);
+        const weightedSurplusMetrics = collectSurplusSolutionMetrics(
+          weightedSolve.solution.variables
+        );
+
+        if (weightedSolve.solution.status !== 'optimal') {
+          auditAttempts.push(
+            buildSolveAuditAttempt({
+              phase: 'reweighted_lp',
+              round,
+              modelKind: 'lp',
+              itemCount: weightedBuild.involvedItemCount,
+              recipeCount: weightedBuild.activeRecipeCount,
+              optionCount: weightedBuild.activeOptions.length,
+              constraintCount: Object.keys(weightedBuild.model.constraints).length,
+              variableCount: Object.keys(weightedBuild.model.variables).length,
+              buildDurationMs: weightedBuild.buildDurationMs,
+              solveDurationMs: weightedSolve.solveDurationMs,
+              status: weightedSolve.solution.status,
+              surplusItemCount: weightedSurplusMetrics.activeItemIds.length,
+              surplusRatePerMin: weightedSurplusMetrics.totalRatePerMin,
+              surplusWeights,
+            })
+          );
+          surplusReweightTermination = 'infeasible';
+          break;
+        }
+
+        const candidate = buildLinearSolveCandidate({
+          request,
+          model: weightedBuild.model,
+          activeOptions: weightedBuild.activeOptions,
+          solution: weightedSolve.solution,
+        });
+
+        const isBest = compareLinearSolveCandidates(candidate, bestCandidate) < 0;
+        if (isBest) {
+          bestCandidate = candidate;
+        }
+
+        const candidateDelta = compareLinearSolveCandidates(candidate, previousCandidate);
+        const sameSupport =
+          candidate.surplus.activeItemIds.length === previousCandidate.surplus.activeItemIds.length &&
+          candidate.surplus.activeItemIds.every(
+            (itemId, index) => itemId === previousCandidate.surplus.activeItemIds[index]
+          );
+        stagnantRounds = sameSupport && candidateDelta === 0 ? stagnantRounds + 1 : 0;
+        previousCandidate = candidate;
+
         auditAttempts.push(
           buildSolveAuditAttempt({
             phase: 'reweighted_lp',
@@ -2339,37 +2667,161 @@ function solveCatalogRequestValidated(
             buildDurationMs: weightedBuild.buildDurationMs,
             solveDurationMs: weightedSolve.solveDurationMs,
             status: weightedSolve.solution.status,
-            surplusItemCount:
-              collectSurplusSolutionMetrics(weightedSolve.solution.variables).activeItemIds.length,
-            surplusRatePerMin:
-              collectSurplusSolutionMetrics(weightedSolve.solution.variables).totalRatePerMin,
+            surplusItemCount: weightedSurplusMetrics.activeItemIds.length,
+            surplusRatePerMin: weightedSurplusMetrics.totalRatePerMin,
+            primaryObjectiveValue: candidate.primaryObjectiveValue,
+            surplusWeights,
+            isBestCandidate: isBest,
+            stagnantRounds,
           })
         );
-        if (weightedSolve.solution.status !== 'optimal') {
-          break;
-        }
 
-        const candidate = buildLinearSolveCandidate({
-          request,
-          model: weightedBuild.model,
-          activeOptions: weightedBuild.activeOptions,
-          solution: weightedSolve.solution,
-        });
-
-        if (compareLinearSolveCandidates(candidate, bestCandidate) < 0) {
-          bestCandidate = candidate;
-        }
-
-        const candidateDelta = compareLinearSolveCandidates(candidate, previousCandidate);
-        const sameSupport =
-          candidate.surplus.activeItemIds.length === previousCandidate.surplus.activeItemIds.length &&
-          candidate.surplus.activeItemIds.every(
-            (itemId, index) => itemId === previousCandidate.surplus.activeItemIds[index]
-          );
-        stagnantRounds = sameSupport && candidateDelta === 0 ? stagnantRounds + 1 : 0;
-        previousCandidate = candidate;
         if (stagnantRounds >= 3) {
+          surplusReweightTermination = 'stagnant';
           break;
+        }
+
+        if (round === maxReweightedRounds - 1) {
+          surplusReweightTermination = 'max_rounds';
+        }
+      }
+
+      // Surplus type + recipe count minimization MILP: the weighted LP
+      // reweighting loop minimises weighted surplus cost, but cannot reduce
+      // surplus TYPE COUNT because spreading surplus across many low-weight
+      // items is always cheaper than concentrating it on fewer items.  Use a
+      // MILP with binary indicator variables to directly minimise type count
+      // and penalise recipe usage (preventing excessive recipe chains added
+      // solely to consume small byproduct surpluses).
+      {
+        const surplusUpperBound = estimateSurplusUpperBound(
+          bestCandidate.solution.variables,
+          targetRateMap
+        );
+        // Recipe link big-M only needs to bound the max total rate of any
+        // single recipe's options — much tighter than the surplus upper bound.
+        const recipeLinkUpperBound = estimateRecipeLinkUpperBound(
+          bestCandidate.solution.variables
+        );
+        // Collect option IDs that the LP solution actually uses — only
+        // these recipes need binary indicators in the MILP.
+        const activeOptionIds = new Set<string>();
+        for (const [varName, value] of bestCandidate.solution.variables) {
+          if (value > EPSILON && !varName.startsWith('__') && !varName.startsWith('ext:')) {
+            activeOptionIds.add(varName);
+          }
+        }
+        const lpSurplusItemIds = new Set(bestCandidate.surplus.activeItemIds);
+        // Surplus candidates: items that currently have surplus, plus all
+        // output items of LP-active non-required recipes.  When the MILP
+        // toggles a recipe off, its output items may accumulate surplus.
+        const surplusCandidateItemIds = new Set(lpSurplusItemIds);
+        for (const { option } of bestCandidate.activeOptions) {
+          const isActive = option.netItemEntries.some(
+            ([, amount]) => amount > EPSILON
+          ) && activeOptionIds.has(option.optionId);
+          if (isActive) {
+            for (const [itemId, amount] of option.netItemEntries) {
+              if (amount > EPSILON) {
+                surplusCandidateItemIds.add(itemId);
+              }
+            }
+          }
+        }
+        const milpBuildStartedAt = currentTimeMs();
+        const milpBuild = buildSurplusTypeMilpModel({
+          request,
+          compiledOptions: compiledGraph.options,
+          targetRateMap,
+          externalItemIds,
+          surplusUpperBound,
+          recipeLinkUpperBound,
+          activeOptionIds,
+          surplusCandidateItemIds,
+        });
+        const milpBuildDurationMs = currentTimeMs() - milpBuildStartedAt;
+        modelDurationMs += milpBuildDurationMs;
+
+        const milpSolve = solveModel(milpBuild.model, {
+          timeout: SURPLUS_MILP_TIMEOUT_MS,
+          tolerance: SURPLUS_MILP_TOLERANCE,
+        });
+        const milpSurplusMetrics = collectSurplusSolutionMetrics(
+          milpSolve.solution.variables
+        );
+
+        // Accept both optimal and timedout (best sub-optimal integer solution
+        // found before the deadline).
+        const milpUsable =
+          milpSolve.solution.status === 'optimal' ||
+          (milpSolve.solution.status === 'timedout' && !isNaN(milpSolve.solution.result));
+
+        if (milpUsable) {
+          const milpCandidate = buildLinearSolveCandidate({
+            request,
+            model: milpBuild.model,
+            activeOptions: milpBuild.activeOptions,
+            solution: milpSolve.solution,
+          });
+
+          // The MILP objective already balances surplus type count vs recipe
+          // count vs power.  Accept the MILP result whenever it does not
+          // increase surplus type count — don't let the LP's lower surplus
+          // *rate* override the MILP's recipe-count savings.
+          const isBest =
+            milpCandidate.surplus.activeItemIds.length <=
+            bestCandidate.surplus.activeItemIds.length;
+
+          auditAttempts.push(
+            buildSolveAuditAttempt({
+              phase: 'surplus_type_milp',
+              modelKind: 'milp',
+              itemCount: milpBuild.involvedItemCount,
+              recipeCount: milpBuild.activeRecipeCount,
+              optionCount: milpBuild.activeOptions.length,
+              constraintCount: Object.keys(milpBuild.model.constraints).length,
+              variableCount: Object.keys(milpBuild.model.variables).length,
+              binaryCount: milpBuild.binaryCount,
+              buildDurationMs: milpBuildDurationMs,
+              solveDurationMs: milpSolve.solveDurationMs,
+              status: milpSolve.solution.status,
+              surplusItemCount: milpSurplusMetrics.activeItemIds.length,
+              surplusRatePerMin: milpSurplusMetrics.totalRatePerMin,
+              primaryObjectiveValue: milpCandidate.primaryObjectiveValue,
+              isBestCandidate: isBest,
+            })
+          );
+
+          if (isBest) {
+            bestCandidate = milpCandidate;
+            // Normalize timedout → optimal: the MILP found a valid integer
+            // solution (just not provably optimal within the time budget),
+            // which is good enough for downstream code that checks status.
+            if (bestCandidate.solution.status === 'timedout') {
+              bestCandidate = {
+                ...bestCandidate,
+                solution: { ...bestCandidate.solution, status: 'optimal' },
+              };
+            }
+          }
+        } else {
+          auditAttempts.push(
+            buildSolveAuditAttempt({
+              phase: 'surplus_type_milp',
+              modelKind: 'milp',
+              itemCount: milpBuild.involvedItemCount,
+              recipeCount: milpBuild.activeRecipeCount,
+              optionCount: milpBuild.activeOptions.length,
+              constraintCount: Object.keys(milpBuild.model.constraints).length,
+              variableCount: Object.keys(milpBuild.model.variables).length,
+              binaryCount: milpBuild.binaryCount,
+              buildDurationMs: milpBuildDurationMs,
+              solveDurationMs: milpSolve.solveDurationMs,
+              status: milpSolve.solution.status,
+              surplusItemCount: milpSurplusMetrics.activeItemIds.length,
+              surplusRatePerMin: milpSurplusMetrics.totalRatePerMin,
+            })
+          );
         }
       }
 
