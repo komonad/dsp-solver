@@ -213,6 +213,42 @@ export interface LocaleBundle {
     netLabel: string;
     solveRequestJson: string;
     solveResultJson: string;
+    audit: {
+      overviewTitle: string;
+      overviewSummary: (
+        itemCount: string,
+        recipeCount: string,
+        optionCount: string,
+        rawInputCount: string
+      ) => string;
+      overviewTimings: (
+        total: string,
+        graph: string,
+        model: string,
+        solve: string,
+        result: string
+      ) => string;
+      attemptsTitle: string;
+      initialAttemptTitle: (index: number) => string;
+      reweightedAttemptTitle: (index: number) => string;
+      complexitySeedAttemptTitle: string;
+      complexityAttemptTitle: (round: number) => string;
+      linearProgramLabel: string;
+      mixedIntegerProgramLabel: string;
+      optimalStatusLabel: string;
+      infeasibleStatusLabel: string;
+      invalidInputStatusLabel: string;
+      attemptHeading: (context: string, modelKind: string, status: string) => string;
+      attemptModelSummary: (
+        itemCount: string,
+        recipeCount: string,
+        optionCount: string,
+        constraintCount: string,
+        variableCount: string
+      ) => string;
+      attemptTimings: (build: string, solve: string, total: string) => string;
+      attemptSurplus: (itemCount: string, rate: string) => string;
+    };
   };
   ready: {
     title: string;
@@ -487,6 +523,38 @@ const zhCN: LocaleBundle = {
     netLabel: '净值',
     solveRequestJson: '求解请求 JSON',
     solveResultJson: '求解结果 JSON',
+    audit: {
+      overviewTitle: '本次求解概览',
+      overviewSummary: (itemCount, recipeCount, optionCount, rawInputCount) =>
+        `图裁剪后保留 ${itemCount} 个物品、${recipeCount} 个配方、${optionCount} 个候选方案，原矿输入 ${rawInputCount} 种。`,
+      overviewTimings: (total, graph, model, solve, result) =>
+        `总耗时 ${total}，其中建图 ${graph}，建模 ${model}，求解 ${solve}，结果整理 ${result}。`,
+      attemptsTitle: '实际求解过程',
+      initialAttemptTitle: index => `第 ${index} 次求解`,
+      reweightedAttemptTitle: index =>
+        `第 ${index} 次求解（按上一轮冗余结果重新加权）`,
+      complexitySeedAttemptTitle: '复杂度预求解',
+      complexityAttemptTitle: round => `复杂度主求解第 ${round} 轮`,
+      linearProgramLabel: '线性规划',
+      mixedIntegerProgramLabel: '混合整数规划',
+      optimalStatusLabel: '已找到最优解',
+      infeasibleStatusLabel: '无可行解',
+      invalidInputStatusLabel: '输入无效',
+      attemptHeading: (context, modelKind, status) =>
+        `${context}：${modelKind}，${status}。`,
+      attemptModelSummary: (
+        itemCount,
+        recipeCount,
+        optionCount,
+        constraintCount,
+        variableCount
+      ) =>
+        `本轮模型包含 ${itemCount} 个物品平衡条件、${recipeCount} 个配方、${optionCount} 个候选方案、${constraintCount} 条约束、${variableCount} 个变量。`,
+      attemptTimings: (build, solve, total) =>
+        `本轮耗时：建模 ${build}，求解 ${solve}，小计 ${total}。`,
+      attemptSurplus: (itemCount, rate) =>
+        `本轮冗余：${itemCount} 种，合计 ${rate} / 分。`,
+    },
   },
   ready: {
     title: '准备就绪',

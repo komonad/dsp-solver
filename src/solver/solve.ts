@@ -14,6 +14,8 @@ import type {
   ItemBalanceEntry,
   ItemRate,
   RecipePlan,
+  SolveAudit,
+  SolveAuditAttempt,
   SolveResult,
 } from './result';
 import { recordSolverPerf } from './perf';
@@ -49,6 +51,7 @@ interface CollectRecipesResult {
 }
 
 interface CompiledSolveGraph {
+  itemIds: string[];
   recipes: ResolvedRecipeSpec[];
   options: CompiledOptionContext[];
   messages: string[];
@@ -753,6 +756,11 @@ function compileSolveGraph(
   }
 
   return {
+    itemIds: collectCompiledGraphItemIds(
+      targetItemIds,
+      effectiveRawInputItemIds,
+      compiledOptions
+    ),
     recipes,
     options: compiledOptions,
     messages: Array.from(diagnostics),
@@ -1194,13 +1202,118 @@ function collectExternalItemIds(
   return externalItemIds;
 }
 
+function countActiveRecipeIds(activeOptions: CompiledOptionContext[]): number {
+  return new Set(activeOptions.map(({ recipe }) => recipe.recipeId)).size;
+}
+
+function collectCompiledGraphItemIds(
+  targetItemIds: Iterable<string>,
+  resolvedRawInputItemIds: Iterable<string>,
+  compiledOptions: CompiledOptionContext[]
+): string[] {
+  const itemIds = new Set<string>();
+
+  for (const itemId of targetItemIds) {
+    itemIds.add(itemId);
+  }
+
+  for (const itemId of resolvedRawInputItemIds) {
+    itemIds.add(itemId);
+  }
+
+  for (const { option } of compiledOptions) {
+    for (const itemId of Object.keys(option.inputPerRun)) {
+      itemIds.add(itemId);
+    }
+
+    for (const itemId of Object.keys(option.outputPerRun)) {
+      itemIds.add(itemId);
+    }
+
+    if (option.proliferatorItemId) {
+      itemIds.add(option.proliferatorItemId);
+    }
+  }
+
+  return Array.from(itemIds).sort((left, right) => left.localeCompare(right));
+}
+
+function buildEmptySolveAudit(): SolveAudit {
+  return {
+    prunedItemCount: 0,
+    prunedRecipeCount: 0,
+    prunedOptionCount: 0,
+    resolvedRawInputCount: 0,
+    graphDurationMs: 0,
+    modelDurationMs: 0,
+    solveDurationMs: 0,
+    resultDurationMs: 0,
+    totalDurationMs: 0,
+    attempts: [],
+  };
+}
+
+function buildSolveAuditAttempt(params: {
+  phase: SolveAuditAttempt['phase'];
+  round?: number;
+  modelKind: SolveAuditAttempt['modelKind'];
+  itemCount: number;
+  recipeCount: number;
+  optionCount: number;
+  constraintCount: number;
+  variableCount: number;
+  buildDurationMs: number;
+  solveDurationMs: number;
+  status: string;
+  surplusItemCount?: number;
+  surplusRatePerMin?: number;
+}): SolveAuditAttempt {
+  const {
+    phase,
+    round,
+    modelKind,
+    itemCount,
+    recipeCount,
+    optionCount,
+    constraintCount,
+    variableCount,
+    buildDurationMs,
+    solveDurationMs,
+    status,
+    surplusItemCount,
+    surplusRatePerMin,
+  } = params;
+
+  return {
+    phase,
+    round,
+    modelKind,
+    itemCount,
+    recipeCount,
+    optionCount,
+    constraintCount,
+    variableCount,
+    buildDurationMs,
+    solveDurationMs,
+    totalDurationMs: buildDurationMs + solveDurationMs,
+    status,
+    surplusItemCount,
+    surplusRatePerMin,
+  };
+}
+
 function buildLinearModel(
   request: SolveRequest,
   compiledOptions: CompiledOptionContext[],
   targetRateMap: Map<string, number>,
   externalItemIds: Set<string>,
   surplusWeights?: ReadonlyMap<string, number>
-): { model: Model<string, string>; activeOptions: CompiledOptionContext[] } {
+): {
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  involvedItemCount: number;
+  activeRecipeCount: number;
+} {
   const activeOptions = collectModelOptions(request, compiledOptions);
   const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
   const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
@@ -1246,6 +1359,8 @@ function buildLinearModel(
       variables,
     },
     activeOptions,
+    involvedItemCount: involvedItemIds.length,
+    activeRecipeCount: countActiveRecipeIds(activeOptions),
   };
 }
 
@@ -1256,7 +1371,12 @@ function buildComplexityModel(params: {
   targetRateMap: Map<string, number>;
   externalItemIds: Set<string>;
   linkUpperBound: number;
-}): { model: Model<string, string>; activeOptions: CompiledOptionContext[] } {
+}): {
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  involvedItemCount: number;
+  activeRecipeCount: number;
+} {
   const {
     catalog,
     request,
@@ -1403,6 +1523,8 @@ function buildComplexityModel(params: {
       binaries,
     },
     activeOptions,
+    involvedItemCount: involvedItemIds.length,
+    activeRecipeCount: countActiveRecipeIds(activeOptions),
   };
 }
 
@@ -1579,8 +1701,15 @@ function buildInfeasibleSolveResult(params: {
   resolvedRawInputItemIds: string[];
   diagnostics: string[];
   infoMessages: string[];
+  solveAudit?: SolveAudit;
 }): SolveResult {
-  const { targetRateMap, resolvedRawInputItemIds, diagnostics, infoMessages } = params;
+  const {
+    targetRateMap,
+    resolvedRawInputItemIds,
+    diagnostics,
+    infoMessages,
+    solveAudit,
+  } = params;
 
   return {
     status: 'infeasible',
@@ -1589,6 +1718,7 @@ function buildInfeasibleSolveResult(params: {
       infoMessages,
       unmetPreferences: [],
     },
+    solveAudit: solveAudit ?? buildEmptySolveAudit(),
     resolvedRawInputItemIds,
     targets: Array.from(targetRateMap.entries()).map(([itemId, requestedRatePerMin]) => ({
       itemId,
@@ -1810,11 +1940,24 @@ function solveCatalogRequestValidated(
     getCatalogSolveCache(catalog).anyRecipeOutputIndex
   );
   const diagnostics = [...compiledGraph.messages];
+  const auditAttempts: SolveAuditAttempt[] = [];
   let model: Model<string, string>;
   let activeOptions: CompiledOptionContext[];
   let solution: Solution<string>;
   let modelDurationMs = 0;
   let lpDurationMs = 0;
+  const buildSolveAudit = (resultDurationMs: number, totalDurationMs: number): SolveAudit => ({
+    prunedItemCount: compiledGraph.itemIds.length,
+    prunedRecipeCount: compiledGraph.recipes.length,
+    prunedOptionCount: compiledGraph.options.length,
+    resolvedRawInputCount: resolvedRawInputItemIds.size,
+    graphDurationMs: graphFinishedAt - solveStartedAt,
+    modelDurationMs,
+    solveDurationMs: lpDurationMs,
+    resultDurationMs,
+    totalDurationMs,
+    attempts: auditAttempts,
+  });
 
   const buildLinear = (surplusWeights?: ReadonlyMap<string, number>) => {
     const startedAt = currentTimeMs();
@@ -1825,15 +1968,23 @@ function solveCatalogRequestValidated(
       externalItemIds,
       surplusWeights
     );
-    modelDurationMs += currentTimeMs() - startedAt;
-    return build;
+    const durationMs = currentTimeMs() - startedAt;
+    modelDurationMs += durationMs;
+    return {
+      ...build,
+      buildDurationMs: durationMs,
+    };
   };
 
   const solveModel = (candidateModel: Model<string, string>) => {
     const startedAt = currentTimeMs();
     const candidateSolution = solveLinearProgram(candidateModel);
-    lpDurationMs += currentTimeMs() - startedAt;
-    return candidateSolution;
+    const durationMs = currentTimeMs() - startedAt;
+    lpDurationMs += durationMs;
+    return {
+      solution: candidateSolution,
+      solveDurationMs: durationMs,
+    };
   };
 
   if (request.objective === 'min_complexity') {
@@ -1848,9 +1999,24 @@ function solveCatalogRequestValidated(
       targetRateMap,
       externalItemIds
     );
-    modelDurationMs += currentTimeMs() - seedBuildStartedAt;
-    const seedSolution = solveModel(seedBuild.model);
-    if (seedSolution.status !== 'optimal') {
+    const seedBuildDurationMs = currentTimeMs() - seedBuildStartedAt;
+    modelDurationMs += seedBuildDurationMs;
+    const seedSolve = solveModel(seedBuild.model);
+    auditAttempts.push(
+      buildSolveAuditAttempt({
+        phase: 'complexity_seed_lp',
+        modelKind: 'lp',
+        itemCount: seedBuild.involvedItemCount,
+        recipeCount: seedBuild.activeRecipeCount,
+        optionCount: seedBuild.activeOptions.length,
+        constraintCount: Object.keys(seedBuild.model.constraints).length,
+        variableCount: Object.keys(seedBuild.model.variables).length,
+        buildDurationMs: seedBuildDurationMs,
+        solveDurationMs: seedSolve.solveDurationMs,
+        status: seedSolve.solution.status,
+      })
+    );
+    if (seedSolve.solution.status !== 'optimal') {
       return buildInfeasibleSolveResult({
         targetRateMap,
         resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds).sort((left, right) =>
@@ -1858,14 +2024,15 @@ function solveCatalogRequestValidated(
         ),
         diagnostics: [
           ...diagnostics,
-          `Complexity seed solve failed with status ${seedSolution.status}.`,
+          `Complexity seed solve failed with status ${seedSolve.solution.status}.`,
         ],
         infoMessages: [...compiledGraph.infoMessages],
+        solveAudit: buildSolveAudit(0, currentTimeMs() - solveStartedAt),
       });
     }
 
     const baseLinkUpperBound = estimateComplexityLinkUpperBound(
-      seedSolution.variables,
+      seedSolve.solution.variables,
       targetRateMap
     );
     let complexityModel: Model<string, string> | null = null;
@@ -1884,16 +2051,32 @@ function solveCatalogRequestValidated(
         externalItemIds,
         linkUpperBound,
       });
-      modelDurationMs += currentTimeMs() - buildStartedAt;
-      const candidateSolution = solveModel(complexityBuild.model);
-      if (candidateSolution.status !== 'optimal') {
-        lastFailureMessage = `Complexity MILP failed with status ${candidateSolution.status}.`;
+      const complexityBuildDurationMs = currentTimeMs() - buildStartedAt;
+      modelDurationMs += complexityBuildDurationMs;
+      const candidateSolve = solveModel(complexityBuild.model);
+      auditAttempts.push(
+        buildSolveAuditAttempt({
+          phase: 'complexity_milp',
+          round: auditAttempts.filter(entry => entry.phase === 'complexity_milp').length,
+          modelKind: 'milp',
+          itemCount: complexityBuild.involvedItemCount,
+          recipeCount: complexityBuild.activeRecipeCount,
+          optionCount: complexityBuild.activeOptions.length,
+          constraintCount: Object.keys(complexityBuild.model.constraints).length,
+          variableCount: Object.keys(complexityBuild.model.variables).length,
+          buildDurationMs: complexityBuildDurationMs,
+          solveDurationMs: candidateSolve.solveDurationMs,
+          status: candidateSolve.solution.status,
+        })
+      );
+      if (candidateSolve.solution.status !== 'optimal') {
+        lastFailureMessage = `Complexity MILP failed with status ${candidateSolve.solution.status}.`;
         continue;
       }
 
       complexityModel = complexityBuild.model;
       complexityOptions = complexityBuild.activeOptions;
-      complexitySolution = candidateSolution;
+      complexitySolution = candidateSolve.solution;
       break;
     }
 
@@ -1905,6 +2088,7 @@ function solveCatalogRequestValidated(
         ),
         diagnostics: [...diagnostics, lastFailureMessage],
         infoMessages: [...compiledGraph.infoMessages],
+        solveAudit: buildSolveAudit(0, currentTimeMs() - solveStartedAt),
       });
     }
 
@@ -1915,7 +2099,30 @@ function solveCatalogRequestValidated(
     const linearBuild = buildLinear();
     model = linearBuild.model;
     activeOptions = linearBuild.activeOptions;
-    solution = solveModel(model);
+    const initialSolve = solveModel(model);
+    solution = initialSolve.solution;
+    auditAttempts.push(
+      buildSolveAuditAttempt({
+        phase: 'initial_lp',
+        modelKind: 'lp',
+        itemCount: linearBuild.involvedItemCount,
+        recipeCount: linearBuild.activeRecipeCount,
+        optionCount: linearBuild.activeOptions.length,
+        constraintCount: Object.keys(linearBuild.model.constraints).length,
+        variableCount: Object.keys(linearBuild.model.variables).length,
+        buildDurationMs: linearBuild.buildDurationMs,
+        solveDurationMs: initialSolve.solveDurationMs,
+        status: initialSolve.solution.status,
+        surplusItemCount:
+          request.balancePolicy === 'allow_surplus'
+            ? collectSurplusSolutionMetrics(initialSolve.solution.variables).activeItemIds.length
+            : undefined,
+        surplusRatePerMin:
+          request.balancePolicy === 'allow_surplus'
+            ? collectSurplusSolutionMetrics(initialSolve.solution.variables).totalRatePerMin
+            : undefined,
+      })
+    );
 
     if (request.balancePolicy === 'allow_surplus' && solution.status === 'optimal') {
       let bestCandidate = buildLinearSolveCandidate({
@@ -1939,9 +2146,28 @@ function solveCatalogRequestValidated(
           break;
         }
 
-        const weightedSolution = solveModel(weightedBuild.model);
+        const weightedSolve = solveModel(weightedBuild.model);
         solveCount += 1;
-        if (weightedSolution.status !== 'optimal') {
+        auditAttempts.push(
+          buildSolveAuditAttempt({
+            phase: 'reweighted_lp',
+            round: auditAttempts.filter(entry => entry.phase === 'reweighted_lp').length,
+            modelKind: 'lp',
+            itemCount: weightedBuild.involvedItemCount,
+            recipeCount: weightedBuild.activeRecipeCount,
+            optionCount: weightedBuild.activeOptions.length,
+            constraintCount: Object.keys(weightedBuild.model.constraints).length,
+            variableCount: Object.keys(weightedBuild.model.variables).length,
+            buildDurationMs: weightedBuild.buildDurationMs,
+            solveDurationMs: weightedSolve.solveDurationMs,
+            status: weightedSolve.solution.status,
+            surplusItemCount:
+              collectSurplusSolutionMetrics(weightedSolve.solution.variables).activeItemIds.length,
+            surplusRatePerMin:
+              collectSurplusSolutionMetrics(weightedSolve.solution.variables).totalRatePerMin,
+          })
+        );
+        if (weightedSolve.solution.status !== 'optimal') {
           break;
         }
 
@@ -1949,7 +2175,7 @@ function solveCatalogRequestValidated(
           request,
           model: weightedBuild.model,
           activeOptions: weightedBuild.activeOptions,
-          solution: weightedSolution,
+          solution: weightedSolve.solution,
         });
 
         if (compareLinearSolveCandidates(candidate, bestCandidate) < 0) {
@@ -2007,6 +2233,7 @@ function solveCatalogRequestValidated(
       ),
       diagnostics: [...diagnostics, `LP solve failed with status ${solution.status}.`],
       infoMessages: [...compiledGraph.infoMessages],
+      solveAudit: buildSolveAudit(0, solveFinishedAt - solveStartedAt),
     });
   }
 
@@ -2044,6 +2271,7 @@ function solveCatalogRequestValidated(
       infoMessages: compiledGraph.infoMessages,
       unmetPreferences: result.diagnostics.unmetPreferences,
     },
+    solveAudit: buildSolveAudit(resultFinishedAt - solveFinishedAt, resultFinishedAt - solveStartedAt),
   };
 }
 
@@ -2074,6 +2302,7 @@ export function solveCatalogRequest(
         infoMessages: [],
         unmetPreferences: [],
       },
+      solveAudit: buildEmptySolveAudit(),
       resolvedRawInputItemIds: [],
       targets: [],
       recipePlans: [],

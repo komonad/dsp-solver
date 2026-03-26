@@ -5,6 +5,7 @@ import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import { FlowRateSequence } from '../components/FlowRateDisplay';
 import { useWorkbench } from '../WorkbenchContext';
 import { cardStyle } from '../workbenchStyles';
+import SolveAuditSection from './SolveAuditSection';
 
 export default function DiagnosticsCard() {
   const {
@@ -27,6 +28,7 @@ export default function DiagnosticsCard() {
     <article style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>{bundle.diagnostics.title}</h2>
       <div style={{ display: 'grid', gap: 8 }}>
+        <SolveAuditSection bundle={bundle} locale={locale} solveAudit={result?.solveAudit} />
         {fallbackModel && fallbackSolve?.reason === 'force_balance_infeasible' ? (
           <Alert
             severity="warning"

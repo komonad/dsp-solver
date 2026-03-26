@@ -681,6 +681,17 @@ test('allow_surplus keeps byproducts as explicit surplus output', () => {
   expect(result.status).toBe('optimal');
   expect(result.externalInputs).toEqual([{ itemId: '1001', ratePerMin: 60 }]);
   expect(result.surplusOutputs).toEqual([{ itemId: '1201', ratePerMin: 60 }]);
+  expect(result.solveAudit).toMatchObject({
+    prunedRecipeCount: 1,
+    prunedOptionCount: 1,
+  });
+  expect(result.solveAudit?.attempts[0]).toMatchObject({
+    phase: 'initial_lp',
+    modelKind: 'lp',
+    status: 'optimal',
+    recipeCount: 1,
+    optionCount: 1,
+  });
   expect(result.itemBalance).toEqual([
     {
       itemId: '1001',
@@ -919,6 +930,7 @@ test('allow_surplus prefers consolidating surplus into fewer item types before l
   expect(result.recipePlans).toHaveLength(1);
   expect(result.recipePlans[0].recipeId).toBe('2');
   expect(result.surplusOutputs).toEqual([{ itemId: '1203', ratePerMin: 120 }]);
+  expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
 test('orbital ring request honors forced graphite recipe instead of delayed coking', () => {

@@ -18,6 +18,71 @@ export interface SolveDiagnostics {
 }
 
 /**
+ * One internal model/solve attempt performed while handling a single
+ * user-triggered solve request.
+ */
+export interface SolveAuditAttempt {
+  /** Stable phase identifier for this attempt. */
+  phase: 'initial_lp' | 'reweighted_lp' | 'complexity_seed_lp' | 'complexity_milp';
+  /** Zero-based round index within the phase family when applicable. */
+  round?: number;
+  /** Model family used for this attempt. */
+  modelKind: 'lp' | 'milp';
+  /** Count of item-balance dimensions passed into the model. */
+  itemCount: number;
+  /** Count of unique recipes represented by the active options in this attempt. */
+  recipeCount: number;
+  /** Count of active recipe/building/proliferator options passed into the model. */
+  optionCount: number;
+  /** Count of linear constraints passed to the solver. */
+  constraintCount: number;
+  /** Count of decision variables passed to the solver. */
+  variableCount: number;
+  /** Time spent constructing the model in milliseconds. */
+  buildDurationMs: number;
+  /** Time spent inside the solver in milliseconds. */
+  solveDurationMs: number;
+  /** Total time for this attempt in milliseconds. */
+  totalDurationMs: number;
+  /** Solver status returned for this attempt. */
+  status: string;
+  /** Final active surplus item count observed on this attempt, when relevant. */
+  surplusItemCount?: number;
+  /** Final total surplus rate in items per minute observed on this attempt, when relevant. */
+  surplusRatePerMin?: number;
+}
+
+/**
+ * Structured internal audit trail for one solve request.
+ *
+ * These metrics are derived by the solver itself and are intended for
+ * diagnostics, profiling, and browser-side audit UIs rather than for
+ * downstream numerical solving.
+ */
+export interface SolveAudit {
+  /** Item count remaining after upstream graph pruning and option compilation. */
+  prunedItemCount: number;
+  /** Recipe count remaining after upstream graph pruning. */
+  prunedRecipeCount: number;
+  /** Option count remaining after request-level graph compilation. */
+  prunedOptionCount: number;
+  /** External/raw input item count used by the compiled solve graph. */
+  resolvedRawInputCount: number;
+  /** Time spent compiling and pruning the solve graph in milliseconds. */
+  graphDurationMs: number;
+  /** Aggregate time spent building models across all attempts in milliseconds. */
+  modelDurationMs: number;
+  /** Aggregate time spent inside the solver across all attempts in milliseconds. */
+  solveDurationMs: number;
+  /** Time spent translating the winning solution into the public result in milliseconds. */
+  resultDurationMs: number;
+  /** Total end-to-end time for this solve in milliseconds. */
+  totalDurationMs: number;
+  /** Chronological list of model/solve attempts made for this request. */
+  attempts: SolveAuditAttempt[];
+}
+
+/**
  * Echo of one requested target together with the actual solved net output.
  */
 export interface SolvedTarget {
@@ -118,6 +183,8 @@ export interface SolveResult {
   status: SolveStatus;
   /** Warnings, validation issues, and unmet soft preferences. */
   diagnostics: SolveDiagnostics;
+  /** Structured internal audit trail for this solve attempt. */
+  solveAudit?: SolveAudit;
   /** Final set of items treated as raw/external inputs during this solve. */
   resolvedRawInputItemIds: string[];
   /** Echo of requested targets and achieved rates. */
