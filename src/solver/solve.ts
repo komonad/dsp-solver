@@ -1709,6 +1709,13 @@ function buildComplexityModel(params: {
  *  counts are < 50, so surplus type count always dominates. */
 const SURPLUS_MILP_RECIPE_WEIGHT = 1e-2;
 
+/** Weight for LP-inactive recipe indicators.  Much higher than
+ *  `SURPLUS_MILP_RECIPE_WEIGHT` so the MILP only introduces a recipe that
+ *  was not used in the LP when it substantially reduces surplus type count.
+ *  At weight 0.5, the MILP needs to save at least 1 surplus type to justify
+ *  introducing 2 new recipes. */
+const SURPLUS_MILP_NEW_RECIPE_WEIGHT = 0.5;
+
 function buildSurplusTypeMilpModel(params: {
   request: SolveRequest;
   compiledOptions: CompiledOptionContext[];
@@ -1885,19 +1892,20 @@ function buildSurplusTypeMilpModel(params: {
   // Recipe-usage binary indicators: penalise the number of distinct recipes
   // used.  This prevents the solver from adding entire production chains
   // (e.g. bio-chain) solely to consume a small byproduct surplus.
-  // Only add indicators for recipes that:
-  // - have at least one option active in the LP solution (unused recipes
-  //   already contribute 0 and don't need binary tracking)
-  // - are NOT required (sole producer of some needed item — their binary
-  //   would always be 1, so tracking them wastes branch-and-bound effort)
+  // LP-active recipes get a light penalty (SURPLUS_MILP_RECIPE_WEIGHT) since
+  // they are already part of the solution.  LP-inactive recipes get a much
+  // heavier penalty (SURPLUS_MILP_NEW_RECIPE_WEIGHT) so the MILP only
+  // introduces them when doing so substantially reduces surplus type count.
+  // Required recipes (sole producer of some needed item) are skipped — their
+  // binary would always be 1, wasting branch-and-bound effort.
   for (const [recipeId, optionIds] of recipeUsageMap.entries()) {
     if (requiredRecipeIds.has(recipeId)) {
       continue;
     }
     const hasActiveOption = optionIds.some(id => activeOptionIds.has(id));
-    if (!hasActiveOption) {
-      continue;
-    }
+    const weight = hasActiveOption
+      ? SURPLUS_MILP_RECIPE_WEIGHT
+      : SURPLUS_MILP_NEW_RECIPE_WEIGHT;
     const constraintName = `__surplus_recipe_link:${recipeId}`;
     constraints[constraintName] = { max: 0 };
     for (const optionId of optionIds) {
@@ -1905,7 +1913,7 @@ function buildSurplusTypeMilpModel(params: {
     }
     const usageVariable = `__surplus_recipe:${recipeId}`;
     const coefficients = ensureVariableCoefficients(variables, usageVariable);
-    coefficients.__objective__ = SURPLUS_MILP_RECIPE_WEIGHT;
+    coefficients.__objective__ = weight;
     binaries.add(usageVariable);
     addVariableCoefficient(variables, usageVariable, constraintName, -recipeLinkUpperBound);
   }

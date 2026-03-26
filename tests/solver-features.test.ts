@@ -1485,3 +1485,41 @@ test('vanilla proliferator items can be produced through their own recipe chain'
   );
   expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
 });
+
+test('orbital ring material matrix surplus milp does not introduce water electrolysis', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '6003', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: ['7015', '6519', '7101', '1116'],
+    disabledRecipeIds: ['510', '523', '705', '704'],
+    disabledBuildingIds: ['6215', '2319'],
+    allowedRecipesByItem: {
+      '1124': ['33'],
+    },
+    globalForcedProliferatorLevel: 0,
+    globalForcedProliferatorMode: 'none',
+  });
+
+  expect(result.status).toBe('optimal');
+  // Water electrolysis (702) should NOT be introduced — it was inactive in
+  // the LP and only adds hydrogen surplus without reducing surplus type count.
+  expect(result.recipePlans.some(p => p.recipeId === '702')).toBe(false);
+  // Surplus should be only hydrogen, at a reasonable level (not inflated by
+  // unnecessary water → hydrogen conversion).
+  expect(result.surplusOutputs).toHaveLength(1);
+  expect(result.surplusOutputs[0].itemId).toBe('1120');
+  expect(result.surplusOutputs[0].ratePerMin).toBeLessThan(100);
+});
