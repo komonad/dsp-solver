@@ -252,6 +252,37 @@ export function restoreWorkbenchSolveState(
   };
 }
 
+function isEmptyIdlePersistedWorkbenchSolveState(
+  state: PersistedWorkbenchSolveState
+): boolean {
+  return (
+    state.activityStatus === 'idle' &&
+    !state.request &&
+    !state.result &&
+    !state.error &&
+    !state.fallback
+  );
+}
+
+export function preserveReusableSettledWorkbenchSolveState(params: {
+  existingState?: PersistedWorkbenchSolveState | null;
+  nextState: PersistedWorkbenchSolveState;
+  expectedInputKey?: string | null;
+}): PersistedWorkbenchSolveState {
+  const { existingState, nextState, expectedInputKey } = params;
+
+  if (
+    isEmptyIdlePersistedWorkbenchSolveState(nextState) &&
+    existingState?.activityStatus === 'settled' &&
+    expectedInputKey &&
+    existingState.inputKey === expectedInputKey
+  ) {
+    return existingState;
+  }
+
+  return nextState;
+}
+
 export function buildWorkbenchSolveInputKey(
   params: WorkbenchSolveInputKeyParams
 ): string {

@@ -92,6 +92,19 @@ function isPersistedSolveState(value: unknown): value is PersistedWorkbenchSolve
   );
 }
 
+function sanitizePersistedSolveState(
+  value: PersistedWorkbenchSolveState
+): PersistedWorkbenchSolveState {
+  if (value.activityStatus === 'settled' || value.inputKey === undefined) {
+    return value;
+  }
+
+  return {
+    ...value,
+    inputKey: undefined,
+  };
+}
+
 function isDatasetPresetId(value: unknown): value is DatasetPresetId {
   return (
     value === 'vanilla' ||
@@ -196,7 +209,9 @@ function sanitizePersistedConfig(value: unknown): WorkbenchPersistedConfig | nul
     id: value.id,
     name: typeof value.name === 'string' ? value.name : undefined,
     editorState: value.editorState as unknown as WorkbenchEditorState,
-    solveState: isPersistedSolveState(value.solveState) ? value.solveState : undefined,
+    solveState: isPersistedSolveState(value.solveState)
+      ? sanitizePersistedSolveState(value.solveState)
+      : undefined,
     updatedAtEpochMs:
       typeof value.updatedAtEpochMs === 'number' && Number.isFinite(value.updatedAtEpochMs)
         ? value.updatedAtEpochMs

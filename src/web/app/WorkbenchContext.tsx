@@ -36,6 +36,7 @@ import {
   computeWorkbenchSolve,
   computeWorkbenchSolveAsync,
   findReusableWorkbenchSolveInputKey,
+  preserveReusableSettledWorkbenchSolveState,
   persistWorkbenchSolveState,
   restoreWorkbenchSolveState,
   type WorkbenchSolveState,
@@ -96,6 +97,8 @@ import {
   type WorkbenchConfigDisplayModel,
   type WorkbenchRecipeOption,
 } from './workbenchHelpers';
+import { buildDisplayedWorkbenchSolveState } from './workbenchDisplayedSolveState';
+import { buildWorkbenchSnapshotSolveRequest } from './workbenchSnapshotRequest';
 
 function waitForNextPaint(): Promise<void> {
   if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
@@ -229,11 +232,45 @@ function backfillWorkbenchConfigSolveInputKeys(params: {
   return changed ? nextConfigs : configs;
 }
 
+function resolvePersistedWorkbenchConfigSolveState(params: {
+  existingState?: WorkbenchPersistedConfig['solveState'];
+  nextState: ReturnType<typeof persistWorkbenchSolveState>;
+  editorState: WorkbenchEditorState;
+  catalogSignature: string;
+  locale: AppLocale;
+}): ReturnType<typeof persistWorkbenchSolveState> {
+  const { existingState, nextState, editorState, catalogSignature, locale } = params;
+  const expectedInputKey = buildExpectedSolveInputKeyForWorkbenchEditorState({
+    editorState,
+    catalogSignature,
+    locale,
+  });
+
+  const reusableState = preserveReusableSettledWorkbenchSolveState({
+    existingState,
+    nextState,
+    expectedInputKey,
+  });
+
+  if (reusableState.inputKey || !existingState?.inputKey || reusableState.activityStatus !== 'settled') {
+    return reusableState;
+  }
+
+  return {
+    ...reusableState,
+    inputKey: existingState.inputKey,
+  };
+}
+
 function mergePersistedSolveStateInputKey(
   existingState: WorkbenchPersistedConfig['solveState'],
   nextState: ReturnType<typeof persistWorkbenchSolveState>
 ): ReturnType<typeof persistWorkbenchSolveState> {
-  if (nextState.inputKey || !existingState?.inputKey) {
+  if (
+    nextState.activityStatus !== 'settled' ||
+    nextState.inputKey ||
+    !existingState?.inputKey
+  ) {
     return nextState;
   }
 
@@ -1128,6 +1165,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   }, [deferredSolveInputKey, restoredSolveInputKey]);
 
   const startSolve = useCallback(() => {
+    setHydratingWorkbenchConfig(null);
     setBlockedSolveInputKey(null);
     setRestoredSolveInputKey(null);
     restoredSolveInputKeyAwaitingMatchRef.current = false;
@@ -1154,7 +1192,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       activeSolveCancellerRef.current = null;
       activeSolveInputKeyRef.current = null;
       startTransition(() => {
-        setAutoSolveState(buildIdleWorkbenchSolveState());
+        setAutoSolveState(current => {
+          const shouldPreserveRestoredSolveState =
+            (Boolean(restoredSolveInputKey) ||
+              hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) &&
+            (current.activity.status === 'settled' || current.activity.status === 'cancelled');
+
+          return shouldPreserveRestoredSolveState
+            ? current
+            : buildIdleWorkbenchSolveState();
+        });
       });
       return;
     }
@@ -1254,16 +1301,52 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     activeWorkbenchConfigId,
   ]);
 
-  const lastRequest = autoSolveState.request;
-  const activeSolveRequest = autoSolveState.activeRequest ?? autoSolveState.request;
+  const snapshotSolveRequest = useMemo(
+    () =>
+      catalog
+        ? buildWorkbenchSnapshotSolveRequest({
+            catalog,
+            editorState: currentWorkbenchEditorState,
+            advancedOverrides: parsedOverrides.value,
+          })
+        : undefined,
+    [catalog, currentWorkbenchEditorState, parsedOverrides.value]
+  );
+  const activeWorkbenchConfig = useMemo(
+    () => findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId),
+    [activeWorkbenchConfigId, workbenchConfigs]
+  );
+  const reusableDisplayedSolveInputKey = useMemo(
+    () =>
+      activeWorkbenchConfig
+        ? findReusableSolveInputKeyForConfig({
+            config: activeWorkbenchConfig,
+            catalogSignature: catalogSolveSignature,
+            locale,
+          })
+        : null,
+    [activeWorkbenchConfig, catalogSolveSignature, locale]
+  );
+  const displayedSolveState = useMemo(
+    () =>
+      buildDisplayedWorkbenchSolveState({
+        liveState: autoSolveState,
+        persistedState: activeWorkbenchConfig?.solveState,
+        reusableInputKey: reusableDisplayedSolveInputKey,
+      }),
+    [activeWorkbenchConfig?.solveState, autoSolveState, reusableDisplayedSolveInputKey]
+  );
+  const lastRequest = displayedSolveState.request;
+  const activeSolveRequest =
+    displayedSolveState.activeRequest ?? displayedSolveState.request ?? snapshotSolveRequest;
   const canStartSolve = Boolean(deferredSolveInputs.catalog) && !deferredSolveInputs.isLoading;
   const canCancelSolve = autoSolveState.activity.status === 'running';
   const solveCancelledForCurrentInputs =
     autoSolveState.activity.status === 'cancelled' &&
     blockedSolveInputKey === deferredSolveInputKey;
-  const result = autoSolveState.result;
-  const solveError = autoSolveState.error;
-  const fallbackSolve = autoSolveState.fallback;
+  const result = displayedSolveState.result;
+  const solveError = displayedSolveState.error;
+  const fallbackSolve = displayedSolveState.fallback;
   const hasTargets = targets.length > 0;
 
   useEffect(() => {
@@ -1284,7 +1367,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         },
         activeWorkbenchConfigId,
         existingActiveConfig?.editorState ?? currentWorkbenchEditorState,
-        mergePersistedSolveStateInputKey(existingActiveConfig?.solveState, persistedAutoSolveState),
+        resolvePersistedWorkbenchConfigSolveState({
+          existingState: existingActiveConfig?.solveState,
+          nextState: mergePersistedSolveStateInputKey(
+            existingActiveConfig?.solveState,
+            persistedAutoSolveState
+          ),
+          editorState: existingActiveConfig?.editorState ?? currentWorkbenchEditorState,
+          catalogSignature: catalogSolveSignature,
+          locale,
+        }),
         {
           skipConfigId: hydratingWorkbenchConfig?.configId,
         }
@@ -1293,9 +1385,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     });
   }, [
     activeWorkbenchConfigId,
+    catalogSolveSignature,
     currentWorkbenchEditorState,
     hydratingWorkbenchConfig,
     loadedSource,
+    locale,
     persistedAutoSolveState,
   ]);
 
@@ -1336,7 +1430,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
   const iconAtlasIds =
     model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
-  const displayedSolveRequest = activeSolveRequest ?? lastRequest;
+  const displayedSolveRequest = activeSolveRequest ?? lastRequest ?? snapshotSolveRequest;
   const requestSummary = useMemo(
     () =>
       catalog && displayedSolveRequest
@@ -1498,7 +1592,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         },
         activeWorkbenchConfigId,
         currentWorkbenchEditorState,
-        mergePersistedSolveStateInputKey(existingActiveConfig?.solveState, persistedAutoSolveState),
+        resolvePersistedWorkbenchConfigSolveState({
+          existingState: existingActiveConfig?.solveState,
+          nextState: mergePersistedSolveStateInputKey(
+            existingActiveConfig?.solveState,
+            persistedAutoSolveState
+          ),
+          editorState: currentWorkbenchEditorState,
+          catalogSignature: catalogSolveSignature,
+          locale,
+        }),
         {
           skipConfigId: hydratingWorkbenchConfig?.configId,
         }
@@ -1506,8 +1609,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     },
     [
       activeWorkbenchConfigId,
+      catalogSolveSignature,
       currentWorkbenchEditorState,
       hydratingWorkbenchConfig,
+      locale,
       persistedAutoSolveState,
       workbenchConfigs,
     ]
@@ -1722,10 +1827,17 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
             },
             activeWorkbenchConfigId,
             currentWorkbenchState,
-            mergePersistedSolveStateInputKey(
-              findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId)?.solveState,
-              persistedAutoSolveState
-            ),
+            resolvePersistedWorkbenchConfigSolveState({
+              existingState: findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId)
+                ?.solveState,
+              nextState: mergePersistedSolveStateInputKey(
+                findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId)?.solveState,
+                persistedAutoSolveState
+              ),
+              editorState: currentWorkbenchState,
+              catalogSignature: nextCatalogSolveSignature,
+              locale,
+            }),
             {
               skipConfigId: hydratingWorkbenchConfig?.configId,
             }

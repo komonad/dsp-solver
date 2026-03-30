@@ -5,6 +5,7 @@ import {
   buildRunningWorkbenchSolveState,
   computeWorkbenchSolveAsync,
   findReusableWorkbenchSolveInputKey,
+  preserveReusableSettledWorkbenchSolveState,
   persistWorkbenchSolveState,
   restoreWorkbenchSolveState,
 } from '../src/web/workbench/autoSolve';
@@ -342,4 +343,49 @@ test('persistWorkbenchSolveState stores a settled input key and allows reuse che
       isLoading: false,
     })
   ).toBeNull();
+});
+
+test('preserveReusableSettledWorkbenchSolveState keeps a matching settled solve when the next state is empty idle', () => {
+  const existingState = {
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings' as const,
+      balancePolicy: 'force_balance' as const,
+      rawInputItemIds: [],
+    },
+    result: null,
+    error: '',
+    activityStatus: 'settled' as const,
+    inputKey: 'matching-key',
+  };
+
+  expect(
+    preserveReusableSettledWorkbenchSolveState({
+      existingState,
+      nextState: {
+        request: undefined,
+        result: null,
+        error: '',
+        activityStatus: 'idle',
+      },
+      expectedInputKey: 'matching-key',
+    })
+  ).toBe(existingState);
+  expect(
+    preserveReusableSettledWorkbenchSolveState({
+      existingState,
+      nextState: {
+        request: undefined,
+        result: null,
+        error: '',
+        activityStatus: 'idle',
+      },
+      expectedInputKey: 'other-key',
+    })
+  ).toEqual({
+    request: undefined,
+    result: null,
+    error: '',
+    activityStatus: 'idle',
+  });
 });

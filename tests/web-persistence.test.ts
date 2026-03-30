@@ -188,7 +188,7 @@ test('workbench cache stores multiple configs per dataset key and exposes the ac
         id: 'b',
         name: 'Plate B',
         solveState: {
-          inputKey: 'cfg-b-key',
+          inputKey: undefined,
         },
       },
     ],
