@@ -235,7 +235,7 @@ test('computeWorkbenchSolve rejects empty effective targets', () => {
     rawInputItemIds: [],
   });
   expect(autoSolve.result).toBeNull();
-  expect(autoSolve.error).toBe(getLocaleBundle().solveRequest.validTargetRequired);
+  expect(autoSolve.error).toBe('');
 });
 
 test('computeWorkbenchSolve applies allowedRecipesByItem as a hard item-level constraint', () => {

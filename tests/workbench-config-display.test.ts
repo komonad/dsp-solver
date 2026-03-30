@@ -1,5 +1,8 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
+import { getLocaleBundle } from '../src/i18n';
 import { buildWorkbenchConfigDisplayModel } from '../src/web/app/workbenchHelpers';
+
+const bundle = getLocaleBundle('zh-CN');
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;
@@ -72,6 +75,7 @@ test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solve
       },
     },
     'zh-CN',
+    bundle,
     {
       result: {
         status: 'optimal',
@@ -155,6 +159,7 @@ test('buildWorkbenchConfigDisplayModel falls back to target summary and running 
       },
     },
     'zh-CN',
+    bundle,
     {
       result: null,
       error: '',

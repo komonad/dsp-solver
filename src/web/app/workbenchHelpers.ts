@@ -3,6 +3,7 @@ import {
   formatPower,
   formatPreferredProliferatorLabel,
   type AppLocale,
+  type LocaleBundle,
 } from '../../i18n';
 import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
 import type { SolveResult } from '../../solver';
@@ -338,13 +339,12 @@ export function getBrowserSessionStorage(): Storage | undefined {
 export function buildDefaultWorkbenchEditorState(
   catalog: ResolvedCatalogModel
 ): WorkbenchEditorState {
-  const nextTargetId = pickDefaultTarget(catalog);
   const recommendedObjective =
     catalog.recommendedSolve.objective === 'min_complexity'
       ? 'min_buildings'
       : (catalog.recommendedSolve.objective ?? 'min_buildings');
   return {
-    targets: nextTargetId ? [{ itemId: nextTargetId, ratePerMin: 60 }] : [],
+    targets: [],
     objective: recommendedObjective,
     balancePolicy: catalog.recommendedSolve.balancePolicy ?? 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
@@ -375,10 +375,11 @@ function isRunningWorkbenchConfigSolveState(
 function summarizeWorkbenchTargets(
   catalog: ResolvedCatalogModel,
   targets: EditableTarget[],
-  locale: AppLocale
+  locale: AppLocale,
+  bundle: LocaleBundle
 ): string {
   if (targets.length === 0) {
-    return '无目标';
+    return bundle.workbenchConfigs.noTargets;
   }
 
   const visibleTargets = targets.slice(0, 2).map(target => {
@@ -422,10 +423,11 @@ export function buildWorkbenchConfigDisplayModel(
   catalog: ResolvedCatalogModel,
   config: Pick<WorkbenchPersistedConfig, 'id' | 'name' | 'editorState'>,
   locale: AppLocale,
+  bundle: LocaleBundle,
   solveState?: WorkbenchConfigSummarySolveState
 ): WorkbenchConfigDisplayModel {
   const customName = config.name?.trim() ?? '';
-  const targetSummary = summarizeWorkbenchTargets(catalog, config.editorState.targets, locale);
+  const targetSummary = summarizeWorkbenchTargets(catalog, config.editorState.targets, locale, bundle);
   const result = solveState?.result ?? null;
 
   return {

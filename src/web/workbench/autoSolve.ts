@@ -1,5 +1,5 @@
 import type { ResolvedCatalogModel } from '../../catalog';
-import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
+import { DEFAULT_APP_LOCALE, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
 import { solveCatalogRequest, solveCatalogRequestAsync } from '../../solver/solve';
 import {
@@ -380,7 +380,6 @@ function prepareWorkbenchSolve(params: ComputeWorkbenchSolveParams): PreparedWor
     advancedOverridesText,
     locale = DEFAULT_APP_LOCALE,
   } = params;
-  const bundle = getLocaleBundle(locale);
   const startedAt = currentTimeMs();
   const parsedOverrides = parseAdvancedSolveOverrides(advancedOverridesText, locale);
 
@@ -459,7 +458,7 @@ function prepareWorkbenchSolve(params: ComputeWorkbenchSolveParams): PreparedWor
         request,
         activeRequest: request,
         result: null,
-        error: bundle.solveRequest.validTargetRequired,
+        error: '',
         fallback: undefined,
         activity: {
           status: 'settled',

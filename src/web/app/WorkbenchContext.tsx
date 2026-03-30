@@ -780,12 +780,26 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (hydratingWorkbenchConfig.expectedInputKey !== deferredSolveInputKey) {
+    // Recompute expected key with current catalog signature, since the signature
+    // may have changed since hydration started (e.g., default config updated).
+    const activeConfig = findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId);
+    if (!activeConfig) {
+      setHydratingWorkbenchConfig(null);
+      return;
+    }
+
+    const expectedKey = buildExpectedSolveInputKeyForWorkbenchEditorState({
+      editorState: activeConfig.editorState,
+      catalogSignature: catalogSolveSignature,
+      locale,
+    });
+
+    if (expectedKey !== deferredSolveInputKey) {
       return;
     }
 
     setHydratingWorkbenchConfig(null);
-  }, [activeWorkbenchConfigId, deferredSolveInputKey, hydratingWorkbenchConfig]);
+  }, [activeWorkbenchConfigId, catalogSolveSignature, deferredSolveInputKey, hydratingWorkbenchConfig, locale, workbenchConfigs]);
 
   useEffect(() => {
     if (blockedSolveInputKey && blockedSolveInputKey !== deferredSolveInputKey) {
@@ -1150,6 +1164,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
             }
           : config,
         locale,
+        bundle,
         config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
           ? autoSolveState
           : config.solveState
@@ -1158,6 +1173,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   }, [
     activeWorkbenchConfigId,
     autoSolveState,
+    bundle,
     catalog,
     currentWorkbenchEditorState,
     isHydratingActiveWorkbenchConfig,
@@ -1552,6 +1568,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   }
 
   function removeTarget(index: number) {
+    setAutoSolveState(buildIdleWorkbenchSolveState());
     setTargets(current => {
       const removedTarget = current[index];
       const nextTargets = current.filter((_, targetIndex) => targetIndex !== index);

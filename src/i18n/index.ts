@@ -129,6 +129,7 @@ export interface LocaleBundle {
     saveRenameButton: string;
     cancelRenameButton: string;
     solveErrorStatus: string;
+    noTargets: string;
   };
   summary: {
     catalogTitle: string;
@@ -492,6 +493,7 @@ const zhCN: LocaleBundle = {
     saveRenameButton: '保存',
     cancelRenameButton: '取消',
     solveErrorStatus: '求解失败',
+    noTargets: '无目标',
   },
   summary: {
     catalogTitle: '数据集概览',
