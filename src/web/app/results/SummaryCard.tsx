@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import { formatRate, formatPower, type AppLocale } from '../../../i18n';
 import { EntityLabel } from '../../shared/EntityIcon';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
@@ -75,6 +76,8 @@ export function SummaryItemRateList({
 
 export default function SummaryCard() {
   const { bundle, locale, iconAtlasIds, model } = useWorkbench();
+  const theme = useTheme();
+  const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
 
   if (!model) {
     return null;
@@ -98,8 +101,8 @@ export default function SummaryCard() {
       <div
         style={{
           display: 'grid',
-          gap: 16,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
+          gap: isCompactLayout ? 12 : 16,
+          gridTemplateColumns: `repeat(auto-fit, minmax(${isCompactLayout ? 120 : 132}px, 1fr))`,
         }}
       >
         <div style={summarySectionStyle}>
@@ -147,7 +150,7 @@ export default function SummaryCard() {
             display: 'grid',
             gap: 10,
             alignContent: 'start',
-            gridColumn: 'span 2',
+            gridColumn: isCompactLayout ? 'auto' : 'span 2',
           }}
         >
           <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>

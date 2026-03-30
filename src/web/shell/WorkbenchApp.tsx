@@ -45,19 +45,28 @@ function WorkbenchLayout() {
           'radial-gradient(circle at top left, rgba(244, 194, 102, 0.24), transparent 35%), linear-gradient(135deg, #f5efe2 0%, #dce7ef 48%, #f7f8fb 100%)',
       }}
     >
-      <Container maxWidth={false} sx={{ maxWidth: 1560, py: 3, display: 'grid', gap: 3 }}>
-        <Box sx={{ px: 0.5 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+      <Container
+        maxWidth={false}
+        sx={{
+          maxWidth: 1560,
+          py: { xs: 1.5, sm: 3 },
+          px: { xs: 1.5, sm: 2, md: 3 },
+          display: 'grid',
+          gap: { xs: 2, md: 3 },
+        }}
+      >
+        <Box sx={{ px: { xs: 0, sm: 0.5 } }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, fontSize: { xs: 24, sm: undefined } }}>
             {bundle.page.heading}
           </Typography>
         </Box>
-        <section style={{ display: 'grid', gap: 20 }}>
+        <section style={{ display: 'grid', gap: 16 }}>
           <Paper
             sx={{
-              p: { xs: 2, md: 2.5 },
+              p: { xs: 1.25, sm: 2, md: 2.5 },
               borderRadius: '24px',
               display: 'grid',
-              gap: 2.5,
+              gap: { xs: 2, md: 2.5 },
               overflow: 'hidden',
             }}
           >

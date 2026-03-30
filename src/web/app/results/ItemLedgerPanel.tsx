@@ -4,7 +4,11 @@ import ItemLedgerSection from './ItemLedgerSection';
 import { useWorkbench } from '../WorkbenchContext';
 import { cardStyle, resultSideColumnStyle } from '../workbenchStyles';
 
-export default function ItemLedgerPanel() {
+export interface ItemLedgerPanelProps {
+  sticky?: boolean;
+}
+
+export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps) {
   const {
     bundle,
     model,
@@ -19,20 +23,53 @@ export default function ItemLedgerPanel() {
     return null;
   }
 
+  const containerStyle: React.CSSProperties = sticky
+    ? { ...resultSideColumnStyle, gridColumn: '3', gridRow: '1 / span 2' }
+    : { minWidth: 0 };
+  const contentCardStyle: React.CSSProperties = sticky
+    ? {
+        ...cardStyle,
+        padding: 16,
+        height: '100%',
+        maxHeight: '100%',
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'grid',
+        gridTemplateRows: 'auto auto minmax(0, 1fr)',
+        gap: 12,
+      }
+    : {
+        ...cardStyle,
+        padding: 16,
+        display: 'grid',
+        gridTemplateRows: 'auto auto auto',
+        gap: 12,
+      };
+  const scrollerStyle: React.CSSProperties = sticky
+    ? {
+        display: 'grid',
+        gap: 16,
+        overflow: 'auto',
+        minHeight: 0,
+        paddingRight: 4,
+        paddingBottom: 24,
+        scrollPaddingBottom: 24,
+      }
+    : {
+        display: 'grid',
+        gap: 16,
+        maxHeight: 'min(65vh, 560px)',
+        overflow: 'auto',
+        minHeight: 0,
+        paddingRight: 4,
+        paddingBottom: 16,
+        scrollPaddingBottom: 16,
+      };
+
   return (
-    <aside style={{ ...resultSideColumnStyle, gridColumn: '3', gridRow: '1 / span 2' }}>
+    <aside style={containerStyle}>
       <article
-        style={{
-          ...cardStyle,
-          padding: 16,
-          height: '100%',
-          maxHeight: '100%',
-          minHeight: 0,
-          overflow: 'hidden',
-          display: 'grid',
-          gridTemplateRows: 'auto auto minmax(0, 1fr)',
-          gap: 12,
-        }}
+        style={contentCardStyle}
       >
         <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
         <Stack spacing={1}>
@@ -60,15 +97,7 @@ export default function ItemLedgerPanel() {
         </Stack>
         <div
           ref={itemLedgerScrollRef}
-          style={{
-            display: 'grid',
-            gap: 16,
-            overflow: 'auto',
-            minHeight: 0,
-            paddingRight: 4,
-            paddingBottom: 24,
-            scrollPaddingBottom: 24,
-          }}
+          style={scrollerStyle}
         >
           {model.itemLedgerSections.map(section => (
             <section

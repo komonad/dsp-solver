@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMediaQuery, useTheme } from '@mui/material';
 import SolveActivityNotice from '../components/SolveActivityNotice';
 import SummaryCard from './SummaryCard';
 import DiagnosticsCard from './DiagnosticsCard';
@@ -9,6 +10,9 @@ import { cardStyle, resultBodyGridStyle, resultMainColumnStyle } from '../workbe
 
 export default function ResultsArea() {
   const { bundle, model, autoSolveState } = useWorkbench();
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down('md'));
+  const isTabletLayout = useMediaQuery(theme.breakpoints.between('md', 'lg'));
   const isSolveRunning = autoSolveState.activity.status === 'running';
   const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 
@@ -50,15 +54,68 @@ export default function ResultsArea() {
     );
   }
 
-  return (
-    <section style={resultBodyGridStyle}>
-      {isSolveRunning || isSolveCancelled ? (
-        <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
-          <article style={{ ...cardStyle, padding: 12 }}>
-            <SolveActivityNotice />
+  const activitySection =
+    isSolveRunning || isSolveCancelled ? (
+      <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <article style={{ ...cardStyle, padding: 12 }}>
+          <SolveActivityNotice />
+        </article>
+      </div>
+    ) : null;
+
+  if (isMobileLayout) {
+    return (
+      <section style={{ display: 'grid', gap: 16 }}>
+        {activitySection}
+        <SummaryCard />
+        <DiagnosticsCard />
+        <article style={{ ...cardStyle, width: '100%', maxWidth: 'none' }}>
+          <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <RecipePlanList />
+          </div>
+        </article>
+        <ItemLedgerPanel sticky={false} />
+      </section>
+    );
+  }
+
+  if (isTabletLayout) {
+    return (
+      <section
+        style={{
+          display: 'grid',
+          gap: 20,
+          gridTemplateColumns: 'minmax(280px, 1fr) minmax(0, 1.35fr)',
+          alignItems: 'start',
+        }}
+      >
+        {activitySection}
+
+        <div style={{ ...resultMainColumnStyle, gridColumn: '1', minWidth: 0 }}>
+          <SummaryCard />
+          <DiagnosticsCard />
+        </div>
+
+        <div style={{ gridColumn: '2', minWidth: 0 }}>
+          <article style={{ ...cardStyle, width: '100%', maxWidth: 'none', justifySelf: 'stretch' }}>
+            <h2 style={{ marginTop: 0 }}>{bundle.recipePlans.title}</h2>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <RecipePlanList />
+            </div>
           </article>
         </div>
-      ) : null}
+
+        <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+          <ItemLedgerPanel sticky={false} />
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section style={resultBodyGridStyle}>
+      {activitySection}
 
       <div style={{ ...resultMainColumnStyle, gridColumn: '1', gridRow: '1 / span 2', minWidth: 0 }}>
         <SummaryCard />
@@ -74,7 +131,7 @@ export default function ResultsArea() {
         </article>
       </div>
 
-      <ItemLedgerPanel />
+      <ItemLedgerPanel sticky />
     </section>
   );
 }
