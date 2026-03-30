@@ -249,6 +249,8 @@ export interface CatalogRecommendedSolveSpec {
   objective?: 'min_buildings' | 'min_complexity' | 'min_power' | 'min_external_input';
   /** Optional recommended material-balance policy. */
   balancePolicy?: 'allow_surplus' | 'force_balance';
+  /** Optional recommended global proliferator policy. */
+  proliferatorPolicy?: 'auto' | 'none' | 'speed' | 'productivity';
 }
 
 /**
@@ -802,6 +804,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     'min_external_input',
   ]);
   const balancePolicySet = new Set(['allow_surplus', 'force_balance']);
+  const proliferatorPolicySet = new Set(['auto', 'none', 'speed', 'productivity']);
 
   if (config.recommendedSolve !== undefined) {
     if (
@@ -823,6 +826,17 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         errors,
         '$.recommendedSolve.balancePolicy',
         'balancePolicy must be one of allow_surplus or force_balance.'
+      );
+    }
+
+    if (
+      config.recommendedSolve.proliferatorPolicy !== undefined &&
+      !proliferatorPolicySet.has(config.recommendedSolve.proliferatorPolicy)
+    ) {
+      pushIssue(
+        errors,
+        '$.recommendedSolve.proliferatorPolicy',
+        'proliferatorPolicy must be one of auto, none, speed, or productivity.'
       );
     }
   }

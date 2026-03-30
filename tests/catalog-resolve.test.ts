@@ -182,6 +182,7 @@ test.each([
     expectedIconAtlasIds: ['OrbitalRing'],
     expectedRecommendedSolve: {
       objective: 'min_power',
+      proliferatorPolicy: 'none',
     },
   },
 ])(
@@ -237,7 +238,7 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
     speedMultiplier: 2,
   });
   expect(resolved.recommendedDisabledRecipeIds).toEqual(['510', '517', '705', '776']);
-  expect(resolved.recommendedDisabledBuildingIds).toEqual(['6215']);
+  expect(resolved.recommendedDisabledBuildingIds).toEqual(['6215', '2319']);
   expect(resolved.rawItemIds).toEqual(
     expect.arrayContaining(['1005', '1116', '6251', '6519'])
   );

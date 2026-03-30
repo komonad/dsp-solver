@@ -1655,10 +1655,12 @@
     776
   ],
   "recommendedDisabledBuildingIds": [
-    6215
+    6215,
+    2319
   ],
   "recommendedSolve": {
-    "objective": "min_power"
+    "objective": "min_power",
+    "proliferatorPolicy": "none"
   },
   "recommendedRawItemIds": [
     1000,

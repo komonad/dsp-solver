@@ -348,7 +348,7 @@ export function buildDefaultWorkbenchEditorState(
     objective: recommendedObjective,
     balancePolicy: catalog.recommendedSolve.balancePolicy ?? 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
-    proliferatorPolicy: 'auto',
+    proliferatorPolicy: catalog.recommendedSolve.proliferatorPolicy ?? 'auto',
     globalProliferatorLevel: '',
     rawInputItemIds: [],
     disabledRawInputItemIds: [],
