@@ -157,13 +157,13 @@ export const resultSideColumnStyle: React.CSSProperties = {
   position: 'sticky',
   top: 24,
   alignSelf: 'start',
-  // Constrain max-height to the viewport so the inner ledger scroller works
-  // when content overflows, but allow the column to shrink when content is
-  // sparse (using max-height instead of height avoids extra blank space).
+  // Constrain the sticky side column to a single track so the ledger card can
+  // stretch to the viewport height and delegate overflow to the inner scroller.
   maxHeight: 'calc(100vh - 24px)',
   minHeight: 0,
   minWidth: 0,
   display: 'grid',
+  gridTemplateRows: 'minmax(0, 1fr)',
   gap: 20,
 };
 
