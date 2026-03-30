@@ -18,6 +18,8 @@ import {
   snapshotTargetInputSx,
 } from '../workbenchStyles';
 import { useWorkbench } from '../WorkbenchContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import {
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipeProliferatorPreferenceDisplayEntries,
@@ -44,18 +46,21 @@ export default function SolveSnapshotPanel() {
     bundle,
     locale,
     catalog,
-    loadedSource,
     iconAtlasIds,
+  } = useCatalog();
+  const {
     model,
     autoSolveState,
+    requestSummary,
+    solveError,
+  } = useSolve();
+  const {
     targets,
     proliferatorPolicy,
     globalProliferatorLevel,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
     hasTargets,
-    requestSummary,
-    solveError,
     recipePreferences,
     preferredBuildings,
     updateTarget,
@@ -65,6 +70,7 @@ export default function SolveSnapshotPanel() {
     removeDisabledBuilding,
     removeRecipePreference,
     removePreferredBuilding,
+    loadedSource,
   } = useWorkbench();
 
   const browserStorage = useMemo(() => getBrowserStorage(), []);

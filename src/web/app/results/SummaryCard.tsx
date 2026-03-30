@@ -3,7 +3,8 @@ import { useMediaQuery, useTheme } from '@mui/material';
 import { formatRate, formatPower, type AppLocale } from '../../../i18n';
 import { EntityLabel } from '../../shared/EntityIcon';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
-import { useWorkbench } from '../WorkbenchContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
 
 const summarySectionStyle: React.CSSProperties = {
@@ -75,7 +76,8 @@ export function SummaryItemRateList({
 }
 
 export default function SummaryCard() {
-  const { bundle, locale, iconAtlasIds, model } = useWorkbench();
+  const { bundle, locale, iconAtlasIds } = useCatalog();
+  const { model } = useSolve();
   const theme = useTheme();
   const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
 

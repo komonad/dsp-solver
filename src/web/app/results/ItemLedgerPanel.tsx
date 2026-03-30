@@ -1,6 +1,8 @@
 import React from 'react';
 import { Button, Stack } from '@mui/material';
 import ItemLedgerSection from './ItemLedgerSection';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import { useWorkbench } from '../WorkbenchContext';
 import { cardStyle, resultSideColumnStyle } from '../workbenchStyles';
 
@@ -9,9 +11,9 @@ export interface ItemLedgerPanelProps {
 }
 
 export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps) {
+  const { bundle } = useCatalog();
+  const { model } = useSolve();
   const {
-    bundle,
-    model,
     itemLedgerScrollRef,
     itemLedgerSectionRefs,
     scrollItemLedgerToTop,

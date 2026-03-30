@@ -5,6 +5,8 @@ import { DATASET_PRESETS } from '../catalog/catalogClient';
 import DatasetEditorPanel from '../catalog/editor/DatasetEditorPanel';
 import StructuredDatasetEditor from '../catalog/editor/StructuredDatasetEditor';
 import { cardStyle, compactSelectFieldSx } from './workbenchStyles';
+import { useCatalog } from './CatalogContext';
+import { useSolve } from './SolveContext';
 import { useWorkbench } from './WorkbenchContext';
 
 // ---------------------------------------------------------------------------
@@ -15,17 +17,18 @@ export default function DatasetSourcePanel() {
   const {
     bundle,
     locale,
+    catalog,
+  } = useCatalog();
+  const { model } = useSolve();
+  const {
     presetId,
     isCustomPreset,
     isLoading,
-    catalog,
-    model,
     datasetPath,
     defaultConfigPath,
     datasetEditorText,
     defaultConfigEditorText,
     datasetEditorError,
-    iconAtlasIds,
     onPresetChange,
     reloadCatalog,
     loadCatalog,

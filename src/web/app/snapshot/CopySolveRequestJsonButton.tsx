@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '@mui/material';
 import { copyText } from '../../shared/copyText';
-import { useWorkbench } from '../WorkbenchContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 
 type CopyState = 'idle' | 'copied' | 'failed';
 
 export default function CopySolveRequestJsonButton() {
-  const { bundle, activeSolveRequest } = useWorkbench();
+  const { bundle } = useCatalog();
+  const { activeSolveRequest } = useSolve();
   const [copyState, setCopyState] = useState<CopyState>('idle');
   const requestJsonText = useMemo(
     () => (activeSolveRequest ? JSON.stringify(activeSolveRequest, null, 2) : ''),

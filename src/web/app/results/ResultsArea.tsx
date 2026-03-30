@@ -5,11 +5,13 @@ import SummaryCard from './SummaryCard';
 import DiagnosticsCard from './DiagnosticsCard';
 import RecipePlanList from './RecipePlanList';
 import ItemLedgerPanel from './ItemLedgerPanel';
-import { useWorkbench } from '../WorkbenchContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import { cardStyle, resultBodyGridStyle, resultMainColumnStyle } from '../workbenchStyles';
 
 export default function ResultsArea() {
-  const { bundle, model, autoSolveState } = useWorkbench();
+  const { bundle } = useCatalog();
+  const { model, autoSolveState } = useSolve();
   const theme = useTheme();
   const isMobileLayout = useMediaQuery(theme.breakpoints.down('md'));
   const isTabletLayout = useMediaQuery(theme.breakpoints.between('md', 'lg'));

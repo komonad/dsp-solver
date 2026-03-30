@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Button, Chip, CircularProgress, LinearProgress, Stack, Typography } from '@mui/material';
-import { useWorkbench } from '../WorkbenchContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import { buildSolveActivityViewModel } from '../../workbench/solveActivity';
 
 export interface SolveActivityNoticeProps {
@@ -9,7 +10,8 @@ export interface SolveActivityNoticeProps {
 
 export default function SolveActivityNotice(props: SolveActivityNoticeProps) {
   const { compact = false } = props;
-  const { bundle, locale, autoSolveState, canCancelSolve, cancelSolve, startSolve } = useWorkbench();
+  const { bundle, locale } = useCatalog();
+  const { autoSolveState, canCancelSolve, cancelSolve, startSolve } = useSolve();
   const [nowEpochMs, setNowEpochMs] = useState(() => Date.now());
   const isSolveRunning = autoSolveState.activity.status === 'running';
   const isSolveCancelled = autoSolveState.activity.status === 'cancelled';

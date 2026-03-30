@@ -13,7 +13,9 @@ import {
   RecipePlanToggleButton,
   RecipePlanToggleGroup,
 } from './RecipePlanCardParts';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
+import { useWorkbenchDraft } from '../WorkbenchDraftContext';
 import { buildRecipePlanCardDisplayModel } from '../workbenchHelpers';
 
 export interface RecipePlanCardProps {
@@ -51,18 +53,22 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
     locale,
     iconAtlasIds,
     catalog,
+    getRecipeBuildingOptions,
+    getRecipeModeOptions,
+    getRecipeLevelOptions,
+  } = useCatalog();
+  const {
     recipePreferences,
     recipeStrategyOverrides,
     preferredBuildings,
     applyRecipeStrategyPatch,
-    getRecipeBuildingOptions,
-    getRecipeModeOptions,
-    getRecipeLevelOptions,
     setRecipePreferredBuilding,
     setRecipePreferredProliferator,
+  } = useWorkbench();
+  const {
     revealedRecipePlanKey,
     revealedRecipePlanNonce,
-  } = useWorkbench();
+  } = useWorkbenchDraft();
 
   const displayModel = buildRecipePlanCardDisplayModel(catalog, plan, locale);
   const recipePlanRevealKey = buildRecipePlanRevealKey(plan);

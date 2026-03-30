@@ -4,20 +4,22 @@ import { formatRate } from '../../../i18n';
 import { copyText } from '../../shared/copyText';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import { FlowRateSequence } from '../components/FlowRateDisplay';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
+import { useSolve } from '../SolveContext';
 import { cardStyle } from '../workbenchStyles';
 import SolveAuditSection from './SolveAuditSection';
 
 export default function DiagnosticsCard() {
+  const { bundle, locale, iconAtlasIds } = useCatalog();
   const {
-    bundle,
-    locale,
-    iconAtlasIds,
     model,
     fallbackModel,
     fallbackSolve,
     lastRequest,
     result,
+  } = useSolve();
+  const {
     applyAllowSurplusFallback,
   } = useWorkbench();
   const requestJsonText = useMemo(

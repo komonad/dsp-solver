@@ -1,9 +1,9 @@
 import React from 'react';
 import { Alert, Snackbar } from '@mui/material';
-import { useWorkbench } from './WorkbenchContext';
+import { useWorkbenchDraft } from './WorkbenchDraftContext';
 
 export default function StrategyWarningSnackbar() {
-  const { recipeStrategyWarning, setRecipeStrategyWarning } = useWorkbench();
+  const { recipeStrategyWarning, setRecipeStrategyWarning } = useWorkbenchDraft();
 
   return (
     <Snackbar

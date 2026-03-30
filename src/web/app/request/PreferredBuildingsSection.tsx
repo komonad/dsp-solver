@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 import ProducedRecipeSelector from './ProducedRecipeSelector';
 import { SelectOption } from '../components/SelectOption';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import {
   collapsibleSectionStyle,
@@ -19,6 +20,8 @@ export default function PreferredBuildingsSection() {
     buildingOptions,
     preferredRecipeOptionsByItem,
     getRecipeBuildingOptions,
+  } = useCatalog();
+  const {
     addPreferredBuilding,
   } = useWorkbench();
   const [isGlobal, setIsGlobal] = useState(false);

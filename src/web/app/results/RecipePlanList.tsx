@@ -1,10 +1,10 @@
 import React from 'react';
 import RecipePlanCard from './RecipePlanCard';
-import { useWorkbench } from '../WorkbenchContext';
+import { useSolve } from '../SolveContext';
 import { buildRecipePlanRevealKey } from '../../shared/recipePlanReveal';
 
 export default function RecipePlanList() {
-  const { model } = useWorkbench();
+  const { model } = useSolve();
 
   if (!model) {
     return null;

@@ -7,11 +7,13 @@ import ForkRightIcon from '@mui/icons-material/ForkRight';
 import { Box, Button, Chip, IconButton, TextField, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 import { cardStyle } from './workbenchStyles';
+import { useCatalog } from './CatalogContext';
 import { useWorkbench } from './WorkbenchContext';
+import type { WorkbenchConfigDisplayModel } from './workbenchHelpers';
 
 function mapConfigStatusLabel(
-  status: ReturnType<typeof useWorkbench>['workbenchConfigDisplayModels'][number]['status'],
-  bundle: ReturnType<typeof useWorkbench>['bundle']
+  status: WorkbenchConfigDisplayModel['status'],
+  bundle: ReturnType<typeof useCatalog>['bundle']
 ): string {
   if (status === 'running') {
     return bundle.solveActivity.runningChipLabel;
@@ -30,7 +32,7 @@ function mapConfigStatusLabel(
 }
 
 function mapConfigStatusColor(
-  status: ReturnType<typeof useWorkbench>['workbenchConfigDisplayModels'][number]['status']
+  status: WorkbenchConfigDisplayModel['status']
 ): 'default' | 'success' | 'warning' | 'error' | 'info' {
   if (status === 'running') {
     return 'info';
@@ -48,8 +50,8 @@ function mapConfigStatusColor(
 }
 
 export default function WorkbenchConfigStrip() {
+  const { bundle } = useCatalog();
   const {
-    bundle,
     workbenchConfigDisplayModels,
     activeWorkbenchConfigId,
     switchWorkbenchConfig,

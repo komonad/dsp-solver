@@ -1,6 +1,7 @@
-import React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Box, Button, MenuItem, TextField, Typography } from '@mui/material';
 import { SelectOption } from '../components/SelectOption';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import {
   collapsibleSectionStyle,
@@ -10,14 +11,32 @@ import {
 } from '../workbenchStyles';
 
 export default function DisabledBuildingsSection() {
+  const { bundle, catalog, buildingOptions } = useCatalog();
   const {
-    bundle,
-    catalog,
-    disabledBuildingDraftId,
-    disableBuildingOptions,
-    setDisabledBuildingDraftId,
+    disabledBuildingIds,
     addDisabledBuilding,
   } = useWorkbench();
+
+  const disableBuildingOptions = useMemo(
+    () => buildingOptions.filter(building => !disabledBuildingIds.includes(building.buildingId)),
+    [buildingOptions, disabledBuildingIds]
+  );
+
+  const [draftId, setDraftId] = useState('');
+
+  useEffect(() => {
+    if (!draftId && disableBuildingOptions.length > 0) {
+      setDraftId(disableBuildingOptions[0].buildingId);
+      return;
+    }
+    if (
+      draftId &&
+      disableBuildingOptions.length > 0 &&
+      !disableBuildingOptions.some(building => building.buildingId === draftId)
+    ) {
+      setDraftId(disableBuildingOptions[0].buildingId);
+    }
+  }, [draftId, disableBuildingOptions]);
 
   return (
     <section style={collapsibleSectionStyle}>
@@ -40,8 +59,8 @@ export default function DisabledBuildingsSection() {
             fullWidth
             size="small"
             sx={compactSelectFieldSx}
-            value={disabledBuildingDraftId}
-            onChange={event => setDisabledBuildingDraftId(event.target.value)}
+            value={draftId}
+            onChange={event => setDraftId(event.target.value)}
             disabled={!catalog || disableBuildingOptions.length === 0}
             slotProps={{
               htmlInput: {
@@ -59,8 +78,8 @@ export default function DisabledBuildingsSection() {
           <Button
             variant="outlined"
             size="small"
-            onClick={addDisabledBuilding}
-            disabled={!disabledBuildingDraftId}
+            onClick={() => addDisabledBuilding(draftId)}
+            disabled={!draftId}
             sx={{ minHeight: 40, px: 1.5, whiteSpace: 'nowrap', justifySelf: 'start' }}
           >
             {bundle.solveRequest.disableButton}

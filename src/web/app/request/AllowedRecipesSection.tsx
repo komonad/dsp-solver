@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Button, Typography } from '@mui/material';
 import ProducedRecipeSelector from './ProducedRecipeSelector';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import {
   collapsibleSectionStyle,
@@ -15,6 +16,8 @@ export default function AllowedRecipesSection() {
     iconAtlasIds,
     itemOptions,
     preferredRecipeOptionsByItem,
+  } = useCatalog();
+  const {
     allowedRecipesByItem,
     applyAllowedRecipesForItem,
   } = useWorkbench();

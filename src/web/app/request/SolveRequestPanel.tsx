@@ -22,6 +22,9 @@ import {
   summaryStyle,
 } from '../workbenchStyles';
 import { useWorkbench } from '../WorkbenchContext';
+import { useWorkbenchDraft } from '../WorkbenchDraftContext';
+import { useCatalog } from '../CatalogContext';
+import { useSolve } from '../SolveContext';
 import AllowedRecipesSection from './AllowedRecipesSection';
 import DisabledBuildingsSection from './DisabledBuildingsSection';
 import DisabledRecipesSection from './DisabledRecipesSection';
@@ -34,32 +37,38 @@ export default function SolveRequestPanel() {
     catalog,
     iconAtlasIds,
     itemOptions,
-    targetDraftItemId,
-    targetDraftRatePerMin,
-    targetPickerQuery,
-    targetDraftItemOption,
-    objective,
-    proliferatorPolicy,
-    globalProliferatorLevel,
     globalProliferatorLevelOptions,
-    globalProliferatorLevelDisabled,
-    advancedOverridesText,
-    parsedOverrides,
+  } = useCatalog();
+  const {
     autoSolveState,
     canStartSolve,
     canCancelSolve,
     solveCancelledForCurrentInputs,
-    setTargetPickerQuery,
-    setTargetDraftItemId,
-    setTargetDraftRatePerMin,
+    startSolve,
+    cancelSolve,
+  } = useSolve();
+  const {
+    objective,
+    proliferatorPolicy,
+    globalProliferatorLevel,
+    globalProliferatorLevelDisabled,
+    advancedOverridesText,
+    parsedOverrides,
     setObjective,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
     setAdvancedOverridesText,
     addTarget,
-    startSolve,
-    cancelSolve,
   } = useWorkbench();
+  const {
+    targetDraftItemId,
+    targetDraftRatePerMin,
+    targetPickerQuery,
+    targetDraftItemOption,
+    setTargetPickerQuery,
+    setTargetDraftItemId,
+    setTargetDraftRatePerMin,
+  } = useWorkbenchDraft();
   const solveActionLabel =
     autoSolveState.activity.status === 'running' || solveCancelledForCurrentInputs
       ? bundle.solveRequest.restartSolveButton

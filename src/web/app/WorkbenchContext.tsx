@@ -9,9 +9,8 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import type { ProliferatorMode, ResolvedCatalogModel, ResolvedRecipeSpec } from '../../catalog';
+import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
 import {
-  AppLocale,
   DEFAULT_APP_LOCALE,
   type DatasetPresetId,
   getDatasetPresetText,
@@ -20,9 +19,8 @@ import {
 import {
   buildPresentationModel,
   buildPresentationRequestSummary,
-  type PresentationModel,
 } from '../../presentation';
-import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
+import type { BalancePolicy, SolveObjective } from '../../solver';
 import {
   DATASET_PRESETS,
   loadCatalogSourceFromUrl,
@@ -35,12 +33,24 @@ import {
   buildRunningWorkbenchSolveState,
   computeWorkbenchSolve,
   computeWorkbenchSolveAsync,
-  findReusableWorkbenchSolveInputKey,
-  preserveReusableSettledWorkbenchSolveState,
   persistWorkbenchSolveState,
   restoreWorkbenchSolveState,
   type WorkbenchSolveState,
 } from '../workbench/autoSolve';
+import {
+  upsertRecipePreferenceEntry,
+  patchRecipeStrategyOverrideEntry,
+  findWorkbenchConfig,
+} from '../workbench/editorStateHelpers';
+import {
+  waitForNextPaint,
+  buildWorkbenchCatalogSolveSignature,
+  findReusableSolveInputKeyForConfig,
+  buildExpectedSolveInputKeyForWorkbenchEditorState,
+  backfillWorkbenchConfigSolveInputKeys,
+  resolvePersistedWorkbenchConfigSolveState,
+  mergePersistedSolveStateInputKey,
+} from '../workbench/workbenchSolveInputKey';
 import {
   createWorkbenchConfig as createWorkbenchConfigCollection,
   createWorkbenchPersistedConfig,
@@ -57,6 +67,9 @@ import {
 } from '../workbench/solveWorkerClient';
 import { computeLedgerSectionScrollTop } from '../shared/ledgerScroll';
 import type { ItemPickerOption } from '../shared/itemPickerModel';
+import { CatalogProvider } from './CatalogContext';
+import { SolveProvider, type SolveContextValue } from './SolveContext';
+import { WorkbenchDraftProvider, type WorkbenchDraftContextValue } from './WorkbenchDraftContext';
 import { tryApplyRecipeStrategyOverride } from '../workbench/recipeStrategy';
 import {
   parseAdvancedSolveOverrides,
@@ -85,210 +98,22 @@ import {
 import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
   buildWorkbenchConfigDisplayModel,
-  buildRecipeOptionsByOutputItem,
   buildDefaultWorkbenchEditorState,
   getBrowserSessionStorage,
   getBrowserStorage,
   pickDefaultGlobalProliferatorLevel,
-  pickDefaultRecipePreference,
   pickDefaultTarget,
   pickSuggestedTargetItemId,
-  sortModeOptions,
   type WorkbenchConfigDisplayModel,
-  type WorkbenchRecipeOption,
 } from './workbenchHelpers';
 import { buildDisplayedWorkbenchSolveState } from './workbenchDisplayedSolveState';
 import { buildWorkbenchSnapshotSolveRequest } from './workbenchSnapshotRequest';
-
-function waitForNextPaint(): Promise<void> {
-  if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-    return new Promise(resolve => setTimeout(resolve, 0));
-  }
-
-  return new Promise(resolve => {
-    window.requestAnimationFrame(() => resolve());
-  });
-}
-
-function hashWorkbenchText(text: string): string {
-  let hash = 2166136261;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(36);
-}
-
-function buildWorkbenchCatalogSolveSignature(
-  datasetText: string,
-  defaultConfigText: string
-): string {
-  return `${hashWorkbenchText(datasetText)}:${hashWorkbenchText(defaultConfigText)}`;
-}
-
-function findReusableSolveInputKeyForConfig(params: {
-  config: Pick<WorkbenchPersistedConfig, 'editorState' | 'solveState'>;
-  catalogSignature: string;
-  locale: AppLocale;
-}): string | null {
-  const { config, catalogSignature, locale } = params;
-  return findReusableWorkbenchSolveInputKey(config.solveState, {
-    catalogSignature,
-    targets: config.editorState.targets,
-    objective: config.editorState.objective,
-    balancePolicy: config.editorState.balancePolicy,
-    proliferatorPolicy: config.editorState.proliferatorPolicy,
-    globalProliferatorLevel: config.editorState.globalProliferatorLevel,
-    autoPromoteUnavailableItemsToRawInputs:
-      config.editorState.autoPromoteUnavailableItemsToRawInputs,
-    rawInputItemIds: config.editorState.rawInputItemIds,
-    disabledRawInputItemIds: config.editorState.disabledRawInputItemIds,
-    disabledRecipeIds: config.editorState.disabledRecipeIds,
-    disabledBuildingIds: config.editorState.disabledBuildingIds,
-    allowedRecipesByItem: config.editorState.allowedRecipesByItem,
-    preferredBuildings: config.editorState.preferredBuildings,
-    recipePreferences: config.editorState.recipePreferences,
-    recipeStrategyOverrides: config.editorState.recipeStrategyOverrides,
-    advancedOverridesText: config.editorState.advancedOverridesText,
-    locale,
-    isLoading: false,
-  });
-}
-
-function buildExpectedSolveInputKeyForWorkbenchEditorState(params: {
-  editorState: WorkbenchEditorState;
-  catalogSignature: string;
-  locale: AppLocale;
-}): string {
-  const { editorState, catalogSignature, locale } = params;
-  return buildWorkbenchSolveInputKey({
-    catalogSignature,
-    targets: editorState.targets,
-    objective: editorState.objective,
-    balancePolicy: editorState.balancePolicy,
-    proliferatorPolicy: editorState.proliferatorPolicy,
-    globalProliferatorLevel: editorState.globalProliferatorLevel,
-    autoPromoteUnavailableItemsToRawInputs: editorState.autoPromoteUnavailableItemsToRawInputs,
-    rawInputItemIds: editorState.rawInputItemIds,
-    disabledRawInputItemIds: editorState.disabledRawInputItemIds,
-    disabledRecipeIds: editorState.disabledRecipeIds,
-    disabledBuildingIds: editorState.disabledBuildingIds,
-    allowedRecipesByItem: editorState.allowedRecipesByItem,
-    preferredBuildings: editorState.preferredBuildings,
-    recipePreferences: editorState.recipePreferences,
-    recipeStrategyOverrides: editorState.recipeStrategyOverrides,
-    advancedOverridesText: editorState.advancedOverridesText,
-    locale,
-    isLoading: false,
-  });
-}
-
-function backfillWorkbenchConfigSolveInputKeys(params: {
-  configs: WorkbenchPersistedConfig[];
-  catalogSignature: string;
-  locale: AppLocale;
-}): WorkbenchPersistedConfig[] {
-  const { configs, catalogSignature, locale } = params;
-  let changed = false;
-  const nextConfigs = configs.map(config => {
-    if (
-      !config.solveState ||
-      config.solveState.activityStatus !== 'settled' ||
-      config.solveState.inputKey
-    ) {
-      return config;
-    }
-
-    changed = true;
-    return {
-      ...config,
-      solveState: {
-        ...config.solveState,
-        inputKey: buildWorkbenchSolveInputKey({
-          catalogSignature,
-          targets: config.editorState.targets,
-          objective: config.editorState.objective,
-          balancePolicy: config.editorState.balancePolicy,
-          proliferatorPolicy: config.editorState.proliferatorPolicy,
-          globalProliferatorLevel: config.editorState.globalProliferatorLevel,
-          autoPromoteUnavailableItemsToRawInputs:
-            config.editorState.autoPromoteUnavailableItemsToRawInputs,
-          rawInputItemIds: config.editorState.rawInputItemIds,
-          disabledRawInputItemIds: config.editorState.disabledRawInputItemIds,
-          disabledRecipeIds: config.editorState.disabledRecipeIds,
-          disabledBuildingIds: config.editorState.disabledBuildingIds,
-          allowedRecipesByItem: config.editorState.allowedRecipesByItem,
-          preferredBuildings: config.editorState.preferredBuildings,
-          recipePreferences: config.editorState.recipePreferences,
-          recipeStrategyOverrides: config.editorState.recipeStrategyOverrides,
-          advancedOverridesText: config.editorState.advancedOverridesText,
-          locale,
-          isLoading: false,
-        }),
-      },
-    };
-  });
-
-  return changed ? nextConfigs : configs;
-}
-
-function resolvePersistedWorkbenchConfigSolveState(params: {
-  existingState?: WorkbenchPersistedConfig['solveState'];
-  nextState: ReturnType<typeof persistWorkbenchSolveState>;
-  editorState: WorkbenchEditorState;
-  catalogSignature: string;
-  locale: AppLocale;
-}): ReturnType<typeof persistWorkbenchSolveState> {
-  const { existingState, nextState, editorState, catalogSignature, locale } = params;
-  const expectedInputKey = buildExpectedSolveInputKeyForWorkbenchEditorState({
-    editorState,
-    catalogSignature,
-    locale,
-  });
-
-  const reusableState = preserveReusableSettledWorkbenchSolveState({
-    existingState,
-    nextState,
-    expectedInputKey,
-  });
-
-  if (reusableState.inputKey || !existingState?.inputKey || reusableState.activityStatus !== 'settled') {
-    return reusableState;
-  }
-
-  return {
-    ...reusableState,
-    inputKey: existingState.inputKey,
-  };
-}
-
-function mergePersistedSolveStateInputKey(
-  existingState: WorkbenchPersistedConfig['solveState'],
-  nextState: ReturnType<typeof persistWorkbenchSolveState>
-): ReturnType<typeof persistWorkbenchSolveState> {
-  if (
-    nextState.activityStatus !== 'settled' ||
-    nextState.inputKey ||
-    !existingState?.inputKey
-  ) {
-    return nextState;
-  }
-
-  return {
-    ...nextState,
-    inputKey: existingState.inputKey,
-  };
-}
 
 // ---------------------------------------------------------------------------
 // Context value interface
 // ---------------------------------------------------------------------------
 
 export interface WorkbenchContextValue {
-  // Locale / bundle
-  locale: AppLocale;
-  bundle: ReturnType<typeof getLocaleBundle>;
-
   // Dataset source state
   presetId: DatasetPresetId;
   setPresetId: React.Dispatch<React.SetStateAction<DatasetPresetId>>;
@@ -298,7 +123,6 @@ export interface WorkbenchContextValue {
   setDefaultConfigPath: React.Dispatch<React.SetStateAction<string>>;
   catalogLabel: string;
   setCatalogLabel: React.Dispatch<React.SetStateAction<string>>;
-  catalog: ResolvedCatalogModel | null;
   loadedSource: WorkbenchCacheSource | null;
   loadedDatasetText: string;
   loadedDefaultConfigText: string;
@@ -316,12 +140,6 @@ export interface WorkbenchContextValue {
   workbenchConfigDisplayModels: WorkbenchConfigDisplayModel[];
   targets: EditableTarget[];
   setTargets: React.Dispatch<React.SetStateAction<EditableTarget[]>>;
-  targetDraftItemId: string;
-  setTargetDraftItemId: React.Dispatch<React.SetStateAction<string>>;
-  targetDraftRatePerMin: number;
-  setTargetDraftRatePerMin: React.Dispatch<React.SetStateAction<number>>;
-  targetPickerQuery: string;
-  setTargetPickerQuery: React.Dispatch<React.SetStateAction<string>>;
   objective: SolveObjective;
   setObjective: React.Dispatch<React.SetStateAction<SolveObjective>>;
   balancePolicy: BalancePolicy;
@@ -340,8 +158,6 @@ export interface WorkbenchContextValue {
   setDisabledRecipeIds: React.Dispatch<React.SetStateAction<string[]>>;
   disabledBuildingIds: string[];
   setDisabledBuildingIds: React.Dispatch<React.SetStateAction<string[]>>;
-  disabledBuildingDraftId: string;
-  setDisabledBuildingDraftId: React.Dispatch<React.SetStateAction<string>>;
   allowedRecipesByItem: Record<string, string[]>;
   setAllowedRecipesByItem: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   recipePreferences: EditableRecipePreference[];
@@ -350,13 +166,8 @@ export interface WorkbenchContextValue {
   setRecipeStrategyOverrides: React.Dispatch<
     React.SetStateAction<EditableRecipeStrategyOverride[]>
   >;
-  recipePreferenceDraftId: string;
-  setRecipePreferenceDraftId: React.Dispatch<React.SetStateAction<string>>;
   advancedOverridesText: string;
   setAdvancedOverridesText: React.Dispatch<React.SetStateAction<string>>;
-  recipeStrategyWarning: string;
-  setRecipeStrategyWarning: React.Dispatch<React.SetStateAction<string>>;
-
   // Preferred buildings
   preferredBuildings: EditablePreferredBuilding[];
   setPreferredBuildings: React.Dispatch<React.SetStateAction<EditablePreferredBuilding[]>>;
@@ -366,41 +177,13 @@ export interface WorkbenchContextValue {
   itemLedgerSectionRefs: React.MutableRefObject<Record<string, HTMLElement | null>>;
 
   // Derived data
-  itemOptions: ItemPickerOption[];
-  recipeOptions: ResolvedRecipeSpec[];
-  buildingOptions: ResolvedCatalogModel['buildings'];
   parsedOverrides: ParseAdvancedOverridesResult;
-  autoSolveState: WorkbenchSolveState;
-  model: PresentationModel | null;
-  fallbackModel: PresentationModel | null;
-  preferredRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
-  globalProliferatorLevelOptions: number[];
   recipeStrategyOverrideMap: Map<string, EditableRecipeStrategyOverride>;
   isCustomPreset: boolean;
   hasTargets: boolean;
-  lastRequest: SolveRequest | undefined;
-  activeSolveRequest: SolveRequest | undefined;
-  canStartSolve: boolean;
-  canCancelSolve: boolean;
-  solveCancelledForCurrentInputs: boolean;
-  result: SolveResult | null;
-  solveError: string;
-  fallbackSolve: WorkbenchSolveState['fallback'];
-  requestSummary: PresentationModel['requestSummary'] | undefined;
-  iconAtlasIds: string[];
-  targetDraftItemOption: ItemPickerOption | null;
-  disableBuildingOptions: ResolvedCatalogModel['buildings'];
-  recipePreferenceOptions: ResolvedRecipeSpec[];
   globalProliferatorLevelDisabled: boolean;
-  revealedRecipePlanKey: string;
-  revealedRecipePlanNonce: number;
 
   // Event handlers
-  applyWorkbenchEditorState: (
-    nextCatalog: ResolvedCatalogModel,
-    editorState: WorkbenchEditorState
-  ) => void;
-  buildCurrentWorkbenchEditorState: () => WorkbenchEditorState;
   loadCatalog: (
     nextDatasetPath: string,
     nextDefaultConfigPath: string,
@@ -425,17 +208,10 @@ export interface WorkbenchContextValue {
   unmarkItemAsRawInput: (itemId: string) => void;
   addDisabledRecipe: (recipeId: string) => void;
   removeDisabledRecipe: (recipeId: string) => void;
-  addDisabledBuilding: () => void;
+  addDisabledBuilding: (buildingId: string) => void;
   removeDisabledBuilding: (buildingId: string) => void;
-  addRecipePreference: () => void;
   updateRecipePreference: (recipeId: string, patch: Partial<EditableRecipePreference>) => void;
   removeRecipePreference: (recipeId: string) => void;
-  getRecipeDefinition: (recipeId: string) => ResolvedRecipeSpec | undefined;
-  getRecipeBuildingOptions: (
-    recipeId: string
-  ) => Array<NonNullable<ReturnType<ResolvedCatalogModel['buildingMap']['get']>>>;
-  getRecipeModeOptions: (recipeId: string) => ProliferatorMode[];
-  getRecipeLevelOptions: (recipeId: string) => number[];
   applyRecipeStrategyPatch: (
     recipeId: string,
     patch: Partial<EditableRecipeStrategyOverride>
@@ -455,13 +231,10 @@ export interface WorkbenchContextValue {
   addPreferredBuilding: (entry: EditablePreferredBuilding) => void;
   removePreferredBuilding: (index: number) => void;
   locateItemInLedger: (itemId: string) => void;
-  revealRecipePlan: (planKey: string) => void;
   scrollItemLedgerToTop: () => void;
   scrollItemLedgerToBottom: () => void;
   scrollItemLedgerToSection: (sectionKey: string) => void;
   applyAllowSurplusFallback: () => void;
-  startSolve: () => void;
-  cancelSolve: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -469,93 +242,6 @@ export interface WorkbenchContextValue {
 // ---------------------------------------------------------------------------
 
 const WorkbenchContext = createContext<WorkbenchContextValue | null>(null);
-
-function upsertRecipePreferenceEntry(
-  currentPreferences: EditableRecipePreference[],
-  recipeId: string,
-  patch: Partial<EditableRecipePreference>
-): EditableRecipePreference[] {
-  const currentPreference =
-    currentPreferences.find(preference => preference.recipeId === recipeId) ?? {
-      recipeId,
-      preferredBuildingId: '',
-      preferredProliferatorMode: '',
-      preferredProliferatorLevel: '',
-    };
-
-  const nextPreference: EditableRecipePreference = {
-    ...currentPreference,
-    ...patch,
-    recipeId,
-  };
-
-  if (nextPreference.preferredProliferatorMode === '') {
-    nextPreference.preferredProliferatorLevel = '';
-  } else if (nextPreference.preferredProliferatorMode === 'none') {
-    nextPreference.preferredProliferatorLevel = 0;
-  } else if (nextPreference.preferredProliferatorLevel === 0) {
-    nextPreference.preferredProliferatorLevel = '';
-  }
-
-  const remainingPreferences = currentPreferences.filter(
-    preference => preference.recipeId !== recipeId
-  );
-  const hasValue = Boolean(
-    nextPreference.preferredBuildingId ||
-    nextPreference.preferredProliferatorMode ||
-    nextPreference.preferredProliferatorLevel !== ''
-  );
-
-  return hasValue
-    ? [...remainingPreferences, nextPreference]
-    : remainingPreferences;
-}
-
-function patchRecipeStrategyOverrideEntry(
-  currentOverrides: EditableRecipeStrategyOverride[],
-  recipeId: string,
-  patch: Partial<EditableRecipeStrategyOverride>
-): EditableRecipeStrategyOverride[] {
-  const currentOverride =
-    currentOverrides.find(override => override.recipeId === recipeId) ?? {
-      recipeId,
-      forcedBuildingId: '',
-      forcedProliferatorMode: '',
-      forcedProliferatorLevel: '',
-    };
-
-  const nextOverride: EditableRecipeStrategyOverride = {
-    ...currentOverride,
-    ...patch,
-    recipeId,
-  };
-
-  if (nextOverride.forcedProliferatorMode === '') {
-    nextOverride.forcedProliferatorLevel = '';
-  } else if (nextOverride.forcedProliferatorMode === 'none') {
-    nextOverride.forcedProliferatorLevel = 0;
-  } else if (nextOverride.forcedProliferatorLevel === 0) {
-    nextOverride.forcedProliferatorLevel = '';
-  }
-
-  const remainingOverrides = currentOverrides.filter(
-    override => override.recipeId !== recipeId
-  );
-  const hasValue = Boolean(
-    nextOverride.forcedBuildingId ||
-    nextOverride.forcedProliferatorMode ||
-    nextOverride.forcedProliferatorLevel !== ''
-  );
-
-  return hasValue ? [...remainingOverrides, nextOverride] : remainingOverrides;
-}
-
-function findWorkbenchConfig(
-  configs: WorkbenchPersistedConfig[],
-  configId: string
-): WorkbenchPersistedConfig | null {
-  return configs.find(config => config.id === configId) ?? null;
-}
 
 // ---------------------------------------------------------------------------
 // Provider
@@ -630,13 +316,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [disabledRawInputItemIds, setDisabledRawInputItemIds] = useState<string[]>([]);
   const [disabledRecipeIds, setDisabledRecipeIds] = useState<string[]>([]);
   const [disabledBuildingIds, setDisabledBuildingIds] = useState<string[]>([]);
-  const [disabledBuildingDraftId, setDisabledBuildingDraftId] = useState('');
   const [allowedRecipesByItem, setAllowedRecipesByItem] = useState<Record<string, string[]>>({});
   const [recipePreferences, setRecipePreferences] = useState<EditableRecipePreference[]>([]);
   const [recipeStrategyOverrides, setRecipeStrategyOverrides] = useState<
     EditableRecipeStrategyOverride[]
   >([]);
-  const [recipePreferenceDraftId, setRecipePreferenceDraftId] = useState('');
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [recipeStrategyWarning, setRecipeStrategyWarning] = useState('');
   const [preferredBuildings, setPreferredBuildings] = useState<EditablePreferredBuilding[]>([]);
@@ -679,11 +363,9 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     setDisabledRawInputItemIds(editorState.disabledRawInputItemIds);
     setDisabledRecipeIds(editorState.disabledRecipeIds);
     setDisabledBuildingIds(editorState.disabledBuildingIds);
-    setDisabledBuildingDraftId('');
     setAllowedRecipesByItem(editorState.allowedRecipesByItem);
     setRecipePreferences(editorState.recipePreferences);
     setRecipeStrategyOverrides(editorState.recipeStrategyOverrides);
-    setRecipePreferenceDraftId(pickDefaultRecipePreference(nextCatalog));
     setAdvancedOverridesText(editorState.advancedOverridesText);
     setRecipeStrategyWarning('');
     setPreferredBuildings(editorState.preferredBuildings);
@@ -747,6 +429,35 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         locale,
       }),
     });
+  }
+
+  function activateWorkbenchConfig(
+    nextCatalog: ResolvedCatalogModel,
+    nextConfigs: WorkbenchPersistedConfig[],
+    nextConfig: WorkbenchPersistedConfig,
+    signature: string,
+    options?: {
+      reusableKey?: string | null;
+      solveState?: WorkbenchSolveState;
+    }
+  ) {
+    setWorkbenchConfigs(nextConfigs);
+    setActiveWorkbenchConfigId(nextConfig.id);
+    beginWorkbenchConfigHydration(nextConfig, signature);
+    setBlockedSolveInputKey(null);
+    restoreReusableSolveInputKey(
+      options?.reusableKey !== undefined
+        ? options.reusableKey
+        : findReusableSolveInputKeyForConfig({
+            config: nextConfig,
+            catalogSignature: signature,
+            locale,
+          })
+    );
+    setAutoSolveState(
+      options?.solveState ?? restoreWorkbenchSolveState(nextConfig.solveState)
+    );
+    applyWorkbenchEditorState(nextCatalog, nextConfig.editorState);
   }
 
   // -------------------------------------------------------------------------
@@ -907,72 +618,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setTargetDraftItemId(suggestedItemId);
     }
   }, [catalog, itemOptions, targetDraftItemId, targets]);
-
-  // -------------------------------------------------------------------------
-  // Derived: recipeOptions, buildingOptions
-  // -------------------------------------------------------------------------
-
-  const recipeOptions = useMemo(
-    () =>
-      catalog?.recipes.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
-    [catalog]
-  );
-
-  const buildingOptions = useMemo(
-    () =>
-      catalog?.buildings.slice().sort((left, right) => left.name.localeCompare(right.name)) ?? [],
-    [catalog]
-  );
-
-  // -------------------------------------------------------------------------
-  // Derived: disableBuildingOptions, recipePreferenceOptions
-  // -------------------------------------------------------------------------
-
-  const disableBuildingOptions = useMemo(
-    () =>
-      buildingOptions.filter(building => !disabledBuildingIds.includes(building.buildingId)),
-    [buildingOptions, disabledBuildingIds]
-  );
-
-  const recipePreferenceOptions = useMemo(
-    () =>
-      recipeOptions.filter(
-        recipe => !recipePreferences.some(preference => preference.recipeId === recipe.recipeId)
-      ),
-    [recipeOptions, recipePreferences]
-  );
-
-  // Sync disabledBuildingDraftId
-  useEffect(() => {
-    if (!disabledBuildingDraftId && disableBuildingOptions.length > 0) {
-      setDisabledBuildingDraftId(disableBuildingOptions[0].buildingId);
-      return;
-    }
-    if (
-      disabledBuildingDraftId &&
-      disableBuildingOptions.length > 0 &&
-      !disableBuildingOptions.some(
-        building => building.buildingId === disabledBuildingDraftId
-      )
-    ) {
-      setDisabledBuildingDraftId(disableBuildingOptions[0].buildingId);
-    }
-  }, [disabledBuildingDraftId, disableBuildingOptions]);
-
-  // Sync recipePreferenceDraftId
-  useEffect(() => {
-    if (!recipePreferenceDraftId && recipePreferenceOptions.length > 0) {
-      setRecipePreferenceDraftId(recipePreferenceOptions[0].recipeId);
-      return;
-    }
-    if (
-      recipePreferenceDraftId &&
-      recipePreferenceOptions.length > 0 &&
-      !recipePreferenceOptions.some(recipe => recipe.recipeId === recipePreferenceDraftId)
-    ) {
-      setRecipePreferenceDraftId(recipePreferenceOptions[0].recipeId);
-    }
-  }, [recipePreferenceDraftId, recipePreferenceOptions]);
 
   // -------------------------------------------------------------------------
   // Effects: persist editor state and dataset draft
@@ -1464,11 +1109,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [recipeStrategyOverrides]
   );
 
-  const preferredRecipeOptionsByItem = useMemo(
-    () => buildRecipeOptionsByOutputItem(catalog),
-    [catalog]
-  );
-
   const globalProliferatorLevelOptions = useMemo(
     () =>
       catalog
@@ -1630,19 +1270,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      setWorkbenchConfigs(nextCollection.configs);
-      setActiveWorkbenchConfigId(nextConfig.id);
-      beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
-      setBlockedSolveInputKey(null);
-      restoreReusableSolveInputKey(
-        findReusableSolveInputKeyForConfig({
-          config: nextConfig,
-          catalogSignature: catalogSolveSignature,
-          locale,
-        })
-      );
-      setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
-      applyWorkbenchEditorState(catalog, nextConfig.editorState);
+      activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
     },
     [
       activeWorkbenchConfigId,
@@ -1689,13 +1317,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setWorkbenchConfigs(nextCollection.configs);
-    setActiveWorkbenchConfigId(nextConfig.id);
-    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
-    setBlockedSolveInputKey(null);
-    restoreReusableSolveInputKey(null);
-    setAutoSolveState(buildIdleWorkbenchSolveState());
-    applyWorkbenchEditorState(catalog, nextConfig.editorState);
+    activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature, {
+      reusableKey: null,
+      solveState: buildIdleWorkbenchSolveState(),
+    });
   }, [buildSyncedWorkbenchConfigCollection, catalog]);
 
   const forkActiveWorkbenchConfig = useCallback(function forkActiveWorkbenchConfig() {
@@ -1718,20 +1343,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         solveState: persistedAutoSolveState,
       });
 
-    setWorkbenchConfigs(nextCollection.configs);
-    setActiveWorkbenchConfigId(nextConfig.id);
-    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
-    setBlockedSolveInputKey(null);
-    restoreReusableSolveInputKey(
-      findReusableSolveInputKeyForConfig({
-        config: nextConfig,
-        catalogSignature: catalogSolveSignature,
-        locale,
-      })
-    );
-    setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
     if (catalog) {
-      applyWorkbenchEditorState(catalog, nextConfig.editorState);
+      activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
     }
   }, [
     activeWorkbenchConfigId,
@@ -1754,9 +1367,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       buildDefaultWorkbenchEditorState(catalog)
     );
 
-    setWorkbenchConfigs(nextCollection.configs);
-
     if (configId !== activeWorkbenchConfigId) {
+      setWorkbenchConfigs(nextCollection.configs);
       return;
     }
 
@@ -1767,18 +1379,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    setActiveWorkbenchConfigId(nextConfig.id);
-    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
-    setBlockedSolveInputKey(null);
-    restoreReusableSolveInputKey(
-      findReusableSolveInputKeyForConfig({
-        config: nextConfig,
-        catalogSignature: catalogSolveSignature,
-        locale,
-      })
-    );
-    setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
-    applyWorkbenchEditorState(catalog, nextConfig.editorState);
+    activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
   }, [
     activeWorkbenchConfigId,
     buildSyncedWorkbenchConfigCollection,
@@ -2007,33 +1608,15 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     setDisabledRecipeIds(current => current.filter(entry => entry !== recipeId));
   }
 
-  function addDisabledBuilding() {
-    if (!disabledBuildingDraftId || disabledBuildingIds.includes(disabledBuildingDraftId)) {
+  function addDisabledBuilding(buildingId: string) {
+    if (!buildingId || disabledBuildingIds.includes(buildingId)) {
       return;
     }
-    setDisabledBuildingIds(current => [...current, disabledBuildingDraftId]);
+    setDisabledBuildingIds(current => [...current, buildingId]);
   }
 
   function removeDisabledBuilding(buildingId: string) {
     setDisabledBuildingIds(current => current.filter(entry => entry !== buildingId));
-  }
-
-  function addRecipePreference() {
-    if (
-      !recipePreferenceDraftId ||
-      recipePreferences.some(entry => entry.recipeId === recipePreferenceDraftId)
-    ) {
-      return;
-    }
-    setRecipePreferences(current => [
-      ...current,
-      {
-        recipeId: recipePreferenceDraftId,
-        preferredBuildingId: '',
-        preferredProliferatorMode: '',
-        preferredProliferatorLevel: '',
-      },
-    ]);
   }
 
   function updateRecipePreference(
@@ -2085,41 +1668,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         preferredProliferatorLevel: level,
       })
     );
-  }
-
-  function getRecipeDefinition(recipeId: string): ResolvedRecipeSpec | undefined {
-    return catalog?.recipeMap.get(recipeId);
-  }
-
-  function getRecipeBuildingOptions(recipeId: string) {
-    const recipe = getRecipeDefinition(recipeId);
-    if (!catalog || !recipe) {
-      return [];
-    }
-
-    return recipe.allowedBuildingIds
-      .map(buildingId => catalog.buildingMap.get(buildingId))
-      .filter((building): building is NonNullable<typeof building> => Boolean(building))
-      .sort((left, right) => left.name.localeCompare(right.name));
-  }
-
-  function getRecipeModeOptions(recipeId: string): ProliferatorMode[] {
-    const recipe = getRecipeDefinition(recipeId);
-    if (!recipe) {
-      return [];
-    }
-    return sortModeOptions(Array.from(new Set(recipe.supportsProliferatorModes)));
-  }
-
-  function getRecipeLevelOptions(recipeId: string): number[] {
-    const recipe = getRecipeDefinition(recipeId);
-    if (!catalog || !recipe || recipe.maxProliferatorLevel <= 0) {
-      return [];
-    }
-    return catalog.proliferatorLevels
-      .map(level => level.level)
-      .filter(level => level > 0 && level <= recipe.maxProliferatorLevel)
-      .sort((left, right) => left - right);
   }
 
   const applyRecipeStrategyPatch = useCallback(
@@ -2363,10 +1911,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
   const contextValue = useMemo<WorkbenchContextValue>(
     () => ({
-      // Locale / bundle
-      locale,
-      bundle,
-
       // Dataset source state
       presetId,
       setPresetId,
@@ -2376,7 +1920,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setDefaultConfigPath,
       catalogLabel,
       setCatalogLabel,
-      catalog,
       loadedSource,
       loadedDatasetText,
       loadedDefaultConfigText,
@@ -2394,12 +1937,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       workbenchConfigDisplayModels,
       targets,
       setTargets,
-      targetDraftItemId,
-      setTargetDraftItemId,
-      targetDraftRatePerMin,
-      setTargetDraftRatePerMin,
-      targetPickerQuery,
-      setTargetPickerQuery,
       objective,
       setObjective,
       balancePolicy,
@@ -2418,20 +1955,14 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setDisabledRecipeIds,
       disabledBuildingIds,
       setDisabledBuildingIds,
-      disabledBuildingDraftId,
-      setDisabledBuildingDraftId,
       allowedRecipesByItem,
       setAllowedRecipesByItem,
       recipePreferences,
       setRecipePreferences,
       recipeStrategyOverrides,
       setRecipeStrategyOverrides,
-      recipePreferenceDraftId,
-      setRecipePreferenceDraftId,
       advancedOverridesText,
       setAdvancedOverridesText,
-      recipeStrategyWarning,
-      setRecipeStrategyWarning,
       preferredBuildings,
       setPreferredBuildings,
 
@@ -2440,38 +1971,13 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       itemLedgerSectionRefs,
 
       // Derived data
-      itemOptions,
-      recipeOptions,
-      buildingOptions,
       parsedOverrides,
-      autoSolveState,
-      model,
-      fallbackModel,
-      preferredRecipeOptionsByItem,
-      globalProliferatorLevelOptions,
       recipeStrategyOverrideMap,
       isCustomPreset,
       hasTargets,
-      lastRequest,
-      activeSolveRequest,
-      canStartSolve,
-      canCancelSolve,
-      solveCancelledForCurrentInputs,
-      result,
-      solveError,
-      fallbackSolve,
-      requestSummary,
-      iconAtlasIds,
-      targetDraftItemOption,
-      disableBuildingOptions,
-      recipePreferenceOptions,
       globalProliferatorLevelDisabled,
-      revealedRecipePlanKey,
-      revealedRecipePlanNonce,
 
       // Event handlers
-      applyWorkbenchEditorState,
-      buildCurrentWorkbenchEditorState,
       loadCatalog,
       reloadCatalog,
       onPresetChange,
@@ -2493,15 +1999,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       removeDisabledRecipe,
       addDisabledBuilding,
       removeDisabledBuilding,
-      addRecipePreference,
       updateRecipePreference,
       removeRecipePreference,
       setRecipePreferredBuilding,
       setRecipePreferredProliferator,
-      getRecipeDefinition,
-      getRecipeBuildingOptions,
-      getRecipeModeOptions,
-      getRecipeLevelOptions,
       applyRecipeStrategyPatch,
       applyAllowedRecipesForItem,
       clearAllowedRecipesForItem,
@@ -2509,26 +2010,20 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addPreferredBuilding,
       removePreferredBuilding,
       locateItemInLedger,
-      revealRecipePlan,
       scrollItemLedgerToTop,
       scrollItemLedgerToBottom,
       scrollItemLedgerToSection,
       applyAllowSurplusFallback,
-      startSolve,
-      cancelSolve,
     }),
     // This memo has a large dependency list because the context value includes
     // all state, derived data, and handlers. We list every value explicitly to
     // ensure React re-creates the context object only when something changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
-      locale,
-      bundle,
       presetId,
       datasetPath,
       defaultConfigPath,
       catalogLabel,
-      catalog,
       loadedSource,
       loadedDatasetText,
       loadedDefaultConfigText,
@@ -2541,9 +2036,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       activeWorkbenchConfigId,
       workbenchConfigDisplayModels,
       targets,
-      targetDraftItemId,
-      targetDraftRatePerMin,
-      targetPickerQuery,
       objective,
       balancePolicy,
       autoPromoteUnavailableItemsToRawInputs,
@@ -2553,42 +2045,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       disabledRawInputItemIds,
       disabledRecipeIds,
       disabledBuildingIds,
-      disabledBuildingDraftId,
       allowedRecipesByItem,
       recipePreferences,
       recipeStrategyOverrides,
-      recipePreferenceDraftId,
       advancedOverridesText,
-      recipeStrategyWarning,
       preferredBuildings,
-      itemOptions,
-      recipeOptions,
-      buildingOptions,
       parsedOverrides,
-      autoSolveState,
-      model,
-      fallbackModel,
-      preferredRecipeOptionsByItem,
-      globalProliferatorLevelOptions,
       recipeStrategyOverrideMap,
       isCustomPreset,
       hasTargets,
-      lastRequest,
-      activeSolveRequest,
-      canStartSolve,
-      canCancelSolve,
-      solveCancelledForCurrentInputs,
-      result,
-      solveError,
-      fallbackSolve,
-      requestSummary,
-      iconAtlasIds,
-      targetDraftItemOption,
-      disableBuildingOptions,
-      recipePreferenceOptions,
       globalProliferatorLevelDisabled,
-      revealedRecipePlanKey,
-      revealedRecipePlanNonce,
       markItemAsRawInput,
       unmarkItemAsRawInput,
       applyRecipeStrategyPatch,
@@ -2600,11 +2066,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addPreferredBuilding,
       removePreferredBuilding,
       locateItemInLedger,
-      revealRecipePlan,
       scrollItemLedgerToTop,
       scrollItemLedgerToBottom,
-      startSolve,
-      cancelSolve,
       scrollItemLedgerToSection,
       applyAllowSurplusFallback,
       switchWorkbenchConfig,
@@ -2615,8 +2078,83 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     ]
   );
 
+  const draftContextValue = useMemo<WorkbenchDraftContextValue>(
+    () => ({
+      targetDraftItemId,
+      setTargetDraftItemId,
+      targetDraftRatePerMin,
+      setTargetDraftRatePerMin,
+      targetPickerQuery,
+      setTargetPickerQuery,
+      targetDraftItemOption,
+      revealedRecipePlanKey,
+      revealedRecipePlanNonce,
+      revealRecipePlan,
+      recipeStrategyWarning,
+      setRecipeStrategyWarning,
+    }),
+    [
+      targetDraftItemId,
+      targetDraftRatePerMin,
+      targetPickerQuery,
+      targetDraftItemOption,
+      revealedRecipePlanKey,
+      revealedRecipePlanNonce,
+      revealRecipePlan,
+      recipeStrategyWarning,
+    ]
+  );
+
+  const solveContextValue = useMemo<SolveContextValue>(
+    () => ({
+      autoSolveState,
+      model,
+      fallbackModel,
+      result,
+      solveError,
+      fallbackSolve,
+      lastRequest,
+      activeSolveRequest,
+      requestSummary,
+      canStartSolve,
+      canCancelSolve,
+      solveCancelledForCurrentInputs,
+      startSolve,
+      cancelSolve,
+    }),
+    [
+      autoSolveState,
+      model,
+      fallbackModel,
+      result,
+      solveError,
+      fallbackSolve,
+      lastRequest,
+      activeSolveRequest,
+      requestSummary,
+      canStartSolve,
+      canCancelSolve,
+      solveCancelledForCurrentInputs,
+      startSolve,
+      cancelSolve,
+    ]
+  );
+
   return (
-    <WorkbenchContext.Provider value={contextValue}>{children}</WorkbenchContext.Provider>
+    <CatalogProvider
+      locale={locale}
+      bundle={bundle}
+      catalog={catalog}
+      iconAtlasIds={iconAtlasIds}
+    >
+      <SolveProvider value={solveContextValue}>
+        <WorkbenchContext.Provider value={contextValue}>
+          <WorkbenchDraftProvider value={draftContextValue}>
+            {children}
+          </WorkbenchDraftProvider>
+        </WorkbenchContext.Provider>
+      </SolveProvider>
+    </CatalogProvider>
   );
 }
 

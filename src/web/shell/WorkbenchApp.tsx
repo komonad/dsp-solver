@@ -1,6 +1,9 @@
 import { Box, Container, Paper, Typography } from '@mui/material';
 import ItemSliceOverlayHost from '../itemSlice/ItemSliceOverlayHost';
 import { WorkbenchProvider, useWorkbench } from '../app/WorkbenchContext';
+import { useWorkbenchDraft } from '../app/WorkbenchDraftContext';
+import { useCatalog } from '../app/CatalogContext';
+import { useSolve } from '../app/SolveContext';
 import DatasetSourcePanel from '../app/DatasetSourcePanel';
 import WorkbenchConfigStrip from '../app/WorkbenchConfigStrip';
 import SolveRequestPanel from '../app/request/SolveRequestPanel';
@@ -20,20 +23,21 @@ export default function WorkbenchApp() {
 function WorkbenchLayout() {
   const {
     bundle,
-    model,
-    autoSolveState,
-    loadError,
+    locale,
     iconAtlasIds,
-    allowedRecipesByItem,
     preferredRecipeOptionsByItem,
+  } = useCatalog();
+  const { model, autoSolveState } = useSolve();
+  const {
+    loadError,
+    allowedRecipesByItem,
     markItemAsRawInput,
     unmarkItemAsRawInput,
     applyAllowedRecipesForItem,
     clearAllowedRecipesForItem,
     locateItemInLedger,
-    revealRecipePlan,
-    locale,
   } = useWorkbench();
+  const { revealRecipePlan } = useWorkbenchDraft();
   const isSolveRunning = autoSolveState.activity.status === 'running';
   const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 

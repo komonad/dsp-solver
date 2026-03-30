@@ -3,6 +3,7 @@ import { formatRate } from '../../../i18n';
 import type { PresentationModel } from '../../../presentation';
 import { EntityLabelButton } from '../../shared/EntityIcon';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
+import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import { compactLedgerButtonStyle } from '../workbenchStyles';
 
@@ -13,10 +14,8 @@ export interface ItemLedgerSectionProps {
 const ItemLedgerSection = React.memo(function ItemLedgerSection({
   section,
 }: ItemLedgerSectionProps) {
+  const { bundle, locale, iconAtlasIds } = useCatalog();
   const {
-    bundle,
-    locale,
-    iconAtlasIds,
     markItemAsRawInput,
     unmarkItemAsRawInput,
   } = useWorkbench();
