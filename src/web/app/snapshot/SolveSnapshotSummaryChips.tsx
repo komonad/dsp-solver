@@ -20,13 +20,14 @@ export interface SolveSnapshotSummaryChipsProps {
   balancePolicy: BalancePolicy;
   sprayLabel: string;
   status: SolveStatus | null;
+  activityLabel?: string;
 }
 
 function renderMetricChip(
   metricId: SnapshotMetricId,
   label: string,
   descriptions: Record<SnapshotMetricId, string>,
-  color?: 'default' | 'success'
+  color?: 'default' | 'success' | 'warning'
 ) {
   return (
     <Tooltip
@@ -47,6 +48,7 @@ export default function SolveSnapshotSummaryChips({
   balancePolicy,
   sprayLabel,
   status,
+  activityLabel,
 }: SolveSnapshotSummaryChipsProps) {
   const metricDescriptions = getSnapshotMetricDescription(bundle);
   return (
@@ -72,6 +74,14 @@ export default function SolveSnapshotSummaryChips({
         metricDescriptions,
         status === 'optimal' ? 'success' : 'default'
       )}
+      {activityLabel
+        ? renderMetricChip(
+            'activity',
+            `${bundle.solveActivity.metricLabel}: ${activityLabel}`,
+            metricDescriptions,
+            'warning'
+          )
+        : null}
     </Stack>
   );
 }

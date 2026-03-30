@@ -1,4 +1,5 @@
 import React, {
+  startTransition,
   createContext,
   useCallback,
   useContext,
@@ -16,14 +17,29 @@ import {
   getDatasetPresetText,
   getLocaleBundle,
 } from '../../i18n';
-import { buildPresentationModel, type PresentationModel } from '../../presentation';
+import {
+  buildPresentationModel,
+  buildPresentationRequestSummary,
+  type PresentationModel,
+} from '../../presentation';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
 import {
   DATASET_PRESETS,
   loadCatalogSourceFromUrl,
   resolveCatalogSourceTexts,
 } from '../catalog/catalogClient';
-import { computeWorkbenchSolve, type WorkbenchSolveState } from '../workbench/autoSolve';
+import {
+  buildCancelledWorkbenchSolveState,
+  buildIdleWorkbenchSolveState,
+  buildRunningWorkbenchSolveState,
+  computeWorkbenchSolve,
+  computeWorkbenchSolveAsync,
+  type WorkbenchSolveState,
+} from '../workbench/autoSolve';
+import {
+  cancelSolveWorker,
+  solveCatalogRequestWithWorker,
+} from '../workbench/solveWorkerClient';
 import { computeLedgerSectionScrollTop } from '../shared/ledgerScroll';
 import type { ItemPickerOption } from '../shared/itemPickerModel';
 import { tryApplyRecipeStrategyOverride } from '../workbench/recipeStrategy';
@@ -63,6 +79,16 @@ import {
   sortModeOptions,
   type WorkbenchRecipeOption,
 } from './workbenchHelpers';
+
+function waitForNextPaint(): Promise<void> {
+  if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    return new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  return new Promise(resolve => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Context value interface
@@ -160,6 +186,10 @@ export interface WorkbenchContextValue {
   isCustomPreset: boolean;
   hasTargets: boolean;
   lastRequest: SolveRequest | undefined;
+  activeSolveRequest: SolveRequest | undefined;
+  canStartSolve: boolean;
+  canCancelSolve: boolean;
+  solveCancelledForCurrentInputs: boolean;
   result: SolveResult | null;
   solveError: string;
   fallbackSolve: WorkbenchSolveState['fallback'];
@@ -232,6 +262,8 @@ export interface WorkbenchContextValue {
   scrollItemLedgerToBottom: () => void;
   scrollItemLedgerToSection: (sectionKey: string) => void;
   applyAllowSurplusFallback: () => void;
+  startSolve: () => void;
+  cancelSolve: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -779,39 +811,179 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     ]
   );
   const deferredSolveInputs = useDeferredValue(solveInputs);
-
-  const autoSolveState = useMemo(() => {
-    if (!deferredSolveInputs.catalog || deferredSolveInputs.isLoading) {
-      return {
-        request: undefined,
-        result: null,
-        error: '',
-      };
+  const [autoSolveState, setAutoSolveState] = useState<WorkbenchSolveState>(() =>
+    buildIdleWorkbenchSolveState()
+  );
+  const autoSolveSequenceRef = useRef(0);
+  const [manualSolveNonce, setManualSolveNonce] = useState(0);
+  const [blockedSolveInputKey, setBlockedSolveInputKey] = useState<string | null>(null);
+  const activeSolveInputKeyRef = useRef<string | null>(null);
+  const activeSolveCancellerRef = useRef<(() => void) | null>(null);
+  const solveCatalogKeyMapRef = useRef(new WeakMap<ResolvedCatalogModel, number>());
+  const nextSolveCatalogKeyRef = useRef(1);
+  const deferredSolveCatalogKey = useMemo(() => {
+    if (!deferredSolveInputs.catalog) {
+      return 'no-catalog';
     }
 
-    return computeWorkbenchSolve({
-      catalog: deferredSolveInputs.catalog,
-      targets: deferredSolveInputs.targets,
-      objective: deferredSolveInputs.objective,
-      balancePolicy: deferredSolveInputs.balancePolicy,
-      proliferatorPolicy: deferredSolveInputs.proliferatorPolicy,
-      globalProliferatorLevel: deferredSolveInputs.globalProliferatorLevel,
-      autoPromoteUnavailableItemsToRawInputs:
-        deferredSolveInputs.autoPromoteUnavailableItemsToRawInputs,
-      rawInputItemIds: deferredSolveInputs.rawInputItemIds,
-      disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
-      disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
-      disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
-      allowedRecipesByItem: deferredSolveInputs.allowedRecipesByItem,
-      preferredBuildings: deferredSolveInputs.preferredBuildings,
-      recipePreferences: deferredSolveInputs.recipePreferences,
-      recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
-      advancedOverridesText: deferredSolveInputs.advancedOverridesText,
-      locale: deferredSolveInputs.locale,
+    const existingKey = solveCatalogKeyMapRef.current.get(deferredSolveInputs.catalog);
+    if (typeof existingKey === 'number') {
+      return `catalog-${existingKey}`;
+    }
+
+    const nextKey = nextSolveCatalogKeyRef.current++;
+    solveCatalogKeyMapRef.current.set(deferredSolveInputs.catalog, nextKey);
+    return `catalog-${nextKey}`;
+  }, [deferredSolveInputs.catalog]);
+  const deferredSolveInputKey = useMemo(
+    () =>
+      JSON.stringify({
+        catalogKey: deferredSolveCatalogKey,
+        targets: deferredSolveInputs.targets,
+        objective: deferredSolveInputs.objective,
+        balancePolicy: deferredSolveInputs.balancePolicy,
+        proliferatorPolicy: deferredSolveInputs.proliferatorPolicy,
+        globalProliferatorLevel: deferredSolveInputs.globalProliferatorLevel,
+        autoPromoteUnavailableItemsToRawInputs:
+          deferredSolveInputs.autoPromoteUnavailableItemsToRawInputs,
+        rawInputItemIds: deferredSolveInputs.rawInputItemIds,
+        disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
+        disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
+        disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
+        allowedRecipesByItem: deferredSolveInputs.allowedRecipesByItem,
+        preferredBuildings: deferredSolveInputs.preferredBuildings,
+        recipePreferences: deferredSolveInputs.recipePreferences,
+        recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
+        advancedOverridesText: deferredSolveInputs.advancedOverridesText,
+        locale: deferredSolveInputs.locale,
+        isLoading: deferredSolveInputs.isLoading,
+      }),
+    [deferredSolveCatalogKey, deferredSolveInputs]
+  );
+
+  useEffect(() => {
+    if (blockedSolveInputKey && blockedSolveInputKey !== deferredSolveInputKey) {
+      setBlockedSolveInputKey(null);
+    }
+  }, [blockedSolveInputKey, deferredSolveInputKey]);
+
+  const startSolve = useCallback(() => {
+    setBlockedSolveInputKey(null);
+    setManualSolveNonce(current => current + 1);
+  }, []);
+
+  const cancelSolve = useCallback(() => {
+    if (autoSolveState.activity.status !== 'running') {
+      return;
+    }
+
+    autoSolveSequenceRef.current += 1;
+    activeSolveCancellerRef.current?.();
+    activeSolveCancellerRef.current = null;
+    setBlockedSolveInputKey(activeSolveInputKeyRef.current ?? deferredSolveInputKey);
+    activeSolveInputKeyRef.current = null;
+    startTransition(() => {
+      setAutoSolveState(current => buildCancelledWorkbenchSolveState(current));
     });
-  }, [deferredSolveInputs]);
+  }, [autoSolveState.activity.status, deferredSolveInputKey]);
+
+  useEffect(() => {
+    if (!deferredSolveInputs.catalog || deferredSolveInputs.isLoading) {
+      activeSolveCancellerRef.current = null;
+      activeSolveInputKeyRef.current = null;
+      startTransition(() => {
+        setAutoSolveState(buildIdleWorkbenchSolveState());
+      });
+      return;
+    }
+
+    if (blockedSolveInputKey === deferredSolveInputKey) {
+      return;
+    }
+
+    const activeCatalog = deferredSolveInputs.catalog;
+    const sequence = autoSolveSequenceRef.current + 1;
+    autoSolveSequenceRef.current = sequence;
+    let disposed = false;
+    activeSolveInputKeyRef.current = deferredSolveInputKey;
+    activeSolveCancellerRef.current = cancelSolveWorker;
+
+    setAutoSolveState(current =>
+      buildRunningWorkbenchSolveState(current, {
+        stage: 'preparing_request',
+      })
+    );
+
+    void (async () => {
+      await waitForNextPaint();
+      if (disposed || autoSolveSequenceRef.current !== sequence) {
+        return;
+      }
+
+      const nextState = await computeWorkbenchSolveAsync(
+        {
+          catalog: activeCatalog,
+          targets: deferredSolveInputs.targets,
+          objective: deferredSolveInputs.objective,
+          balancePolicy: deferredSolveInputs.balancePolicy,
+          proliferatorPolicy: deferredSolveInputs.proliferatorPolicy,
+          globalProliferatorLevel: deferredSolveInputs.globalProliferatorLevel,
+          autoPromoteUnavailableItemsToRawInputs:
+            deferredSolveInputs.autoPromoteUnavailableItemsToRawInputs,
+          rawInputItemIds: deferredSolveInputs.rawInputItemIds,
+          disabledRawInputItemIds: deferredSolveInputs.disabledRawInputItemIds,
+          disabledRecipeIds: deferredSolveInputs.disabledRecipeIds,
+          disabledBuildingIds: deferredSolveInputs.disabledBuildingIds,
+          allowedRecipesByItem: deferredSolveInputs.allowedRecipesByItem,
+          preferredBuildings: deferredSolveInputs.preferredBuildings,
+          recipePreferences: deferredSolveInputs.recipePreferences,
+          recipeStrategyOverrides: deferredSolveInputs.recipeStrategyOverrides,
+          advancedOverridesText: deferredSolveInputs.advancedOverridesText,
+          locale: deferredSolveInputs.locale,
+        },
+        solveCatalogRequestWithWorker,
+        progress => {
+          if (disposed || autoSolveSequenceRef.current !== sequence) {
+            return;
+          }
+
+          setAutoSolveState(current =>
+            buildRunningWorkbenchSolveState(current, {
+              stage: progress.stage,
+              activeRequest: progress.activeRequest,
+            })
+          );
+        }
+      );
+      if (disposed || autoSolveSequenceRef.current !== sequence) {
+        return;
+      }
+
+      startTransition(() => {
+        setAutoSolveState(nextState);
+      });
+      if (autoSolveSequenceRef.current === sequence) {
+        activeSolveInputKeyRef.current = null;
+        activeSolveCancellerRef.current = null;
+      }
+    })();
+
+    return () => {
+      disposed = true;
+      if (autoSolveSequenceRef.current === sequence) {
+        activeSolveInputKeyRef.current = null;
+        activeSolveCancellerRef.current = null;
+      }
+    };
+  }, [blockedSolveInputKey, deferredSolveInputKey, deferredSolveInputs, manualSolveNonce]);
 
   const lastRequest = autoSolveState.request;
+  const activeSolveRequest = autoSolveState.activeRequest ?? autoSolveState.request;
+  const canStartSolve = Boolean(deferredSolveInputs.catalog) && !deferredSolveInputs.isLoading;
+  const canCancelSolve = autoSolveState.activity.status === 'running';
+  const solveCancelledForCurrentInputs =
+    autoSolveState.activity.status === 'cancelled' &&
+    blockedSolveInputKey === deferredSolveInputKey;
   const result = autoSolveState.result;
   const solveError = autoSolveState.error;
   const fallbackSolve = autoSolveState.fallback;
@@ -852,9 +1024,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     return nextModel;
   }, [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]);
 
-  const requestSummary = model?.requestSummary;
   const iconAtlasIds =
     model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
+  const displayedSolveRequest = activeSolveRequest ?? lastRequest;
+  const requestSummary = useMemo(
+    () =>
+      catalog && displayedSolveRequest
+        ? buildPresentationRequestSummary(catalog, displayedSolveRequest, locale)
+        : undefined,
+    [catalog, displayedSolveRequest, locale]
+  );
 
   const fallbackModel = useMemo(() => {
     if (!catalog || !fallbackSolve) {
@@ -1573,6 +1752,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       isCustomPreset,
       hasTargets,
       lastRequest,
+      activeSolveRequest,
+      canStartSolve,
+      canCancelSolve,
+      solveCancelledForCurrentInputs,
       result,
       solveError,
       fallbackSolve,
@@ -1625,6 +1808,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       scrollItemLedgerToBottom,
       scrollItemLedgerToSection,
       applyAllowSurplusFallback,
+      startSolve,
+      cancelSolve,
     }),
     // This memo has a large dependency list because the context value includes
     // all state, derived data, and handlers. We list every value explicitly to
@@ -1680,6 +1865,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       isCustomPreset,
       hasTargets,
       lastRequest,
+      activeSolveRequest,
+      canStartSolve,
+      canCancelSolve,
+      solveCancelledForCurrentInputs,
       result,
       solveError,
       fallbackSolve,
@@ -1705,6 +1894,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       revealRecipePlan,
       scrollItemLedgerToTop,
       scrollItemLedgerToBottom,
+      startSolve,
+      cancelSolve,
       scrollItemLedgerToSection,
       applyAllowSurplusFallback,
     ]

@@ -7,6 +7,7 @@ import {
   formatSolveObjective,
   formatSolveStatus,
   getDatasetPresetText,
+  getLocaleBundle,
 } from '../src/i18n';
 
 test('i18n formatters emit zh-CN UI labels', () => {

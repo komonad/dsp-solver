@@ -73,14 +73,16 @@ function resolveRequestPath(urlPath) {
   return existsSync(fallback) ? fallback : null;
 }
 
-if (!existsSync(DIST_DIR)) {
-  throw new Error(`dist-web was not found at ${DIST_DIR}. Run "npm run build:web" first.`);
-}
-
 const { host, port } = parseArgs(process.argv.slice(2));
 
 const server = createServer((request, response) => {
   try {
+    if (!existsSync(DIST_DIR)) {
+      response.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' });
+      response.end(`dist-web is not ready at ${DIST_DIR}. Waiting for the first webpack build.`);
+      return;
+    }
+
     const filePath = resolveRequestPath(request.url || '/');
 
     if (!filePath) {

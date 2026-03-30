@@ -66,7 +66,13 @@ export default function DiagnosticsCard() {
     <article style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>{bundle.diagnostics.title}</h2>
       <div style={{ display: 'grid', gap: 8 }}>
-        <SolveAuditSection bundle={bundle} locale={locale} solveAudit={result?.solveAudit} objective={lastRequest?.objective} />
+        <SolveAuditSection
+          bundle={bundle}
+          locale={locale}
+          solveAudit={result?.solveAudit}
+          objective={lastRequest?.objective}
+          solvedRecipeCount={result?.recipePlans.length}
+        />
         {fallbackModel && fallbackSolve?.reason === 'force_balance_infeasible' ? (
           <Alert
             severity="warning"

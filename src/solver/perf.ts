@@ -1,8 +1,10 @@
 export interface SolverPerfEntry {
-  phase: 'graph' | 'model' | 'lp' | 'result' | 'total';
+  phase: 'graph' | 'model' | 'lp' | 'result' | 'total' | 'attempt';
   durationMs: number;
   recipeCount?: number;
   optionCount?: number;
+  usedRecipeCount?: number;
+  usedOptionCount?: number;
   constraintCount?: number;
   variableCount?: number;
   status?: string;
@@ -51,6 +53,8 @@ export function recordSolverPerf(entry: SolverPerfEntry): void {
       `duration=${entry.durationMs.toFixed(1)}ms`,
       entry.recipeCount !== undefined ? `recipes=${entry.recipeCount}` : '',
       entry.optionCount !== undefined ? `options=${entry.optionCount}` : '',
+      entry.usedRecipeCount !== undefined ? `usedRecipes=${entry.usedRecipeCount}` : '',
+      entry.usedOptionCount !== undefined ? `usedPlans=${entry.usedOptionCount}` : '',
       entry.constraintCount !== undefined ? `constraints=${entry.constraintCount}` : '',
       entry.variableCount !== undefined ? `variables=${entry.variableCount}` : '',
       entry.status ? `status=${entry.status}` : '',

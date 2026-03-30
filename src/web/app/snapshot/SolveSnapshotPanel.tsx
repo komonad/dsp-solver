@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Divider, Tooltip, Typography } from '@mui/material';
 import { EntityIcon } from '../../shared/EntityIcon';
 import CollapsibleSnapshotSection from './CollapsibleSnapshotSection';
+import CopySolveRequestJsonButton from './CopySolveRequestJsonButton';
 import RecipeConstraintSnapshotList from './RecipeConstraintSnapshotList';
 import RecipePreferenceSnapshotList from './RecipePreferenceSnapshotList';
 import SnapshotRemoveButton from './SnapshotRemoveButton';
@@ -34,6 +35,7 @@ import {
   DEFAULT_WORKBENCH_SNAPSHOT_SECTION_STATE,
   resolveWorkbenchSnapshotSectionState,
 } from '../../workbench/snapshotSections';
+import { buildSolveActivityViewModel } from '../../workbench/solveActivity';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 
 export default function SolveSnapshotPanel() {
@@ -45,8 +47,8 @@ export default function SolveSnapshotPanel() {
     loadedSource,
     iconAtlasIds,
     model,
+    autoSolveState,
     targets,
-    objective,
     proliferatorPolicy,
     globalProliferatorLevel,
     setProliferatorPolicy,
@@ -145,10 +147,50 @@ export default function SolveSnapshotPanel() {
       setProliferatorPolicy,
     ]
   );
+  const solveActivity = useMemo(
+    () =>
+      buildSolveActivityViewModel({
+        bundle,
+        locale,
+        solveState: autoSolveState,
+        nowEpochMs: Date.now(),
+      }),
+    [autoSolveState, bundle, locale]
+  );
+  const emptySnapshotMessage = useMemo(() => {
+    if (!catalog) {
+      return bundle.summary.loadDatasetToStart;
+    }
+
+    if (autoSolveState.activity.status === 'cancelled') {
+      return bundle.solveRequest.autoSolveCancelledHint;
+    }
+
+    if (autoSolveState.activity.status === 'running') {
+      return solveActivity?.description ?? bundle.solveRequest.autoSolveRunningHint;
+    }
+
+    if (targets.length > 0) {
+      return bundle.ready.description;
+    }
+
+    return bundle.summary.loadDatasetToStart;
+  }, [autoSolveState.activity.status, bundle, catalog, solveActivity, targets.length]);
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
-      <Typography variant="h6">{bundle.summary.solveSnapshotTitle}</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Typography variant="h6">{bundle.summary.solveSnapshotTitle}</Typography>
+        <CopySolveRequestJsonButton />
+      </Box>
       {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
       {requestSummary ? (
         <>
@@ -156,10 +198,11 @@ export default function SolveSnapshotPanel() {
             bundle={bundle}
             locale={locale}
             requestSummary={requestSummary}
-            objective={objective}
+            objective={requestSummary.objective}
             balancePolicy={requestSummary.balancePolicy}
             sprayLabel={requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet}
             status={model?.status ?? null}
+            activityLabel={solveActivity?.stageLabel}
           />
 
           <Divider />
@@ -403,7 +446,7 @@ export default function SolveSnapshotPanel() {
         </>
       ) : (
         <Typography variant="body2" color="text.secondary">
-          {bundle.summary.loadDatasetToStart}
+          {emptySnapshotMessage}
         </Typography>
       )}
     </article>

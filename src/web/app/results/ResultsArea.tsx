@@ -1,4 +1,5 @@
 import React from 'react';
+import SolveActivityNotice from '../components/SolveActivityNotice';
 import SummaryCard from './SummaryCard';
 import DiagnosticsCard from './DiagnosticsCard';
 import RecipePlanList from './RecipePlanList';
@@ -7,9 +8,19 @@ import { useWorkbench } from '../WorkbenchContext';
 import { cardStyle, resultBodyGridStyle, resultMainColumnStyle } from '../workbenchStyles';
 
 export default function ResultsArea() {
-  const { bundle, model } = useWorkbench();
+  const { bundle, model, autoSolveState } = useWorkbench();
+  const isSolveRunning = autoSolveState.activity.status === 'running';
+  const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 
   if (!model) {
+    if (isSolveRunning || isSolveCancelled) {
+      return (
+        <article style={cardStyle}>
+          <SolveActivityNotice />
+        </article>
+      );
+    }
+
     return (
       <article style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>{bundle.datasetSource.waitingTitle}</h2>
@@ -21,6 +32,14 @@ export default function ResultsArea() {
   }
 
   if (!model.status) {
+    if (isSolveRunning || isSolveCancelled) {
+      return (
+        <article style={cardStyle}>
+          <SolveActivityNotice />
+        </article>
+      );
+    }
+
     return (
       <article style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>{bundle.ready.title}</h2>
@@ -33,6 +52,14 @@ export default function ResultsArea() {
 
   return (
     <section style={resultBodyGridStyle}>
+      {isSolveRunning || isSolveCancelled ? (
+        <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+          <article style={{ ...cardStyle, padding: 12 }}>
+            <SolveActivityNotice />
+          </article>
+        </div>
+      ) : null}
+
       <div style={{ ...resultMainColumnStyle, gridColumn: '1', gridRow: '1 / span 2', minWidth: 0 }}>
         <SummaryCard />
         <DiagnosticsCard />

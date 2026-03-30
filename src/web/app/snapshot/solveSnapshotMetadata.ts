@@ -2,7 +2,7 @@ import type { LocaleBundle } from '../../../i18n';
 import type { WorkbenchSnapshotSectionId } from '../../workbench/snapshotSections';
 
 export type SnapshotSectionId = WorkbenchSnapshotSectionId;
-export type SnapshotMetricId = 'objective' | 'balance' | 'spray' | 'status';
+export type SnapshotMetricId = 'objective' | 'balance' | 'spray' | 'status' | 'activity';
 
 export function getSnapshotSectionDescription(
   bundle: LocaleBundle

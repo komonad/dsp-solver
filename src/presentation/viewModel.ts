@@ -965,6 +965,111 @@ export function buildPresentationOverviewSections(
   };
 }
 
+export function buildPresentationRequestSummary(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  locale: AppLocale = DEFAULT_APP_LOCALE
+): PresentationRequestSummary {
+  return {
+    objective: request.objective,
+    balancePolicy: request.balancePolicy,
+    proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request, locale),
+    targets: request.targets.map(target => ({
+      itemId: target.itemId,
+      itemName: getItemName(catalog, target.itemId),
+      iconKey: getItemIcon(catalog, target.itemId),
+      ratePerMin: target.ratePerMin,
+    })),
+    rawInputs: sortNamedItems(
+      (request.rawInputItemIds ?? []).map(itemId => ({
+        itemId,
+        itemName: getItemName(catalog, itemId),
+        iconKey: getItemIcon(catalog, itemId),
+      }))
+    ),
+    allowedRecipeSettings: Object.entries(request.allowedRecipesByItem ?? {})
+      .flatMap(([itemId, recipeIds]) =>
+        recipeIds.map(recipeId => {
+          const recipe = catalog.recipeMap.get(recipeId);
+          return {
+            itemId,
+            itemName: getItemName(catalog, itemId),
+            iconKey: getItemIcon(catalog, itemId),
+            recipeId,
+            recipeName: getRecipeName(catalog, recipeId),
+            recipeIconKey: getRecipeIcon(catalog, recipeId),
+            cycleTimeSec: recipe?.cycleTimeSec ?? 0,
+            inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
+            outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
+          };
+        })
+      )
+      .sort(
+        (left, right) =>
+          left.itemName.localeCompare(right.itemName) ||
+          left.recipeName.localeCompare(right.recipeName)
+      ),
+    disabledRecipeSettings: (request.disabledRecipeIds ?? [])
+      .map(recipeId => {
+        const recipe = catalog.recipeMap.get(recipeId);
+        return {
+          recipeId,
+          recipeName: getRecipeName(catalog, recipeId),
+          recipeIconKey: getRecipeIcon(catalog, recipeId),
+          cycleTimeSec: recipe?.cycleTimeSec ?? 0,
+          inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
+          outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
+        };
+      })
+      .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
+    disabledRecipes: sortByName(
+      (request.disabledRecipeIds ?? []).map(recipeId => ({
+        itemId: recipeId,
+        itemName: getRecipeName(catalog, recipeId),
+      }))
+    ),
+    disabledBuildings: sortByName(
+      (request.disabledBuildingIds ?? []).map(buildingId => ({
+        itemId: buildingId,
+        itemName: getBuildingName(catalog, buildingId),
+        iconKey: getBuildingIcon(catalog, buildingId),
+      }))
+    ),
+    preferredRecipeSettings: Array.from(
+      new Set([
+        ...Object.keys(request.preferredBuildingByRecipe ?? {}),
+        ...Object.keys(request.preferredProliferatorModeByRecipe ?? {}),
+        ...Object.keys(request.preferredProliferatorLevelByRecipe ?? {}),
+      ])
+    )
+      .map(recipeId => ({
+        recipeId,
+        recipeName: getRecipeName(catalog, recipeId),
+        recipeIconKey: getRecipeIcon(catalog, recipeId),
+        buildingName: request.preferredBuildingByRecipe?.[recipeId]
+          ? getBuildingName(catalog, request.preferredBuildingByRecipe[recipeId])
+          : undefined,
+        buildingIconKey: request.preferredBuildingByRecipe?.[recipeId]
+          ? getBuildingIcon(catalog, request.preferredBuildingByRecipe[recipeId])
+          : undefined,
+        proliferatorPreferenceLabel: formatPreferredProliferatorLabel(
+          request.preferredProliferatorModeByRecipe?.[recipeId],
+          request.preferredProliferatorLevelByRecipe?.[recipeId],
+          locale
+        ),
+      }))
+      .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
+    hasAdvancedOverrides:
+      Object.keys(request.allowedRecipesByItem ?? {}).length > 0 ||
+      Object.keys(request.forcedBuildingByRecipe ?? {}).length > 0 ||
+      Object.keys(request.preferredBuildingByRecipe ?? {}).length > 0 ||
+      Object.keys(request.forcedProliferatorLevelByRecipe ?? {}).length > 0 ||
+      Object.keys(request.preferredProliferatorLevelByRecipe ?? {}).length > 0 ||
+      Object.keys(request.forcedProliferatorModeByRecipe ?? {}).length > 0 ||
+      Object.keys(request.preferredProliferatorModeByRecipe ?? {}).length > 0,
+  };
+}
+
 export function buildPresentationModel(
   params: BuildPresentationModelParams
 ): PresentationModel {
@@ -977,105 +1082,8 @@ export function buildPresentationModel(
     defaultConfigPath,
     locale = DEFAULT_APP_LOCALE,
   } = params;
-  const requestSummary: PresentationRequestSummary | undefined = request
-    ? {
-        objective: request.objective,
-        balancePolicy: request.balancePolicy,
-        proliferatorPolicyLabel: inferGlobalProliferatorPolicyLabel(catalog, request, locale),
-        targets: request.targets.map(target => ({
-          itemId: target.itemId,
-          itemName: getItemName(catalog, target.itemId),
-          iconKey: getItemIcon(catalog, target.itemId),
-          ratePerMin: target.ratePerMin,
-        })),
-        rawInputs: sortNamedItems(
-          (request.rawInputItemIds ?? []).map(itemId => ({
-            itemId,
-            itemName: getItemName(catalog, itemId),
-            iconKey: getItemIcon(catalog, itemId),
-          }))
-        ),
-        allowedRecipeSettings: Object.entries(request.allowedRecipesByItem ?? {})
-          .flatMap(([itemId, recipeIds]) =>
-            recipeIds.map(recipeId => {
-              const recipe = catalog.recipeMap.get(recipeId);
-              return {
-                itemId,
-                itemName: getItemName(catalog, itemId),
-                iconKey: getItemIcon(catalog, itemId),
-                recipeId,
-                recipeName: getRecipeName(catalog, recipeId),
-                recipeIconKey: getRecipeIcon(catalog, recipeId),
-                cycleTimeSec: recipe?.cycleTimeSec ?? 0,
-                inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
-                outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
-              };
-            })
-          )
-          .sort(
-            (left, right) =>
-              left.itemName.localeCompare(right.itemName) ||
-              left.recipeName.localeCompare(right.recipeName)
-          ),
-        disabledRecipeSettings: (request.disabledRecipeIds ?? [])
-          .map(recipeId => {
-            const recipe = catalog.recipeMap.get(recipeId);
-            return {
-              recipeId,
-              recipeName: getRecipeName(catalog, recipeId),
-              recipeIconKey: getRecipeIcon(catalog, recipeId),
-              cycleTimeSec: recipe?.cycleTimeSec ?? 0,
-              inputs: recipe ? mapRecipeIoAmounts(catalog, recipe.inputs) : [],
-              outputs: recipe ? mapRecipeIoAmounts(catalog, recipe.outputs) : [],
-            };
-          })
-          .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
-        disabledRecipes: sortByName(
-          (request.disabledRecipeIds ?? []).map(recipeId => ({
-            itemId: recipeId,
-            itemName: getRecipeName(catalog, recipeId),
-          }))
-        ),
-        disabledBuildings: sortByName(
-          (request.disabledBuildingIds ?? []).map(buildingId => ({
-            itemId: buildingId,
-            itemName: getBuildingName(catalog, buildingId),
-            iconKey: getBuildingIcon(catalog, buildingId),
-          }))
-        ),
-        preferredRecipeSettings: Array.from(
-          new Set([
-            ...Object.keys(request.preferredBuildingByRecipe ?? {}),
-            ...Object.keys(request.preferredProliferatorModeByRecipe ?? {}),
-            ...Object.keys(request.preferredProliferatorLevelByRecipe ?? {}),
-          ])
-        )
-          .map(recipeId => ({
-            recipeId,
-            recipeName: getRecipeName(catalog, recipeId),
-            recipeIconKey: getRecipeIcon(catalog, recipeId),
-            buildingName: request.preferredBuildingByRecipe?.[recipeId]
-              ? getBuildingName(catalog, request.preferredBuildingByRecipe[recipeId])
-              : undefined,
-            buildingIconKey: request.preferredBuildingByRecipe?.[recipeId]
-              ? getBuildingIcon(catalog, request.preferredBuildingByRecipe[recipeId])
-              : undefined,
-            proliferatorPreferenceLabel: formatPreferredProliferatorLabel(
-              request.preferredProliferatorModeByRecipe?.[recipeId],
-              request.preferredProliferatorLevelByRecipe?.[recipeId],
-              locale
-            ),
-          }))
-          .sort((left, right) => left.recipeName.localeCompare(right.recipeName)),
-        hasAdvancedOverrides:
-          Object.keys(request.allowedRecipesByItem ?? {}).length > 0 ||
-          Object.keys(request.forcedBuildingByRecipe ?? {}).length > 0 ||
-          Object.keys(request.preferredBuildingByRecipe ?? {}).length > 0 ||
-          Object.keys(request.forcedProliferatorLevelByRecipe ?? {}).length > 0 ||
-          Object.keys(request.preferredProliferatorLevelByRecipe ?? {}).length > 0 ||
-          Object.keys(request.forcedProliferatorModeByRecipe ?? {}).length > 0 ||
-          Object.keys(request.preferredProliferatorModeByRecipe ?? {}).length > 0,
-      }
+  const requestSummary = request
+    ? buildPresentationRequestSummary(catalog, request, locale)
     : undefined;
 
   if (!result) {

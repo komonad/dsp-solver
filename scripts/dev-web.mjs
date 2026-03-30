@@ -1,7 +1,28 @@
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { spawn } from 'node:child_process';
 
-function getNpmCommand() {
-  return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+function getNpmInvocation() {
+  const npmExecPath = process.env.npm_execpath;
+  if (typeof npmExecPath === 'string' && npmExecPath.length > 0) {
+    return {
+      command: process.execPath,
+      args: [npmExecPath],
+    };
+  }
+
+  const bundledNpmCliPath = join(dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  if (existsSync(bundledNpmCliPath)) {
+    return {
+      command: process.execPath,
+      args: [bundledNpmCliPath],
+    };
+  }
+
+  return {
+    command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    args: [],
+  };
 }
 
 function pipeChildOutput(child, label) {
@@ -60,8 +81,10 @@ function spawnChild(command, args, label) {
   });
 }
 
-spawnChild(getNpmCommand(), ['run', 'watch:web'], 'watch:web');
-spawnChild('node', ['scripts/host-web.mjs'], 'host');
+const npmInvocation = getNpmInvocation();
+
+spawnChild(npmInvocation.command, [...npmInvocation.args, 'run', 'watch:web'], 'watch:web');
+spawnChild(process.execPath, ['scripts/host-web.mjs'], 'host');
 
 process.on('SIGINT', () => terminateAll(0));
 process.on('SIGTERM', () => terminateAll(0));

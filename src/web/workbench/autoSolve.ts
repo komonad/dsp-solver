@@ -1,7 +1,7 @@
 import type { ResolvedCatalogModel } from '../../catalog';
 import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
-import { solveCatalogRequest } from '../../solver/solve';
+import { solveCatalogRequest, solveCatalogRequestAsync } from '../../solver/solve';
 import {
   buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,
@@ -40,6 +40,7 @@ export interface ComputeWorkbenchSolveParams {
 
 export interface WorkbenchSolveState {
   request?: SolveRequest;
+  activeRequest?: SolveRequest;
   result: SolveResult | null;
   error: string;
   fallback?: {
@@ -47,16 +48,162 @@ export interface WorkbenchSolveState {
     result: SolveResult;
     reason: 'force_balance_infeasible';
   };
+  activity: WorkbenchSolveActivity;
 }
 
-/**
- * Build the effective workbench request and solve it using the current editor
- * state. Keeping this as a pure function makes the frontend solve flow
- * independently testable without requiring React rendering.
- */
-export function computeWorkbenchSolve(
-  params: ComputeWorkbenchSolveParams
+export type WorkbenchSolveStage =
+  | 'preparing_request'
+  | 'syncing_catalog'
+  | 'loading_solver'
+  | 'solving_primary'
+  | 'solving_relaxed';
+
+export interface WorkbenchSolveActivity {
+  status: 'idle' | 'running' | 'settled' | 'cancelled';
+  startedAtEpochMs?: number;
+  finishedAtEpochMs?: number;
+  staleResult: boolean;
+  stage?: WorkbenchSolveStage;
+}
+
+export interface WorkbenchSolveProgressUpdate {
+  stage: WorkbenchSolveStage;
+  activeRequest?: SolveRequest;
+}
+
+export interface AsyncWorkbenchSolveContext {
+  attempt: 'primary' | 'relaxed';
+  onProgress?: (progress: WorkbenchSolveProgressUpdate) => void;
+}
+
+export type AsyncWorkbenchSolveExecutor = (
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  context: AsyncWorkbenchSolveContext
+) => Promise<SolveResult>;
+
+interface PreparedWorkbenchSolve {
+  request?: SolveRequest;
+  requestBuildMs: number;
+  requestBuiltAt: number;
+  startedAt: number;
+  earlyState?: WorkbenchSolveState;
+}
+
+function currentTimeMs(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
+
+function currentEpochMs(): number {
+  return Date.now();
+}
+
+export function buildIdleWorkbenchSolveState(): WorkbenchSolveState {
+  return {
+    request: undefined,
+    activeRequest: undefined,
+    result: null,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'idle',
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+export function buildRunningWorkbenchSolveState(
+  previousState: WorkbenchSolveState,
+  options: {
+    startedAtEpochMs?: number;
+    stage?: WorkbenchSolveStage;
+    activeRequest?: SolveRequest;
+  } = {}
 ): WorkbenchSolveState {
+  const startedAtEpochMs =
+    options.startedAtEpochMs ??
+    (previousState.activity.status === 'running'
+      ? previousState.activity.startedAtEpochMs
+      : undefined) ??
+    currentEpochMs();
+  return {
+    ...previousState,
+    activeRequest: options.activeRequest ?? previousState.activeRequest,
+    error: '',
+    activity: {
+      status: 'running',
+      startedAtEpochMs,
+      staleResult: Boolean(previousState.result),
+      stage:
+        options.stage ??
+        (previousState.activity.status === 'running'
+          ? previousState.activity.stage
+          : undefined) ??
+        'preparing_request',
+    },
+  };
+}
+
+export function buildCancelledWorkbenchSolveState(
+  previousState: WorkbenchSolveState
+): WorkbenchSolveState {
+  return {
+    ...previousState,
+    error: '',
+    activity: {
+      status: 'cancelled',
+      startedAtEpochMs: previousState.activity.startedAtEpochMs,
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: Boolean(previousState.result),
+      stage: previousState.activity.stage,
+    },
+  };
+}
+
+function isCancelledWorkbenchSolveError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message === 'Solve cancelled by user.' || message === 'Solve superseded by a newer request.';
+}
+
+function isNonFatalRelaxedSolveError(error: unknown): boolean {
+  return !isCancelledWorkbenchSolveError(error);
+}
+
+function buildCancelledWorkbenchSolveStateForRequest(params: {
+  startedAt: number;
+  requestBuiltAt: number;
+  requestBuildMs: number;
+  request?: SolveRequest;
+}): WorkbenchSolveState {
+  const { startedAt, requestBuiltAt, requestBuildMs, request } = params;
+  const finishedAt = currentTimeMs();
+  recordWorkbenchPerf({
+    phase: 'solve',
+    status: 'cancelled',
+    durationMs: finishedAt - startedAt,
+    requestBuildMs,
+    solveMs: finishedAt - requestBuiltAt,
+    recordedAt: Date.now(),
+  });
+  return {
+    request,
+    activeRequest: request,
+    result: null,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'cancelled',
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+function prepareWorkbenchSolve(params: ComputeWorkbenchSolveParams): PreparedWorkbenchSolve {
   const {
     catalog,
     targets,
@@ -76,17 +223,11 @@ export function computeWorkbenchSolve(
     locale = DEFAULT_APP_LOCALE,
   } = params;
   const bundle = getLocaleBundle(locale);
-  const startedAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const startedAt = currentTimeMs();
   const parsedOverrides = parseAdvancedSolveOverrides(advancedOverridesText, locale);
 
   if (parsedOverrides.error) {
-    const durationMs =
-      (typeof performance !== 'undefined' && typeof performance.now === 'function'
-        ? performance.now()
-        : Date.now()) - startedAt;
+    const durationMs = currentTimeMs() - startedAt;
     recordWorkbenchPerf({
       phase: 'solve',
       status: 'parse_error',
@@ -95,10 +236,22 @@ export function computeWorkbenchSolve(
       recordedAt: Date.now(),
     });
     return {
-      request: undefined,
-      result: null,
-      error: parsedOverrides.error,
-      fallback: undefined,
+      startedAt,
+      requestBuiltAt: startedAt,
+      requestBuildMs: durationMs,
+      earlyState: {
+        request: undefined,
+        activeRequest: undefined,
+        result: null,
+        error: parsedOverrides.error,
+        fallback: undefined,
+        activity: {
+          status: 'settled',
+          finishedAtEpochMs: currentEpochMs(),
+          staleResult: false,
+          stage: undefined,
+        },
+      },
     };
   }
 
@@ -128,10 +281,7 @@ export function computeWorkbenchSolve(
     disabledRawInputItemIds,
     advancedOverrides: mergeAdvancedSolveOverrides(parsedOverrides.value, uiOverrides),
   });
-  const requestBuiltAt =
-    typeof performance !== 'undefined' && typeof performance.now === 'function'
-      ? performance.now()
-      : Date.now();
+  const requestBuiltAt = currentTimeMs();
   const requestBuildMs = requestBuiltAt - startedAt;
 
   if (request.targets.length === 0) {
@@ -144,64 +294,280 @@ export function computeWorkbenchSolve(
     });
     return {
       request,
-      result: null,
-      error: bundle.solveRequest.validTargetRequired,
-      fallback: undefined,
+      startedAt,
+      requestBuiltAt,
+      requestBuildMs,
+      earlyState: {
+        request,
+        activeRequest: request,
+        result: null,
+        error: bundle.solveRequest.validTargetRequired,
+        fallback: undefined,
+        activity: {
+          status: 'settled',
+          finishedAtEpochMs: currentEpochMs(),
+          staleResult: false,
+          stage: undefined,
+        },
+      },
     };
   }
 
-  try {
-    const strictResult = solveCatalogRequest(catalog, request);
-    let effectiveRequest = request;
-    let effectiveResult = strictResult;
+  return {
+    request,
+    startedAt,
+    requestBuiltAt,
+    requestBuildMs,
+  };
+}
 
-    if (strictResult.status !== 'optimal') {
-      const relaxedRequest: SolveRequest = {
-        ...request,
-        balancePolicy: 'allow_surplus',
-      };
+function buildCompletedWorkbenchSolveState(params: {
+  startedAt: number;
+  requestBuiltAt: number;
+  requestBuildMs: number;
+  request: SolveRequest;
+  result: SolveResult;
+}): WorkbenchSolveState {
+  const { startedAt, requestBuiltAt, requestBuildMs, request, result } = params;
+  const finishedAt = currentTimeMs();
+  recordWorkbenchPerf({
+    phase: 'solve',
+    status: result.status,
+    durationMs: finishedAt - startedAt,
+    requestBuildMs,
+    solveMs: finishedAt - requestBuiltAt,
+    recordedAt: Date.now(),
+  });
+  return {
+    request,
+    activeRequest: request,
+    result,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'settled',
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+function buildExceptionalWorkbenchSolveState(params: {
+  startedAt: number;
+  requestBuiltAt: number;
+  requestBuildMs: number;
+  request?: SolveRequest;
+  error: unknown;
+}): WorkbenchSolveState {
+  const { startedAt, requestBuiltAt, requestBuildMs, request, error } = params;
+  const finishedAt = currentTimeMs();
+  recordWorkbenchPerf({
+    phase: 'solve',
+    status: 'exception',
+    durationMs: finishedAt - startedAt,
+    requestBuildMs,
+    solveMs: finishedAt - requestBuiltAt,
+    recordedAt: Date.now(),
+  });
+  return {
+    request,
+    activeRequest: request,
+    result: null,
+    error: error instanceof Error ? error.message : String(error),
+    fallback: undefined,
+    activity: {
+      status: 'settled',
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+function runWorkbenchSolve(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest
+): WorkbenchSolveState {
+  const strictResult = solveCatalogRequest(catalog, request);
+  let effectiveRequest = request;
+  let effectiveResult = strictResult;
+
+  if (strictResult.status !== 'optimal') {
+    const relaxedRequest: SolveRequest = {
+      ...request,
+      balancePolicy: 'allow_surplus',
+    };
+    try {
       const relaxedResult = solveCatalogRequest(catalog, relaxedRequest);
       if (relaxedResult.status === 'optimal') {
         effectiveRequest = relaxedRequest;
         effectiveResult = relaxedResult;
       }
+    } catch (error) {
+      if (!isNonFatalRelaxedSolveError(error)) {
+        throw error;
+      }
     }
-    const finishedAt =
-      typeof performance !== 'undefined' && typeof performance.now === 'function'
-        ? performance.now()
-        : Date.now();
-    recordWorkbenchPerf({
-      phase: 'solve',
-      status: effectiveResult.status,
-      durationMs: finishedAt - startedAt,
-      requestBuildMs,
-      solveMs: finishedAt - requestBuiltAt,
-      recordedAt: Date.now(),
-    });
-    return {
-      request: effectiveRequest,
-      result: effectiveResult,
-      error: '',
-      fallback: undefined,
+  }
+
+  return {
+    request: effectiveRequest,
+    activeRequest: effectiveRequest,
+    result: effectiveResult,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'settled',
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+async function runWorkbenchSolveAsync(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  executeSolve: AsyncWorkbenchSolveExecutor,
+  onProgress?: (progress: WorkbenchSolveProgressUpdate) => void
+): Promise<WorkbenchSolveState> {
+  const strictResult = await executeSolve(catalog, request, {
+    attempt: 'primary',
+    onProgress,
+  });
+  let effectiveRequest = request;
+  let effectiveResult = strictResult;
+
+  if (strictResult.status !== 'optimal') {
+    const relaxedRequest: SolveRequest = {
+      ...request,
+      balancePolicy: 'allow_surplus',
     };
+    try {
+      const relaxedResult = await executeSolve(catalog, relaxedRequest, {
+        attempt: 'relaxed',
+        onProgress,
+      });
+      if (relaxedResult.status === 'optimal') {
+        effectiveRequest = relaxedRequest;
+        effectiveResult = relaxedResult;
+      }
+    } catch (error) {
+      if (!isNonFatalRelaxedSolveError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  return {
+    request: effectiveRequest,
+    activeRequest: effectiveRequest,
+    result: effectiveResult,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'settled',
+      finishedAtEpochMs: currentEpochMs(),
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+/**
+ * Build the effective workbench request and solve it using the current editor
+ * state. Keeping this as a pure function makes the frontend solve flow
+ * independently testable without requiring React rendering.
+ */
+export function computeWorkbenchSolve(
+  params: ComputeWorkbenchSolveParams
+): WorkbenchSolveState {
+  const prepared = prepareWorkbenchSolve(params);
+  if (prepared.earlyState || !prepared.request) {
+    return prepared.earlyState ?? buildIdleWorkbenchSolveState();
+  }
+
+  try {
+    const nextState = runWorkbenchSolve(params.catalog, prepared.request);
+    if (!nextState.request || !nextState.result) {
+      return nextState;
+    }
+
+    return buildCompletedWorkbenchSolveState({
+      startedAt: prepared.startedAt,
+      requestBuiltAt: prepared.requestBuiltAt,
+      requestBuildMs: prepared.requestBuildMs,
+      request: nextState.request,
+      result: nextState.result,
+    });
   } catch (error) {
-    const finishedAt =
-      typeof performance !== 'undefined' && typeof performance.now === 'function'
-        ? performance.now()
-        : Date.now();
-    recordWorkbenchPerf({
-      phase: 'solve',
-      status: 'exception',
-      durationMs: finishedAt - startedAt,
-      requestBuildMs,
-      solveMs: finishedAt - requestBuiltAt,
-      recordedAt: Date.now(),
+    if (isCancelledWorkbenchSolveError(error)) {
+      return buildCancelledWorkbenchSolveStateForRequest({
+        startedAt: prepared.startedAt,
+        requestBuiltAt: prepared.requestBuiltAt,
+        requestBuildMs: prepared.requestBuildMs,
+        request: prepared.request,
+      });
+    }
+    return buildExceptionalWorkbenchSolveState({
+      startedAt: prepared.startedAt,
+      requestBuiltAt: prepared.requestBuiltAt,
+      requestBuildMs: prepared.requestBuildMs,
+      request: prepared.request,
+      error,
     });
-    return {
-      request,
-      result: null,
-      error: error instanceof Error ? error.message : String(error),
-      fallback: undefined,
-    };
+  }
+}
+
+export async function computeWorkbenchSolveAsync(
+  params: ComputeWorkbenchSolveParams,
+  executeSolve: AsyncWorkbenchSolveExecutor = (catalog, request) =>
+    solveCatalogRequestAsync(catalog, request),
+  onProgress?: (progress: WorkbenchSolveProgressUpdate) => void
+): Promise<WorkbenchSolveState> {
+  const prepared = prepareWorkbenchSolve(params);
+  if (prepared.earlyState || !prepared.request) {
+    return prepared.earlyState ?? buildIdleWorkbenchSolveState();
+  }
+  onProgress?.({
+    stage: 'preparing_request',
+    activeRequest: prepared.request,
+  });
+
+  try {
+    const nextState = await runWorkbenchSolveAsync(
+      params.catalog,
+      prepared.request,
+      executeSolve,
+      onProgress
+    );
+    if (!nextState.request || !nextState.result) {
+      return nextState;
+    }
+
+    return buildCompletedWorkbenchSolveState({
+      startedAt: prepared.startedAt,
+      requestBuiltAt: prepared.requestBuiltAt,
+      requestBuildMs: prepared.requestBuildMs,
+      request: nextState.request,
+      result: nextState.result,
+    });
+  } catch (error) {
+    if (isCancelledWorkbenchSolveError(error)) {
+      return buildCancelledWorkbenchSolveStateForRequest({
+        startedAt: prepared.startedAt,
+        requestBuiltAt: prepared.requestBuiltAt,
+        requestBuildMs: prepared.requestBuildMs,
+        request: prepared.request,
+      });
+    }
+    return buildExceptionalWorkbenchSolveState({
+      startedAt: prepared.startedAt,
+      requestBuiltAt: prepared.requestBuiltAt,
+      requestBuildMs: prepared.requestBuildMs,
+      request: prepared.request,
+      error,
+    });
   }
 }

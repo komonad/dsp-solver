@@ -109,7 +109,12 @@ export interface LocaleBundle {
     preferredBuildingGlobalScope: string;
     advancedOverridesLabel: string;
     advancedOverridesHelp: string;
+    startSolveButton: string;
+    restartSolveButton: string;
+    cancelSolveButton: string;
     autoSolveHint: string;
+    autoSolveRunningHint: string;
+    autoSolveCancelledHint: string;
     levelPrefix: string;
     validTargetRequired: string;
     invalidAllowedRecipeSelectionMessage: string;
@@ -143,6 +148,35 @@ export interface LocaleBundle {
     noProliferatorPreferences: string;
     loadDatasetToStart: string;
   };
+  solveActivity: {
+    metricLabel: string;
+    runningChipLabel: string;
+    initialSolveTitle: string;
+    initialSolveDescription: string;
+    refreshingTitle: string;
+    refreshingDescription: string;
+    preparingRequestLabel: string;
+    preparingRequestDescription: string;
+    syncingCatalogLabel: string;
+    syncingCatalogDescription: string;
+    loadingSolverLabel: string;
+    loadingSolverDescription: string;
+    solvingPrimaryLabel: string;
+    solvingPrimaryDescription: string;
+    solvingRelaxedLabel: string;
+    solvingRelaxedDescription: string;
+    elapsedLabel: (elapsed: string) => string;
+    engineLabel: string;
+    pendingResultBadge: string;
+    staleResultBadge: string;
+    cancelledChipLabel: string;
+    cancelledStageLabel: string;
+    cancelledStageDescription: (stageLabel: string) => string;
+    cancelledInitialTitle: string;
+    cancelledInitialDescription: string;
+    cancelledRefreshingTitle: string;
+    cancelledRefreshingDescription: string;
+  };
   snapshot: {
     sectionDescription: {
       targets: string;
@@ -157,6 +191,7 @@ export interface LocaleBundle {
       balance: string;
       spray: string;
       status: string;
+      activity: string;
     };
   };
   recipeStrategy: {
@@ -222,7 +257,8 @@ export interface LocaleBundle {
         itemCount: string,
         recipeCount: string,
         optionCount: string,
-        rawInputCount: string
+        rawInputCount: string,
+        solvedRecipeCount: string
       ) => string;
       overviewTimings: (
         total: string,
@@ -235,6 +271,7 @@ export interface LocaleBundle {
       initialAttemptTitle: (index: number) => string;
       reweightedAttemptTitle: (index: number) => string;
       surplusTypeMilpAttemptTitle: string;
+      surplusComplexityMilpAttemptTitle: string;
       complexitySeedAttemptTitle: string;
       complexityAttemptTitle: (round: number) => string;
       linearProgramLabel: string;
@@ -243,6 +280,7 @@ export interface LocaleBundle {
       infeasibleStatusLabel: string;
       invalidInputStatusLabel: string;
       timedoutStatusLabel: string;
+      skippedStatusLabel: string;
       attemptHeading: (context: string, modelKind: string, status: string) => string;
       attemptModelSummary: (
         itemCount: string,
@@ -253,6 +291,7 @@ export interface LocaleBundle {
       ) => string;
       attemptTimings: (build: string, solve: string, total: string) => string;
       attemptSurplus: (itemCount: string, rate: string) => string;
+      attemptUsage: (recipeCount: string, optionCount: string) => string;
       attemptObjectiveCost: (objectiveLabel: string, value: string) => string;
       reweightTerminationConverged: string;
       reweightTerminationStagnant: string;
@@ -422,7 +461,12 @@ const zhCN: LocaleBundle = {
     advancedOverridesLabel: '高级覆盖 JSON',
     advancedOverridesHelp:
       '用于填写偏好/强制建筑、配方、增产剂等高级请求字段。',
-    autoSolveHint: '已改为自动求解。左侧任一会影响求解的输入变更后，右侧结果会立即更新。',
+    startSolveButton: '立即求解',
+    restartSolveButton: '重新求解',
+    cancelSolveButton: '中断求解',
+    autoSolveHint: '默认保持自动求解。左侧任一会影响求解的输入变更后，右侧结果会自动更新。',
+    autoSolveRunningHint: '当前正在自动求解；如长时间没有结果，可以先手动中断。',
+    autoSolveCancelledHint: '当前输入的自动求解已中断；点击“重新求解”可继续计算这份请求。',
     levelPrefix: '等级',
     validTargetRequired: '至少需要一个有效目标。',
     invalidAllowedRecipeSelectionMessage: '该允许配方组合会导致当前方案无解，未应用。',
@@ -456,6 +500,42 @@ const zhCN: LocaleBundle = {
     noProliferatorPreferences: '当前没有增产偏好。',
     loadDatasetToStart: '先加载数据集，再开始构造求解请求。',
   },
+  solveActivity: {
+    metricLabel: '求解活动',
+    runningChipLabel: '进行中',
+    initialSolveTitle: '正在生成第一版结果',
+    initialSolveDescription:
+      '浏览器正在计算当前方案，结果返回后会自动显示。',
+    refreshingTitle: '正在根据最新设置重新求解',
+    refreshingDescription:
+      '当前右侧仍显示上一版完成结果，新结果返回后会自动替换。',
+    preparingRequestLabel: '整理求解请求',
+    preparingRequestDescription:
+      '正在根据当前输入整理求解请求，准备把新任务送入求解线程。',
+    syncingCatalogLabel: '同步数据集',
+    syncingCatalogDescription:
+      '正在把当前数据集同步到浏览器内求解线程，避免主界面卡顿。',
+    loadingSolverLabel: '准备求解线程',
+    loadingSolverDescription:
+      '正在准备浏览器内求解线程；首次求解通常会比后续更慢。',
+    solvingPrimaryLabel: '求解当前约束',
+    solvingPrimaryDescription:
+      '正在按照当前目标函数和配平策略搜索可行最优解。',
+    solvingRelaxedLabel: '放宽配平后重试',
+    solvingRelaxedDescription:
+      '强制配平没有得到最优解，正在允许冗余产物后重新求解。',
+    elapsedLabel: elapsed => `已用时 ${elapsed}`,
+    engineLabel: '浏览器内求解 Worker',
+    pendingResultBadge: '等待首个结果',
+    staleResultBadge: '显示上一版结果',
+    cancelledChipLabel: '已中断',
+    cancelledStageLabel: '求解已中断',
+    cancelledStageDescription: stageLabel => `已在“${stageLabel}”阶段中断当前求解，可手动重新发起。`,
+    cancelledInitialTitle: '当前求解已中断',
+    cancelledInitialDescription: '这份输入还没有产出结果，点击重新求解后会继续计算。',
+    cancelledRefreshingTitle: '已中断本轮重新求解',
+    cancelledRefreshingDescription: '下面仍显示上一版完成结果，点击重新求解可刷新为最新输入。',
+  },
   snapshot: {
     sectionDescription: {
       targets:
@@ -480,6 +560,8 @@ const zhCN: LocaleBundle = {
         '增产剂策略：定义全局增产模式与等级的默认请求。若存在配方级偏好或强制覆盖，则以更具体的条目为准。',
       status:
         '求解状态：描述当前请求是否找到可行最优解，以及该状态是否满足全部约束与目标函数要求。',
+      activity:
+        '求解活动：表示浏览器是否正在为最新输入重新求解。进行中时，右侧结果可能仍是上一版完成结果。',
     },
   },
   recipeStrategy: {
@@ -534,15 +616,15 @@ const zhCN: LocaleBundle = {
     producedLabel: '生成',
     consumedLabel: '消耗',
     netLabel: '净值',
-    copySolveRequestJson: '复制',
-    copySolveRequestJsonDone: '已复制',
+    copySolveRequestJson: '复制 JSON',
+    copySolveRequestJsonDone: 'JSON 已复制',
     copySolveRequestJsonFailed: '复制失败',
     solveRequestJson: '求解请求 JSON',
     solveResultJson: '求解结果 JSON',
     audit: {
       overviewTitle: '本次求解概览',
-      overviewSummary: (itemCount, recipeCount, optionCount, rawInputCount) =>
-        `图裁剪后保留 ${itemCount} 个物品、${recipeCount} 个配方、${optionCount} 个候选方案，原矿输入 ${rawInputCount} 种。`,
+      overviewSummary: (itemCount, recipeCount, optionCount, rawInputCount, solvedRecipeCount) =>
+        `图裁剪后保留 ${itemCount} 个物品、${recipeCount} 个配方、${optionCount} 个候选方案，原矿输入 ${rawInputCount} 种，本次解实际使用 ${solvedRecipeCount} 个配方。`,
       overviewTimings: (total, graph, model, solve, result) =>
         `总耗时 ${total}，其中建图 ${graph}，建模 ${model}，求解 ${solve}，结果整理 ${result}。`,
       attemptsTitle: '实际求解过程',
@@ -550,6 +632,7 @@ const zhCN: LocaleBundle = {
       reweightedAttemptTitle: index =>
         `第 ${index} 次求解（按上一轮冗余结果重新加权）`,
       surplusTypeMilpAttemptTitle: '冗余种类最小化（混合整数规划）',
+      surplusComplexityMilpAttemptTitle: '固定冗余后的复杂度优化（混合整数规划）',
       complexitySeedAttemptTitle: '复杂度预求解',
       complexityAttemptTitle: round => `复杂度主求解第 ${round} 轮`,
       linearProgramLabel: '线性规划',
@@ -558,6 +641,7 @@ const zhCN: LocaleBundle = {
       infeasibleStatusLabel: '无可行解',
       invalidInputStatusLabel: '输入无效',
       timedoutStatusLabel: '超时（近似解）',
+      skippedStatusLabel: '已跳过',
       attemptHeading: (context, modelKind, status) =>
         `${context}：${modelKind}，${status}。`,
       attemptModelSummary: (
@@ -572,6 +656,8 @@ const zhCN: LocaleBundle = {
         `本轮耗时：建模 ${build}，求解 ${solve}，小计 ${total}。`,
       attemptSurplus: (itemCount, rate) =>
         `本轮冗余：${itemCount} 种，合计 ${rate} / 分。`,
+      attemptUsage: (recipeCount, optionCount) =>
+        `本轮实际使用：${recipeCount} 个配方，${optionCount} 条产线。`,
       attemptObjectiveCost: (objectiveLabel, value) =>
         `本轮${objectiveLabel}代价 ${value}。`,
       reweightTerminationConverged: '冗余产物已收敛至 1 种以下，无需继续加权。',

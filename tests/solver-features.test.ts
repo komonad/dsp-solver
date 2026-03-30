@@ -7,6 +7,7 @@ import {
   type VanillaDatasetSpec,
 } from '../src/catalog';
 import { solveCatalogRequest } from '../src/solver';
+import { loadHighsSolverImplementation } from '../src/solver/experimental';
 
 const workEnergyForOneMW = 1_000_000 / 60;
 
@@ -778,7 +779,7 @@ test('allowedRecipesByItem is enforced as a hard solver constraint even under al
   expect(result.surplusOutputs).toEqual([]);
 });
 
-test('allow_surplus still minimizes unnecessary byproduct magnitude and variety', () => {
+test('allow_surplus still keeps the primary objective ahead of unnecessary byproduct cleanup', () => {
   const dataset: VanillaDatasetSpec = {
     items: [
       { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
@@ -851,11 +852,11 @@ test('allow_surplus still minimizes unnecessary byproduct magnitude and variety'
 
   expect(result.status).toBe('optimal');
   expect(result.recipePlans).toHaveLength(1);
-  expect(result.recipePlans[0].recipeId).toBe('1');
-  expect(result.surplusOutputs).toEqual([]);
+  expect(result.recipePlans[0].recipeId).toBe('2');
+  expect(result.surplusOutputs).toEqual([{ itemId: '1201', ratePerMin: 480 }]);
 });
 
-test('allow_surplus prefers consolidating surplus into fewer item types before lower power', () => {
+test('allow_surplus keeps lower power even when it leaves more surplus item types', () => {
   const dataset: VanillaDatasetSpec = {
     items: [
       { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
@@ -928,12 +929,15 @@ test('allow_surplus prefers consolidating surplus into fewer item types before l
 
   expect(result.status).toBe('optimal');
   expect(result.recipePlans).toHaveLength(1);
-  expect(result.recipePlans[0].recipeId).toBe('2');
-  expect(result.surplusOutputs).toEqual([{ itemId: '1203', ratePerMin: 120 }]);
+  expect(result.recipePlans[0].recipeId).toBe('1');
+  expect(result.surplusOutputs).toEqual([
+    { itemId: '1201', ratePerMin: 60 },
+    { itemId: '1202', ratePerMin: 60 },
+  ]);
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
-test('allow_surplus can trade higher total surplus for fewer surplus item types when reweighting', () => {
+test('allow_surplus reweighting stays within the primary-objective budget', () => {
   const dataset: VanillaDatasetSpec = {
     items: [
       { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
@@ -1006,8 +1010,11 @@ test('allow_surplus can trade higher total surplus for fewer surplus item types 
 
   expect(result.status).toBe('optimal');
   expect(result.recipePlans).toHaveLength(1);
-  expect(result.recipePlans[0].recipeId).toBe('2');
-  expect(result.surplusOutputs).toEqual([{ itemId: '1203', ratePerMin: 300 }]);
+  expect(result.recipePlans[0].recipeId).toBe('1');
+  expect(result.surplusOutputs).toEqual([
+    { itemId: '1201', ratePerMin: 60 },
+    { itemId: '1202', ratePerMin: 60 },
+  ]);
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
@@ -1021,7 +1028,6 @@ test('orbital ring request honors forced graphite recipe instead of delayed coki
     parseJsonText<VanillaDatasetSpec>(datasetText),
     parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
   );
-
   const result = solveCatalogRequest(catalog, {
     targets: [{ itemId: '6003', ratePerMin: 120 }],
     objective: 'min_power',
@@ -1119,7 +1125,7 @@ testOrSkipOnCI('orbital ring magnetic fluid surplus solving prefers fewer surplu
   expect(result.solveAudit?.attempts.some(attempt => attempt.phase === 'reweighted_lp')).toBe(true);
 });
 
-testOrSkipOnCI('orbital ring magnetic fluid surplus type milp finds magma+light oil over titanium cascade', () => {
+testOrSkipOnCI('orbital ring magnetic fluid surplus refinement finds magma+light oil over titanium cascade', async () => {
   const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
   const defaultsText = readFileSync(
     join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
@@ -1129,6 +1135,7 @@ testOrSkipOnCI('orbital ring magnetic fluid surplus type milp finds magma+light 
     parseJsonText<VanillaDatasetSpec>(datasetText),
     parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
   );
+  const implementation = await loadHighsSolverImplementation();
 
   const result = solveCatalogRequest(catalog, {
     targets: [{ itemId: '7705', ratePerMin: 60 }],
@@ -1147,7 +1154,7 @@ testOrSkipOnCI('orbital ring magnetic fluid surplus type milp finds magma+light 
     },
     globalForcedProliferatorLevel: 0,
     globalForcedProliferatorMode: 'none',
-  });
+  }, { implementation });
 
   expect(result.status).toBe('optimal');
   // MILP should find recipe 419 (direct magma→magnets) over recipe 422 (titanium co-production)
@@ -1156,9 +1163,8 @@ testOrSkipOnCI('orbital ring magnetic fluid surplus type milp finds magma+light 
   // Surplus: magma (6251) + light oil (7009), not magnets/titanium crystal
   expect(result.surplusOutputs).toHaveLength(2);
   expect(result.surplusOutputs.map(s => s.itemId).sort()).toEqual(['6251', '7009']);
-  // The surplus_type_milp phase must have been used to discover this
-  expect(result.solveAudit?.attempts.some(a => a.phase === 'surplus_type_milp')).toBe(true);
-  const milpAttempt = result.solveAudit?.attempts.find(a => a.phase === 'surplus_type_milp');
+  expect(result.solveAudit?.attempts.some(a => a.phase === 'surplus_complexity_milp')).toBe(true);
+  const milpAttempt = result.solveAudit?.attempts.find(a => a.phase === 'surplus_complexity_milp');
   expect(milpAttempt?.isBestCandidate).toBe(true);
   expect(milpAttempt?.surplusItemCount).toBe(2);
 });
@@ -1200,10 +1206,6 @@ testOrSkipOnCI('orbital ring solar sail surplus milp avoids excessive recipe cha
   // than the naive LP solution (which used 19 recipes at ~242 MW).
   expect(result.recipePlans.length).toBeLessThanOrEqual(15);
   expect(result.powerSummary.activePowerMW).toBeLessThan(100);
-  // The surplus_type_milp phase should have run and been accepted
-  const milpAttempt = result.solveAudit?.attempts.find(a => a.phase === 'surplus_type_milp');
-  expect(milpAttempt).toBeDefined();
-  expect(milpAttempt?.isBestCandidate).toBe(true);
 });
 
 test('allowedRecipesByItem does not block zero-net recycled outputs in orbital ring chains', () => {
@@ -1521,9 +1523,37 @@ test('orbital ring material matrix surplus milp does not introduce water electro
   // Water electrolysis (702) should NOT be introduced — it was inactive in
   // the LP and only adds hydrogen surplus without reducing surplus type count.
   expect(result.recipePlans.some(p => p.recipeId === '702')).toBe(false);
-  // Surplus should be only hydrogen, at a reasonable level (not inflated by
-  // unnecessary water → hydrogen conversion).
-  expect(result.surplusOutputs).toHaveLength(1);
-  expect(result.surplusOutputs[0].itemId).toBe('1120');
-  expect(result.surplusOutputs[0].ratePerMin).toBeLessThan(100);
+  // The new primary-first strategy may accept additional surplus types, but
+  // hydrogen should remain bounded and recipe 702 must stay inactive.
+  expect(result.surplusOutputs.some(entry => entry.itemId === '1120')).toBe(true);
+  const hydrogen = result.surplusOutputs.find(entry => entry.itemId === '1120');
+  expect(hydrogen?.ratePerMin ?? Infinity).toBeLessThan(100);
+});
+
+test('orbital ring energy matrix allow_surplus solve avoids sprawling cleanup chains', () => {
+  const datasetText = readFileSync(join(__dirname, '..', 'data', 'OrbitalRing.json'), 'utf8');
+  const defaultsText = readFileSync(
+    join(__dirname, '..', 'data', 'OrbitalRing.defaults.json'),
+    'utf8'
+  );
+  const catalog = resolveCatalogModel(
+    parseJsonText<VanillaDatasetSpec>(datasetText),
+    parseJsonText<CatalogDefaultConfigSpec>(defaultsText)
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '6002', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    rawInputItemIds: [],
+    disabledRecipeIds: ['510', '517', '705', '776'],
+    disabledBuildingIds: ['6215'],
+    allowedRecipesByItem: {
+      '7009': ['16'],
+    },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.length).toBeLessThanOrEqual(25);
+  expect(result.powerSummary.activePowerMW).toBeLessThan(100);
 });

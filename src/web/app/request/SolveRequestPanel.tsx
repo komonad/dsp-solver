@@ -45,6 +45,10 @@ export default function SolveRequestPanel() {
     globalProliferatorLevelDisabled,
     advancedOverridesText,
     parsedOverrides,
+    autoSolveState,
+    canStartSolve,
+    canCancelSolve,
+    solveCancelledForCurrentInputs,
     setTargetPickerQuery,
     setTargetDraftItemId,
     setTargetDraftRatePerMin,
@@ -53,11 +57,43 @@ export default function SolveRequestPanel() {
     setGlobalProliferatorLevel,
     setAdvancedOverridesText,
     addTarget,
+    startSolve,
+    cancelSolve,
   } = useWorkbench();
+  const solveActionLabel =
+    autoSolveState.activity.status === 'running' || solveCancelledForCurrentInputs
+      ? bundle.solveRequest.restartSolveButton
+      : bundle.solveRequest.startSolveButton;
+  const solveHint = solveCancelledForCurrentInputs
+    ? bundle.solveRequest.autoSolveCancelledHint
+    : autoSolveState.activity.status === 'running'
+      ? bundle.solveRequest.autoSolveRunningHint
+      : bundle.solveRequest.autoSolveHint;
 
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
-      <Typography variant="h6">{bundle.solveRequest.title}</Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Typography variant="h6">{bundle.solveRequest.title}</Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" size="small" onClick={startSolve} disabled={!canStartSolve}>
+            {solveActionLabel}
+          </Button>
+          <Button variant="contained" size="small" color="warning" onClick={cancelSolve} disabled={!canCancelSolve}>
+            {bundle.solveRequest.cancelSolveButton}
+          </Button>
+        </Box>
+      </Box>
+      <Typography variant="body2" sx={{ color: 'rgba(24, 51, 89, 0.72)' }}>
+        {solveHint}
+      </Typography>
       <div style={{ display: 'grid', gap: 16 }}>
         <Box
           sx={{

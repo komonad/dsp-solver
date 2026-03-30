@@ -43,6 +43,9 @@ function formatAttemptStatus(bundle: LocaleBundle, status: string): string {
   if (status === 'timedout') {
     return bundle.diagnostics.audit.timedoutStatusLabel;
   }
+  if (status === 'skipped') {
+    return bundle.diagnostics.audit.skippedStatusLabel;
+  }
   return status;
 }
 
@@ -56,6 +59,9 @@ function formatAttemptContext(
   }
   if (attempt.phase === 'surplus_type_milp') {
     return bundle.diagnostics.audit.surplusTypeMilpAttemptTitle;
+  }
+  if (attempt.phase === 'surplus_complexity_milp') {
+    return bundle.diagnostics.audit.surplusComplexityMilpAttemptTitle;
   }
   if (attempt.phase === 'complexity_seed_lp') {
     return bundle.diagnostics.audit.complexitySeedAttemptTitle;
@@ -91,8 +97,9 @@ export default function SolveAuditSection(props: {
   bundle: LocaleBundle;
   solveAudit?: SolveAudit | null;
   objective?: SolveObjective;
+  solvedRecipeCount?: number;
 }) {
-  const { locale, bundle, solveAudit, objective } = props;
+  const { locale, bundle, solveAudit, objective, solvedRecipeCount } = props;
   if (!solveAudit) {
     return null;
   }
@@ -120,7 +127,8 @@ export default function SolveAuditSection(props: {
             formatCount(solveAudit.prunedItemCount, locale),
             formatCount(solveAudit.prunedRecipeCount, locale),
             formatCount(solveAudit.prunedOptionCount, locale),
-            formatCount(solveAudit.resolvedRawInputCount, locale)
+            formatCount(solveAudit.resolvedRawInputCount, locale),
+            formatCount(solvedRecipeCount ?? 0, locale)
           )}
         </div>
         <div style={{ color: 'rgba(24, 51, 89, 0.72)', fontSize: 13, lineHeight: 1.5 }}>
@@ -169,6 +177,14 @@ export default function SolveAuditSection(props: {
                   {bundle.diagnostics.audit.attemptSurplus(
                     formatCount(attempt.surplusItemCount, locale),
                     formatRate(attempt.surplusRatePerMin ?? 0, locale)
+                  )}
+                </div>
+              ) : null}
+              {attempt.solvedRecipeCount !== undefined && attempt.solvedOptionCount !== undefined ? (
+                <div style={{ color: 'rgba(24, 51, 89, 0.58)', fontSize: 12, lineHeight: 1.5 }}>
+                  {bundle.diagnostics.audit.attemptUsage(
+                    formatCount(attempt.solvedRecipeCount, locale),
+                    formatCount(attempt.solvedOptionCount, locale)
                   )}
                 </div>
               ) : null}

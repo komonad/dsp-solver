@@ -23,7 +23,13 @@ export interface SolveDiagnostics {
  */
 export interface SolveAuditAttempt {
   /** Stable phase identifier for this attempt. */
-  phase: 'initial_lp' | 'reweighted_lp' | 'surplus_type_milp' | 'complexity_seed_lp' | 'complexity_milp';
+  phase:
+    | 'initial_lp'
+    | 'reweighted_lp'
+    | 'surplus_type_milp'
+    | 'surplus_complexity_milp'
+    | 'complexity_seed_lp'
+    | 'complexity_milp';
   /** Zero-based round index within the phase family when applicable. */
   round?: number;
   /** Model family used for this attempt. */
@@ -52,6 +58,10 @@ export interface SolveAuditAttempt {
   surplusItemCount?: number;
   /** Final total surplus rate in items per minute observed on this attempt, when relevant. */
   surplusRatePerMin?: number;
+  /** Count of distinct recipes actually used by this attempt's solved assignment, when available. */
+  solvedRecipeCount?: number;
+  /** Count of active recipe/building/proliferator plans actually used by this attempt, when available. */
+  solvedOptionCount?: number;
   /** Primary objective value (power/buildings/etc.) for this attempt, when relevant. */
   primaryObjectiveValue?: number;
   /** Per-item surplus weights applied in this reweighted LP round. */
@@ -96,7 +106,8 @@ export interface SolveAudit {
     | 'stagnant'
     | 'max_rounds'
     | 'deadline'
-    | 'infeasible';
+    | 'infeasible'
+    | 'error';
 }
 
 /**

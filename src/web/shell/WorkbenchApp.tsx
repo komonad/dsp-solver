@@ -20,6 +20,7 @@ function WorkbenchLayout() {
   const {
     bundle,
     model,
+    autoSolveState,
     loadError,
     iconAtlasIds,
     allowedRecipesByItem,
@@ -32,6 +33,8 @@ function WorkbenchLayout() {
     revealRecipePlan,
     locale,
   } = useWorkbench();
+  const isSolveRunning = autoSolveState.activity.status === 'running';
+  const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 
   return (
     <Box
@@ -106,8 +109,8 @@ function WorkbenchLayout() {
               </article>
             ) : null}
 
-            {model ? (
-              model.status ? (
+            {model || isSolveRunning || isSolveCancelled ? (
+              model?.status || isSolveRunning || isSolveCancelled ? (
                 <ResultsArea />
               ) : (
                 <article style={cardStyle}>

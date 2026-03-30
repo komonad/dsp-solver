@@ -1,5 +1,3 @@
-import { solve as solveLinearProgram } from 'yalps';
-import type { Model, Options as SolverOptions, Solution } from 'yalps';
 import type {
   ProliferatorMode,
   ResolvedBuildingSpec,
@@ -19,6 +17,8 @@ import type {
   SolveAuditAttempt,
   SolveResult,
 } from './result';
+import type { Model, Options as SolverOptions, Solution, SolverImplementation } from './implementation';
+import { yalpsSolverImplementation } from './yalpsImplementation';
 import { recordSolverPerf } from './perf';
 
 const EPSILON = 1e-8;
@@ -27,14 +27,21 @@ const OBJECTIVE_EPSILON = 1e-6;
 const SECONDARY_EPSILON = 1e-9;
 const EXTERNAL_INPUT_ACTIVITY_EPSILON = 1e-9;
 const SURPLUS_OUTPUT_EPSILON = 1e-3;
+const REPORTED_RATE_EPSILON = 5e-3;
+const PRIMARY_OBJECTIVE_BOUND_RELATIVE_EPSILON = 0.05;
+const PRIMARY_OBJECTIVE_BOUND_ABSOLUTE_EPSILON = 1e-6;
 const ALLOW_SURPLUS_SYNC_BUDGET_MS = 200;
 const ALLOW_SURPLUS_MAX_LINEAR_SOLVES = 5;
 const ALLOW_SURPLUS_REWEIGHT_MAX_FACTOR = 256;
 const ALLOW_SURPLUS_REWEIGHT_MAX_EXPONENT = 4;
 const COMPLEXITY_LINK_BOUND_FLOOR = 64;
 const COMPLEXITY_LINK_BOUND_MULTIPLIERS = [1, 4, 16, 64, 256];
-const SURPLUS_MILP_TIMEOUT_MS = 500;
+const SURPLUS_MILP_TIMEOUT_MS = 750;
 const SURPLUS_MILP_TOLERANCE = 0.10;
+const SURPLUS_COMPLEXITY_MILP_MAX_OPTIONS = 256;
+const SURPLUS_COMPLEXITY_MILP_MAX_BINARIES = 512;
+const SURPLUS_COMPLEXITY_MILP_MAX_OPTIONS_YALPS = 80;
+const SURPLUS_COMPLEXITY_MILP_MAX_BINARIES_YALPS = 160;
 const VALID_PROLIFERATOR_MODES: ProliferatorMode[] = ['none', 'speed', 'productivity'];
 
 interface ValidateResult {
@@ -97,6 +104,8 @@ interface LinearSolveCandidate {
   activeOptions: CompiledOptionContext[];
   solution: Solution<string>;
   surplus: SurplusSolutionMetrics;
+  activeOptionCount: number;
+  activeRecipeCount: number;
   primaryObjectiveValue: number;
 }
 
@@ -557,16 +566,20 @@ function getStaticRecipeOptionCompilation(
   return compilation;
 }
 
-function getSolvedRequestCacheKey(request: SolveRequest): string {
-  return stableSerialize(request);
+function getSolvedRequestCacheKey(
+  request: SolveRequest,
+  implementation: SolverImplementation
+): string {
+  return `${implementation.implementationId}\u0000${stableSerialize(request)}`;
 }
 
 function getCachedSolvedRequestResult(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest
+  request: SolveRequest,
+  implementation: SolverImplementation
 ): SolveResult | null {
   const cache = getCatalogSolveCache(catalog);
-  const requestKey = getSolvedRequestCacheKey(request);
+  const requestKey = getSolvedRequestCacheKey(request, implementation);
   const cached = cache.solvedRequestResults.get(requestKey);
   if (!cached) {
     return null;
@@ -580,10 +593,11 @@ function getCachedSolvedRequestResult(
 function setCachedSolvedRequestResult(
   catalog: ResolvedCatalogModel,
   request: SolveRequest,
+  implementation: SolverImplementation,
   result: SolveResult
 ): void {
   const cache = getCatalogSolveCache(catalog);
-  const requestKey = getSolvedRequestCacheKey(request);
+  const requestKey = getSolvedRequestCacheKey(request, implementation);
   if (cache.solvedRequestResults.has(requestKey)) {
     cache.solvedRequestResults.delete(requestKey);
   }
@@ -681,9 +695,13 @@ function compileRecipeOptions(
     return [];
   }
 
-  const compiledOptions = staticCompilation.options.filter(
+  const filteredOptions = staticCompilation.options.filter(
     ({ option }) =>
       allowedBuildingIdSet.has(option.buildingId) && isOptionAllowedByForce(option, recipe, request)
+  );
+  const compiledOptions = pruneDominatedCompiledOptions(
+    filteredOptions,
+    request.preferredBuildingByRecipe?.[recipe.recipeId]
   );
 
   if (compiledOptions.length === 0) {
@@ -905,6 +923,73 @@ function createProliferatorItemId(level: ResolvedProliferatorLevelSpec): string 
   return level.itemId ?? `__proliferator_level_${level.level}`;
 }
 
+function serializeCompiledItemEntries(entries: readonly CompiledItemAmountEntry[]): string {
+  return entries
+    .map(([itemId, amount]) => `${itemId}:${amount}`)
+    .join('|');
+}
+
+function buildCompiledOptionDominanceKey(option: CompiledOption): string {
+  return [
+    option.recipeId,
+    option.proliferatorMode,
+    option.proliferatorLevel,
+    option.proliferatorItemId ?? '',
+    serializeCompiledItemEntries(option.netItemEntries),
+  ].join('::');
+}
+
+function isCompiledOptionDominated(left: CompiledOption, right: CompiledOption): boolean {
+  const buildingNotWorse =
+    right.buildingCostPerRunPerMin <= left.buildingCostPerRunPerMin + EPSILON;
+  const powerNotWorse = right.powerCostMWPerRunPerMin <= left.powerCostMWPerRunPerMin + EPSILON;
+  const buildingStrictlyBetter =
+    right.buildingCostPerRunPerMin < left.buildingCostPerRunPerMin - EPSILON;
+  const powerStrictlyBetter =
+    right.powerCostMWPerRunPerMin < left.powerCostMWPerRunPerMin - EPSILON;
+
+  return buildingNotWorse && powerNotWorse && (buildingStrictlyBetter || powerStrictlyBetter);
+}
+
+function pruneDominatedCompiledOptions(
+  compiledOptions: CompiledOptionContext[],
+  preferredBuildingId?: string
+): CompiledOptionContext[] {
+  if (compiledOptions.length <= 1) {
+    return compiledOptions;
+  }
+
+  const groupedOptions = new Map<string, CompiledOptionContext[]>();
+  for (const entry of compiledOptions) {
+    const groupKey = buildCompiledOptionDominanceKey(entry.option);
+    const group = groupedOptions.get(groupKey) ?? [];
+    group.push(entry);
+    groupedOptions.set(groupKey, group);
+  }
+
+  const prunedOptions: CompiledOptionContext[] = [];
+  for (const group of groupedOptions.values()) {
+    for (const candidate of group) {
+      if (preferredBuildingId && candidate.option.buildingId === preferredBuildingId) {
+        prunedOptions.push(candidate);
+        continue;
+      }
+
+      const dominated = group.some(
+        other =>
+          other !== candidate &&
+          (!preferredBuildingId || other.option.buildingId !== preferredBuildingId) &&
+          isCompiledOptionDominated(candidate.option, other.option)
+      );
+      if (!dominated) {
+        prunedOptions.push(candidate);
+      }
+    }
+  }
+
+  return prunedOptions;
+}
+
 function getPreferredOptionPenalty(
   request: SolveRequest,
   recipe: ResolvedRecipeSpec,
@@ -963,12 +1048,99 @@ function buildObjectiveCoefficient(
   );
 }
 
+function buildPrimaryObjectiveOptionCoefficient(
+  request: SolveRequest,
+  option: CompiledOption
+): number {
+  if (request.objective === 'min_buildings') {
+    return option.buildingCostPerRunPerMin;
+  }
+
+  if (request.objective === 'min_power') {
+    return option.powerCostMWPerRunPerMin;
+  }
+
+  return 0;
+}
+
 function buildExternalInputObjectiveCoefficient(request: SolveRequest): number {
   if (request.objective !== 'min_external_input') {
     return 0;
   }
 
   return request.balancePolicy === 'allow_surplus' ? OBJECTIVE_EPSILON : 1;
+}
+
+function buildPrimaryObjectiveExternalInputCoefficient(request: SolveRequest): number {
+  return request.objective === 'min_external_input' ? 1 : 0;
+}
+
+function buildPrimaryFirstObjectiveCoefficient(
+  request: SolveRequest,
+  recipe: ResolvedRecipeSpec,
+  option: CompiledOption
+): number {
+  const primaryObjectiveCoefficient = buildPrimaryObjectiveOptionCoefficient(request, option);
+  if (request.objective === 'min_external_input') {
+    return buildObjectiveCoefficient(request, recipe, option);
+  }
+
+  return (
+    primaryObjectiveCoefficient +
+    getPreferredOptionPenalty(request, recipe, option) * SECONDARY_EPSILON +
+    option.buildingCostPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON +
+    option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON * SECONDARY_EPSILON
+  );
+}
+
+function computePrimaryObjectiveUpperBound(primaryObjectiveValue: number): number {
+  return (
+    primaryObjectiveValue +
+    Math.max(
+      PRIMARY_OBJECTIVE_BOUND_ABSOLUTE_EPSILON,
+      Math.abs(primaryObjectiveValue) * PRIMARY_OBJECTIVE_BOUND_RELATIVE_EPSILON
+    )
+  );
+}
+
+function addPrimaryObjectiveUpperBoundConstraint(params: {
+  request: SolveRequest;
+  activeOptions: CompiledOptionContext[];
+  externalItemIds: ReadonlySet<string>;
+  variables: Record<string, Record<string, number>>;
+  constraints: Model<string, string>['constraints'];
+  primaryObjectiveUpperBound?: number;
+}) {
+  const {
+    request,
+    activeOptions,
+    externalItemIds,
+    variables,
+    constraints,
+    primaryObjectiveUpperBound,
+  } = params;
+  if (primaryObjectiveUpperBound === undefined) {
+    return;
+  }
+
+  const constraintName = '__primary_objective_bound__';
+  constraints[constraintName] = { max: primaryObjectiveUpperBound };
+
+  for (const { option } of activeOptions) {
+    const coefficient = buildPrimaryObjectiveOptionCoefficient(request, option);
+    if (coefficient > 0) {
+      addVariableCoefficient(variables, option.optionId, constraintName, coefficient);
+    }
+  }
+
+  const externalInputCoefficient = buildPrimaryObjectiveExternalInputCoefficient(request);
+  if (externalInputCoefficient <= 0) {
+    return;
+  }
+
+  for (const itemId of externalItemIds) {
+    addVariableCoefficient(variables, `ext:${itemId}`, constraintName, externalInputCoefficient);
+  }
 }
 
 function buildComplexityPowerCoefficient(
@@ -1298,7 +1470,7 @@ function addVariableCoefficient(
 }
 
 function buildComplexityUsageVariableName(
-  kind: 'recipe' | 'building' | 'item',
+  kind: 'recipe' | 'building' | 'item' | 'option',
   id: string
 ): string {
   return `__use:${kind}:${id}`;
@@ -1441,6 +1613,8 @@ function buildSolveAuditAttempt(params: {
   status: string;
   surplusItemCount?: number;
   surplusRatePerMin?: number;
+  solvedRecipeCount?: number;
+  solvedOptionCount?: number;
   primaryObjectiveValue?: number;
   surplusWeights?: ReadonlyMap<string, number>;
   isBestCandidate?: boolean;
@@ -1461,13 +1635,15 @@ function buildSolveAuditAttempt(params: {
     status,
     surplusItemCount,
     surplusRatePerMin,
+    solvedRecipeCount,
+    solvedOptionCount,
     primaryObjectiveValue,
     surplusWeights,
     isBestCandidate,
     stagnantRounds,
   } = params;
 
-  return {
+  const attempt = {
     phase,
     round,
     modelKind,
@@ -1483,11 +1659,28 @@ function buildSolveAuditAttempt(params: {
     status,
     surplusItemCount,
     surplusRatePerMin,
+    solvedRecipeCount,
+    solvedOptionCount,
     primaryObjectiveValue,
     surplusWeights: surplusWeights ? Object.fromEntries(surplusWeights) : undefined,
     isBestCandidate,
     stagnantRounds,
   };
+
+  recordSolverPerf({
+    phase: 'attempt',
+    durationMs: attempt.totalDurationMs,
+    recipeCount,
+    optionCount,
+    usedRecipeCount: solvedRecipeCount,
+    usedOptionCount: solvedOptionCount,
+    constraintCount,
+    variableCount,
+    status: `${phase}:${status}`,
+    recordedAt: currentTimeMs(),
+  });
+
+  return attempt;
 }
 
 function buildLinearModel(
@@ -1495,13 +1688,22 @@ function buildLinearModel(
   compiledOptions: CompiledOptionContext[],
   targetRateMap: Map<string, number>,
   externalItemIds: Set<string>,
-  surplusWeights?: ReadonlyMap<string, number>
+  buildOptions?: {
+    surplusWeights?: ReadonlyMap<string, number>;
+    primaryObjectiveUpperBound?: number;
+    optimizePrimaryObjectiveFirst?: boolean;
+  }
 ): {
   model: Model<string, string>;
   activeOptions: CompiledOptionContext[];
   involvedItemCount: number;
   activeRecipeCount: number;
 } {
+  const {
+    surplusWeights,
+    primaryObjectiveUpperBound,
+    optimizePrimaryObjectiveFirst = false,
+  } = buildOptions ?? {};
   const activeOptions = collectModelOptions(request, compiledOptions);
   const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
   const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
@@ -1509,7 +1711,9 @@ function buildLinearModel(
 
   for (const { option, recipe } of activeOptions) {
     const coefficients: Record<string, number> = {
-      __objective__: buildObjectiveCoefficient(request, recipe, option),
+      __objective__: optimizePrimaryObjectiveFirst
+        ? buildPrimaryFirstObjectiveCoefficient(request, recipe, option)
+        : buildObjectiveCoefficient(request, recipe, option),
     };
 
     for (const [itemId, amount] of option.netItemEntries) {
@@ -1522,7 +1726,9 @@ function buildLinearModel(
   for (const itemId of externalItemIds) {
     variables[`ext:${itemId}`] = {
       [itemId]: 1,
-      __objective__: buildExternalInputObjectiveCoefficient(request),
+      __objective__: optimizePrimaryObjectiveFirst
+        ? buildPrimaryObjectiveExternalInputCoefficient(request)
+        : buildExternalInputObjectiveCoefficient(request),
     };
   }
 
@@ -1530,10 +1736,19 @@ function buildLinearModel(
     for (const itemId of involvedItemIds) {
       variables[buildSurplusVariableName(itemId)] = {
         [itemId]: -1,
-        __objective__: surplusWeights?.get(itemId) ?? 1,
+        __objective__: optimizePrimaryObjectiveFirst ? 0 : (surplusWeights?.get(itemId) ?? 1),
       };
     }
   }
+
+  addPrimaryObjectiveUpperBoundConstraint({
+    request,
+    activeOptions,
+    externalItemIds,
+    variables,
+    constraints,
+    primaryObjectiveUpperBound,
+  });
 
   return {
     model: {
@@ -1722,7 +1937,8 @@ function buildSurplusTypeMilpModel(params: {
   targetRateMap: Map<string, number>;
   externalItemIds: Set<string>;
   surplusUpperBound: number;
-  recipeLinkUpperBound: number;
+  optionRateUpperBoundByOptionId: ReadonlyMap<string, number>;
+  defaultOptionRateUpperBound: number;
   /** Option IDs with non-zero rates in the LP solution — only recipes
    *  that are actually used get binary indicators, dramatically reducing
    *  the number of binaries for the branch-and-bound solver. */
@@ -1731,6 +1947,7 @@ function buildSurplusTypeMilpModel(params: {
    *  changes recipe usage.  Includes LP surplus items plus all output
    *  items of LP-active recipes. */
   surplusCandidateItemIds: ReadonlySet<string>;
+  primaryObjectiveUpperBound?: number;
 }): {
   model: Model<string, string>;
   activeOptions: CompiledOptionContext[];
@@ -1744,12 +1961,20 @@ function buildSurplusTypeMilpModel(params: {
     targetRateMap,
     externalItemIds,
     surplusUpperBound,
-    recipeLinkUpperBound,
+    optionRateUpperBoundByOptionId,
+    defaultOptionRateUpperBound,
     activeOptionIds,
     surplusCandidateItemIds,
+    primaryObjectiveUpperBound,
   } = params;
 
-  const activeOptions = collectModelOptions(request, compiledOptions);
+  const activeOptions = collectSurplusMilpOptions({
+    request,
+    compiledOptions,
+    activeOptionIds,
+    targetRateMap,
+    surplusCandidateItemIds,
+  });
   const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
   const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
   const variables: Record<string, Record<string, number>> = {};
@@ -1891,17 +2116,17 @@ function buildSurplusTypeMilpModel(params: {
 
   // Recipe-usage binary indicators: penalise the number of distinct recipes
   // used.  This prevents the solver from adding entire production chains
-  // (e.g. bio-chain) solely to consume a small byproduct surplus.
+  // solely to consume a small byproduct surplus.
   // LP-active recipes get a light penalty (SURPLUS_MILP_RECIPE_WEIGHT) since
   // they are already part of the solution.  LP-inactive recipes get a much
   // heavier penalty (SURPLUS_MILP_NEW_RECIPE_WEIGHT) so the MILP only
   // introduces them when doing so substantially reduces surplus type count.
-  // Required recipes (sole producer of some needed item) are skipped — their
-  // binary would always be 1, wasting branch-and-bound effort.
+  //
+  // Do not skip "required" recipes here. A recipe can be the sole producer
+  // of an intermediate that is only consumed by an optional surplus-handling
+  // branch; dropping its binary would let that whole branch hide behind one
+  // counted root recipe and break complexity optimisation.
   for (const [recipeId, optionIds] of recipeUsageMap.entries()) {
-    if (requiredRecipeIds.has(recipeId)) {
-      continue;
-    }
     const hasActiveOption = optionIds.some(id => activeOptionIds.has(id));
     const weight = hasActiveOption
       ? SURPLUS_MILP_RECIPE_WEIGHT
@@ -1915,8 +2140,22 @@ function buildSurplusTypeMilpModel(params: {
     const coefficients = ensureVariableCoefficients(variables, usageVariable);
     coefficients.__objective__ = weight;
     binaries.add(usageVariable);
-    addVariableCoefficient(variables, usageVariable, constraintName, -recipeLinkUpperBound);
+    const recipeRateUpperBound = optionIds.reduce(
+      (sum, optionId) =>
+        sum + (optionRateUpperBoundByOptionId.get(optionId) ?? defaultOptionRateUpperBound),
+      0
+    );
+    addVariableCoefficient(variables, usageVariable, constraintName, -recipeRateUpperBound);
   }
+
+  addPrimaryObjectiveUpperBoundConstraint({
+    request,
+    activeOptions,
+    externalItemIds,
+    variables,
+    constraints,
+    primaryObjectiveUpperBound,
+  });
 
   return {
     model: {
@@ -1958,19 +2197,37 @@ function estimateSurplusUpperBound(
 /** Estimate a tight big-M for recipe-usage linking constraints.
  *  Only needs to bound the maximum rate of any single option variable —
  *  much smaller than the surplus upper bound. */
-function estimateRecipeLinkUpperBound(
-  solutionVariables: Iterable<[string, number]>
-): number {
-  let maxRate = 0;
+function estimateOptionRateUpperBounds(
+  solutionVariables: Iterable<[string, number]>,
+  targetRateMap: Map<string, number>
+): {
+  optionRateUpperBoundByOptionId: ReadonlyMap<string, number>;
+  defaultOptionRateUpperBound: number;
+} {
+  const optionRateUpperBoundByOptionId = new Map<string, number>();
   for (const [variableName, value] of solutionVariables) {
-    if (value <= EPSILON || variableName.startsWith('__')) {
+    if (
+      value <= EPSILON ||
+      variableName.startsWith('__') ||
+      variableName.startsWith('ext:')
+    ) {
       continue;
     }
-    maxRate = Math.max(maxRate, value);
+    optionRateUpperBoundByOptionId.set(
+      variableName,
+      Math.max(COMPLEXITY_LINK_BOUND_FLOOR, value * 4)
+    );
   }
   // Use 4× the max observed option rate as headroom for the MILP to
   // explore alternative recipe combinations.
-  return Math.max(COMPLEXITY_LINK_BOUND_FLOOR, maxRate * 4);
+  const totalTargetRate = Array.from(targetRateMap.values())
+    .filter(rate => rate > EPSILON)
+    .reduce((sum, rate) => sum + rate, 0);
+
+  return {
+    optionRateUpperBoundByOptionId,
+    defaultOptionRateUpperBound: Math.max(COMPLEXITY_LINK_BOUND_FLOOR, totalTargetRate * 16),
+  };
 }
 
 function roundUpCount(value: number): number {
@@ -1981,9 +2238,14 @@ function roundUpCount(value: number): number {
   return Math.ceil(value - EPSILON);
 }
 
+function normalizeReportedRate(value: number): number {
+  return Math.abs(value) < REPORTED_RATE_EPSILON ? 0 : value;
+}
+
 function sortItemRates(itemRates: Map<string, number>): ItemRate[] {
   return Array.from(itemRates.entries())
-    .filter(([, rate]) => Math.abs(rate) > SURPLUS_OUTPUT_EPSILON)
+    .map(([itemId, rate]) => [itemId, normalizeReportedRate(rate)] as const)
+    .filter(([, rate]) => rate !== 0)
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
     .map(([itemId, ratePerMin]) => ({
       itemId,
@@ -2054,6 +2316,14 @@ function compareLinearSolveCandidates(left: LinearSolveCandidate, right: LinearS
     return left.surplus.activeItemIds.length - right.surplus.activeItemIds.length;
   }
 
+  if (left.activeOptionCount !== right.activeOptionCount) {
+    return left.activeOptionCount - right.activeOptionCount;
+  }
+
+  if (left.activeRecipeCount !== right.activeRecipeCount) {
+    return left.activeRecipeCount - right.activeRecipeCount;
+  }
+
   if (
     Math.abs(left.surplus.totalRatePerMin - right.surplus.totalRatePerMin) > SURPLUS_OUTPUT_EPSILON
   ) {
@@ -2103,7 +2373,464 @@ function buildLinearSolveCandidate(params: {
     activeOptions,
     solution,
     surplus: collectSurplusSolutionMetrics(solution.variables),
+    activeOptionCount: countSolutionActiveOptionIds(solution.variables),
+    activeRecipeCount: countSolutionActiveRecipeIds(activeOptions, solution.variables),
     primaryObjectiveValue: buildPrimaryObjectiveValue(request, activeOptions, solution.variables),
+  };
+}
+
+function shouldSkipSurplusComplexityMilp(
+  implementation: SolverImplementation,
+  activeOptionCount: number,
+  binaryCount: number
+): boolean {
+  if (
+    activeOptionCount > SURPLUS_COMPLEXITY_MILP_MAX_OPTIONS ||
+    binaryCount > SURPLUS_COMPLEXITY_MILP_MAX_BINARIES
+  ) {
+    return true;
+  }
+
+  if (implementation.implementationId === yalpsSolverImplementation.implementationId) {
+    return (
+      activeOptionCount > SURPLUS_COMPLEXITY_MILP_MAX_OPTIONS_YALPS ||
+      binaryCount > SURPLUS_COMPLEXITY_MILP_MAX_BINARIES_YALPS
+    );
+  }
+
+  return false;
+}
+
+function buildFixedSurplusRecipeMilpModel(params: {
+  catalog: ResolvedCatalogModel;
+  request: SolveRequest;
+  compiledOptions: CompiledOptionContext[];
+  targetRateMap: Map<string, number>;
+  externalItemIds: Set<string>;
+  optionRateUpperBoundByOptionId: ReadonlyMap<string, number>;
+  defaultOptionRateUpperBound: number;
+  activeOptionIds: ReadonlySet<string>;
+  allowedSurplusItemIds: ReadonlySet<string>;
+  primaryObjectiveUpperBound?: number;
+}): {
+  model: Model<string, string>;
+  activeOptions: CompiledOptionContext[];
+  involvedItemCount: number;
+  activeRecipeCount: number;
+  binaryCount: number;
+} {
+  const {
+    catalog,
+    request,
+    compiledOptions,
+    targetRateMap,
+    externalItemIds,
+    optionRateUpperBoundByOptionId,
+    defaultOptionRateUpperBound,
+    activeOptionIds,
+    allowedSurplusItemIds,
+    primaryObjectiveUpperBound,
+  } = params;
+
+  const activeOptions = collectFixedSurplusMilpOptions({
+    request,
+    compiledOptions,
+    activeOptionIds,
+    allowedSurplusItemIds,
+  });
+  const involvedItemIds = collectInvolvedItemIds(activeOptions, targetRateMap, externalItemIds);
+  const constraints = buildExactItemBalanceConstraints(involvedItemIds, targetRateMap);
+  const variables: Record<string, Record<string, number>> = {};
+  const binaries = new Set<string>();
+  const recipeUsageMap = new Map<string, string[]>();
+  const buildingUsageMap = new Map<string, string[]>();
+  const itemUsageMap = new Map<string, string[]>();
+  const trackedItemIds = collectComplexityTrackedItemIds(catalog, activeOptions, externalItemIds);
+  const totalUsageUpperBound = activeOptions.reduce(
+    (sum, { option }) =>
+      sum + (optionRateUpperBoundByOptionId.get(option.optionId) ?? defaultOptionRateUpperBound),
+    0
+  );
+  const optionUsageWeight = 1;
+  const totalPowerCoefficient = activeOptions.reduce(
+    (sum, { option, recipe }) => sum + buildComplexityPowerCoefficient(request, recipe, option),
+    0
+  );
+  const powerTieBreakScale =
+    totalPowerCoefficient > 0
+      ? 0.0625 / (Math.max(1, totalUsageUpperBound) * totalPowerCoefficient + 1)
+      : 0;
+
+  const ensureUsageVariable = (variableName: string, weight: number) => {
+    const coefficients = ensureVariableCoefficients(variables, variableName);
+    coefficients.__complexity__ = weight;
+    binaries.add(variableName);
+  };
+
+  const addUsageConstraint = (
+    constraintName: string,
+    variableIds: string[],
+    usageVariable: string,
+    weight: number
+  ) => {
+    constraints[constraintName] = { max: 0 };
+    let linkUpperBound = 0;
+    for (const variableId of variableIds) {
+      addVariableCoefficient(variables, variableId, constraintName, 1);
+      linkUpperBound += optionRateUpperBoundByOptionId.get(variableId) ?? defaultOptionRateUpperBound;
+    }
+    ensureUsageVariable(usageVariable, weight);
+    addVariableCoefficient(variables, usageVariable, constraintName, -Math.max(COMPLEXITY_LINK_BOUND_FLOOR, linkUpperBound));
+  };
+
+  for (const { option, recipe } of activeOptions) {
+    const coefficients: Record<string, number> = {
+      __complexity__: buildComplexityPowerCoefficient(request, recipe, option) * powerTieBreakScale,
+    };
+    for (const [itemId, amount] of option.netItemEntries) {
+      coefficients[itemId] = amount;
+    }
+    variables[option.optionId] = coefficients;
+
+    addUsageConstraint(
+      `__complexity_link:option:${option.optionId}`,
+      [option.optionId],
+      buildComplexityUsageVariableName('option', option.optionId),
+      optionUsageWeight
+    );
+
+    const recipeOptionIds = recipeUsageMap.get(recipe.recipeId) ?? [];
+    recipeOptionIds.push(option.optionId);
+    recipeUsageMap.set(recipe.recipeId, recipeOptionIds);
+
+    const buildingOptionIds = buildingUsageMap.get(option.buildingId) ?? [];
+    buildingOptionIds.push(option.optionId);
+    buildingUsageMap.set(option.buildingId, buildingOptionIds);
+
+    const touchedItemIds = new Set<string>();
+    for (const itemId of option.touchedItemIds) {
+      if (catalog.itemMap.has(itemId)) {
+        touchedItemIds.add(itemId);
+      }
+    }
+    for (const itemId of touchedItemIds) {
+      const itemVariableIds = itemUsageMap.get(itemId) ?? [];
+      itemVariableIds.push(option.optionId);
+      itemUsageMap.set(itemId, itemVariableIds);
+    }
+  }
+
+  for (const itemId of externalItemIds) {
+    variables[`ext:${itemId}`] = {
+      [itemId]: 1,
+    };
+  }
+
+  for (const itemId of allowedSurplusItemIds) {
+    if (!involvedItemIds.includes(itemId)) {
+      continue;
+    }
+    variables[buildSurplusVariableName(itemId)] = {
+      [itemId]: -1,
+      __complexity__: powerTieBreakScale * OBJECTIVE_EPSILON,
+    };
+  }
+
+  for (const itemId of trackedItemIds) {
+    const itemVariableIds = itemUsageMap.get(itemId) ?? [];
+    if (externalItemIds.has(itemId)) {
+      itemVariableIds.push(`ext:${itemId}`);
+    }
+    itemUsageMap.set(itemId, itemVariableIds);
+  }
+
+  const recipeUsageWeight = 0.5 / Math.max(1, recipeUsageMap.size);
+  const buildingUsageWeight = 0.25 / Math.max(1, buildingUsageMap.size);
+  const itemUsageWeight = 0.125 / Math.max(1, trackedItemIds.length);
+
+  for (const [recipeId, optionIds] of recipeUsageMap.entries()) {
+    addUsageConstraint(
+      `__complexity_link:recipe:${recipeId}`,
+      optionIds,
+      buildComplexityUsageVariableName('recipe', recipeId),
+      recipeUsageWeight
+    );
+  }
+
+  for (const [buildingId, optionIds] of buildingUsageMap.entries()) {
+    addUsageConstraint(
+      `__complexity_link:building:${buildingId}`,
+      optionIds,
+      buildComplexityUsageVariableName('building', buildingId),
+      buildingUsageWeight
+    );
+  }
+
+  for (const [itemId, variableIds] of itemUsageMap.entries()) {
+    if (variableIds.length === 0) {
+      continue;
+    }
+    addUsageConstraint(
+      `__complexity_link:item:${itemId}`,
+      variableIds,
+      buildComplexityUsageVariableName('item', itemId),
+      itemUsageWeight
+    );
+  }
+
+  addPrimaryObjectiveUpperBoundConstraint({
+    request,
+    activeOptions,
+    externalItemIds,
+    variables,
+    constraints,
+    primaryObjectiveUpperBound,
+  });
+
+  return {
+    model: {
+      direction: 'minimize',
+      objective: '__complexity__',
+      constraints,
+      variables,
+      binaries,
+    },
+    activeOptions,
+    involvedItemCount: involvedItemIds.length,
+    activeRecipeCount: countActiveRecipeIds(activeOptions),
+    binaryCount: binaries.size,
+  };
+}
+
+function collectSurplusMilpOptions(params: {
+  request: SolveRequest;
+  compiledOptions: CompiledOptionContext[];
+  activeOptionIds: ReadonlySet<string>;
+  targetRateMap: ReadonlyMap<string, number>;
+  surplusCandidateItemIds: ReadonlySet<string>;
+}): CompiledOptionContext[] {
+  const {
+    request,
+    compiledOptions,
+    activeOptionIds,
+    targetRateMap,
+    surplusCandidateItemIds,
+  } = params;
+
+  const availableOptions = collectModelOptions(request, compiledOptions);
+  if (activeOptionIds.size === 0) {
+    return availableOptions;
+  }
+
+  const producerOptionIdsByItem = new Map<string, Set<string>>();
+  const consumerOptionIdsByItem = new Map<string, Set<string>>();
+  const activeConsumedItemIds = new Set<string>();
+  const selectedOptionIds = new Set<string>();
+
+  for (const entry of availableOptions) {
+    const { option } = entry;
+    if (activeOptionIds.has(option.optionId)) {
+      selectedOptionIds.add(option.optionId);
+      for (const [itemId, amount] of option.netItemEntries) {
+        if (amount < -EPSILON) {
+          activeConsumedItemIds.add(itemId);
+        }
+      }
+    }
+
+    for (const [itemId, amount] of option.netItemEntries) {
+      if (amount > EPSILON) {
+        let optionIds = producerOptionIdsByItem.get(itemId);
+        if (!optionIds) {
+          optionIds = new Set();
+          producerOptionIdsByItem.set(itemId, optionIds);
+        }
+        optionIds.add(option.optionId);
+      } else if (amount < -EPSILON) {
+        let optionIds = consumerOptionIdsByItem.get(itemId);
+        if (!optionIds) {
+          optionIds = new Set();
+          consumerOptionIdsByItem.set(itemId, optionIds);
+        }
+        optionIds.add(option.optionId);
+      }
+    }
+  }
+
+  const producerCandidateItemIds = new Set<string>();
+  for (const [itemId, rate] of targetRateMap.entries()) {
+    if (rate > EPSILON) {
+      producerCandidateItemIds.add(itemId);
+    }
+  }
+  for (const itemId of activeConsumedItemIds) {
+    producerCandidateItemIds.add(itemId);
+  }
+  for (const itemId of surplusCandidateItemIds) {
+    producerCandidateItemIds.add(itemId);
+  }
+
+  for (const itemId of producerCandidateItemIds) {
+    for (const optionId of producerOptionIdsByItem.get(itemId) ?? []) {
+      selectedOptionIds.add(optionId);
+    }
+  }
+
+  for (const itemId of surplusCandidateItemIds) {
+    for (const optionId of consumerOptionIdsByItem.get(itemId) ?? []) {
+      selectedOptionIds.add(optionId);
+    }
+  }
+
+  for (const optionId of Array.from(selectedOptionIds)) {
+    const entry = availableOptions.find(candidate => candidate.option.optionId === optionId);
+    if (!entry) {
+      continue;
+    }
+    for (const [itemId, amount] of entry.option.netItemEntries) {
+      if (amount < -EPSILON) {
+        for (const producerOptionId of producerOptionIdsByItem.get(itemId) ?? []) {
+          selectedOptionIds.add(producerOptionId);
+        }
+      }
+    }
+  }
+
+  return availableOptions.filter(entry => selectedOptionIds.has(entry.option.optionId));
+}
+
+function collectFixedSurplusMilpOptions(params: {
+  request: SolveRequest;
+  compiledOptions: CompiledOptionContext[];
+  activeOptionIds: ReadonlySet<string>;
+  allowedSurplusItemIds: ReadonlySet<string>;
+}): CompiledOptionContext[] {
+  const { request, compiledOptions, activeOptionIds, allowedSurplusItemIds } = params;
+  const availableOptions = collectModelOptions(request, compiledOptions);
+  if (activeOptionIds.size === 0) {
+    return availableOptions;
+  }
+
+  const optionById = new Map(
+    availableOptions.map(entry => [entry.option.optionId, entry] as const)
+  );
+  const producerOptionIdsByItem = new Map<string, Set<string>>();
+  const consumerOptionIdsByItem = new Map<string, Set<string>>();
+  const selectedOptionIds = new Set<string>();
+  const pendingExpansionOptionIds: string[] = [];
+  const expandedOptionIds = new Set<string>();
+
+  const enqueueOptionId = (optionId: string, expandInputs: boolean) => {
+    if (!optionById.has(optionId)) {
+      return;
+    }
+    const wasAdded = !selectedOptionIds.has(optionId);
+    selectedOptionIds.add(optionId);
+    if (expandInputs && wasAdded) {
+      pendingExpansionOptionIds.push(optionId);
+    }
+  };
+
+  for (const entry of availableOptions) {
+    const { option } = entry;
+    if (activeOptionIds.has(option.optionId)) {
+      selectedOptionIds.add(option.optionId);
+    }
+
+    for (const [itemId, amount] of option.netItemEntries) {
+      if (amount > EPSILON) {
+        const optionIds = producerOptionIdsByItem.get(itemId) ?? new Set<string>();
+        optionIds.add(option.optionId);
+        producerOptionIdsByItem.set(itemId, optionIds);
+      } else if (amount < -EPSILON) {
+        const optionIds = consumerOptionIdsByItem.get(itemId) ?? new Set<string>();
+        optionIds.add(option.optionId);
+        consumerOptionIdsByItem.set(itemId, optionIds);
+      }
+    }
+  }
+
+  for (const itemId of allowedSurplusItemIds) {
+    for (const optionId of consumerOptionIdsByItem.get(itemId) ?? []) {
+      enqueueOptionId(optionId, true);
+    }
+  }
+
+  while (pendingExpansionOptionIds.length > 0) {
+    const optionId = pendingExpansionOptionIds.pop()!;
+    if (expandedOptionIds.has(optionId)) {
+      continue;
+    }
+    expandedOptionIds.add(optionId);
+    const entry = optionById.get(optionId);
+    if (!entry) {
+      continue;
+    }
+
+    for (const [itemId, amount] of entry.option.netItemEntries) {
+      if (amount >= -EPSILON) {
+        continue;
+      }
+      for (const producerOptionId of producerOptionIdsByItem.get(itemId) ?? []) {
+        enqueueOptionId(producerOptionId, true);
+      }
+    }
+  }
+
+  return availableOptions.filter(entry => selectedOptionIds.has(entry.option.optionId));
+}
+
+function countSolutionActiveRecipeIds(
+  activeOptions: CompiledOptionContext[],
+  solutionVariables: Iterable<[string, number]>
+): number {
+  const recipeIdByOptionId = new Map(
+    activeOptions.map(({ option, recipe }) => [option.optionId, recipe.recipeId] as const)
+  );
+  const activeRecipeIds = new Set<string>();
+
+  for (const [variableName, value] of solutionVariables) {
+    if (value <= EPSILON) {
+      continue;
+    }
+
+    const recipeId = recipeIdByOptionId.get(variableName);
+    if (recipeId) {
+      activeRecipeIds.add(recipeId);
+    }
+  }
+
+  return activeRecipeIds.size;
+}
+
+function countSolutionActiveOptionIds(solutionVariables: Iterable<[string, number]>): number {
+  let activeOptionCount = 0;
+
+  for (const [variableName, value] of solutionVariables) {
+    if (
+      value <= EPSILON ||
+      variableName.startsWith('__') ||
+      variableName.startsWith('ext:')
+    ) {
+      continue;
+    }
+
+    activeOptionCount += 1;
+  }
+
+  return activeOptionCount;
+}
+
+function collectSolvedUsageCounts(
+  activeOptions: CompiledOptionContext[],
+  solutionVariables: Iterable<[string, number]>
+): {
+  solvedRecipeCount: number;
+  solvedOptionCount: number;
+} {
+  return {
+    solvedRecipeCount: countSolutionActiveRecipeIds(activeOptions, solutionVariables),
+    solvedOptionCount: countSolutionActiveOptionIds(solutionVariables),
   };
 }
 
@@ -2304,9 +3031,9 @@ function buildResultFromSolution(params: {
       const targetRate = targetRateMap.get(itemId) ?? 0;
       const producedRatePerMin = producedMap.get(itemId) ?? 0;
       const consumedRatePerMin = (recipeConsumedMap.get(itemId) ?? 0) + targetRate;
-      const netRatePerMin = producedRatePerMin - consumedRatePerMin;
+      const netRatePerMin = normalizeReportedRate(producedRatePerMin - consumedRatePerMin);
 
-      if (request.balancePolicy === 'allow_surplus' && netRatePerMin > SURPLUS_OUTPUT_EPSILON) {
+      if (request.balancePolicy === 'allow_surplus' && netRatePerMin > 0) {
         surplusOutputs.push({ itemId, ratePerMin: netRatePerMin });
       }
 
@@ -2353,7 +3080,8 @@ function buildResultFromSolution(params: {
 
 function solveCatalogRequestValidated(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest
+  request: SolveRequest,
+  implementation: SolverImplementation
 ): SolveResult {
   const solveStartedAt = currentTimeMs();
   const targetRateMap = aggregateTargetRates(request);
@@ -2409,16 +3137,18 @@ function solveCatalogRequestValidated(
     surplusReweightTermination,
   });
 
-  const buildLinear = (
-    surplusWeights?: ReadonlyMap<string, number>
-  ) => {
+  const buildLinear = (buildOptions?: {
+    surplusWeights?: ReadonlyMap<string, number>;
+    primaryObjectiveUpperBound?: number;
+    optimizePrimaryObjectiveFirst?: boolean;
+  }) => {
     const startedAt = currentTimeMs();
     const build = buildLinearModel(
       request,
       compiledGraph.options,
       targetRateMap,
       externalItemIds,
-      surplusWeights
+      buildOptions
     );
     const durationMs = currentTimeMs() - startedAt;
     modelDurationMs += durationMs;
@@ -2428,15 +3158,32 @@ function solveCatalogRequestValidated(
     };
   };
 
-  const solveModel = (candidateModel: Model<string, string>, options?: SolverOptions) => {
+  const solveModelWithImplementation = (
+    solverImplementation: SolverImplementation,
+    candidateModel: Model<string, string>,
+    options?: SolverOptions
+  ) => {
     const startedAt = currentTimeMs();
-    const candidateSolution = solveLinearProgram(candidateModel, options);
+    const candidateSolution = solverImplementation.solve(candidateModel, options);
     const durationMs = currentTimeMs() - startedAt;
     lpDurationMs += durationMs;
     return {
       solution: candidateSolution,
       solveDurationMs: durationMs,
     };
+  };
+
+  const solveModel = (candidateModel: Model<string, string>, options?: SolverOptions) =>
+    solveModelWithImplementation(implementation, candidateModel, options);
+
+  const hasIncumbentSolution = (candidateSolution: Solution<string>) => {
+    for (const [, value] of candidateSolution.variables) {
+      if (Number.isFinite(value) && value > EPSILON) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
   if (request.objective === 'min_complexity') {
@@ -2466,6 +3213,7 @@ function solveCatalogRequestValidated(
         buildDurationMs: seedBuildDurationMs,
         solveDurationMs: seedSolve.solveDurationMs,
         status: seedSolve.solution.status,
+        ...collectSolvedUsageCounts(seedBuild.activeOptions, seedSolve.solution.variables),
       })
     );
     if (seedSolve.solution.status !== 'optimal') {
@@ -2519,6 +3267,7 @@ function solveCatalogRequestValidated(
           buildDurationMs: complexityBuildDurationMs,
           solveDurationMs: candidateSolve.solveDurationMs,
           status: candidateSolve.solution.status,
+          ...collectSolvedUsageCounts(complexityBuild.activeOptions, candidateSolve.solution.variables),
         })
       );
       if (candidateSolve.solution.status !== 'optimal') {
@@ -2548,7 +3297,9 @@ function solveCatalogRequestValidated(
     activeOptions = complexityOptions;
     solution = complexitySolution;
   } else {
-    const linearBuild = buildLinear();
+    const linearBuild = buildLinear(
+      request.balancePolicy === 'allow_surplus' ? { optimizePrimaryObjectiveFirst: true } : undefined
+    );
     model = linearBuild.model;
     activeOptions = linearBuild.activeOptions;
     const initialSolve = solveModel(model);
@@ -2565,6 +3316,7 @@ function solveCatalogRequestValidated(
         buildDurationMs: linearBuild.buildDurationMs,
         solveDurationMs: initialSolve.solveDurationMs,
         status: initialSolve.solution.status,
+        ...collectSolvedUsageCounts(activeOptions, initialSolve.solution.variables),
         surplusItemCount:
           request.balancePolicy === 'allow_surplus'
             ? collectSurplusSolutionMetrics(initialSolve.solution.variables).activeItemIds.length
@@ -2581,6 +3333,9 @@ function solveCatalogRequestValidated(
     );
 
     if (request.balancePolicy === 'allow_surplus' && solution.status === 'optimal') {
+      const primaryObjectiveUpperBound = computePrimaryObjectiveUpperBound(
+        buildPrimaryObjectiveValue(request, activeOptions, solution.variables)
+      );
       let bestCandidate = buildLinearSolveCandidate({
         request,
         model,
@@ -2607,16 +3362,41 @@ function solveCatalogRequestValidated(
           break;
         }
 
-        const weightedBuild = buildLinear(surplusWeights);
+        const weightedBuild = buildLinear({
+          surplusWeights,
+          primaryObjectiveUpperBound,
+        });
         if (currentTimeMs() >= deadline) {
           surplusReweightTermination = 'deadline';
           break;
         }
 
-        const weightedSolve = solveModel(weightedBuild.model);
-        const weightedSurplusMetrics = collectSurplusSolutionMetrics(
-          weightedSolve.solution.variables
-        );
+        let weightedSolve: ReturnType<typeof solveModel> | null = null;
+        let weightedSurplusMetrics: SurplusSolutionMetrics | null = null;
+        try {
+          weightedSolve = solveModel(weightedBuild.model);
+          weightedSurplusMetrics = collectSurplusSolutionMetrics(
+            weightedSolve.solution.variables
+          );
+        } catch (error) {
+          auditAttempts.push(
+            buildSolveAuditAttempt({
+              phase: 'reweighted_lp',
+              round,
+              modelKind: 'lp',
+              itemCount: weightedBuild.involvedItemCount,
+              recipeCount: weightedBuild.activeRecipeCount,
+              optionCount: weightedBuild.activeOptions.length,
+              constraintCount: Object.keys(weightedBuild.model.constraints).length,
+              variableCount: Object.keys(weightedBuild.model.variables).length,
+              buildDurationMs: weightedBuild.buildDurationMs,
+              solveDurationMs: 0,
+              status: 'error',
+            })
+          );
+          surplusReweightTermination = 'error';
+          break;
+        }
 
         if (weightedSolve.solution.status !== 'optimal') {
           auditAttempts.push(
@@ -2632,8 +3412,9 @@ function solveCatalogRequestValidated(
               buildDurationMs: weightedBuild.buildDurationMs,
               solveDurationMs: weightedSolve.solveDurationMs,
               status: weightedSolve.solution.status,
-              surplusItemCount: weightedSurplusMetrics.activeItemIds.length,
-              surplusRatePerMin: weightedSurplusMetrics.totalRatePerMin,
+              ...collectSolvedUsageCounts(weightedBuild.activeOptions, weightedSolve.solution.variables),
+              surplusItemCount: weightedSurplusMetrics!.activeItemIds.length,
+              surplusRatePerMin: weightedSurplusMetrics!.totalRatePerMin,
               surplusWeights,
             })
           );
@@ -2675,8 +3456,10 @@ function solveCatalogRequestValidated(
             buildDurationMs: weightedBuild.buildDurationMs,
             solveDurationMs: weightedSolve.solveDurationMs,
             status: weightedSolve.solution.status,
-            surplusItemCount: weightedSurplusMetrics.activeItemIds.length,
-            surplusRatePerMin: weightedSurplusMetrics.totalRatePerMin,
+            solvedRecipeCount: candidate.activeRecipeCount,
+            solvedOptionCount: candidate.activeOptionCount,
+            surplusItemCount: weightedSurplusMetrics!.activeItemIds.length,
+            surplusRatePerMin: weightedSurplusMetrics!.totalRatePerMin,
             primaryObjectiveValue: candidate.primaryObjectiveValue,
             surplusWeights,
             isBestCandidate: isBest,
@@ -2694,23 +3477,16 @@ function solveCatalogRequestValidated(
         }
       }
 
-      // Surplus type + recipe count minimization MILP: the weighted LP
-      // reweighting loop minimises weighted surplus cost, but cannot reduce
-      // surplus TYPE COUNT because spreading surplus across many low-weight
-      // items is always cheaper than concentrating it on fewer items.  Use a
-      // MILP with binary indicator variables to directly minimise type count
-      // and penalise recipe usage (preventing excessive recipe chains added
-      // solely to consume small byproduct surpluses).
-      {
-        const surplusUpperBound = estimateSurplusUpperBound(
-          bestCandidate.solution.variables,
-          targetRateMap
-        );
+      // Once LP reweighting settles on a surplus support, polish that local
+      // neighbourhood with a complexity MILP instead of reopening the full
+      // graph to chase one fewer surplus type.
+      if (bestCandidate.surplus.activeItemIds.length > 0) {
         // Recipe link big-M only needs to bound the max total rate of any
         // single recipe's options — much tighter than the surplus upper bound.
-        const recipeLinkUpperBound = estimateRecipeLinkUpperBound(
-          bestCandidate.solution.variables
-        );
+        const {
+          optionRateUpperBoundByOptionId,
+          defaultOptionRateUpperBound,
+        } = estimateOptionRateUpperBounds(bestCandidate.solution.variables, targetRateMap);
         // Collect option IDs that the LP solution actually uses — only
         // these recipes need binary indicators in the MILP.
         const activeOptionIds = new Set<string>();
@@ -2720,51 +3496,114 @@ function solveCatalogRequestValidated(
           }
         }
         const lpSurplusItemIds = new Set(bestCandidate.surplus.activeItemIds);
-        // Surplus candidates: items that currently have surplus, plus all
-        // output items of LP-active non-required recipes.  When the MILP
-        // toggles a recipe off, its output items may accumulate surplus.
-        const surplusCandidateItemIds = new Set(lpSurplusItemIds);
-        for (const { option } of bestCandidate.activeOptions) {
-          const isActive = option.netItemEntries.some(
-            ([, amount]) => amount > EPSILON
-          ) && activeOptionIds.has(option.optionId);
-          if (isActive) {
-            for (const [itemId, amount] of option.netItemEntries) {
-              if (amount > EPSILON) {
-                surplusCandidateItemIds.add(itemId);
-              }
-            }
-          }
-        }
         const milpBuildStartedAt = currentTimeMs();
-        const milpBuild = buildSurplusTypeMilpModel({
+        const milpPhase: SolveAuditAttempt['phase'] = 'surplus_complexity_milp';
+        const milpBuild = buildFixedSurplusRecipeMilpModel({
+          catalog,
           request,
           compiledOptions: compiledGraph.options,
           targetRateMap,
           externalItemIds,
-          surplusUpperBound,
-          recipeLinkUpperBound,
+          optionRateUpperBoundByOptionId,
+          defaultOptionRateUpperBound,
           activeOptionIds,
-          surplusCandidateItemIds,
+          allowedSurplusItemIds: lpSurplusItemIds,
+          primaryObjectiveUpperBound,
         });
         const milpBuildDurationMs = currentTimeMs() - milpBuildStartedAt;
         modelDurationMs += milpBuildDurationMs;
-
-        const milpSolve = solveModel(milpBuild.model, {
-          timeout: SURPLUS_MILP_TIMEOUT_MS,
-          tolerance: SURPLUS_MILP_TOLERANCE,
-        });
-        const milpSurplusMetrics = collectSurplusSolutionMetrics(
-          milpSolve.solution.variables
+        const milpConstraintCount = Object.keys(milpBuild.model.constraints).length;
+        const milpVariableCount = Object.keys(milpBuild.model.variables).length;
+        const skipMilp = shouldSkipSurplusComplexityMilp(
+          implementation,
+          milpBuild.activeOptions.length,
+          milpBuild.binaryCount
         );
 
-        // Accept both optimal and timedout (best sub-optimal integer solution
-        // found before the deadline).
-        const milpUsable =
-          milpSolve.solution.status === 'optimal' ||
-          (milpSolve.solution.status === 'timedout' && !isNaN(milpSolve.solution.result));
+        let milpSolve: ReturnType<typeof solveModel> | null = null;
+        let milpSurplusMetrics: SurplusSolutionMetrics | null = null;
+        if (skipMilp) {
+          auditAttempts.push(
+            buildSolveAuditAttempt({
+              phase: milpPhase,
+              modelKind: 'milp',
+              itemCount: milpBuild.involvedItemCount,
+              recipeCount: milpBuild.activeRecipeCount,
+              optionCount: milpBuild.activeOptions.length,
+              constraintCount: milpConstraintCount,
+              variableCount: milpVariableCount,
+              binaryCount: milpBuild.binaryCount,
+              buildDurationMs: milpBuildDurationMs,
+              solveDurationMs: 0,
+              status: 'skipped',
+            })
+          );
+        } else {
+          try {
+            milpSolve = solveModel(milpBuild.model, {
+              timeout: SURPLUS_MILP_TIMEOUT_MS,
+              tolerance: SURPLUS_MILP_TOLERANCE,
+            });
+            milpSurplusMetrics = collectSurplusSolutionMetrics(
+              milpSolve.solution.variables
+            );
+          } catch (error) {
+            auditAttempts.push(
+              buildSolveAuditAttempt({
+                phase: milpPhase,
+                modelKind: 'milp',
+                itemCount: milpBuild.involvedItemCount,
+                recipeCount: milpBuild.activeRecipeCount,
+                optionCount: milpBuild.activeOptions.length,
+                constraintCount: milpConstraintCount,
+                variableCount: milpVariableCount,
+                binaryCount: milpBuild.binaryCount,
+                buildDurationMs: milpBuildDurationMs,
+                solveDurationMs: 0,
+                status: 'error',
+              })
+            );
+            milpSolve = null;
+          }
+        }
 
-        if (milpUsable) {
+        if (
+          !skipMilp &&
+          milpSolve === null &&
+          implementation.implementationId !== yalpsSolverImplementation.implementationId
+        ) {
+          try {
+            milpSolve = solveModelWithImplementation(yalpsSolverImplementation, milpBuild.model, {
+              timeout: SURPLUS_MILP_TIMEOUT_MS,
+              tolerance: SURPLUS_MILP_TOLERANCE,
+            });
+            milpSurplusMetrics = collectSurplusSolutionMetrics(
+              milpSolve.solution.variables
+            );
+          } catch (error) {
+            auditAttempts.push(
+              buildSolveAuditAttempt({
+                phase: milpPhase,
+                round: 1,
+                modelKind: 'milp',
+              itemCount: milpBuild.involvedItemCount,
+              recipeCount: milpBuild.activeRecipeCount,
+              optionCount: milpBuild.activeOptions.length,
+              constraintCount: milpConstraintCount,
+              variableCount: milpVariableCount,
+              binaryCount: milpBuild.binaryCount,
+              buildDurationMs: 0,
+              solveDurationMs: 0,
+              status: 'error',
+              })
+            );
+            milpSolve = null;
+          }
+        }
+
+        const milpUsable = milpSolve !== null && milpSolve.solution.status === 'optimal';
+
+        if (milpUsable && milpSolve) {
           const milpCandidate = buildLinearSolveCandidate({
             request,
             model: milpBuild.model,
@@ -2772,29 +3611,25 @@ function solveCatalogRequestValidated(
             solution: milpSolve.solution,
           });
 
-          // The MILP objective already balances surplus type count vs recipe
-          // count vs power.  Accept the MILP result whenever it does not
-          // increase surplus type count — don't let the LP's lower surplus
-          // *rate* override the MILP's recipe-count savings.
-          const isBest =
-            milpCandidate.surplus.activeItemIds.length <=
-            bestCandidate.surplus.activeItemIds.length;
+          const isBest = compareLinearSolveCandidates(milpCandidate, bestCandidate) <= 0;
 
           auditAttempts.push(
             buildSolveAuditAttempt({
-              phase: 'surplus_type_milp',
+              phase: milpPhase,
               modelKind: 'milp',
               itemCount: milpBuild.involvedItemCount,
               recipeCount: milpBuild.activeRecipeCount,
               optionCount: milpBuild.activeOptions.length,
-              constraintCount: Object.keys(milpBuild.model.constraints).length,
-              variableCount: Object.keys(milpBuild.model.variables).length,
+              constraintCount: milpConstraintCount,
+              variableCount: milpVariableCount,
               binaryCount: milpBuild.binaryCount,
               buildDurationMs: milpBuildDurationMs,
               solveDurationMs: milpSolve.solveDurationMs,
               status: milpSolve.solution.status,
-              surplusItemCount: milpSurplusMetrics.activeItemIds.length,
-              surplusRatePerMin: milpSurplusMetrics.totalRatePerMin,
+              solvedRecipeCount: milpCandidate.activeRecipeCount,
+              solvedOptionCount: milpCandidate.activeOptionCount,
+              surplusItemCount: milpSurplusMetrics!.activeItemIds.length,
+              surplusRatePerMin: milpSurplusMetrics!.totalRatePerMin,
               primaryObjectiveValue: milpCandidate.primaryObjectiveValue,
               isBestCandidate: isBest,
             })
@@ -2812,10 +3647,10 @@ function solveCatalogRequestValidated(
               };
             }
           }
-        } else {
+        } else if (milpSolve) {
           auditAttempts.push(
             buildSolveAuditAttempt({
-              phase: 'surplus_type_milp',
+              phase: milpPhase,
               modelKind: 'milp',
               itemCount: milpBuild.involvedItemCount,
               recipeCount: milpBuild.activeRecipeCount,
@@ -2826,8 +3661,9 @@ function solveCatalogRequestValidated(
               buildDurationMs: milpBuildDurationMs,
               solveDurationMs: milpSolve.solveDurationMs,
               status: milpSolve.solution.status,
-              surplusItemCount: milpSurplusMetrics.activeItemIds.length,
-              surplusRatePerMin: milpSurplusMetrics.totalRatePerMin,
+              ...collectSolvedUsageCounts(milpBuild.activeOptions, milpSolve.solution.variables),
+              surplusItemCount: milpSurplusMetrics!.activeItemIds.length,
+              surplusRatePerMin: milpSurplusMetrics!.totalRatePerMin,
             })
           );
         }
@@ -2917,45 +3753,78 @@ function solveCatalogRequestValidated(
 
 function solveCatalogRequestValidatedCached(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest
+  request: SolveRequest,
+  implementation: SolverImplementation
 ): SolveResult {
-  const cached = getCachedSolvedRequestResult(catalog, request);
+  const cached = getCachedSolvedRequestResult(catalog, request, implementation);
   if (cached) {
     return cached;
   }
 
-  const result = solveCatalogRequestValidated(catalog, request);
-  setCachedSolvedRequestResult(catalog, request, result);
+  const result = solveCatalogRequestValidated(catalog, request, implementation);
+  setCachedSolvedRequestResult(catalog, request, implementation, result);
   return result;
+}
+
+function buildInvalidInputSolveResult(messages: string[]): SolveResult {
+  return {
+    status: 'invalid_input',
+    diagnostics: {
+      messages,
+      infoMessages: [],
+      unmetPreferences: [],
+    },
+    solveAudit: buildEmptySolveAudit(),
+    resolvedRawInputItemIds: [],
+    targets: [],
+    recipePlans: [],
+    buildingSummary: [],
+    powerSummary: {
+      activePowerMW: 0,
+      roundedPlacementPowerMW: 0,
+    },
+    externalInputs: [],
+    surplusOutputs: [],
+    itemBalance: [],
+  };
+}
+
+export interface SolveCatalogRequestOptions {
+  implementation?: SolverImplementation;
+}
+
+export interface SolveCatalogRequestAsyncOptions extends SolveCatalogRequestOptions {
+  implementationPromise?: Promise<SolverImplementation>;
 }
 
 export function solveCatalogRequest(
   catalog: ResolvedCatalogModel,
-  request: SolveRequest
+  request: SolveRequest,
+  options: SolveCatalogRequestOptions = {}
 ): SolveResult {
+  const implementation = options.implementation ?? yalpsSolverImplementation;
   const validation = validateSolveRequest(catalog, request);
   if (!validation.valid) {
-    return {
-      status: 'invalid_input',
-      diagnostics: {
-        messages: validation.messages,
-        infoMessages: [],
-        unmetPreferences: [],
-      },
-      solveAudit: buildEmptySolveAudit(),
-      resolvedRawInputItemIds: [],
-      targets: [],
-      recipePlans: [],
-      buildingSummary: [],
-      powerSummary: {
-        activePowerMW: 0,
-        roundedPlacementPowerMW: 0,
-      },
-      externalInputs: [],
-      surplusOutputs: [],
-      itemBalance: [],
-    };
+    return buildInvalidInputSolveResult(validation.messages);
   }
 
-  return solveCatalogRequestValidatedCached(catalog, request);
+  return solveCatalogRequestValidatedCached(catalog, request, implementation);
+}
+
+export async function solveCatalogRequestAsync(
+  catalog: ResolvedCatalogModel,
+  request: SolveRequest,
+  options: SolveCatalogRequestAsyncOptions = {}
+): Promise<SolveResult> {
+  const implementation =
+    options.implementation ??
+    (options.implementationPromise
+      ? await options.implementationPromise
+      : yalpsSolverImplementation);
+  const validation = validateSolveRequest(catalog, request);
+  if (!validation.valid) {
+    return buildInvalidInputSolveResult(validation.messages);
+  }
+
+  return solveCatalogRequestValidatedCached(catalog, request, implementation);
 }

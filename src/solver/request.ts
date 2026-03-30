@@ -19,9 +19,9 @@ export type SolveObjective =
 /**
  * Material-balance policy for non-target items.
  *
- * - `allow_surplus`: intermediate/byproduct items may end with net output >= 0;
- *   the LP models explicit final-surplus variables and minimizes those
- *   surpluses before the selected primary objective
+ * - `allow_surplus`: intermediate/byproduct items may end with net output >= 0.
+ *   The solver first preserves the selected primary objective, then uses
+ *   follow-up LP/MILP refinement to reduce surplus and cleanup complexity
  * - `force_balance`: non-external items must close exactly with net 0 unless
  *   they are explicit targets
  */

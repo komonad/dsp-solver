@@ -1,5 +1,10 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
-import { buildPresentationModel, buildPresentationOverviewSections, type PresentationModel } from '../src/presentation';
+import {
+  buildPresentationModel,
+  buildPresentationOverviewSections,
+  buildPresentationRequestSummary,
+  type PresentationModel,
+} from '../src/presentation';
 import { solveCatalogRequest } from '../src/solver';
 
 function workEnergyForMW(megawatts: number): number {
@@ -153,6 +158,68 @@ test('presentation model carries frontend-visible names and totals from a solved
     roundedUpBuildingCount: 1,
   });
   expect(model.recipePlans[0].activePowerMW).toBeCloseTo(4, 6);
+});
+
+test('presentation request summary can be built without a solved result', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const request = {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings' as const,
+    balancePolicy: 'force_balance' as const,
+    rawInputItemIds: ['1001'],
+    allowedRecipesByItem: {
+      '1101': ['1'],
+    },
+    disabledRecipeIds: ['1'],
+    disabledBuildingIds: ['5002'],
+    preferredBuildingByRecipe: {
+      '1': '5001',
+    },
+  };
+
+  expect(buildPresentationRequestSummary(catalog, request)).toEqual({
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicyLabel: '自动',
+    targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
+    rawInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore' }],
+    allowedRecipeSettings: [
+      {
+        itemId: '1101',
+        itemName: 'Demo Plate',
+        iconKey: 'demo-plate',
+        recipeId: '1',
+        recipeName: 'Ore to Plate',
+        recipeIconKey: 'demo-plate',
+        cycleTimeSec: 1,
+        inputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 1 }],
+        outputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 1 }],
+      },
+    ],
+    disabledRecipeSettings: [
+      {
+        recipeId: '1',
+        recipeName: 'Ore to Plate',
+        recipeIconKey: 'demo-plate',
+        cycleTimeSec: 1,
+        inputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore', ratePerMin: 1 }],
+        outputs: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 1 }],
+      },
+    ],
+    disabledRecipes: [{ itemId: '1', itemName: 'Ore to Plate' }],
+    disabledBuildings: [{ itemId: '5002', itemName: 'Turbo Smelter', iconKey: 'turbo-smelter' }],
+    preferredRecipeSettings: [
+      {
+        recipeId: '1',
+        recipeName: 'Ore to Plate',
+        recipeIconKey: 'demo-plate',
+        buildingName: 'Compact Smelter',
+        buildingIconKey: 'compact-smelter',
+        proliferatorPreferenceLabel: undefined,
+      },
+    ],
+    hasAdvancedOverrides: true,
+  });
 });
 
 test('presentation model still exposes catalog summary before solving', () => {
