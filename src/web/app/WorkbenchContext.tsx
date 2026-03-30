@@ -29,13 +29,27 @@ import {
   resolveCatalogSourceTexts,
 } from '../catalog/catalogClient';
 import {
+  buildWorkbenchSolveInputKey,
   buildCancelledWorkbenchSolveState,
   buildIdleWorkbenchSolveState,
   buildRunningWorkbenchSolveState,
   computeWorkbenchSolve,
   computeWorkbenchSolveAsync,
+  findReusableWorkbenchSolveInputKey,
+  persistWorkbenchSolveState,
+  restoreWorkbenchSolveState,
   type WorkbenchSolveState,
 } from '../workbench/autoSolve';
+import {
+  createWorkbenchConfig as createWorkbenchConfigCollection,
+  createWorkbenchPersistedConfig,
+  deleteWorkbenchConfig as deleteWorkbenchConfigCollection,
+  forkWorkbenchConfig as forkWorkbenchConfigCollection,
+  renameWorkbenchConfig as renameWorkbenchConfigCollection,
+  replaceWorkbenchConfigEditorState,
+  sanitizeWorkbenchConfigCollectionForCatalog,
+  syncActiveWorkbenchConfigCollection,
+} from '../workbench/configs';
 import {
   cancelSolveWorker,
   solveCatalogRequestWithWorker,
@@ -57,17 +71,19 @@ import {
   clearWorkbenchCache,
   clearWorkbenchDatasetDraft,
   readActiveWorkbenchCacheSource,
+  readWorkbenchConfigCollection,
   readWorkbenchDatasetDraft,
-  readWorkbenchEditorState,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
+  writeWorkbenchConfigCollection,
   writeWorkbenchDatasetDraft,
-  writeWorkbenchEditorState,
   type WorkbenchCacheSource,
   type WorkbenchEditorState,
+  type WorkbenchPersistedConfig,
 } from '../workbench/persistence';
 import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
+  buildWorkbenchConfigDisplayModel,
   buildRecipeOptionsByOutputItem,
   buildDefaultWorkbenchEditorState,
   getBrowserSessionStorage,
@@ -77,6 +93,7 @@ import {
   pickDefaultTarget,
   pickSuggestedTargetItemId,
   sortModeOptions,
+  type WorkbenchConfigDisplayModel,
   type WorkbenchRecipeOption,
 } from './workbenchHelpers';
 
@@ -88,6 +105,142 @@ function waitForNextPaint(): Promise<void> {
   return new Promise(resolve => {
     window.requestAnimationFrame(() => resolve());
   });
+}
+
+function hashWorkbenchText(text: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function buildWorkbenchCatalogSolveSignature(
+  datasetText: string,
+  defaultConfigText: string
+): string {
+  return `${hashWorkbenchText(datasetText)}:${hashWorkbenchText(defaultConfigText)}`;
+}
+
+function findReusableSolveInputKeyForConfig(params: {
+  config: Pick<WorkbenchPersistedConfig, 'editorState' | 'solveState'>;
+  catalogSignature: string;
+  locale: AppLocale;
+}): string | null {
+  const { config, catalogSignature, locale } = params;
+  return findReusableWorkbenchSolveInputKey(config.solveState, {
+    catalogSignature,
+    targets: config.editorState.targets,
+    objective: config.editorState.objective,
+    balancePolicy: config.editorState.balancePolicy,
+    proliferatorPolicy: config.editorState.proliferatorPolicy,
+    globalProliferatorLevel: config.editorState.globalProliferatorLevel,
+    autoPromoteUnavailableItemsToRawInputs:
+      config.editorState.autoPromoteUnavailableItemsToRawInputs,
+    rawInputItemIds: config.editorState.rawInputItemIds,
+    disabledRawInputItemIds: config.editorState.disabledRawInputItemIds,
+    disabledRecipeIds: config.editorState.disabledRecipeIds,
+    disabledBuildingIds: config.editorState.disabledBuildingIds,
+    allowedRecipesByItem: config.editorState.allowedRecipesByItem,
+    preferredBuildings: config.editorState.preferredBuildings,
+    recipePreferences: config.editorState.recipePreferences,
+    recipeStrategyOverrides: config.editorState.recipeStrategyOverrides,
+    advancedOverridesText: config.editorState.advancedOverridesText,
+    locale,
+    isLoading: false,
+  });
+}
+
+function buildExpectedSolveInputKeyForWorkbenchEditorState(params: {
+  editorState: WorkbenchEditorState;
+  catalogSignature: string;
+  locale: AppLocale;
+}): string {
+  const { editorState, catalogSignature, locale } = params;
+  return buildWorkbenchSolveInputKey({
+    catalogSignature,
+    targets: editorState.targets,
+    objective: editorState.objective,
+    balancePolicy: editorState.balancePolicy,
+    proliferatorPolicy: editorState.proliferatorPolicy,
+    globalProliferatorLevel: editorState.globalProliferatorLevel,
+    autoPromoteUnavailableItemsToRawInputs: editorState.autoPromoteUnavailableItemsToRawInputs,
+    rawInputItemIds: editorState.rawInputItemIds,
+    disabledRawInputItemIds: editorState.disabledRawInputItemIds,
+    disabledRecipeIds: editorState.disabledRecipeIds,
+    disabledBuildingIds: editorState.disabledBuildingIds,
+    allowedRecipesByItem: editorState.allowedRecipesByItem,
+    preferredBuildings: editorState.preferredBuildings,
+    recipePreferences: editorState.recipePreferences,
+    recipeStrategyOverrides: editorState.recipeStrategyOverrides,
+    advancedOverridesText: editorState.advancedOverridesText,
+    locale,
+    isLoading: false,
+  });
+}
+
+function backfillWorkbenchConfigSolveInputKeys(params: {
+  configs: WorkbenchPersistedConfig[];
+  catalogSignature: string;
+  locale: AppLocale;
+}): WorkbenchPersistedConfig[] {
+  const { configs, catalogSignature, locale } = params;
+  let changed = false;
+  const nextConfigs = configs.map(config => {
+    if (
+      !config.solveState ||
+      config.solveState.activityStatus !== 'settled' ||
+      config.solveState.inputKey
+    ) {
+      return config;
+    }
+
+    changed = true;
+    return {
+      ...config,
+      solveState: {
+        ...config.solveState,
+        inputKey: buildWorkbenchSolveInputKey({
+          catalogSignature,
+          targets: config.editorState.targets,
+          objective: config.editorState.objective,
+          balancePolicy: config.editorState.balancePolicy,
+          proliferatorPolicy: config.editorState.proliferatorPolicy,
+          globalProliferatorLevel: config.editorState.globalProliferatorLevel,
+          autoPromoteUnavailableItemsToRawInputs:
+            config.editorState.autoPromoteUnavailableItemsToRawInputs,
+          rawInputItemIds: config.editorState.rawInputItemIds,
+          disabledRawInputItemIds: config.editorState.disabledRawInputItemIds,
+          disabledRecipeIds: config.editorState.disabledRecipeIds,
+          disabledBuildingIds: config.editorState.disabledBuildingIds,
+          allowedRecipesByItem: config.editorState.allowedRecipesByItem,
+          preferredBuildings: config.editorState.preferredBuildings,
+          recipePreferences: config.editorState.recipePreferences,
+          recipeStrategyOverrides: config.editorState.recipeStrategyOverrides,
+          advancedOverridesText: config.editorState.advancedOverridesText,
+          locale,
+          isLoading: false,
+        }),
+      },
+    };
+  });
+
+  return changed ? nextConfigs : configs;
+}
+
+function mergePersistedSolveStateInputKey(
+  existingState: WorkbenchPersistedConfig['solveState'],
+  nextState: ReturnType<typeof persistWorkbenchSolveState>
+): ReturnType<typeof persistWorkbenchSolveState> {
+  if (nextState.inputKey || !existingState?.inputKey) {
+    return nextState;
+  }
+
+  return {
+    ...nextState,
+    inputKey: existingState.inputKey,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +274,9 @@ export interface WorkbenchContextValue {
   isLoading: boolean;
 
   // Workbench editor state
+  workbenchConfigs: WorkbenchPersistedConfig[];
+  activeWorkbenchConfigId: string;
+  workbenchConfigDisplayModels: WorkbenchConfigDisplayModel[];
   targets: EditableTarget[];
   setTargets: React.Dispatch<React.SetStateAction<EditableTarget[]>>;
   targetDraftItemId: string;
@@ -217,6 +373,11 @@ export interface WorkbenchContextValue {
   reloadCatalog: () => void;
   onPresetChange: (nextPresetId: DatasetPresetId) => void;
   clearCachedWorkbenchState: () => void;
+  switchWorkbenchConfig: (configId: string) => void;
+  createDefaultWorkbenchConfig: () => void;
+  renameWorkbenchConfig: (configId: string, name: string) => void;
+  forkActiveWorkbenchConfig: () => void;
+  deleteWorkbenchConfig: (configId: string) => void;
   resetDatasetEditorToLoadedSource: () => void;
   updateDatasetEditorTexts: (nextDatasetText: string, nextDefaultConfigText: string) => void;
   applyDatasetEditorChanges: () => void;
@@ -352,6 +513,13 @@ function patchRecipeStrategyOverrideEntry(
   return hasValue ? [...remainingOverrides, nextOverride] : remainingOverrides;
 }
 
+function findWorkbenchConfig(
+  configs: WorkbenchPersistedConfig[],
+  configId: string
+): WorkbenchPersistedConfig | null {
+  return configs.find(config => config.id === configId) ?? null;
+}
+
 // ---------------------------------------------------------------------------
 // Provider
 // ---------------------------------------------------------------------------
@@ -403,6 +571,12 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [datasetEditorError, setDatasetEditorError] = useState('');
   const [loadError, setLoadError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [workbenchConfigs, setWorkbenchConfigs] = useState<WorkbenchPersistedConfig[]>([]);
+  const [activeWorkbenchConfigId, setActiveWorkbenchConfigId] = useState('');
+  const [hydratingWorkbenchConfig, setHydratingWorkbenchConfig] = useState<{
+    configId: string;
+    expectedInputKey: string;
+  } | null>(null);
 
   const [targets, setTargets] = useState<EditableTarget[]>([]);
   const [targetDraftItemId, setTargetDraftItemId] = useState('');
@@ -498,6 +672,46 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     };
   }
 
+  const currentWorkbenchEditorState = useMemo(
+    () => buildCurrentWorkbenchEditorState(),
+    [
+      advancedOverridesText,
+      autoPromoteUnavailableItemsToRawInputs,
+      balancePolicy,
+      disabledBuildingIds,
+      disabledRawInputItemIds,
+      disabledRecipeIds,
+      objective,
+      allowedRecipesByItem,
+      preferredBuildings,
+      proliferatorPolicy,
+      globalProliferatorLevel,
+      rawInputItemIds,
+      recipePreferences,
+      recipeStrategyOverrides,
+      targets,
+    ]
+  );
+
+  function restoreReusableSolveInputKey(nextInputKey: string | null) {
+    restoredSolveInputKeyAwaitingMatchRef.current = Boolean(nextInputKey);
+    setRestoredSolveInputKey(nextInputKey);
+  }
+
+  function beginWorkbenchConfigHydration(
+    config: Pick<WorkbenchPersistedConfig, 'id' | 'editorState'>,
+    signature: string
+  ) {
+    setHydratingWorkbenchConfig({
+      configId: config.id,
+      expectedInputKey: buildExpectedSolveInputKeyForWorkbenchEditorState({
+        editorState: config.editorState,
+        catalogSignature: signature,
+        locale,
+      }),
+    });
+  }
+
   // -------------------------------------------------------------------------
   // loadCatalog
   // -------------------------------------------------------------------------
@@ -545,20 +759,27 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         }
       }
       const nextCatalog = restoredSource.catalog;
-      const cachedEditorState = readWorkbenchEditorState(browserStorage, nextSource);
+      const nextCatalogSolveSignature = buildWorkbenchCatalogSolveSignature(
+        restoredSource.datasetText,
+        restoredSource.defaultConfigText
+      );
       const defaultEditorState = buildDefaultWorkbenchEditorState(nextCatalog);
-      const restoredEditorState = cachedEditorState
-        ? sanitizeWorkbenchEditorState(nextCatalog, cachedEditorState)
-        : null;
-      const nextEditorState = restoredEditorState
-        ? {
-            ...defaultEditorState,
-            ...restoredEditorState,
-            targets: restoredEditorState.targets.length
-              ? restoredEditorState.targets
-              : defaultEditorState.targets,
-          }
-        : defaultEditorState;
+      const cachedConfigCollection = sanitizeWorkbenchConfigCollectionForCatalog(
+        nextCatalog,
+        readWorkbenchConfigCollection(browserStorage, nextSource),
+        defaultEditorState
+      );
+      const hydratedConfigCollection = {
+        ...cachedConfigCollection,
+        configs: backfillWorkbenchConfigSolveInputKeys({
+          configs: cachedConfigCollection.configs,
+          catalogSignature: nextCatalogSolveSignature,
+          locale,
+        }),
+      };
+      const nextActiveConfig =
+        findWorkbenchConfig(hydratedConfigCollection.configs, hydratedConfigCollection.activeConfigId) ??
+        hydratedConfigCollection.configs[0];
 
       setCatalog(nextCatalog);
       setLoadedSource(nextSource);
@@ -567,12 +788,27 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setDatasetEditorText(restoredSource.datasetText);
       setDefaultConfigEditorText(restoredSource.defaultConfigText);
       setCatalogLabel(nextLabel);
-      applyWorkbenchEditorState(nextCatalog, nextEditorState);
+      setWorkbenchConfigs(hydratedConfigCollection.configs);
+      setActiveWorkbenchConfigId(nextActiveConfig.id);
+      beginWorkbenchConfigHydration(nextActiveConfig, nextCatalogSolveSignature);
+      setBlockedSolveInputKey(null);
+      restoreReusableSolveInputKey(
+        findReusableSolveInputKeyForConfig({
+          config: nextActiveConfig,
+          catalogSignature: nextCatalogSolveSignature,
+          locale,
+        })
+      );
+      setAutoSolveState(restoreWorkbenchSolveState(nextActiveConfig.solveState));
+      applyWorkbenchEditorState(nextCatalog, nextActiveConfig.editorState);
     } catch (error) {
       setCatalog(null);
       setLoadedSource(null);
       setLoadedDatasetText('');
       setLoadedDefaultConfigText('{}');
+      setWorkbenchConfigs([]);
+      setActiveWorkbenchConfigId('');
+      setAutoSolveState(buildIdleWorkbenchSolveState());
       const detail = error instanceof Error ? error.message : String(error);
       setLoadError(`${bundle.datasetSource.loadFailedPrefix}${detail}`);
     } finally {
@@ -706,46 +942,42 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------------------------
 
   useEffect(() => {
-    if (!browserStorage || !loadedSource) {
+    if (!loadedSource || !activeWorkbenchConfigId) {
       return;
     }
 
-    writeWorkbenchEditorState(browserStorage, loadedSource, {
-      targets,
-      objective,
-      balancePolicy,
-      autoPromoteUnavailableItemsToRawInputs,
-      proliferatorPolicy,
-      globalProliferatorLevel,
-      rawInputItemIds,
-      disabledRawInputItemIds,
-      disabledRecipeIds,
-      disabledBuildingIds,
-      allowedRecipesByItem,
-      recipePreferences,
-      recipeStrategyOverrides,
-      preferredBuildings,
-      advancedOverridesText,
+    if (hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) {
+      return;
+    }
+
+    setWorkbenchConfigs(current => {
+      const nextCollection = replaceWorkbenchConfigEditorState(
+        {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: current,
+        },
+        activeWorkbenchConfigId,
+        currentWorkbenchEditorState
+      );
+      return nextCollection.configs === current ? current : nextCollection.configs;
     });
   }, [
-    advancedOverridesText,
-    autoPromoteUnavailableItemsToRawInputs,
-    balancePolicy,
-    browserStorage,
-    disabledBuildingIds,
-    disabledRawInputItemIds,
-    disabledRecipeIds,
+    activeWorkbenchConfigId,
+    currentWorkbenchEditorState,
+    hydratingWorkbenchConfig,
     loadedSource,
-    objective,
-    allowedRecipesByItem,
-    preferredBuildings,
-    proliferatorPolicy,
-    globalProliferatorLevel,
-    rawInputItemIds,
-    recipePreferences,
-    recipeStrategyOverrides,
-    targets,
   ]);
+
+  useEffect(() => {
+    if (!browserStorage || !loadedSource || !activeWorkbenchConfigId || workbenchConfigs.length === 0) {
+      return;
+    }
+
+    writeWorkbenchConfigCollection(browserStorage, loadedSource, {
+      activeConfigId: activeWorkbenchConfigId,
+      configs: workbenchConfigs,
+    });
+  }, [activeWorkbenchConfigId, browserStorage, loadedSource, workbenchConfigs]);
 
   useEffect(() => {
     if (!browserStorage || !loadedSource) {
@@ -817,28 +1049,21 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const autoSolveSequenceRef = useRef(0);
   const [manualSolveNonce, setManualSolveNonce] = useState(0);
   const [blockedSolveInputKey, setBlockedSolveInputKey] = useState<string | null>(null);
+  const [restoredSolveInputKey, setRestoredSolveInputKey] = useState<string | null>(null);
+  const restoredSolveInputKeyAwaitingMatchRef = useRef(false);
   const activeSolveInputKeyRef = useRef<string | null>(null);
   const activeSolveCancellerRef = useRef<(() => void) | null>(null);
-  const solveCatalogKeyMapRef = useRef(new WeakMap<ResolvedCatalogModel, number>());
-  const nextSolveCatalogKeyRef = useRef(1);
-  const deferredSolveCatalogKey = useMemo(() => {
-    if (!deferredSolveInputs.catalog) {
-      return 'no-catalog';
-    }
-
-    const existingKey = solveCatalogKeyMapRef.current.get(deferredSolveInputs.catalog);
-    if (typeof existingKey === 'number') {
-      return `catalog-${existingKey}`;
-    }
-
-    const nextKey = nextSolveCatalogKeyRef.current++;
-    solveCatalogKeyMapRef.current.set(deferredSolveInputs.catalog, nextKey);
-    return `catalog-${nextKey}`;
-  }, [deferredSolveInputs.catalog]);
+  const catalogSolveSignature = useMemo(
+    () =>
+      loadedSource
+        ? buildWorkbenchCatalogSolveSignature(loadedDatasetText, loadedDefaultConfigText)
+        : 'no-catalog',
+    [loadedDefaultConfigText, loadedDatasetText, loadedSource]
+  );
   const deferredSolveInputKey = useMemo(
     () =>
-      JSON.stringify({
-        catalogKey: deferredSolveCatalogKey,
+      buildWorkbenchSolveInputKey({
+        catalogSignature: catalogSolveSignature,
         targets: deferredSolveInputs.targets,
         objective: deferredSolveInputs.objective,
         balancePolicy: deferredSolveInputs.balancePolicy,
@@ -858,8 +1083,27 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         locale: deferredSolveInputs.locale,
         isLoading: deferredSolveInputs.isLoading,
       }),
-    [deferredSolveCatalogKey, deferredSolveInputs]
+    [catalogSolveSignature, deferredSolveInputs]
   );
+  const persistedAutoSolveState = useMemo(
+    () =>
+      persistWorkbenchSolveState(autoSolveState, {
+        inputKey: autoSolveState.activity.status === 'settled' ? deferredSolveInputKey : undefined,
+      }),
+    [autoSolveState, deferredSolveInputKey]
+  );
+
+  useEffect(() => {
+    if (!hydratingWorkbenchConfig || hydratingWorkbenchConfig.configId !== activeWorkbenchConfigId) {
+      return;
+    }
+
+    if (hydratingWorkbenchConfig.expectedInputKey !== deferredSolveInputKey) {
+      return;
+    }
+
+    setHydratingWorkbenchConfig(null);
+  }, [activeWorkbenchConfigId, deferredSolveInputKey, hydratingWorkbenchConfig]);
 
   useEffect(() => {
     if (blockedSolveInputKey && blockedSolveInputKey !== deferredSolveInputKey) {
@@ -867,8 +1111,26 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     }
   }, [blockedSolveInputKey, deferredSolveInputKey]);
 
+  useEffect(() => {
+    if (!restoredSolveInputKey) {
+      restoredSolveInputKeyAwaitingMatchRef.current = false;
+      return;
+    }
+
+    if (restoredSolveInputKey === deferredSolveInputKey) {
+      restoredSolveInputKeyAwaitingMatchRef.current = false;
+      return;
+    }
+
+    if (!restoredSolveInputKeyAwaitingMatchRef.current) {
+      setRestoredSolveInputKey(null);
+    }
+  }, [deferredSolveInputKey, restoredSolveInputKey]);
+
   const startSolve = useCallback(() => {
     setBlockedSolveInputKey(null);
+    setRestoredSolveInputKey(null);
+    restoredSolveInputKeyAwaitingMatchRef.current = false;
     setManualSolveNonce(current => current + 1);
   }, []);
 
@@ -897,7 +1159,14 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (blockedSolveInputKey === deferredSolveInputKey) {
+    if (hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) {
+      return;
+    }
+
+    if (
+      blockedSolveInputKey === deferredSolveInputKey ||
+      restoredSolveInputKey === deferredSolveInputKey
+    ) {
       return;
     }
 
@@ -975,7 +1244,15 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         activeSolveCancellerRef.current = null;
       }
     };
-  }, [blockedSolveInputKey, deferredSolveInputKey, deferredSolveInputs, manualSolveNonce]);
+  }, [
+    blockedSolveInputKey,
+    deferredSolveInputKey,
+    deferredSolveInputs,
+    hydratingWorkbenchConfig,
+    manualSolveNonce,
+    restoredSolveInputKey,
+    activeWorkbenchConfigId,
+  ]);
 
   const lastRequest = autoSolveState.request;
   const activeSolveRequest = autoSolveState.activeRequest ?? autoSolveState.request;
@@ -988,6 +1265,39 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const solveError = autoSolveState.error;
   const fallbackSolve = autoSolveState.fallback;
   const hasTargets = targets.length > 0;
+
+  useEffect(() => {
+    if (!loadedSource || !activeWorkbenchConfigId) {
+      return;
+    }
+
+    if (hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) {
+      return;
+    }
+
+    setWorkbenchConfigs(current => {
+      const existingActiveConfig = findWorkbenchConfig(current, activeWorkbenchConfigId);
+      const nextCollection = syncActiveWorkbenchConfigCollection(
+        {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: current,
+        },
+        activeWorkbenchConfigId,
+        existingActiveConfig?.editorState ?? currentWorkbenchEditorState,
+        mergePersistedSolveStateInputKey(existingActiveConfig?.solveState, persistedAutoSolveState),
+        {
+          skipConfigId: hydratingWorkbenchConfig?.configId,
+        }
+      );
+      return nextCollection.configs === current ? current : nextCollection.configs;
+    });
+  }, [
+    activeWorkbenchConfigId,
+    currentWorkbenchEditorState,
+    hydratingWorkbenchConfig,
+    loadedSource,
+    persistedAutoSolveState,
+  ]);
 
   // -------------------------------------------------------------------------
   // Derived: model, fallbackModel
@@ -1088,6 +1398,39 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [itemOptions, targetDraftItemId]
   );
 
+  const isHydratingActiveWorkbenchConfig =
+    hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId;
+
+  const workbenchConfigDisplayModels = useMemo(() => {
+    if (!catalog) {
+      return [];
+    }
+
+    return workbenchConfigs.map(config =>
+      buildWorkbenchConfigDisplayModel(
+        catalog,
+        config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
+          ? {
+              ...config,
+              editorState: currentWorkbenchEditorState,
+            }
+          : config,
+        locale,
+        config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
+          ? autoSolveState
+          : config.solveState
+      )
+    );
+  }, [
+    activeWorkbenchConfigId,
+    autoSolveState,
+    catalog,
+    currentWorkbenchEditorState,
+    isHydratingActiveWorkbenchConfig,
+    locale,
+    workbenchConfigs,
+  ]);
+
   // -------------------------------------------------------------------------
   // Event handlers
   // -------------------------------------------------------------------------
@@ -1135,9 +1478,209 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
     if (catalog) {
       clearWorkbenchCache(browserStorage);
-      applyWorkbenchEditorState(catalog, buildDefaultWorkbenchEditorState(catalog));
+      const defaultWorkbenchState = buildDefaultWorkbenchEditorState(catalog);
+      const nextConfig = createWorkbenchPersistedConfig(defaultWorkbenchState);
+      setWorkbenchConfigs([nextConfig]);
+      setActiveWorkbenchConfigId(nextConfig.id);
+      beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
+      setAutoSolveState(buildIdleWorkbenchSolveState());
+      applyWorkbenchEditorState(catalog, defaultWorkbenchState);
     }
   }
+
+  const buildSyncedWorkbenchConfigCollection = useCallback(
+    function buildSyncedWorkbenchConfigCollection() {
+      const existingActiveConfig = findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId);
+      return syncActiveWorkbenchConfigCollection(
+        {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: workbenchConfigs,
+        },
+        activeWorkbenchConfigId,
+        currentWorkbenchEditorState,
+        mergePersistedSolveStateInputKey(existingActiveConfig?.solveState, persistedAutoSolveState),
+        {
+          skipConfigId: hydratingWorkbenchConfig?.configId,
+        }
+      );
+    },
+    [
+      activeWorkbenchConfigId,
+      currentWorkbenchEditorState,
+      hydratingWorkbenchConfig,
+      persistedAutoSolveState,
+      workbenchConfigs,
+    ]
+  );
+
+  const switchWorkbenchConfig = useCallback(
+    function switchWorkbenchConfig(nextConfigId: string) {
+      if (!catalog || nextConfigId === activeWorkbenchConfigId) {
+        return;
+      }
+
+      const nextCollection = buildSyncedWorkbenchConfigCollection();
+      const nextConfig = findWorkbenchConfig(nextCollection.configs, nextConfigId);
+      if (!nextConfig) {
+        return;
+      }
+
+      setWorkbenchConfigs(nextCollection.configs);
+      setActiveWorkbenchConfigId(nextConfig.id);
+      beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
+      setBlockedSolveInputKey(null);
+      restoreReusableSolveInputKey(
+        findReusableSolveInputKeyForConfig({
+          config: nextConfig,
+          catalogSignature: catalogSolveSignature,
+          locale,
+        })
+      );
+      setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
+      applyWorkbenchEditorState(catalog, nextConfig.editorState);
+    },
+    [
+      activeWorkbenchConfigId,
+      buildSyncedWorkbenchConfigCollection,
+      catalogSolveSignature,
+      catalog,
+      locale,
+    ]
+  );
+
+  const renameWorkbenchConfig = useCallback(function renameWorkbenchConfig(
+    configId: string,
+    name: string
+  ) {
+    setWorkbenchConfigs(current =>
+      renameWorkbenchConfigCollection(
+        {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: current,
+        },
+        configId,
+        name.trim()
+      ).configs
+    );
+  }, [activeWorkbenchConfigId]);
+
+  const createDefaultWorkbenchConfig = useCallback(function createDefaultWorkbenchConfig() {
+    if (!catalog) {
+      return;
+    }
+
+    const defaultWorkbenchState = buildDefaultWorkbenchEditorState(catalog);
+    const nextCollection = createWorkbenchConfigCollection(
+      buildSyncedWorkbenchConfigCollection(),
+      {
+        editorState: defaultWorkbenchState,
+      }
+    );
+    const nextConfig =
+      findWorkbenchConfig(nextCollection.configs, nextCollection.activeConfigId) ??
+      nextCollection.configs[nextCollection.configs.length - 1];
+
+    if (!nextConfig) {
+      return;
+    }
+
+    setWorkbenchConfigs(nextCollection.configs);
+    setActiveWorkbenchConfigId(nextConfig.id);
+    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
+    setBlockedSolveInputKey(null);
+    restoreReusableSolveInputKey(null);
+    setAutoSolveState(buildIdleWorkbenchSolveState());
+    applyWorkbenchEditorState(catalog, nextConfig.editorState);
+  }, [buildSyncedWorkbenchConfigCollection, catalog]);
+
+  const forkActiveWorkbenchConfig = useCallback(function forkActiveWorkbenchConfig() {
+    if (!activeWorkbenchConfigId) {
+      return;
+    }
+
+    const nextCollection = forkWorkbenchConfigCollection(
+      buildSyncedWorkbenchConfigCollection(),
+      activeWorkbenchConfigId,
+      {
+        editorState: currentWorkbenchEditorState,
+        solveState: persistedAutoSolveState,
+      }
+    );
+    const nextConfig =
+      findWorkbenchConfig(nextCollection.configs, nextCollection.activeConfigId) ??
+      nextCollection.configs[nextCollection.configs.length - 1] ??
+      createWorkbenchPersistedConfig(currentWorkbenchEditorState, {
+        solveState: persistedAutoSolveState,
+      });
+
+    setWorkbenchConfigs(nextCollection.configs);
+    setActiveWorkbenchConfigId(nextConfig.id);
+    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
+    setBlockedSolveInputKey(null);
+    restoreReusableSolveInputKey(
+      findReusableSolveInputKeyForConfig({
+        config: nextConfig,
+        catalogSignature: catalogSolveSignature,
+        locale,
+      })
+    );
+    setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
+    if (catalog) {
+      applyWorkbenchEditorState(catalog, nextConfig.editorState);
+    }
+  }, [
+    activeWorkbenchConfigId,
+    buildSyncedWorkbenchConfigCollection,
+    catalogSolveSignature,
+    catalog,
+    currentWorkbenchEditorState,
+    locale,
+    persistedAutoSolveState,
+  ]);
+
+  const deleteWorkbenchConfig = useCallback(function deleteWorkbenchConfig(configId: string) {
+    if (!catalog) {
+      return;
+    }
+
+    const nextCollection = deleteWorkbenchConfigCollection(
+      buildSyncedWorkbenchConfigCollection(),
+      configId,
+      buildDefaultWorkbenchEditorState(catalog)
+    );
+
+    setWorkbenchConfigs(nextCollection.configs);
+
+    if (configId !== activeWorkbenchConfigId) {
+      return;
+    }
+
+    const nextConfig =
+      findWorkbenchConfig(nextCollection.configs, nextCollection.activeConfigId) ??
+      nextCollection.configs[0];
+    if (!nextConfig) {
+      return;
+    }
+
+    setActiveWorkbenchConfigId(nextConfig.id);
+    beginWorkbenchConfigHydration(nextConfig, catalogSolveSignature);
+    setBlockedSolveInputKey(null);
+    restoreReusableSolveInputKey(
+      findReusableSolveInputKeyForConfig({
+        config: nextConfig,
+        catalogSignature: catalogSolveSignature,
+        locale,
+      })
+    );
+    setAutoSolveState(restoreWorkbenchSolveState(nextConfig.solveState));
+    applyWorkbenchEditorState(catalog, nextConfig.editorState);
+  }, [
+    activeWorkbenchConfigId,
+    buildSyncedWorkbenchConfigCollection,
+    catalog,
+    catalogSolveSignature,
+    locale,
+  ]);
 
   const applyAllowSurplusFallback = useCallback(() => {
     setBalancePolicy('allow_surplus');
@@ -1159,11 +1702,48 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     try {
       const resolved = resolveCatalogSourceTexts(datasetEditorText, defaultConfigEditorText);
       const nextCatalog = resolved.catalog;
+      const nextCatalogSolveSignature = buildWorkbenchCatalogSolveSignature(
+        resolved.datasetText,
+        resolved.defaultConfigText
+      );
       const currentWorkbenchState = sanitizeWorkbenchEditorState(
         nextCatalog,
-        buildCurrentWorkbenchEditorState()
+        currentWorkbenchEditorState
       );
       const defaultWorkbenchState = buildDefaultWorkbenchEditorState(nextCatalog);
+      const nextConfigCollection = sanitizeWorkbenchConfigCollectionForCatalog(
+        nextCatalog,
+        {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: syncActiveWorkbenchConfigCollection(
+            {
+              activeConfigId: activeWorkbenchConfigId,
+              configs: workbenchConfigs,
+            },
+            activeWorkbenchConfigId,
+            currentWorkbenchState,
+            mergePersistedSolveStateInputKey(
+              findWorkbenchConfig(workbenchConfigs, activeWorkbenchConfigId)?.solveState,
+              persistedAutoSolveState
+            ),
+            {
+              skipConfigId: hydratingWorkbenchConfig?.configId,
+            }
+          ).configs,
+        },
+        defaultWorkbenchState
+      );
+      const hydratedConfigCollection = {
+        ...nextConfigCollection,
+        configs: backfillWorkbenchConfigSolveInputKeys({
+          configs: nextConfigCollection.configs,
+          catalogSignature: nextCatalogSolveSignature,
+          locale,
+        }),
+      };
+      const nextActiveConfig =
+        findWorkbenchConfig(hydratedConfigCollection.configs, hydratedConfigCollection.activeConfigId) ??
+        hydratedConfigCollection.configs[0];
 
       setCatalog(nextCatalog);
       setLoadedSource({
@@ -1177,13 +1757,19 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setDefaultConfigEditorText(resolved.defaultConfigText);
       setLoadError('');
       setDatasetEditorError('');
-      applyWorkbenchEditorState(nextCatalog, {
-        ...defaultWorkbenchState,
-        ...currentWorkbenchState,
-        targets: currentWorkbenchState.targets.length
-          ? currentWorkbenchState.targets
-          : defaultWorkbenchState.targets,
-      });
+      setWorkbenchConfigs(hydratedConfigCollection.configs);
+      setActiveWorkbenchConfigId(nextActiveConfig.id);
+      beginWorkbenchConfigHydration(nextActiveConfig, nextCatalogSolveSignature);
+      setBlockedSolveInputKey(null);
+      restoreReusableSolveInputKey(
+        findReusableSolveInputKeyForConfig({
+          config: nextActiveConfig,
+          catalogSignature: nextCatalogSolveSignature,
+          locale,
+        })
+      );
+      setAutoSolveState(restoreWorkbenchSolveState(nextActiveConfig.solveState));
+      applyWorkbenchEditorState(nextCatalog, nextActiveConfig.editorState);
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       setDatasetEditorError(`${bundle.datasetSource.editorApplyFailedPrefix}${detail}`);
@@ -1691,6 +2277,9 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       isLoading,
 
       // Workbench editor state
+      workbenchConfigs,
+      activeWorkbenchConfigId,
+      workbenchConfigDisplayModels,
       targets,
       setTargets,
       targetDraftItemId,
@@ -1775,6 +2364,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       reloadCatalog,
       onPresetChange,
       clearCachedWorkbenchState,
+      switchWorkbenchConfig,
+      createDefaultWorkbenchConfig,
+      renameWorkbenchConfig,
+      forkActiveWorkbenchConfig,
+      deleteWorkbenchConfig,
       resetDatasetEditorToLoadedSource,
       updateDatasetEditorTexts,
       applyDatasetEditorChanges,
@@ -1831,6 +2425,9 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       datasetEditorError,
       loadError,
       isLoading,
+      workbenchConfigs,
+      activeWorkbenchConfigId,
+      workbenchConfigDisplayModels,
       targets,
       targetDraftItemId,
       targetDraftRatePerMin,
@@ -1898,6 +2495,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       cancelSolve,
       scrollItemLedgerToSection,
       applyAllowSurplusFallback,
+      switchWorkbenchConfig,
+      createDefaultWorkbenchConfig,
+      renameWorkbenchConfig,
+      forkActiveWorkbenchConfig,
+      deleteWorkbenchConfig,
     ]
   );
 

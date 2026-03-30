@@ -4,11 +4,13 @@ import {
   clearNamespacedStorage,
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
+  readWorkbenchConfigCollection,
   readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
   readWorkbenchSnapshotSectionState,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
+  writeWorkbenchConfigCollection,
   writeWorkbenchDatasetDraft,
   writeWorkbenchEditorState,
   writeWorkbenchSnapshotSectionState,
@@ -118,6 +120,86 @@ test('workbench cache stores active dataset source and editor state per dataset 
   );
 });
 
+test('workbench cache stores multiple configs per dataset key and exposes the active editor state', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
+  };
+
+  writeWorkbenchConfigCollection(storage, source, {
+    activeConfigId: 'b',
+    configs: [
+      {
+        id: 'a',
+        name: 'Plate A',
+        editorState: {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+          objective: 'min_buildings',
+          balancePolicy: 'force_balance',
+          autoPromoteUnavailableItemsToRawInputs: true,
+          proliferatorPolicy: 'auto',
+          rawInputItemIds: [],
+          disabledRawInputItemIds: [],
+          disabledRecipeIds: [],
+          disabledBuildingIds: [],
+          allowedRecipesByItem: {},
+          recipePreferences: [],
+          recipeStrategyOverrides: [],
+          preferredBuildings: [],
+          advancedOverridesText: '',
+        },
+      },
+      {
+        id: 'b',
+        name: 'Plate B',
+        editorState: {
+          targets: [{ itemId: '1101', ratePerMin: 120 }],
+          objective: 'min_power',
+          balancePolicy: 'allow_surplus',
+          autoPromoteUnavailableItemsToRawInputs: true,
+          proliferatorPolicy: 'auto',
+          rawInputItemIds: [],
+          disabledRawInputItemIds: [],
+          disabledRecipeIds: [],
+          disabledBuildingIds: [],
+          allowedRecipesByItem: {},
+          recipePreferences: [],
+          recipeStrategyOverrides: [],
+          preferredBuildings: [],
+          advancedOverridesText: '',
+        },
+        solveState: {
+          result: null,
+          error: '',
+          activityStatus: 'idle',
+          inputKey: 'cfg-b-key',
+        },
+      },
+    ],
+  });
+
+  expect(readWorkbenchConfigCollection(storage, source)).toMatchObject({
+    activeConfigId: 'b',
+    configs: [
+      { id: 'a', name: 'Plate A' },
+      {
+        id: 'b',
+        name: 'Plate B',
+        solveState: {
+          inputKey: 'cfg-b-key',
+        },
+      },
+    ],
+  });
+  expect(readWorkbenchEditorState(storage, source)).toMatchObject({
+    targets: [{ itemId: '1101', ratePerMin: 120 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+  });
+});
+
 test('clearWorkbenchCache removes both active source and entries', () => {
   const storage = createMemoryStorage();
   const source: WorkbenchCacheSource = {
@@ -192,6 +274,72 @@ test('workbench cache ignores legacy versioned cache keys', () => {
   );
 
   expect(readActiveWorkbenchCacheSource(storage)).toBeNull();
+});
+
+test('workbench cache migrates legacy single-editor entries into a default config collection', () => {
+  const storage = createMemoryStorage();
+  const sourceKey =
+    './tests/fixtures/scenarios/DemoSmelting.json::./tests/fixtures/scenarios/DemoSmelting.defaults.json';
+  storage.setItem(
+    'dspcalc.workbench.v1',
+    JSON.stringify({
+      version: 1,
+      activeSource: {
+        presetId: 'custom',
+        datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+        defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
+      },
+      entries: {
+        [sourceKey]: {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+          objective: 'min_buildings',
+          balancePolicy: 'force_balance',
+          autoPromoteUnavailableItemsToRawInputs: true,
+          proliferatorPolicy: 'auto',
+          rawInputItemIds: [],
+          disabledRawInputItemIds: [],
+          disabledRecipeIds: [],
+          disabledBuildingIds: [],
+          allowedRecipesByItem: {},
+          recipePreferences: [],
+          recipeStrategyOverrides: [],
+          preferredBuildings: [],
+          advancedOverridesText: '',
+        },
+      },
+    })
+  );
+
+  const source: WorkbenchCacheSource = {
+    presetId: 'custom',
+    datasetPath: './tests/fixtures/scenarios/DemoSmelting.json',
+    defaultConfigPath: './tests/fixtures/scenarios/DemoSmelting.defaults.json',
+  };
+
+  expect(readWorkbenchConfigCollection(storage, source)).toEqual({
+    activeConfigId: 'default',
+    configs: [
+      {
+        id: 'default',
+        editorState: {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+          objective: 'min_buildings',
+          balancePolicy: 'force_balance',
+          autoPromoteUnavailableItemsToRawInputs: true,
+          proliferatorPolicy: 'auto',
+          rawInputItemIds: [],
+          disabledRawInputItemIds: [],
+          disabledRecipeIds: [],
+          disabledBuildingIds: [],
+          allowedRecipesByItem: {},
+          recipePreferences: [],
+          recipeStrategyOverrides: [],
+          preferredBuildings: [],
+          advancedOverridesText: '',
+        },
+      },
+    ],
+  });
 });
 
 test('workbench cache accepts orbitalring as a persisted dataset preset', () => {

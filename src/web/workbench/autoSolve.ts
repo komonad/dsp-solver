@@ -51,6 +51,47 @@ export interface WorkbenchSolveState {
   activity: WorkbenchSolveActivity;
 }
 
+/**
+ * Serialized workbench solve state stored with a saved workbench config.
+ *
+ * Running solve attempts are normalized away before persistence so reloading
+ * the page restores the last meaningful request/result pair instead of a
+ * phantom in-flight solve.
+ */
+export interface PersistedWorkbenchSolveState {
+  request?: SolveRequest;
+  result: SolveResult | null;
+  error: string;
+  fallback?: {
+    request: SolveRequest;
+    result: SolveResult;
+    reason: 'force_balance_infeasible';
+  };
+  activityStatus: 'idle' | 'settled' | 'cancelled';
+  inputKey?: string;
+}
+
+export interface WorkbenchSolveInputKeyParams {
+  catalogSignature: string;
+  targets: EditableTarget[];
+  objective: SolveObjective;
+  balancePolicy: BalancePolicy;
+  proliferatorPolicy: WorkbenchProliferatorPolicy;
+  globalProliferatorLevel?: '' | number;
+  autoPromoteUnavailableItemsToRawInputs: boolean;
+  rawInputItemIds: string[];
+  disabledRawInputItemIds?: string[];
+  disabledRecipeIds: string[];
+  disabledBuildingIds: string[];
+  allowedRecipesByItem: Record<string, string[]>;
+  preferredBuildings: EditablePreferredBuilding[];
+  recipePreferences: EditableRecipePreference[];
+  recipeStrategyOverrides: EditableRecipeStrategyOverride[];
+  advancedOverridesText: string;
+  locale?: AppLocale;
+  isLoading?: boolean;
+}
+
 export type WorkbenchSolveStage =
   | 'preparing_request'
   | 'syncing_catalog'
@@ -161,6 +202,92 @@ export function buildCancelledWorkbenchSolveState(
       stage: previousState.activity.stage,
     },
   };
+}
+
+function normalizePersistedWorkbenchSolveActivityStatus(
+  state: WorkbenchSolveState
+): PersistedWorkbenchSolveState['activityStatus'] {
+  if (state.activity.status === 'running') {
+    return state.request || state.result || state.error ? 'settled' : 'idle';
+  }
+
+  return state.activity.status;
+}
+
+export function persistWorkbenchSolveState(
+  state: WorkbenchSolveState,
+  options: {
+    inputKey?: string;
+  } = {}
+): PersistedWorkbenchSolveState {
+  const activityStatus = normalizePersistedWorkbenchSolveActivityStatus(state);
+  return {
+    request: state.request,
+    result: state.result,
+    error: state.error,
+    fallback: state.fallback,
+    activityStatus,
+    inputKey: activityStatus === 'settled' ? options.inputKey : undefined,
+  };
+}
+
+export function restoreWorkbenchSolveState(
+  state?: PersistedWorkbenchSolveState | null
+): WorkbenchSolveState {
+  if (!state) {
+    return buildIdleWorkbenchSolveState();
+  }
+
+  return {
+    request: state.request,
+    activeRequest: undefined,
+    result: state.result,
+    error: state.error,
+    fallback: state.fallback,
+    activity: {
+      status: state.activityStatus,
+      staleResult: false,
+      stage: undefined,
+    },
+  };
+}
+
+export function buildWorkbenchSolveInputKey(
+  params: WorkbenchSolveInputKeyParams
+): string {
+  return JSON.stringify({
+    catalogSignature: params.catalogSignature,
+    targets: params.targets,
+    objective: params.objective,
+    balancePolicy: params.balancePolicy,
+    proliferatorPolicy: params.proliferatorPolicy,
+    globalProliferatorLevel: params.globalProliferatorLevel,
+    autoPromoteUnavailableItemsToRawInputs:
+      params.autoPromoteUnavailableItemsToRawInputs,
+    rawInputItemIds: params.rawInputItemIds,
+    disabledRawInputItemIds: params.disabledRawInputItemIds,
+    disabledRecipeIds: params.disabledRecipeIds,
+    disabledBuildingIds: params.disabledBuildingIds,
+    allowedRecipesByItem: params.allowedRecipesByItem,
+    preferredBuildings: params.preferredBuildings,
+    recipePreferences: params.recipePreferences,
+    recipeStrategyOverrides: params.recipeStrategyOverrides,
+    advancedOverridesText: params.advancedOverridesText,
+    locale: params.locale,
+    isLoading: params.isLoading ?? false,
+  });
+}
+
+export function findReusableWorkbenchSolveInputKey(
+  state: PersistedWorkbenchSolveState | null | undefined,
+  params: WorkbenchSolveInputKeyParams
+): string | null {
+  if (!state || state.activityStatus !== 'settled' || !state.inputKey) {
+    return null;
+  }
+
+  const expectedInputKey = buildWorkbenchSolveInputKey(params);
+  return state.inputKey === expectedInputKey ? expectedInputKey : null;
 }
 
 function isCancelledWorkbenchSolveError(error: unknown): boolean {

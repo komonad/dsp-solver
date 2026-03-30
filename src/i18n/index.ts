@@ -119,6 +119,17 @@ export interface LocaleBundle {
     validTargetRequired: string;
     invalidAllowedRecipeSelectionMessage: string;
   };
+  workbenchConfigs: {
+    title: string;
+    createDefaultButton: string;
+    forkButton: string;
+    renameButton: string;
+    deleteButton: string;
+    renamePlaceholder: string;
+    saveRenameButton: string;
+    cancelRenameButton: string;
+    solveErrorStatus: string;
+  };
   summary: {
     catalogTitle: string;
     solveSnapshotTitle: string;
@@ -470,6 +481,17 @@ const zhCN: LocaleBundle = {
     levelPrefix: '等级',
     validTargetRequired: '至少需要一个有效目标。',
     invalidAllowedRecipeSelectionMessage: '该允许配方组合会导致当前方案无解，未应用。',
+  },
+  workbenchConfigs: {
+    title: '配置切换',
+    createDefaultButton: '新建默认配置',
+    forkButton: '从当前配置分叉',
+    renameButton: '命名',
+    deleteButton: '删除配置',
+    renamePlaceholder: '输入配置名称',
+    saveRenameButton: '保存',
+    cancelRenameButton: '取消',
+    solveErrorStatus: '求解失败',
   },
   summary: {
     catalogTitle: '数据集概览',

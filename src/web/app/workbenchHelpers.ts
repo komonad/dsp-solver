@@ -5,13 +5,21 @@ import {
   type AppLocale,
 } from '../../i18n';
 import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
+import type { SolveResult } from '../../solver';
 import { buildRecipeFlowDisplay } from '../shared/recipeDisplay';
+import type {
+  PersistedWorkbenchSolveState,
+  WorkbenchSolveState,
+} from '../workbench/autoSolve';
 import type {
   EditableRecipePreference,
   EditableTarget,
   WorkbenchProliferatorPolicy,
 } from '../workbench/requestBuilder';
-import type { WorkbenchEditorState } from '../workbench/persistence';
+import type {
+  WorkbenchEditorState,
+  WorkbenchPersistedConfig,
+} from '../workbench/persistence';
 
 export interface WorkbenchRecipeOptionIO {
   itemId: string;
@@ -43,6 +51,27 @@ export interface RecipeProliferatorPreferenceDisplayEntry {
   recipeName: string;
   recipeIconKey?: string;
   proliferatorPreferenceLabel: string;
+}
+
+export type WorkbenchConfigDisplayStatus =
+  | 'idle'
+  | 'running'
+  | 'cancelled'
+  | 'solve_error'
+  | SolveResult['status'];
+
+export interface WorkbenchConfigDisplayModel {
+  id: string;
+  title: string;
+  customName: string;
+  hasCustomName: boolean;
+  targetSummary: string;
+  objective: WorkbenchEditorState['objective'];
+  balancePolicy: WorkbenchEditorState['balancePolicy'];
+  status: WorkbenchConfigDisplayStatus;
+  recipePlanCount: number | null;
+  roundedBuildingCount: number | null;
+  powerLabel: string | null;
 }
 
 export function formatRecipeAmount(amount: number, locale: string): string {
@@ -330,5 +359,87 @@ export function buildDefaultWorkbenchEditorState(
     recipeStrategyOverrides: [],
     preferredBuildings: [],
     advancedOverridesText: '',
+  };
+}
+
+type WorkbenchConfigSummarySolveState =
+  | Pick<WorkbenchSolveState, 'result' | 'error' | 'activity'>
+  | Pick<PersistedWorkbenchSolveState, 'result' | 'error' | 'activityStatus'>;
+
+function isRunningWorkbenchConfigSolveState(
+  state: WorkbenchConfigSummarySolveState | undefined
+): state is Pick<WorkbenchSolveState, 'result' | 'error' | 'activity'> {
+  return Boolean(state && 'activity' in state);
+}
+
+function summarizeWorkbenchTargets(
+  catalog: ResolvedCatalogModel,
+  targets: EditableTarget[],
+  locale: AppLocale
+): string {
+  if (targets.length === 0) {
+    return '无目标';
+  }
+
+  const visibleTargets = targets.slice(0, 2).map(target => {
+    const itemName = catalog.itemMap.get(target.itemId)?.name ?? target.itemId;
+    return `${itemName} ${formatRecipeAmount(target.ratePerMin, locale)}/分`;
+  });
+
+  if (targets.length > 2) {
+    visibleTargets.push(`+${targets.length - 2}`);
+  }
+
+  return visibleTargets.join(' · ');
+}
+
+function pickWorkbenchConfigStatus(
+  solveState: WorkbenchConfigSummarySolveState | undefined
+): WorkbenchConfigDisplayStatus {
+  if (!solveState) {
+    return 'idle';
+  }
+
+  if (isRunningWorkbenchConfigSolveState(solveState)) {
+    if (solveState.activity.status === 'running') {
+      return 'running';
+    }
+    if (solveState.activity.status === 'cancelled') {
+      return 'cancelled';
+    }
+  } else if (solveState.activityStatus === 'cancelled') {
+    return 'cancelled';
+  }
+
+  if (solveState.error) {
+    return 'solve_error';
+  }
+
+  return solveState.result?.status ?? 'idle';
+}
+
+export function buildWorkbenchConfigDisplayModel(
+  catalog: ResolvedCatalogModel,
+  config: Pick<WorkbenchPersistedConfig, 'id' | 'name' | 'editorState'>,
+  locale: AppLocale,
+  solveState?: WorkbenchConfigSummarySolveState
+): WorkbenchConfigDisplayModel {
+  const customName = config.name?.trim() ?? '';
+  const targetSummary = summarizeWorkbenchTargets(catalog, config.editorState.targets, locale);
+  const result = solveState?.result ?? null;
+
+  return {
+    id: config.id,
+    title: customName || targetSummary,
+    customName,
+    hasCustomName: customName.length > 0,
+    targetSummary,
+    objective: config.editorState.objective,
+    balancePolicy: config.editorState.balancePolicy,
+    status: pickWorkbenchConfigStatus(solveState),
+    recipePlanCount: result?.recipePlans.length ?? null,
+    roundedBuildingCount:
+      result?.buildingSummary.reduce((sum, entry) => sum + entry.roundedUpCount, 0) ?? null,
+    powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, locale) : null,
   };
 }

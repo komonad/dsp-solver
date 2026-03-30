@@ -2,6 +2,7 @@ import { Box, Container, Paper, Typography } from '@mui/material';
 import ItemSliceOverlayHost from '../itemSlice/ItemSliceOverlayHost';
 import { WorkbenchProvider, useWorkbench } from '../app/WorkbenchContext';
 import DatasetSourcePanel from '../app/DatasetSourcePanel';
+import WorkbenchConfigStrip from '../app/WorkbenchConfigStrip';
 import SolveRequestPanel from '../app/request/SolveRequestPanel';
 import SolveSnapshotPanel from '../app/snapshot/SolveSnapshotPanel';
 import ResultsArea from '../app/results/ResultsArea';
@@ -78,6 +79,7 @@ function WorkbenchLayout() {
                 alignItems: 'start',
               }}
             >
+              <WorkbenchConfigStrip />
               <Box
                 sx={{
                   display: 'grid',

@@ -1,6 +1,7 @@
 import type { ResolvedCatalogModel } from '../../catalog';
 import type { DatasetPresetId } from '../../i18n';
 import type { BalancePolicy, SolveObjective } from '../../solver';
+import type { PersistedWorkbenchSolveState } from './autoSolve';
 import type {
   EditablePreferredBuilding,
   EditableRecipePreference,
@@ -12,6 +13,7 @@ import type { WorkbenchSnapshotSectionState } from './snapshotSections';
 
 const DSPCALC_STORAGE_PREFIX = 'dspcalc.';
 const WORKBENCH_CACHE_STORAGE_KEY = 'dspcalc.workbench.v1';
+const DEFAULT_WORKBENCH_CONFIG_ID = 'default';
 
 export interface WorkbenchCacheSource {
   presetId: DatasetPresetId;
@@ -37,6 +39,19 @@ export interface WorkbenchEditorState {
   advancedOverridesText: string;
 }
 
+export interface WorkbenchPersistedConfig {
+  id: string;
+  name?: string;
+  editorState: WorkbenchEditorState;
+  solveState?: PersistedWorkbenchSolveState;
+  updatedAtEpochMs?: number;
+}
+
+export interface WorkbenchPersistedConfigCollection {
+  activeConfigId: string;
+  configs: WorkbenchPersistedConfig[];
+}
+
 type SanitizableWorkbenchEditorState = Omit<
   WorkbenchEditorState,
   'proliferatorPolicy' | 'allowedRecipesByItem'
@@ -51,9 +66,9 @@ export interface WorkbenchDatasetDraft {
 }
 
 interface WorkbenchCachePayload {
-  version: 1;
+  version: 2;
   activeSource?: WorkbenchCacheSource;
-  entries: Record<string, WorkbenchEditorState>;
+  entries: Record<string, WorkbenchPersistedConfigCollection>;
   sourceDrafts?: Record<string, WorkbenchDatasetDraft>;
   snapshotSectionStates?: Record<string, WorkbenchSnapshotSectionState>;
 }
@@ -63,6 +78,18 @@ type EnumerableStorage = Pick<Storage, 'key' | 'removeItem'> & { length: number 
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isPersistedSolveState(value: unknown): value is PersistedWorkbenchSolveState {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    value.activityStatus === 'idle' ||
+    value.activityStatus === 'settled' ||
+    value.activityStatus === 'cancelled'
+  );
 }
 
 function isDatasetPresetId(value: unknown): value is DatasetPresetId {
@@ -156,6 +183,68 @@ function sanitizeSnapshotSectionState(value: unknown): WorkbenchSnapshotSectionS
     : null;
 }
 
+function sanitizePersistedConfig(value: unknown): WorkbenchPersistedConfig | null {
+  if (!isRecord(value) || typeof value.id !== 'string' || !value.id) {
+    return null;
+  }
+
+  if (!isRecord(value.editorState)) {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    name: typeof value.name === 'string' ? value.name : undefined,
+    editorState: value.editorState as unknown as WorkbenchEditorState,
+    solveState: isPersistedSolveState(value.solveState) ? value.solveState : undefined,
+    updatedAtEpochMs:
+      typeof value.updatedAtEpochMs === 'number' && Number.isFinite(value.updatedAtEpochMs)
+        ? value.updatedAtEpochMs
+        : undefined,
+  };
+}
+
+function sanitizePersistedConfigCollection(
+  value: unknown
+): WorkbenchPersistedConfigCollection | null {
+  if (!isRecord(value) || !Array.isArray(value.configs)) {
+    return null;
+  }
+
+  const configs = value.configs
+    .map(entry => sanitizePersistedConfig(entry))
+    .filter((entry): entry is WorkbenchPersistedConfig => Boolean(entry));
+
+  if (configs.length === 0) {
+    return null;
+  }
+
+  const activeConfigId =
+    typeof value.activeConfigId === 'string' &&
+    configs.some(config => config.id === value.activeConfigId)
+      ? value.activeConfigId
+      : configs[0].id;
+
+  return {
+    activeConfigId,
+    configs,
+  };
+}
+
+function migrateLegacyEditorStateToConfigCollection(
+  editorState: WorkbenchEditorState
+): WorkbenchPersistedConfigCollection {
+  return {
+    activeConfigId: DEFAULT_WORKBENCH_CONFIG_ID,
+    configs: [
+      {
+        id: DEFAULT_WORKBENCH_CONFIG_ID,
+        editorState,
+      },
+    ],
+  };
+}
+
 function readCachePayload(storage?: MinimalStorage): WorkbenchCachePayload | null {
   if (!storage) {
     return null;
@@ -168,15 +257,35 @@ function readCachePayload(storage?: MinimalStorage): WorkbenchCachePayload | nul
 
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.version !== 1 || !isRecord(parsed.entries)) {
+    if (!isRecord(parsed) || !isRecord(parsed.entries)) {
       return null;
     }
 
     const activeSource = sanitizeCacheSource(parsed.activeSource);
+    const parsedVersion = parsed.version;
+    if (parsedVersion !== 1 && parsedVersion !== 2) {
+      return null;
+    }
+
+    const entries = Object.entries(parsed.entries).reduce<Record<string, WorkbenchPersistedConfigCollection>>(
+      (next, [key, value]) => {
+        const collection =
+          sanitizePersistedConfigCollection(value) ??
+          (parsedVersion === 1 && isRecord(value)
+            ? migrateLegacyEditorStateToConfigCollection(value as unknown as WorkbenchEditorState)
+            : null);
+        if (collection) {
+          next[key] = collection;
+        }
+        return next;
+      },
+      {}
+    );
+
     return {
-      version: 1,
+      version: 2,
       activeSource: activeSource ?? undefined,
-      entries: parsed.entries as Record<string, WorkbenchEditorState>,
+      entries,
       sourceDrafts: isRecord(parsed.sourceDrafts)
         ? (parsed.sourceDrafts as Record<string, WorkbenchDatasetDraft>)
         : undefined,
@@ -219,12 +328,14 @@ export function readWorkbenchEditorState(
   storage: MinimalStorage | undefined,
   source: WorkbenchCacheSource
 ): WorkbenchEditorState | null {
-  const payload = readCachePayload(storage);
-  if (!payload) {
+  const collection = readWorkbenchConfigCollection(storage, source);
+  if (!collection) {
     return null;
   }
 
-  return payload.entries[buildWorkbenchCacheKey(source)] ?? null;
+  return (
+    collection.configs.find(config => config.id === collection.activeConfigId)?.editorState ?? null
+  );
 }
 
 export function writeActiveWorkbenchCacheSource(
@@ -232,7 +343,7 @@ export function writeActiveWorkbenchCacheSource(
   source: WorkbenchCacheSource
 ): void {
   const payload = readCachePayload(storage) ?? {
-    version: 1 as const,
+    version: 2 as const,
     entries: {},
   };
 
@@ -248,16 +359,66 @@ export function writeWorkbenchEditorState(
   editorState: WorkbenchEditorState
 ): void {
   const payload = readCachePayload(storage) ?? {
-    version: 1 as const,
+    version: 2 as const,
+    entries: {},
+  };
+  const key = buildWorkbenchCacheKey(source);
+  const currentCollection = payload.entries[key];
+  const nextCollection = currentCollection
+    ? {
+        ...currentCollection,
+        configs: currentCollection.configs.map(config =>
+          config.id === currentCollection.activeConfigId
+            ? {
+                ...config,
+                editorState,
+                updatedAtEpochMs: Date.now(),
+              }
+            : config
+        ),
+      }
+    : migrateLegacyEditorStateToConfigCollection(editorState);
+
+  writeCachePayload(storage, {
+    version: 2,
+    activeSource: source,
+    entries: {
+      ...payload.entries,
+      [key]: nextCollection,
+    },
+    sourceDrafts: payload.sourceDrafts,
+    snapshotSectionStates: payload.snapshotSectionStates,
+  });
+}
+
+export function readWorkbenchConfigCollection(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource
+): WorkbenchPersistedConfigCollection | null {
+  const payload = readCachePayload(storage);
+  if (!payload) {
+    return null;
+  }
+
+  return payload.entries[buildWorkbenchCacheKey(source)] ?? null;
+}
+
+export function writeWorkbenchConfigCollection(
+  storage: MinimalStorage | undefined,
+  source: WorkbenchCacheSource,
+  collection: WorkbenchPersistedConfigCollection
+): void {
+  const payload = readCachePayload(storage) ?? {
+    version: 2 as const,
     entries: {},
   };
 
   writeCachePayload(storage, {
-    version: 1,
+    version: 2,
     activeSource: source,
     entries: {
       ...payload.entries,
-      [buildWorkbenchCacheKey(source)]: editorState,
+      [buildWorkbenchCacheKey(source)]: collection,
     },
     sourceDrafts: payload.sourceDrafts,
     snapshotSectionStates: payload.snapshotSectionStates,
@@ -294,12 +455,12 @@ export function writeWorkbenchDatasetDraft(
   draft: WorkbenchDatasetDraft
 ): void {
   const payload = readCachePayload(storage) ?? {
-    version: 1 as const,
+    version: 2 as const,
     entries: {},
   };
 
   writeCachePayload(storage, {
-    version: 1,
+    version: 2,
     activeSource: source,
     entries: payload.entries,
     sourceDrafts: {
@@ -316,12 +477,12 @@ export function writeWorkbenchSnapshotSectionState(
   state: WorkbenchSnapshotSectionState
 ): void {
   const payload = readCachePayload(storage) ?? {
-    version: 1 as const,
+    version: 2 as const,
     entries: {},
   };
 
   writeCachePayload(storage, {
-    version: 1,
+    version: 2,
     activeSource: source,
     entries: payload.entries,
     sourceDrafts: payload.sourceDrafts,

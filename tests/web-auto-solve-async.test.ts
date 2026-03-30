@@ -1,6 +1,13 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { solveCatalogRequest } from '../src/solver';
-import { computeWorkbenchSolveAsync } from '../src/web/workbench/autoSolve';
+import {
+  buildWorkbenchSolveInputKey,
+  buildRunningWorkbenchSolveState,
+  computeWorkbenchSolveAsync,
+  findReusableWorkbenchSolveInputKey,
+  persistWorkbenchSolveState,
+  restoreWorkbenchSolveState,
+} from '../src/web/workbench/autoSolve';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;
@@ -228,4 +235,111 @@ test('computeWorkbenchSolveAsync treats user cancellation as cancelled instead o
 
   expect(result.error).toBe('');
   expect(result.activity.status).toBe('cancelled');
+});
+
+test('persistWorkbenchSolveState normalizes in-flight activity before restoring it', () => {
+  const runningState = buildRunningWorkbenchSolveState({
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+    },
+    activeRequest: undefined,
+    result: null,
+    error: '',
+    fallback: undefined,
+    activity: {
+      status: 'idle',
+      staleResult: false,
+      stage: undefined,
+    },
+  });
+
+  const persisted = persistWorkbenchSolveState(runningState);
+  const restored = restoreWorkbenchSolveState(persisted);
+
+  expect(persisted.activityStatus).toBe('settled');
+  expect(restored.activity.status).toBe('settled');
+  expect(restored.result).toBeNull();
+  expect(restored.request).toEqual(runningState.request);
+});
+
+test('persistWorkbenchSolveState stores a settled input key and allows reuse checks', () => {
+  const inputKey = buildWorkbenchSolveInputKey({
+    catalogSignature: 'demo-catalog',
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    preferredBuildings: [],
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    advancedOverridesText: '',
+    locale: 'zh-CN',
+    isLoading: false,
+  });
+  const settledState = restoreWorkbenchSolveState({
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+    },
+    result: null,
+    error: 'invalid input',
+    activityStatus: 'settled',
+  });
+
+  const persisted = persistWorkbenchSolveState(settledState, { inputKey });
+
+  expect(persisted.inputKey).toBe(inputKey);
+  expect(
+    findReusableWorkbenchSolveInputKey(persisted, {
+      catalogSignature: 'demo-catalog',
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      proliferatorPolicy: 'auto',
+      autoPromoteUnavailableItemsToRawInputs: false,
+      rawInputItemIds: [],
+      disabledRawInputItemIds: [],
+      disabledRecipeIds: [],
+      disabledBuildingIds: [],
+      allowedRecipesByItem: {},
+      preferredBuildings: [],
+      recipePreferences: [],
+      recipeStrategyOverrides: [],
+      advancedOverridesText: '',
+      locale: 'zh-CN',
+      isLoading: false,
+    })
+  ).toBe(inputKey);
+  expect(
+    findReusableWorkbenchSolveInputKey(persisted, {
+      catalogSignature: 'demo-catalog',
+      targets: [{ itemId: '1101', ratePerMin: 120 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      proliferatorPolicy: 'auto',
+      autoPromoteUnavailableItemsToRawInputs: false,
+      rawInputItemIds: [],
+      disabledRawInputItemIds: [],
+      disabledRecipeIds: [],
+      disabledBuildingIds: [],
+      allowedRecipesByItem: {},
+      preferredBuildings: [],
+      recipePreferences: [],
+      recipeStrategyOverrides: [],
+      advancedOverridesText: '',
+      locale: 'zh-CN',
+      isLoading: false,
+    })
+  ).toBeNull();
 });
