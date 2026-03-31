@@ -272,19 +272,36 @@ export default function WorkbenchConfigStrip() {
                     </Box>
                   ) : (
                     <>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{
-                          fontWeight: 700,
-                          fontSize: 12,
-                          lineHeight: 1.2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {config.title}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontWeight: 700,
+                            fontSize: 12,
+                            lineHeight: 1.2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            minWidth: 0,
+                          }}
+                        >
+                          {config.title}
+                        </Typography>
+                        {config.datasetLabel ? (
+                          <Chip
+                            label={config.datasetLabel}
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                              height: 16,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              flexShrink: 0,
+                              '& .MuiChip-label': { px: 0.5 },
+                            }}
+                          />
+                        ) : null}
+                      </Box>
                       {config.hasCustomName ? (
                         <Typography
                           variant="caption"

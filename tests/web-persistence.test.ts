@@ -4,6 +4,7 @@ import {
   clearNamespacedStorage,
   clearWorkbenchCache,
   readActiveWorkbenchCacheSource,
+  readAllWorkbenchConfigEntries,
   readWorkbenchConfigCollection,
   readWorkbenchDatasetDraft,
   readWorkbenchEditorState,
@@ -564,4 +565,141 @@ test('sanitizeWorkbenchEditorState preserves a valid global proliferator level',
 
   expect(sanitized.proliferatorPolicy).toBe('speed');
   expect(sanitized.globalProliferatorLevel).toBe(2);
+});
+
+test('writeWorkbenchConfigCollection persists source and new config fields (datasetLabel, cachedTargetSummary)', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'custom',
+    datasetPath: './Demo.json',
+    defaultConfigPath: './Demo.defaults.json',
+  };
+
+  writeWorkbenchConfigCollection(storage, source, {
+    activeConfigId: 'a',
+    configs: [
+      {
+        id: 'a',
+        name: 'Config A',
+        datasetLabel: 'Demo',
+        cachedTargetSummary: 'Plate 60/分',
+        editorState: {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+          objective: 'min_buildings',
+          balancePolicy: 'force_balance',
+          autoPromoteUnavailableItemsToRawInputs: true,
+          proliferatorPolicy: 'auto',
+          rawInputItemIds: [],
+          disabledRawInputItemIds: [],
+          disabledRecipeIds: [],
+          disabledBuildingIds: [],
+          allowedRecipesByItem: {},
+          recipePreferences: [],
+          recipeStrategyOverrides: [],
+          preferredBuildings: [],
+          advancedOverridesText: '',
+        },
+      },
+    ],
+  });
+
+  const collection = readWorkbenchConfigCollection(storage, source);
+  expect(collection).not.toBeNull();
+  expect(collection!.source).toEqual(source);
+  expect(collection!.configs[0].datasetLabel).toBe('Demo');
+  expect(collection!.configs[0].cachedTargetSummary).toBe('Plate 60/分');
+});
+
+test('readAllWorkbenchConfigEntries returns entries from all sources with persisted source info', () => {
+  const storage = createMemoryStorage();
+  const sourceA: WorkbenchCacheSource = {
+    presetId: 'vanilla',
+    datasetPath: './Vanilla.json',
+    defaultConfigPath: './Vanilla.defaults.json',
+  };
+  const sourceB: WorkbenchCacheSource = {
+    presetId: 'orbitalring',
+    datasetPath: './OrbitalRing.json',
+    defaultConfigPath: './OrbitalRing.defaults.json',
+  };
+
+  const editorState: WorkbenchEditorState = {
+    targets: [],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    autoPromoteUnavailableItemsToRawInputs: true,
+    proliferatorPolicy: 'auto',
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  };
+
+  writeWorkbenchConfigCollection(storage, sourceA, {
+    activeConfigId: 'a1',
+    configs: [{ id: 'a1', name: 'Vanilla Config', editorState }],
+  });
+  writeWorkbenchConfigCollection(storage, sourceB, {
+    activeConfigId: 'b1',
+    configs: [{ id: 'b1', name: 'Orbital Config', editorState }],
+  });
+
+  const entries = readAllWorkbenchConfigEntries(storage);
+  expect(entries).toHaveLength(2);
+
+  const entryA = entries.find(e => e.cacheKey === buildWorkbenchCacheKey(sourceA));
+  const entryB = entries.find(e => e.cacheKey === buildWorkbenchCacheKey(sourceB));
+  expect(entryA).toBeDefined();
+  expect(entryB).toBeDefined();
+  expect(entryA!.source).toEqual(sourceA);
+  expect(entryB!.source).toEqual(sourceB);
+  expect(entryA!.collection.configs[0].name).toBe('Vanilla Config');
+  expect(entryB!.collection.configs[0].name).toBe('Orbital Config');
+});
+
+test('readAllWorkbenchConfigEntries skips entries without persisted source', () => {
+  const storage = createMemoryStorage();
+
+  // Manually write a legacy entry without source field
+  storage.setItem(
+    'dspcalc.workbench.v1',
+    JSON.stringify({
+      version: 2,
+      entries: {
+        './Legacy.json::./Legacy.defaults.json': {
+          activeConfigId: 'x',
+          configs: [
+            {
+              id: 'x',
+              editorState: {
+                targets: [],
+                objective: 'min_buildings',
+                balancePolicy: 'force_balance',
+                autoPromoteUnavailableItemsToRawInputs: true,
+                proliferatorPolicy: 'auto',
+                rawInputItemIds: [],
+                disabledRawInputItemIds: [],
+                disabledRecipeIds: [],
+                disabledBuildingIds: [],
+                allowedRecipesByItem: {},
+                recipePreferences: [],
+                recipeStrategyOverrides: [],
+                preferredBuildings: [],
+                advancedOverridesText: '',
+              },
+            },
+          ],
+          // no source field
+        },
+      },
+    })
+  );
+
+  const entries = readAllWorkbenchConfigEntries(storage);
+  expect(entries).toHaveLength(0);
 });

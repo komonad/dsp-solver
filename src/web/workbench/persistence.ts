@@ -45,11 +45,14 @@ export interface WorkbenchPersistedConfig {
   editorState: WorkbenchEditorState;
   solveState?: PersistedWorkbenchSolveState;
   updatedAtEpochMs?: number;
+  datasetLabel?: string;
+  cachedTargetSummary?: string;
 }
 
 export interface WorkbenchPersistedConfigCollection {
   activeConfigId: string;
   configs: WorkbenchPersistedConfig[];
+  source?: WorkbenchCacheSource;
 }
 
 type SanitizableWorkbenchEditorState = Omit<
@@ -216,6 +219,8 @@ function sanitizePersistedConfig(value: unknown): WorkbenchPersistedConfig | nul
       typeof value.updatedAtEpochMs === 'number' && Number.isFinite(value.updatedAtEpochMs)
         ? value.updatedAtEpochMs
         : undefined,
+    datasetLabel: typeof value.datasetLabel === 'string' ? value.datasetLabel : undefined,
+    cachedTargetSummary: typeof value.cachedTargetSummary === 'string' ? value.cachedTargetSummary : undefined,
   };
 }
 
@@ -243,6 +248,7 @@ function sanitizePersistedConfigCollection(
   return {
     activeConfigId,
     configs,
+    source: isRecord(value.source) ? sanitizeCacheSource(value.source) ?? undefined : undefined,
   };
 }
 
@@ -433,11 +439,44 @@ export function writeWorkbenchConfigCollection(
     activeSource: source,
     entries: {
       ...payload.entries,
-      [buildWorkbenchCacheKey(source)]: collection,
+      [buildWorkbenchCacheKey(source)]: {
+        ...collection,
+        source,
+      },
     },
     sourceDrafts: payload.sourceDrafts,
     snapshotSectionStates: payload.snapshotSectionStates,
   });
+}
+
+export interface WorkbenchConfigEntryWithSource {
+  source: WorkbenchCacheSource;
+  cacheKey: string;
+  collection: WorkbenchPersistedConfigCollection;
+}
+
+export function readAllWorkbenchConfigEntries(
+  storage: MinimalStorage | undefined
+): WorkbenchConfigEntryWithSource[] {
+  const payload = readCachePayload(storage);
+  if (!payload) {
+    return [];
+  }
+
+  const entries: WorkbenchConfigEntryWithSource[] = [];
+  for (const [cacheKey, collection] of Object.entries(payload.entries)) {
+    if (!collection.source) {
+      continue;
+    }
+
+    entries.push({
+      source: collection.source,
+      cacheKey,
+      collection,
+    });
+  }
+
+  return entries;
 }
 
 export function readWorkbenchDatasetDraft(

@@ -85,19 +85,23 @@ import {
   clearWorkbenchCache,
   clearWorkbenchDatasetDraft,
   readActiveWorkbenchCacheSource,
+  readAllWorkbenchConfigEntries,
   readWorkbenchConfigCollection,
   readWorkbenchDatasetDraft,
   sanitizeWorkbenchEditorState,
   writeActiveWorkbenchCacheSource,
   writeWorkbenchConfigCollection,
   writeWorkbenchDatasetDraft,
+  buildWorkbenchCacheKey,
   type WorkbenchCacheSource,
+  type WorkbenchConfigEntryWithSource,
   type WorkbenchEditorState,
   type WorkbenchPersistedConfig,
 } from '../workbench/persistence';
 import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
   buildWorkbenchConfigDisplayModel,
+  buildForeignWorkbenchConfigDisplayModel,
   buildDefaultWorkbenchEditorState,
   getBrowserSessionStorage,
   getBrowserStorage,
@@ -137,6 +141,7 @@ export interface WorkbenchContextValue {
   // Workbench editor state
   workbenchConfigs: WorkbenchPersistedConfig[];
   activeWorkbenchConfigId: string;
+  currentSourceKey: string;
   workbenchConfigDisplayModels: WorkbenchConfigDisplayModel[];
   targets: EditableTarget[];
   setTargets: React.Dispatch<React.SetStateAction<EditableTarget[]>>;
@@ -296,6 +301,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [workbenchConfigs, setWorkbenchConfigs] = useState<WorkbenchPersistedConfig[]>([]);
   const [activeWorkbenchConfigId, setActiveWorkbenchConfigId] = useState('');
+  const [foreignConfigEntries, setForeignConfigEntries] = useState<WorkbenchConfigEntryWithSource[]>([]);
   const [hydratingWorkbenchConfig, setHydratingWorkbenchConfig] = useState<{
     configId: string;
     expectedInputKey: string;
@@ -549,6 +555,13 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       );
       setAutoSolveState(restoreWorkbenchSolveState(nextActiveConfig.solveState));
       applyWorkbenchEditorState(nextCatalog, nextActiveConfig.editorState);
+
+      const nextCacheKey = buildWorkbenchCacheKey(nextSource);
+      setForeignConfigEntries(
+        readAllWorkbenchConfigEntries(browserStorage).filter(
+          entry => entry.cacheKey !== nextCacheKey
+        )
+      );
     } catch (error) {
       setCatalog(null);
       setLoadedSource(null);
@@ -556,6 +569,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setLoadedDefaultConfigText('{}');
       setWorkbenchConfigs([]);
       setActiveWorkbenchConfigId('');
+      setForeignConfigEntries([]);
       setAutoSolveState(buildIdleWorkbenchSolveState());
       const detail = error instanceof Error ? error.message : String(error);
       setLoadError(`${bundle.datasetSource.loadFailedPrefix}${detail}`);
@@ -650,8 +664,53 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     loadedSource,
   ]);
 
+  // Keep datasetLabel and cachedTargetSummary in sync on the active config
   useEffect(() => {
-    if (!browserStorage || !loadedSource || !activeWorkbenchConfigId || workbenchConfigs.length === 0) {
+    if (!loadedSource || !activeWorkbenchConfigId || !catalog) {
+      return;
+    }
+
+    if (hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) {
+      return;
+    }
+
+    setWorkbenchConfigs(current => {
+      const activeConfig = findWorkbenchConfig(current, activeWorkbenchConfigId);
+      if (!activeConfig) {
+        return current;
+      }
+
+      const targetSummary = currentWorkbenchEditorState.targets.length > 0
+        ? currentWorkbenchEditorState.targets
+            .slice(0, 2)
+            .map(t => {
+              const itemName = catalog.itemMap.get(t.itemId)?.name ?? t.itemId;
+              return `${itemName} ${t.ratePerMin}/分`;
+            })
+            .join(' · ')
+        : '';
+
+      if (activeConfig.datasetLabel === catalogLabel && activeConfig.cachedTargetSummary === targetSummary) {
+        return current;
+      }
+
+      return current.map(config =>
+        config.id === activeWorkbenchConfigId
+          ? { ...config, datasetLabel: catalogLabel, cachedTargetSummary: targetSummary }
+          : config
+      );
+    });
+  }, [
+    activeWorkbenchConfigId,
+    catalog,
+    catalogLabel,
+    currentWorkbenchEditorState.targets,
+    hydratingWorkbenchConfig,
+    loadedSource,
+  ]);
+
+  useEffect(() => {
+    if (!browserStorage || !loadedSource || !activeWorkbenchConfigId || workbenchConfigs.length === 0 || isLoading) {
       return;
     }
 
@@ -659,7 +718,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       activeConfigId: activeWorkbenchConfigId,
       configs: workbenchConfigs,
     });
-  }, [activeWorkbenchConfigId, browserStorage, loadedSource, workbenchConfigs]);
+  }, [activeWorkbenchConfigId, browserStorage, isLoading, loadedSource, workbenchConfigs]);
 
   useEffect(() => {
     if (!browserStorage || !loadedSource) {
@@ -1009,7 +1068,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const hasTargets = targets.length > 0;
 
   useEffect(() => {
-    if (!loadedSource || !activeWorkbenchConfigId) {
+    if (!loadedSource || !activeWorkbenchConfigId || isLoading) {
       return;
     }
 
@@ -1047,6 +1106,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     catalogSolveSignature,
     currentWorkbenchEditorState,
     hydratingWorkbenchConfig,
+    isLoading,
     loadedSource,
     locale,
     persistedAutoSolveState,
@@ -1149,33 +1209,47 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const isHydratingActiveWorkbenchConfig =
     hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId;
 
-  const workbenchConfigDisplayModels = useMemo(() => {
-    if (!catalog) {
-      return [];
-    }
+  const currentSourceKey = loadedSource ? buildWorkbenchCacheKey(loadedSource) : '';
 
-    return workbenchConfigs.map(config =>
-      buildWorkbenchConfigDisplayModel(
-        catalog,
-        config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
-          ? {
-              ...config,
-              editorState: currentWorkbenchEditorState,
-            }
-          : config,
-        locale,
-        bundle,
-        config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
-          ? autoSolveState
-          : config.solveState
+  const workbenchConfigDisplayModels = useMemo(() => {
+    const localModels = catalog
+      ? workbenchConfigs.map(config =>
+          buildWorkbenchConfigDisplayModel(
+            catalog,
+            config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
+              ? {
+                  ...config,
+                  editorState: currentWorkbenchEditorState,
+                }
+              : config,
+            locale,
+            bundle,
+            config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
+              ? autoSolveState
+              : config.solveState,
+            { datasetLabel: catalogLabel, sourceKey: currentSourceKey }
+          )
+        )
+      : workbenchConfigs.map(config =>
+          buildForeignWorkbenchConfigDisplayModel(config, currentSourceKey)
+        );
+
+    const foreignModels = foreignConfigEntries.flatMap(entry =>
+      entry.collection.configs.map(config =>
+        buildForeignWorkbenchConfigDisplayModel(config, entry.cacheKey)
       )
     );
+
+    return [...localModels, ...foreignModels];
   }, [
     activeWorkbenchConfigId,
     autoSolveState,
     bundle,
     catalog,
+    catalogLabel,
+    currentSourceKey,
     currentWorkbenchEditorState,
+    foreignConfigEntries,
     isHydratingActiveWorkbenchConfig,
     locale,
     workbenchConfigs,
@@ -1276,23 +1350,66 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
   const switchWorkbenchConfig = useCallback(
     function switchWorkbenchConfig(nextConfigId: string) {
-      if (!catalog || nextConfigId === activeWorkbenchConfigId) {
+      if (nextConfigId === activeWorkbenchConfigId) {
         return;
       }
 
-      const nextCollection = buildSyncedWorkbenchConfigCollection();
-      const nextConfig = findWorkbenchConfig(nextCollection.configs, nextConfigId);
-      if (!nextConfig) {
+      // Try local (current source) configs first
+      if (catalog) {
+        const nextCollection = buildSyncedWorkbenchConfigCollection();
+        const nextConfig = findWorkbenchConfig(nextCollection.configs, nextConfigId);
+        if (nextConfig) {
+          activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
+          return;
+        }
+      }
+
+      // Try foreign entries
+      const foreignEntry = foreignConfigEntries.find(
+        entry => entry.collection.configs.some(config => config.id === nextConfigId)
+      );
+      if (!foreignEntry) {
         return;
       }
 
-      activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
+      // Save current state before switching
+      if (loadedSource && catalog) {
+        const syncedCollection = buildSyncedWorkbenchConfigCollection();
+        writeWorkbenchConfigCollection(browserStorage, loadedSource, {
+          activeConfigId: activeWorkbenchConfigId,
+          configs: syncedCollection.configs,
+        });
+      }
+
+      // Pre-set the target config as active in the foreign entry's storage
+      writeWorkbenchConfigCollection(browserStorage, foreignEntry.source, {
+        ...foreignEntry.collection,
+        activeConfigId: nextConfigId,
+      });
+
+      // Switch dataset
+      setPresetId(foreignEntry.source.presetId);
+      setDatasetPath(foreignEntry.source.datasetPath);
+      setDefaultConfigPath(foreignEntry.source.defaultConfigPath);
+      const nextLabel =
+        foreignEntry.collection.configs.find(c => c.id === nextConfigId)?.datasetLabel ??
+        getDatasetPresetText(foreignEntry.source.presetId, locale).label;
+      setCatalogLabel(nextLabel);
+      void loadCatalog(
+        foreignEntry.source.datasetPath,
+        foreignEntry.source.defaultConfigPath,
+        nextLabel,
+        foreignEntry.source.presetId
+      );
     },
     [
       activeWorkbenchConfigId,
+      browserStorage,
       buildSyncedWorkbenchConfigCollection,
-      catalogSolveSignature,
       catalog,
+      catalogSolveSignature,
+      foreignConfigEntries,
+      loadedSource,
       locale,
     ]
   );
@@ -1377,6 +1494,53 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // Check if this config belongs to a foreign entry
+    const foreignEntry = foreignConfigEntries.find(
+      entry => entry.collection.configs.some(c => c.id === configId)
+    );
+    if (foreignEntry) {
+      const remainingConfigs = foreignEntry.collection.configs.filter(c => c.id !== configId);
+      if (remainingConfigs.length === 0) {
+        // Remove the entire foreign entry
+        setForeignConfigEntries(current =>
+          current.filter(e => e.cacheKey !== foreignEntry.cacheKey)
+        );
+      } else {
+        const nextActiveId = foreignEntry.collection.activeConfigId === configId
+          ? remainingConfigs[0].id
+          : foreignEntry.collection.activeConfigId;
+        setForeignConfigEntries(current =>
+          current.map(e =>
+            e.cacheKey === foreignEntry.cacheKey
+              ? {
+                  ...e,
+                  collection: {
+                    ...e.collection,
+                    activeConfigId: nextActiveId,
+                    configs: remainingConfigs,
+                  },
+                }
+              : e
+          )
+        );
+      }
+      if (browserStorage && foreignEntry.source) {
+        const remainingCollection = remainingConfigs.length === 0
+          ? { activeConfigId: '', configs: [] as typeof remainingConfigs, source: foreignEntry.source }
+          : {
+              activeConfigId: foreignEntry.collection.activeConfigId === configId
+                ? remainingConfigs[0].id
+                : foreignEntry.collection.activeConfigId,
+              configs: remainingConfigs,
+              source: foreignEntry.source,
+            };
+        if (remainingConfigs.length > 0) {
+          writeWorkbenchConfigCollection(browserStorage, foreignEntry.source, remainingCollection);
+        }
+      }
+      return;
+    }
+
     const nextCollection = deleteWorkbenchConfigCollection(
       buildSyncedWorkbenchConfigCollection(),
       configId,
@@ -1398,9 +1562,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     activateWorkbenchConfig(catalog, nextCollection.configs, nextConfig, catalogSolveSignature);
   }, [
     activeWorkbenchConfigId,
+    browserStorage,
     buildSyncedWorkbenchConfigCollection,
     catalog,
     catalogSolveSignature,
+    foreignConfigEntries,
     locale,
   ]);
 
@@ -1951,6 +2117,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       // Workbench editor state
       workbenchConfigs,
       activeWorkbenchConfigId,
+      currentSourceKey,
       workbenchConfigDisplayModels,
       targets,
       setTargets,
@@ -2051,6 +2218,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       workbenchConfigs,
       activeWorkbenchConfigId,
+      currentSourceKey,
       workbenchConfigDisplayModels,
       targets,
       objective,

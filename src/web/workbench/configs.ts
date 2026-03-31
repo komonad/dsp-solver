@@ -29,6 +29,8 @@ export function createWorkbenchPersistedConfig(
     editorState,
     solveState: options.solveState,
     updatedAtEpochMs: options.updatedAtEpochMs ?? Date.now(),
+    datasetLabel: options.datasetLabel,
+    cachedTargetSummary: options.cachedTargetSummary,
   };
 }
 

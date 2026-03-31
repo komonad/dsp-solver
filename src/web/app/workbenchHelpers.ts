@@ -73,6 +73,8 @@ export interface WorkbenchConfigDisplayModel {
   recipePlanCount: number | null;
   roundedBuildingCount: number | null;
   powerLabel: string | null;
+  datasetLabel: string;
+  sourceKey: string;
 }
 
 export function formatRecipeAmount(amount: number, locale: string): string {
@@ -424,7 +426,8 @@ export function buildWorkbenchConfigDisplayModel(
   config: Pick<WorkbenchPersistedConfig, 'id' | 'name' | 'editorState'>,
   locale: AppLocale,
   bundle: LocaleBundle,
-  solveState?: WorkbenchConfigSummarySolveState
+  solveState?: WorkbenchConfigSummarySolveState,
+  extra?: { datasetLabel?: string; sourceKey?: string }
 ): WorkbenchConfigDisplayModel {
   const customName = config.name?.trim() ?? '';
   const targetSummary = summarizeWorkbenchTargets(catalog, config.editorState.targets, locale, bundle);
@@ -443,5 +446,35 @@ export function buildWorkbenchConfigDisplayModel(
     roundedBuildingCount:
       result?.buildingSummary.reduce((sum, entry) => sum + entry.roundedUpCount, 0) ?? null,
     powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, locale) : null,
+    datasetLabel: extra?.datasetLabel ?? '',
+    sourceKey: extra?.sourceKey ?? '',
+  };
+}
+
+export function buildForeignWorkbenchConfigDisplayModel(
+  config: WorkbenchPersistedConfig,
+  sourceKey: string
+): WorkbenchConfigDisplayModel {
+  const customName = config.name?.trim() ?? '';
+  const targetSummary = config.cachedTargetSummary ?? (customName || config.id);
+
+  return {
+    id: config.id,
+    title: customName || targetSummary,
+    customName,
+    hasCustomName: customName.length > 0,
+    targetSummary,
+    objective: config.editorState.objective,
+    balancePolicy: config.editorState.balancePolicy,
+    status: pickWorkbenchConfigStatus(config.solveState),
+    recipePlanCount: config.solveState?.result?.recipePlans.length ?? null,
+    roundedBuildingCount:
+      config.solveState?.result?.buildingSummary.reduce(
+        (sum, entry) => sum + entry.roundedUpCount,
+        0
+      ) ?? null,
+    powerLabel: null,
+    datasetLabel: config.datasetLabel ?? '',
+    sourceKey,
   };
 }
