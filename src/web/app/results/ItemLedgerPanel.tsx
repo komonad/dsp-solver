@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Stack } from '@mui/material';
 import ItemLedgerSection from './ItemLedgerSection';
+import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { useCatalog } from '../CatalogContext';
 import { useSolve } from '../SolveContext';
 import { useWorkbench } from '../WorkbenchContext';
@@ -20,6 +21,7 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
     scrollItemLedgerToBottom,
     scrollItemLedgerToSection,
   } = useWorkbench();
+  const [collapsed, setCollapsed] = useState(true);
 
   if (!model) {
     return null;
@@ -31,20 +33,20 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
   const contentCardStyle: React.CSSProperties = sticky
     ? {
         ...cardStyle,
-        padding: 16,
+        padding: 12,
         height: '100%',
         maxHeight: '100%',
         minHeight: 0,
         overflow: 'hidden',
         display: 'grid',
-        gridTemplateRows: 'auto auto minmax(0, 1fr)',
+        gridTemplateRows: collapsed ? 'auto' : 'auto auto minmax(0, 1fr)',
         gap: 12,
       }
     : {
         ...cardStyle,
-        padding: 16,
+        padding: 12,
         display: 'grid',
-        gridTemplateRows: 'auto auto auto',
+        gridTemplateRows: collapsed ? 'auto' : 'auto auto auto',
         gap: 12,
       };
   const scrollerStyle: React.CSSProperties = sticky
@@ -68,51 +70,63 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
         scrollPaddingBottom: 16,
       };
 
+  const sectionCount = model.itemLedgerSections.reduce(
+    (sum, s) => sum + s.items.length,
+    0,
+  );
+
   return (
     <aside style={containerStyle}>
-      <article
-        style={contentCardStyle}
-      >
-        <h2 style={{ marginTop: 0, marginBottom: 0 }}>{bundle.itemLedger.title}</h2>
-        <Stack spacing={1}>
-          <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-            {model.itemLedgerSections.map(section => (
-              <Button
-                key={`jump-${section.key}`}
-                onClick={() => scrollItemLedgerToSection(section.key)}
-                variant="outlined"
-                size="small"
-                color="inherit"
-              >
-                {section.title}
-              </Button>
-            ))}
-          </Stack>
-          <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-            <Button onClick={scrollItemLedgerToTop} variant="outlined" size="small" color="inherit">
-              {bundle.itemLedger.jumpToTopButton}
-            </Button>
-            <Button onClick={scrollItemLedgerToBottom} variant="outlined" size="small" color="inherit">
-              {bundle.itemLedger.jumpToBottomButton}
-            </Button>
-          </Stack>
-        </Stack>
-        <div
-          ref={itemLedgerScrollRef}
-          style={scrollerStyle}
-        >
-          {model.itemLedgerSections.map(section => (
-            <section
-              key={section.key}
-              ref={node => {
-                itemLedgerSectionRefs.current[section.key] = node;
-              }}
-              style={{ display: 'grid', gap: 8 }}
+      <article style={contentCardStyle}>
+        <CollapsibleCardHeader
+          title={bundle.itemLedger.title}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed(prev => !prev)}
+          summary={`${sectionCount}`}
+        />
+        {collapsed ? null : (
+          <>
+            <Stack spacing={1}>
+              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                {model.itemLedgerSections.map(section => (
+                  <Button
+                    key={`jump-${section.key}`}
+                    onClick={() => scrollItemLedgerToSection(section.key)}
+                    variant="outlined"
+                    size="small"
+                    color="inherit"
+                  >
+                    {section.title}
+                  </Button>
+                ))}
+              </Stack>
+              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+                <Button onClick={scrollItemLedgerToTop} variant="outlined" size="small" color="inherit">
+                  {bundle.itemLedger.jumpToTopButton}
+                </Button>
+                <Button onClick={scrollItemLedgerToBottom} variant="outlined" size="small" color="inherit">
+                  {bundle.itemLedger.jumpToBottomButton}
+                </Button>
+              </Stack>
+            </Stack>
+            <div
+              ref={itemLedgerScrollRef}
+              style={scrollerStyle}
             >
-              <ItemLedgerSection section={section} />
-            </section>
-          ))}
-        </div>
+              {model.itemLedgerSections.map(section => (
+                <section
+                  key={section.key}
+                  ref={node => {
+                    itemLedgerSectionRefs.current[section.key] = node;
+                  }}
+                  style={{ display: 'grid', gap: 8 }}
+                >
+                  <ItemLedgerSection section={section} />
+                </section>
+              ))}
+            </div>
+          </>
+        )}
       </article>
     </aside>
   );

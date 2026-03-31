@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Divider, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import type { SolveObjective } from '../../../solver';
+import { type DatasetPresetId, getDatasetPresetText } from '../../../i18n';
+import type { WorkbenchProliferatorPolicy } from '../../workbench/requestBuilder';
+import { DATASET_PRESETS } from '../../catalog/catalogClient';
+import DatasetEditorPanel from '../../catalog/editor/DatasetEditorPanel';
+import StructuredDatasetEditor from '../../catalog/editor/StructuredDatasetEditor';
 import { EntityIcon } from '../../shared/EntityIcon';
 import CollapsibleSnapshotSection from './CollapsibleSnapshotSection';
 import CopySolveRequestJsonButton from './CopySolveRequestJsonButton';
@@ -8,11 +14,14 @@ import RecipePreferenceSnapshotList from './RecipePreferenceSnapshotList';
 import SnapshotRemoveButton from './SnapshotRemoveButton';
 import SolveSnapshotRecipeFlowSummary from './SolveSnapshotRecipeFlowSummary';
 import SolveSnapshotSummaryChips from './SolveSnapshotSummaryChips';
+import { pickDefaultGlobalProliferatorLevel } from '../workbenchHelpers';
 import {
   cardStyle,
+  compactSelectFieldSx,
   snapshotEntryActionSegmentSx,
   snapshotEntryCapsuleSx,
   snapshotEntryGroupSx,
+  snapshotSelectFieldSx,
   snapshotTargetEntrySx,
   snapshotTargetFieldSx,
   snapshotTargetInputSx,
@@ -39,6 +48,12 @@ import {
 } from '../../workbench/snapshotSections';
 import { buildSolveActivityViewModel } from '../../workbench/solveActivity';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
+import AllowedRecipeInlineEditor from './editors/AllowedRecipeInlineEditor';
+import DisabledBuildingInlineEditor from './editors/DisabledBuildingInlineEditor';
+import DisabledRecipeInlineEditor from './editors/DisabledRecipeInlineEditor';
+import PreferredBuildingInlineEditor from './editors/PreferredBuildingInlineEditor';
+import ProliferatorPreferenceInlineEditor from './editors/ProliferatorPreferenceInlineEditor';
+import TargetInlineEditor from './editors/TargetInlineEditor';
 
 export default function SolveSnapshotPanel() {
   const rateUnitLabel = '/\u5206';
@@ -47,17 +62,26 @@ export default function SolveSnapshotPanel() {
     locale,
     catalog,
     iconAtlasIds,
+    globalProliferatorLevelOptions,
   } = useCatalog();
   const {
     model,
     autoSolveState,
     requestSummary,
     solveError,
+    canStartSolve,
+    canCancelSolve,
+    solveCancelledForCurrentInputs,
+    startSolve,
+    cancelSolve,
   } = useSolve();
   const {
     targets,
+    objective,
     proliferatorPolicy,
     globalProliferatorLevel,
+    globalProliferatorLevelDisabled,
+    setObjective,
     setProliferatorPolicy,
     setGlobalProliferatorLevel,
     hasTargets,
@@ -71,11 +95,38 @@ export default function SolveSnapshotPanel() {
     removeRecipePreference,
     removePreferredBuilding,
     loadedSource,
+    presetId,
+    isCustomPreset,
+    isLoading,
+    datasetPath,
+    defaultConfigPath,
+    datasetEditorText,
+    defaultConfigEditorText,
+    datasetEditorError,
+    onPresetChange,
+    reloadCatalog,
+    loadCatalog,
+    clearCachedWorkbenchState,
+    setDatasetEditorText,
+    setDefaultConfigEditorText,
+    applyDatasetEditorChanges,
+    resetDatasetEditorToLoadedSource,
+    updateDatasetEditorTexts,
+    setPresetId,
+    setCatalogLabel,
+    setDatasetPath,
+    setDefaultConfigPath,
+    catalogLabel,
   } = useWorkbench();
 
   const browserStorage = useMemo(() => getBrowserStorage(), []);
   const sectionDescriptions = useMemo(() => getSnapshotSectionDescription(bundle), [bundle]);
   const [sectionState, setSectionState] = useState(DEFAULT_WORKBENCH_SNAPSHOT_SECTION_STATE);
+  const [addingSectionId, setAddingSectionId] = useState<string | null>(null);
+
+  function toggleAddingSection(sectionId: string) {
+    setAddingSectionId(current => (current === sectionId ? null : sectionId));
+  }
 
   useEffect(() => {
     if (!loadedSource) {
@@ -183,6 +234,11 @@ export default function SolveSnapshotPanel() {
     return bundle.summary.loadDatasetToStart;
   }, [autoSolveState.activity.status, bundle, catalog, solveActivity, targets.length]);
 
+  const solveActionLabel =
+    autoSolveState.activity.status === 'running' || solveCancelledForCurrentInputs
+      ? bundle.solveRequest.restartSolveButton
+      : bundle.solveRequest.startSolveButton;
+
   return (
     <article style={{ ...cardStyle, display: 'grid', gap: 12 }}>
       <Box
@@ -194,8 +250,76 @@ export default function SolveSnapshotPanel() {
           flexWrap: 'wrap',
         }}
       >
-        <Typography variant="h6">{bundle.summary.solveSnapshotTitle}</Typography>
-        <CopySolveRequestJsonButton />
+        <Typography variant="h6" sx={{ fontSize: 16 }}>{bundle.summary.solveSnapshotTitle}</Typography>
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Button variant="outlined" size="small" onClick={startSolve} disabled={!canStartSolve} sx={{ minHeight: 30, px: 1.25, fontSize: 12 }}>
+            {solveActionLabel}
+          </Button>
+          {canCancelSolve ? (
+            <Button variant="contained" size="small" color="warning" onClick={cancelSolve} sx={{ minHeight: 30, px: 1.25, fontSize: 12 }}>
+              {bundle.solveRequest.cancelSolveButton}
+            </Button>
+          ) : null}
+          <CopySolveRequestJsonButton />
+        </Box>
+      </Box>
+
+      {/* Objective / Spray / Level selects */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+        <TextField
+          select
+          size="small"
+          sx={{ ...snapshotSelectFieldSx, minWidth: 100 }}
+          label={bundle.summary.objectiveLabel}
+          value={objective}
+          onChange={event => setObjective(event.target.value as SolveObjective)}
+        >
+          <MenuItem value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</MenuItem>
+          <MenuItem value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</MenuItem>
+          <MenuItem value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</MenuItem>
+        </TextField>
+        <TextField
+          select
+          size="small"
+          sx={{ ...snapshotSelectFieldSx, minWidth: 100 }}
+          label={bundle.summary.sprayLabel}
+          value={proliferatorPolicy}
+          onChange={event => {
+            const nextPolicy = event.target.value as WorkbenchProliferatorPolicy;
+            setProliferatorPolicy(nextPolicy);
+            setGlobalProliferatorLevel(current =>
+              nextPolicy === 'auto' || nextPolicy === 'none'
+                ? ''
+                : typeof current === 'number' && current > 0
+                  ? current
+                  : pickDefaultGlobalProliferatorLevel(catalog)
+            );
+          }}
+        >
+          <MenuItem value="auto">{bundle.solveRequest.proliferatorPolicyOptions.auto}</MenuItem>
+          <MenuItem value="none">{bundle.solveRequest.proliferatorPolicyOptions.none}</MenuItem>
+          <MenuItem value="speed">{bundle.solveRequest.proliferatorPolicyOptions.speed}</MenuItem>
+          <MenuItem value="productivity">{bundle.solveRequest.proliferatorPolicyOptions.productivity}</MenuItem>
+        </TextField>
+        {!globalProliferatorLevelDisabled ? (
+          <TextField
+            select
+            size="small"
+            sx={{ ...snapshotSelectFieldSx, minWidth: 80 }}
+            label={bundle.solveRequest.preferredSprayLevelLabel}
+            value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
+            onChange={event =>
+              setGlobalProliferatorLevel(event.target.value ? Number(event.target.value) : '')
+            }
+          >
+            <MenuItem value="">{bundle.common.auto}</MenuItem>
+            {globalProliferatorLevelOptions.map(level => (
+              <MenuItem key={level} value={String(level)}>
+                {`${bundle.solveRequest.levelPrefix} ${level}`}
+              </MenuItem>
+            ))}
+          </TextField>
+        ) : null}
       </Box>
       {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
       {requestSummary ? (
@@ -203,10 +327,7 @@ export default function SolveSnapshotPanel() {
           <SolveSnapshotSummaryChips
             bundle={bundle}
             locale={locale}
-            requestSummary={requestSummary}
-            objective={requestSummary.objective}
             balancePolicy={requestSummary.balancePolicy}
-            sprayLabel={requestSummary.proliferatorPolicyLabel ?? bundle.common.notSet}
             status={model?.status ?? null}
             activityLabel={solveActivity?.stageLabel}
           />
@@ -219,7 +340,13 @@ export default function SolveSnapshotPanel() {
             description={sectionDescriptions.targets}
             expanded={sectionState.targets}
             onExpandedChange={expanded => setSectionExpanded('targets', expanded)}
+            onAdd={() => toggleAddingSection('targets')}
+            addLabel={bundle.solveRequest.addTargetTitle}
+            adding={addingSectionId === 'targets'}
           >
+            {addingSectionId === 'targets' ? (
+              <TargetInlineEditor />
+            ) : null}
             {requestSummary.targets.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {bundle.common.none}
@@ -299,6 +426,13 @@ export default function SolveSnapshotPanel() {
             }))}
             expanded={sectionState.allowedRecipes}
             onExpandedChange={expanded => setSectionExpanded('allowedRecipes', expanded)}
+            onAdd={() => toggleAddingSection('allowedRecipes')}
+            adding={addingSectionId === 'allowedRecipes'}
+            inlineEditor={
+              addingSectionId === 'allowedRecipes' ? (
+                <AllowedRecipeInlineEditor />
+              ) : null
+            }
           />
 
           <RecipeConstraintSnapshotList
@@ -319,6 +453,13 @@ export default function SolveSnapshotPanel() {
             }))}
             expanded={sectionState.disabledRecipes}
             onExpandedChange={expanded => setSectionExpanded('disabledRecipes', expanded)}
+            onAdd={() => toggleAddingSection('disabledRecipes')}
+            adding={addingSectionId === 'disabledRecipes'}
+            inlineEditor={
+              addingSectionId === 'disabledRecipes' ? (
+                <DisabledRecipeInlineEditor />
+              ) : null
+            }
           />
 
           <RecipePreferenceSnapshotList
@@ -330,6 +471,13 @@ export default function SolveSnapshotPanel() {
             entries={displayedProliferatorEntries}
             expanded={sectionState.proliferatorPreferences}
             onExpandedChange={expanded => setSectionExpanded('proliferatorPreferences', expanded)}
+            onAdd={() => toggleAddingSection('proliferatorPreferences')}
+            adding={addingSectionId === 'proliferatorPreferences'}
+            inlineEditor={
+              addingSectionId === 'proliferatorPreferences' ? (
+                <ProliferatorPreferenceInlineEditor />
+              ) : null
+            }
           />
 
           <CollapsibleSnapshotSection
@@ -338,7 +486,12 @@ export default function SolveSnapshotPanel() {
             description={sectionDescriptions.disabledBuildings}
             expanded={sectionState.disabledBuildings}
             onExpandedChange={expanded => setSectionExpanded('disabledBuildings', expanded)}
+            onAdd={() => toggleAddingSection('disabledBuildings')}
+            adding={addingSectionId === 'disabledBuildings'}
           >
+            {addingSectionId === 'disabledBuildings' ? (
+              <DisabledBuildingInlineEditor />
+            ) : null}
             {requestSummary.disabledBuildings.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {bundle.common.none}
@@ -379,7 +532,12 @@ export default function SolveSnapshotPanel() {
             description={sectionDescriptions.preferredBuildings}
             expanded={sectionState.preferredBuildings}
             onExpandedChange={expanded => setSectionExpanded('preferredBuildings', expanded)}
+            onAdd={() => toggleAddingSection('preferredBuildings')}
+            adding={addingSectionId === 'preferredBuildings'}
           >
+            {addingSectionId === 'preferredBuildings' ? (
+              <PreferredBuildingInlineEditor />
+            ) : null}
             {preferredBuildings.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
                 {bundle.common.none}
@@ -448,6 +606,161 @@ export default function SolveSnapshotPanel() {
                 })}
               </Box>
             )}
+          </CollapsibleSnapshotSection>
+
+          <Divider />
+
+          <CollapsibleSnapshotSection
+            title={bundle.datasetSource.title}
+            description={sectionDescriptions.dataset}
+            expanded={sectionState.dataset}
+            onExpandedChange={expanded => setSectionExpanded('dataset', expanded)}
+          >
+            <Box sx={{ display: 'grid', gap: 1 }}>
+              <Box sx={{ display: 'grid', gap: 0.5 }}>
+                <TextField
+                  select
+                  fullWidth
+                  size="small"
+                  sx={compactSelectFieldSx}
+                  value={presetId}
+                  onChange={event => onPresetChange(event.target.value as DatasetPresetId)}
+                  inputProps={{ 'aria-label': bundle.summary.datasetLabel }}
+                >
+                  {DATASET_PRESETS.map(preset => (
+                    <MenuItem key={preset.id} value={preset.id}>
+                      {getDatasetPresetText(preset.id, locale).label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Box>
+              <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => void loadCatalog(datasetPath, defaultConfigPath, catalogLabel, presetId)}
+                  disabled={isLoading}
+                  sx={{ minHeight: 36, px: 1.25 }}
+                >
+                  {isLoading ? bundle.datasetSource.loadingButton : bundle.datasetSource.loadButton}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={reloadCatalog}
+                  disabled={isLoading}
+                  sx={{ minHeight: 36, px: 1.25 }}
+                >
+                  {bundle.datasetSource.reloadButton}
+                </Button>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  onClick={clearCachedWorkbenchState}
+                  sx={{ minHeight: 36, px: 1.25 }}
+                >
+                  {bundle.datasetSource.clearCacheButton}
+                </Button>
+              </Stack>
+            </Box>
+
+            {isCustomPreset ? (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1,
+                  mt: 1,
+                  gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' },
+                }}
+              >
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={bundle.summary.datasetPathLabel}
+                  value={datasetPath}
+                  onChange={event => {
+                    setPresetId('custom');
+                    setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                    setDatasetPath(event.target.value);
+                  }}
+                  placeholder={bundle.datasetSource.datasetPathPlaceholder}
+                />
+                <TextField
+                  fullWidth
+                  size="small"
+                  label={bundle.summary.defaultsPathLabel}
+                  value={defaultConfigPath}
+                  onChange={event => {
+                    setPresetId('custom');
+                    setCatalogLabel(getDatasetPresetText('custom', locale).label);
+                    setDefaultConfigPath(event.target.value);
+                  }}
+                  placeholder={bundle.datasetSource.defaultsPathPlaceholder}
+                />
+              </Box>
+            ) : (
+              <Stack spacing={0.35} sx={{ mt: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {bundle.summary.datasetPathLabel}: {datasetPath || bundle.common.notSet}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {bundle.summary.defaultsPathLabel}: {defaultConfigPath || bundle.common.none}
+                </Typography>
+              </Stack>
+            )}
+
+            <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75} sx={{ mt: 0.5 }}>
+              {model ? (
+                <>
+                  <Chip
+                    size="small"
+                    label={`${bundle.summary.datasetLabel} ${
+                      model.catalogSummary.datasetLabel ?? bundle.common.custom
+                    }`}
+                  />
+                  <Chip size="small" label={`${bundle.summary.itemsLabel} ${model.catalogSummary.itemCount}`} />
+                  <Chip size="small" label={`${bundle.summary.recipesLabel} ${model.catalogSummary.recipeCount}`} />
+                  <Chip size="small" label={`${bundle.summary.buildingsLabel} ${model.catalogSummary.buildingCount}`} />
+                </>
+              ) : (
+                <Chip size="small" label={bundle.summary.loadDatasetToStart} />
+              )}
+            </Stack>
+
+            <DatasetEditorPanel
+              title={bundle.datasetSource.editorTitle}
+              helpText={bundle.datasetSource.editorHelp}
+              datasetLabel={bundle.datasetSource.editorDatasetLabel}
+              defaultsLabel={bundle.datasetSource.editorDefaultsLabel}
+              datasetText={datasetEditorText}
+              defaultConfigText={defaultConfigEditorText}
+              applyButtonLabel={bundle.datasetSource.editorApplyButton}
+              resetButtonLabel={bundle.datasetSource.editorResetButton}
+              errorText={datasetEditorError}
+              onDatasetTextChange={setDatasetEditorText}
+              onDefaultConfigTextChange={setDefaultConfigEditorText}
+              onApply={applyDatasetEditorChanges}
+              onReset={resetDatasetEditorToLoadedSource}
+            >
+              <StructuredDatasetEditor
+                title={bundle.datasetSource.structuredEditorTitle}
+                helpText={bundle.datasetSource.structuredEditorHelp}
+                unavailableText={bundle.datasetSource.structuredEditorUnavailable}
+                tabs={{
+                  items: bundle.datasetSource.structuredEditorTabs.items,
+                  recipes: bundle.datasetSource.structuredEditorTabs.recipes,
+                  buildingRules: bundle.datasetSource.structuredEditorTabs.buildingRules,
+                  defaults: bundle.datasetSource.structuredEditorTabs.defaults,
+                }}
+                actions={{
+                  add: bundle.datasetSource.structuredEditorAddButton,
+                  remove: bundle.datasetSource.structuredEditorRemoveButton,
+                }}
+                datasetText={datasetEditorText}
+                defaultConfigText={defaultConfigEditorText}
+                onSourceTextsChange={updateDatasetEditorTexts}
+              />
+            </DatasetEditorPanel>
           </CollapsibleSnapshotSection>
         </>
       ) : (

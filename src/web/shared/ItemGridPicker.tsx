@@ -20,6 +20,8 @@ interface ItemGridPickerProps {
   selectedItemName?: string;
   selectedItemIcon?: string;
   disabled?: boolean;
+  /** Compact mode: smaller font, tighter padding for sidebar use. */
+  dense?: boolean;
 }
 
 export default function ItemGridPicker(props: ItemGridPickerProps) {
@@ -36,6 +38,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
     selectedItemName,
     selectedItemIcon,
     disabled = false,
+    dense = false,
   } = props;
 
   const anchorRef = useRef<HTMLDivElement | null>(null);
@@ -117,6 +120,11 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
           }
         }}
         disabled={disabled}
+        sx={dense ? {
+          '& .MuiInputBase-root': { fontSize: 12, height: 30 },
+          '& .MuiInputLabel-root': { fontSize: 12, transform: 'translate(10px, 7px) scale(1)' },
+          '& .MuiInputLabel-shrink': { fontSize: 12, transform: 'translate(14px, -8px) scale(0.85)' },
+        } : undefined}
         slotProps={{
           input: {
             startAdornment: selectedItemId && selectedItemIcon ? (
@@ -125,7 +133,7 @@ export default function ItemGridPicker(props: ItemGridPickerProps) {
                   label={selectedItemName ?? ''}
                   iconKey={selectedItemIcon}
                   atlasIds={atlasIds}
-                  size={20}
+                  size={dense ? 16 : 20}
                 />
               </InputAdornment>
             ) : undefined,

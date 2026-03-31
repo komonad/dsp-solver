@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import ForkRightIcon from '@mui/icons-material/ForkRight';
-import { Box, Button, Chip, IconButton, TextField, Typography } from '@mui/material';
+import { Box, Chip, IconButton, TextField, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 import { cardStyle } from './workbenchStyles';
 import { useCatalog } from './CatalogContext';
@@ -52,6 +52,7 @@ function mapConfigStatusColor(
 export default function WorkbenchConfigStrip() {
   const { bundle } = useCatalog();
   const {
+    catalogLabel,
     workbenchConfigDisplayModels,
     activeWorkbenchConfigId,
     switchWorkbenchConfig,
@@ -106,35 +107,47 @@ export default function WorkbenchConfigStrip() {
   }
 
   return (
-    <article style={{ ...cardStyle, display: 'grid', gap: 14 }}>
+    <article style={{ ...cardStyle, display: 'grid', gap: 8, padding: 10 }}>
       <Box
         sx={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 1,
+          gap: 0.75,
           flexWrap: 'wrap',
         }}
       >
-        <Typography variant="h6">{bundle.workbenchConfigs.title}</Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button
-            variant="outlined"
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
+            {bundle.workbenchConfigs.title}
+          </Typography>
+          {catalogLabel ? (
+            <Chip
+              label={catalogLabel}
+              size="small"
+              variant="outlined"
+              sx={{ height: 20, fontSize: 11, fontWeight: 600 }}
+            />
+          ) : null}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <IconButton
             size="small"
-            startIcon={<AddIcon />}
             onClick={createDefaultWorkbenchConfig}
+            aria-label={bundle.workbenchConfigs.createDefaultButton}
+            sx={{ width: 26, height: 26, p: 0 }}
           >
-            {bundle.workbenchConfigs.createDefaultButton}
-          </Button>
-          <Button
-            variant="outlined"
+            <AddIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+          <IconButton
             size="small"
-            startIcon={<ForkRightIcon />}
             onClick={forkActiveWorkbenchConfig}
             disabled={!activeConfig}
+            aria-label={bundle.workbenchConfigs.forkButton}
+            sx={{ width: 26, height: 26, p: 0 }}
           >
-            {bundle.workbenchConfigs.forkButton}
-          </Button>
+            <ForkRightIcon sx={{ fontSize: 18 }} />
+          </IconButton>
         </Box>
       </Box>
 
@@ -143,13 +156,13 @@ export default function WorkbenchConfigStrip() {
           display: 'grid',
           gridAutoFlow: 'column',
           gridAutoColumns: {
-            xs: 'minmax(232px, 85vw)',
-            sm: 'minmax(248px, 280px)',
+            xs: 'minmax(200px, 80vw)',
+            sm: 'minmax(200px, 240px)',
           },
-          gap: 1.25,
+          gap: 1,
           overflowX: 'auto',
           overflowY: 'hidden',
-          pb: 0.5,
+          pb: 0.25,
           minHeight: 0,
           scrollSnapType: 'x proximity',
         }}
@@ -174,8 +187,8 @@ export default function WorkbenchConfigStrip() {
               }}
               sx={{
                 textAlign: 'left',
-                p: 1.5,
-                borderRadius: '18px',
+                p: 1,
+                borderRadius: '12px',
                 border: isActive
                   ? '1px solid rgba(24, 88, 163, 0.34)'
                   : '1px solid rgba(24, 51, 89, 0.12)',
@@ -187,7 +200,7 @@ export default function WorkbenchConfigStrip() {
                   : '0 1px 4px rgba(24, 51, 89, 0.06)',
                 minWidth: 0,
                 display: 'grid',
-                gap: 1,
+                gap: 0.5,
                 scrollSnapAlign: 'start',
                 cursor: 'pointer',
                 outline: 'none',
@@ -207,12 +220,12 @@ export default function WorkbenchConfigStrip() {
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
-                  gap: 1,
+                  gap: 0.5,
                 }}
               >
-                <Box sx={{ minWidth: 0, display: 'grid', gap: 0.5 }}>
+                <Box sx={{ minWidth: 0, display: 'grid', gap: 0.25 }}>
                   {isRenaming ? (
-                    <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    <Box sx={{ display: 'grid', gap: 0.5 }}>
                       <TextField
                         size="small"
                         autoFocus
@@ -229,8 +242,9 @@ export default function WorkbenchConfigStrip() {
                           }
                         }}
                         placeholder={bundle.workbenchConfigs.renamePlaceholder}
+                        sx={{ '& .MuiInputBase-root': { fontSize: 12, height: 28 } }}
                       />
-                      <Box sx={{ display: 'flex', gap: 0.75 }}>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <IconButton
                           size="small"
                           color="primary"
@@ -239,8 +253,9 @@ export default function WorkbenchConfigStrip() {
                             commitRename();
                           }}
                           aria-label={bundle.workbenchConfigs.saveRenameButton}
+                          sx={{ width: 22, height: 22, p: 0 }}
                         >
-                          <CheckIcon fontSize="small" />
+                          <CheckIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -249,8 +264,9 @@ export default function WorkbenchConfigStrip() {
                             cancelRename();
                           }}
                           aria-label={bundle.workbenchConfigs.cancelRenameButton}
+                          sx={{ width: 22, height: 22, p: 0 }}
                         >
-                          <CloseIcon fontSize="small" />
+                          <CloseIcon sx={{ fontSize: 16 }} />
                         </IconButton>
                       </Box>
                     </Box>
@@ -260,6 +276,7 @@ export default function WorkbenchConfigStrip() {
                         variant="subtitle2"
                         sx={{
                           fontWeight: 700,
+                          fontSize: 12,
                           lineHeight: 1.2,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -268,23 +285,27 @@ export default function WorkbenchConfigStrip() {
                       >
                         {config.title}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'rgba(24, 51, 89, 0.68)',
-                          fontSize: 12,
-                          lineHeight: 1.4,
-                          minHeight: 34,
-                        }}
-                      >
-                        {config.targetSummary}
-                      </Typography>
+                      {config.hasCustomName ? (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'rgba(24, 51, 89, 0.6)',
+                            fontSize: 11,
+                            lineHeight: 1.3,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {config.targetSummary}
+                        </Typography>
+                      ) : null}
                     </>
                   )}
                 </Box>
 
                 {!isRenaming ? (
-                  <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
+                  <Box sx={{ display: 'flex', gap: 0, flexShrink: 0 }}>
                     <IconButton
                       size="small"
                       onClick={event => {
@@ -292,8 +313,9 @@ export default function WorkbenchConfigStrip() {
                         startRenaming(config.id, config.customName);
                       }}
                       aria-label={bundle.workbenchConfigs.renameButton}
+                      sx={{ width: 22, height: 22, p: 0 }}
                     >
-                      <DriveFileRenameOutlineIcon fontSize="small" />
+                      <DriveFileRenameOutlineIcon sx={{ fontSize: 14 }} />
                     </IconButton>
                     <IconButton
                       size="small"
@@ -302,65 +324,46 @@ export default function WorkbenchConfigStrip() {
                         deleteWorkbenchConfig(config.id);
                       }}
                       aria-label={bundle.workbenchConfigs.deleteButton}
+                      sx={{ width: 22, height: 22, p: 0 }}
                     >
-                      <DeleteOutlineIcon fontSize="small" />
+                      <DeleteOutlineIcon sx={{ fontSize: 14 }} />
                     </IconButton>
                   </Box>
                 ) : null}
               </Box>
 
               {!isRenaming ? (
-                <>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 0.75,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Chip
-                      label={statusLabel}
-                      size="small"
-                      color={mapConfigStatusColor(config.status)}
-                      variant={isActive ? 'filled' : 'outlined'}
-                    />
-                    <Chip
-                      label={bundle.enums.objective[config.objective]}
-                      size="small"
-                      variant="outlined"
-                    />
-                    <Chip
-                      label={bundle.enums.balancePolicy[config.balancePolicy]}
-                      size="small"
-                      variant="outlined"
-                    />
-                  </Box>
-
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: 1.25,
-                      color: 'rgba(24, 51, 89, 0.74)',
-                      fontSize: 12,
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {config.roundedBuildingCount !== null ? (
-                      <span>{`${bundle.summary.buildingsLabel} ${config.roundedBuildingCount}`}</span>
-                    ) : null}
-                    {config.recipePlanCount !== null ? (
-                      <span>{`${bundle.summary.recipesLabel} ${config.recipePlanCount}`}</span>
-                    ) : null}
-                    {config.powerLabel ? <span>{config.powerLabel}</span> : null}
-                    {config.roundedBuildingCount === null &&
-                    config.recipePlanCount === null &&
-                    !config.powerLabel ? (
-                      <span>{bundle.common.notSolvedYet}</span>
-                    ) : null}
-                  </Box>
-                </>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 0.5,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Chip
+                    label={statusLabel}
+                    size="small"
+                    color={mapConfigStatusColor(config.status)}
+                    variant={isActive ? 'filled' : 'outlined'}
+                    sx={{ height: 18, fontSize: 11, '& .MuiChip-label': { px: 0.75 } }}
+                  />
+                  {config.roundedBuildingCount !== null ? (
+                    <Typography component="span" sx={{ fontSize: 11, color: 'rgba(24, 51, 89, 0.68)' }}>
+                      {`${bundle.summary.buildingsLabel} ${config.roundedBuildingCount}`}
+                    </Typography>
+                  ) : null}
+                  {config.recipePlanCount !== null ? (
+                    <Typography component="span" sx={{ fontSize: 11, color: 'rgba(24, 51, 89, 0.68)' }}>
+                      {`${bundle.summary.recipesLabel} ${config.recipePlanCount}`}
+                    </Typography>
+                  ) : null}
+                  {config.powerLabel ? (
+                    <Typography component="span" sx={{ fontSize: 11, color: 'rgba(24, 51, 89, 0.68)' }}>
+                      {config.powerLabel}
+                    </Typography>
+                  ) : null}
+                </Box>
               ) : null}
             </Box>
           );

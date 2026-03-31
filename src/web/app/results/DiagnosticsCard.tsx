@@ -3,6 +3,7 @@ import { Alert, Button } from '@mui/material';
 import { formatRate } from '../../../i18n';
 import { copyText } from '../../shared/copyText';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
+import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { FlowRateSequence } from '../components/FlowRateDisplay';
 import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
@@ -22,6 +23,22 @@ export default function DiagnosticsCard() {
   const {
     applyAllowSurplusFallback,
   } = useWorkbench();
+
+  const hasDiagnosticContent = !!(
+    model &&
+    ((model.diagnostics?.messages.length ?? 0) > 0 ||
+      (model.diagnostics?.unmetPreferences.length ?? 0) > 0 ||
+      (fallbackModel && fallbackSolve?.reason === 'force_balance_infeasible') ||
+      (model.status && model.status !== 'optimal'))
+  );
+  const [collapsed, setCollapsed] = useState(!hasDiagnosticContent);
+
+  // Auto-expand when diagnostic content appears
+  useEffect(() => {
+    if (hasDiagnosticContent) {
+      setCollapsed(false);
+    }
+  }, [hasDiagnosticContent]);
   const requestJsonText = useMemo(
     () => (lastRequest ? JSON.stringify(lastRequest, null, 2) : ''),
     [lastRequest]
@@ -66,8 +83,15 @@ export default function DiagnosticsCard() {
 
   return (
     <article style={cardStyle}>
-      <h2 style={{ marginTop: 0 }}>{bundle.diagnostics.title}</h2>
-      <div style={{ display: 'grid', gap: 8 }}>
+      <CollapsibleCardHeader
+        title={bundle.diagnostics.title}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(prev => !prev)}
+        summary={model.status && model.status !== 'optimal' ? model.status : undefined}
+      />
+      {collapsed ? null : (
+      <>
+      <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
         <SolveAuditSection
           bundle={bundle}
           locale={locale}
@@ -185,6 +209,8 @@ export default function DiagnosticsCard() {
           {JSON.stringify(result, null, 2)}
         </pre>
       </details>
+      </>
+      )}
     </article>
   );
 }

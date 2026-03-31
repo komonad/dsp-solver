@@ -1,13 +1,12 @@
 import { Chip, Stack, Tooltip } from '@mui/material';
 import {
   formatBalancePolicy,
-  formatSolveObjective,
   formatSolveStatus,
   type AppLocale,
   type LocaleBundle,
 } from '../../../i18n';
 import type { PresentationModel } from '../../../presentation';
-import type { BalancePolicy, SolveObjective, SolveStatus } from '../../../solver';
+import type { BalancePolicy, SolveStatus } from '../../../solver';
 import type { SnapshotMetricId } from './solveSnapshotMetadata';
 import { getSnapshotMetricDescription } from './solveSnapshotMetadata';
 import { snapshotFormalTooltipSlotProps } from '../workbenchStyles';
@@ -16,9 +15,7 @@ export interface SolveSnapshotSummaryChipsProps {
   bundle: LocaleBundle;
   locale: AppLocale;
   requestSummary?: PresentationModel['requestSummary'];
-  objective: SolveObjective;
   balancePolicy: BalancePolicy;
-  sprayLabel: string;
   status: SolveStatus | null;
   activityLabel?: string;
 }
@@ -43,10 +40,7 @@ function renderMetricChip(
 export default function SolveSnapshotSummaryChips({
   bundle,
   locale,
-  requestSummary,
-  objective,
   balancePolicy,
-  sprayLabel,
   status,
   activityLabel,
 }: SolveSnapshotSummaryChipsProps) {
@@ -54,18 +48,8 @@ export default function SolveSnapshotSummaryChips({
   return (
     <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75}>
       {renderMetricChip(
-        'objective',
-        `${bundle.summary.objectiveLabel}: ${formatSolveObjective(objective, locale)}`,
-        metricDescriptions
-      )}
-      {renderMetricChip(
         'balance',
         `${bundle.summary.balanceLabel}: ${formatBalancePolicy(balancePolicy, locale)}`,
-        metricDescriptions
-      )}
-      {renderMetricChip(
-        'spray',
-        `${bundle.summary.sprayLabel}: ${sprayLabel || bundle.common.notSet}`,
         metricDescriptions
       )}
       {renderMetricChip(

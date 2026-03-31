@@ -197,6 +197,7 @@ export interface LocaleBundle {
       proliferatorPreferences: string;
       disabledBuildings: string;
       preferredBuildings: string;
+      dataset: string;
     };
     metricDescription: {
       objective: string;
@@ -574,6 +575,8 @@ const zhCN: LocaleBundle = {
         '禁用建筑约束：列表中的建筑会被全局移出候选建筑集合。求解器不得将任何配方分配到这些建筑上。',
       preferredBuildings:
         '偏好建筑约束：定义全局或配方级的建筑选择偏好。配方级条目优先于全局条目，并用于约束或引导对应配方的建筑分配。',
+      dataset:
+        '数据集配置：选择或自定义游戏数据集，包括物品、配方和建筑定义。更改数据集后需要重新加载。',
     },
     metricDescription: {
       objective:

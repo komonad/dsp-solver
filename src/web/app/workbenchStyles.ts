@@ -3,28 +3,19 @@ import type React from 'react';
 export const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
   margin: 0,
-  background:
-    'radial-gradient(circle at top left, rgba(244, 194, 102, 0.28), transparent 35%), linear-gradient(135deg, #f5efe2 0%, #dce7ef 48%, #f7f8fb 100%)',
+  background: '#f4f6f8',
   color: '#183359',
   fontFamily: '"IBM Plex Sans", "Noto Sans SC", sans-serif',
-};
-
-export const shellStyle: React.CSSProperties = {
-  maxWidth: 1280,
-  margin: '0 auto',
-  padding: '40px 24px 64px',
-  display: 'grid',
-  gap: 20,
 };
 
 export const cardStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.76)',
   border: '1px solid rgba(18, 45, 77, 0.12)',
-  borderRadius: 20,
-  padding: 16,
+  borderRadius: 16,
+  padding: 12,
   boxSizing: 'border-box',
   minWidth: 0,
-  boxShadow: '0 10px 26px rgba(24, 51, 89, 0.07)',
+  boxShadow: '0 4px 16px rgba(24, 51, 89, 0.06)',
 };
 
 export const inputStyle: React.CSSProperties = {
@@ -57,6 +48,55 @@ export const compactSelectFieldSx = {
     minWidth: 0,
     maxWidth: '100%',
   },
+} as const;
+
+/**
+ * Extra-compact select for use inside the snapshot panel sidebar.
+ * Fixed height 30px with 12px font for consistent alignment with buttons.
+ */
+export const snapshotSelectFieldSx = {
+  ...compactSelectFieldSx,
+  '& .MuiInputBase-root': {
+    minWidth: 0,
+    fontSize: 12,
+    height: 30,
+  },
+  '& .MuiInputLabel-root': {
+    fontSize: 12,
+    transform: 'translate(10px, 7px) scale(1)',
+  },
+  '& .MuiInputLabel-shrink': {
+    fontSize: 12,
+    transform: 'translate(14px, -8px) scale(0.85)',
+  },
+} as const;
+
+/** Shared wrapper box for snapshot inline editors (the [+] add forms). */
+export const snapshotInlineEditorSx = {
+  display: 'grid',
+  gap: 0.5,
+  p: 0.75,
+  mb: 0.75,
+  borderRadius: '8px',
+  border: '1px solid rgba(24, 88, 163, 0.18)',
+  backgroundColor: 'rgba(232, 243, 255, 0.38)',
+} as const;
+
+/** Compact text field style for snapshot inline editors (non-select). */
+export const snapshotInlineFieldSx = {
+  ...snapshotSelectFieldSx,
+} as const;
+
+/** Compact button sizing for snapshot inline editors — matches 30px input height. */
+export const snapshotInlineButtonSx = {
+  height: 30,
+  minHeight: 0,
+  px: 1,
+  py: 0,
+  fontSize: 12,
+  lineHeight: 1.3,
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
 } as const;
 
 export const recipePlanToggleGroupSx = {
@@ -142,18 +182,6 @@ export const subtleButtonStyle: React.CSSProperties = {
   ...buttonStyle,
   background: 'rgba(24, 51, 89, 0.08)',
   color: '#183359',
-};
-
-export const resultBodyGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 20,
-  gridTemplateColumns: 'minmax(280px, 1fr) minmax(0, 2fr) minmax(280px, 1fr)',
-  alignItems: 'start',
-};
-
-export const resultMainColumnStyle: React.CSSProperties = {
-  display: 'grid',
-  gap: 20,
 };
 
 export const resultSideColumnStyle: React.CSSProperties = {
@@ -392,36 +420,6 @@ export const snapshotFormalTooltipSlotProps = {
     },
   },
 } as const;
-
-export const collapsibleSectionStyle: React.CSSProperties = {
-  borderTop: '1px solid rgba(24, 51, 89, 0.10)',
-  paddingTop: 12,
-};
-
-export const inlineSectionLayoutSx = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 1,
-  alignItems: 'center',
-} as const;
-
-export const inlineConstraintSectionGroupSx = {
-  display: 'grid',
-  gap: 1.25,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-  alignItems: 'start',
-} as const;
-
-export const inlineSectionLabelSx = {
-  flexShrink: 0,
-  whiteSpace: 'nowrap',
-  lineHeight: 1.2,
-} as const;
-
-export const summaryStyle: React.CSSProperties = {
-  cursor: 'pointer',
-  fontWeight: 700,
-};
 
 export const sectionHeadingStyle: React.CSSProperties = {
   margin: 0,

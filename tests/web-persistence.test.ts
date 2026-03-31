@@ -412,6 +412,7 @@ test('snapshot section states are stored per source key and preserved alongside 
     proliferatorPreferences: false,
     disabledBuildings: true,
     preferredBuildings: false,
+    dataset: false,
   });
 
   writeWorkbenchEditorState(storage, source, {

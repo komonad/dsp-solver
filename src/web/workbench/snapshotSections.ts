@@ -4,7 +4,8 @@ export type WorkbenchSnapshotSectionId =
   | 'disabledRecipes'
   | 'proliferatorPreferences'
   | 'disabledBuildings'
-  | 'preferredBuildings';
+  | 'preferredBuildings'
+  | 'dataset';
 
 export type WorkbenchSnapshotSectionState = Record<WorkbenchSnapshotSectionId, boolean>;
 
@@ -15,6 +16,7 @@ export const DEFAULT_WORKBENCH_SNAPSHOT_SECTION_STATE: WorkbenchSnapshotSectionS
   proliferatorPreferences: true,
   disabledBuildings: true,
   preferredBuildings: true,
+  dataset: false,
 };
 
 export function resolveWorkbenchSnapshotSectionState(

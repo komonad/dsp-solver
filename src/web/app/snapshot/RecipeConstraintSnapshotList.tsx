@@ -32,6 +32,11 @@ export interface RecipeConstraintSnapshotListProps {
   entries: RecipeConstraintSnapshotEntry[];
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onAdd?: () => void;
+  addLabel?: string;
+  addDisabled?: boolean;
+  adding?: boolean;
+  inlineEditor?: React.ReactNode;
 }
 
 export default function RecipeConstraintSnapshotList({
@@ -45,6 +50,11 @@ export default function RecipeConstraintSnapshotList({
   entries,
   expanded,
   onExpandedChange,
+  onAdd,
+  addLabel,
+  addDisabled,
+  adding,
+  inlineEditor,
 }: RecipeConstraintSnapshotListProps) {
   return (
     <CollapsibleSnapshotSection
@@ -53,7 +63,12 @@ export default function RecipeConstraintSnapshotList({
       description={description}
       expanded={expanded}
       onExpandedChange={onExpandedChange}
+      onAdd={onAdd}
+      addLabel={addLabel}
+      addDisabled={addDisabled}
+      adding={adding}
     >
+      {inlineEditor}
       {entries.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}

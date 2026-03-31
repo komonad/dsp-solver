@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { formatRate, formatPower, type AppLocale } from '../../../i18n';
 import { EntityLabel } from '../../shared/EntityIcon';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
+import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { useCatalog } from '../CatalogContext';
 import { useSolve } from '../SolveContext';
 import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
@@ -80,6 +81,7 @@ export default function SummaryCard() {
   const { model } = useSolve();
   const theme = useTheme();
   const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
+  const [collapsed, setCollapsed] = useState(false);
 
   if (!model) {
     return null;
@@ -97,10 +99,21 @@ export default function SummaryCard() {
   const surplusOutputItems = model.solvedSummary ? model.surplusOutputs : [];
   const hasNetOutputs = targetOutputItems.length > 0 || surplusOutputItems.length > 0;
 
+  const summaryText = model.solvedSummary
+    ? `${model.buildingSummary.reduce((s, b) => s + b.roundedUpCount, 0)} ${bundle.summary.buildingsLabel}  ${formatPower(model.solvedSummary.roundedPlacementPowerMW, locale)}`
+    : undefined;
+
   return (
     <article style={cardStyle}>
-      <h2 style={{ marginTop: 0 }}>{bundle.overview.summaryTitle}</h2>
-      <div
+      <CollapsibleCardHeader
+        title={bundle.overview.summaryTitle}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(prev => !prev)}
+        summary={summaryText}
+      />
+      {collapsed ? null : <div style={{ marginTop: 8 }} />}
+      {!collapsed ? (
+        <div
         style={{
           display: 'grid',
           gap: isCompactLayout ? 12 : 16,
@@ -215,6 +228,7 @@ export default function SummaryCard() {
           <div style={{ fontSize: 13, color: 'rgba(24, 51, 89, 0.72)' }}>{bundle.recipePlans.title}</div>
         </div>
       </div>
+      ) : null}
     </article>
   );
 }

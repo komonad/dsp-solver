@@ -26,6 +26,11 @@ export interface RecipePreferenceSnapshotListProps {
   entries: RecipePreferenceSnapshotEntry[];
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onAdd?: () => void;
+  addLabel?: string;
+  addDisabled?: boolean;
+  adding?: boolean;
+  inlineEditor?: React.ReactNode;
 }
 
 export default function RecipePreferenceSnapshotList({
@@ -37,6 +42,11 @@ export default function RecipePreferenceSnapshotList({
   entries,
   expanded,
   onExpandedChange,
+  onAdd,
+  addLabel,
+  addDisabled,
+  adding,
+  inlineEditor,
 }: RecipePreferenceSnapshotListProps) {
   return (
     <CollapsibleSnapshotSection
@@ -45,7 +55,12 @@ export default function RecipePreferenceSnapshotList({
       description={description}
       expanded={expanded}
       onExpandedChange={onExpandedChange}
+      onAdd={onAdd}
+      addLabel={addLabel}
+      addDisabled={addDisabled}
+      adding={adding}
     >
+      {inlineEditor}
       {entries.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           {emptyText}

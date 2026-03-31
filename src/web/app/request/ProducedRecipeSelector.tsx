@@ -4,6 +4,7 @@ import type { ItemPickerOption } from '../../shared/itemPickerModel';
 import ItemGridPicker from '../../shared/ItemGridPicker';
 import {
   compactSelectFieldSx,
+  snapshotSelectFieldSx,
 } from '../workbenchStyles';
 import {
   filterItemOptionsByRecipeAvailability,
@@ -28,6 +29,8 @@ export interface ProducedRecipeSelectorProps {
   emptySelectionLabel: string;
   getExcludedRecipeIds?: (itemId: string) => string[];
   disabled?: boolean;
+  /** Compact mode for sidebar use. */
+  dense?: boolean;
 }
 
 export default function ProducedRecipeSelector({
@@ -46,6 +49,7 @@ export default function ProducedRecipeSelector({
   emptySelectionLabel,
   getExcludedRecipeIds = () => [],
   disabled = false,
+  dense = false,
 }: ProducedRecipeSelectorProps) {
   const [itemQuery, setItemQuery] = useState('');
 
@@ -94,61 +98,67 @@ export default function ProducedRecipeSelector({
   return (
     <Box
       sx={{
-        display: 'grid',
-        gap: 1,
-        gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' },
+        display: 'flex',
+        gap: dense ? 0.5 : 1,
+        flexWrap: dense ? 'nowrap' : 'wrap',
         alignItems: 'start',
+        ...(dense ? {} : { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' } }),
       }}
     >
-      <ItemGridPicker
-        items={availableItemOptions}
-        selectedItemId={selectedItemId}
-        query={itemQuery}
-        onQueryChange={setItemQuery}
-        onSelect={itemId => {
-          if (itemId !== selectedItemId) {
-            onSelectedRecipeChange('');
-          }
-          onSelectedItemChange(itemId);
-        }}
-        atlasIds={atlasIds}
-        searchLabel={searchLabel}
-        searchPlaceholder={searchPlaceholder}
-        emptyText={emptyText}
-        selectedItemName={selectedItem?.name}
-        selectedItemIcon={selectedItem?.icon}
-        disabled={disabled}
-      />
+      <Box sx={dense ? { flex: '1 1 0', minWidth: 0 } : undefined}>
+        <ItemGridPicker
+          items={availableItemOptions}
+          selectedItemId={selectedItemId}
+          query={itemQuery}
+          onQueryChange={setItemQuery}
+          onSelect={itemId => {
+            if (itemId !== selectedItemId) {
+              onSelectedRecipeChange('');
+            }
+            onSelectedItemChange(itemId);
+          }}
+          atlasIds={atlasIds}
+          searchLabel={searchLabel}
+          searchPlaceholder={searchPlaceholder}
+          emptyText={emptyText}
+          selectedItemName={selectedItem?.name}
+          selectedItemIcon={selectedItem?.icon}
+          disabled={disabled}
+          dense={dense}
+        />
+      </Box>
 
-      <TextField
-        select
-        fullWidth
-        size="small"
-        sx={compactSelectFieldSx}
-        value={selectedRecipeId}
-        disabled={disabled || !selectedItemId || recipeOptions.length === 0}
-        onChange={event => onSelectedRecipeChange(event.target.value)}
-        slotProps={{
-          htmlInput: {
-            'aria-label': recipeLabel,
-          },
-        }}
-      >
-        <MenuItem value="">{emptySelectionLabel}</MenuItem>
-        {recipeOptions.map(option => (
-          <MenuItem key={option.recipeId} value={option.recipeId}>
-            <RecipeOptionLabel
-              recipeName={option.recipeName}
-              inputs={option.inputs}
-              outputs={option.outputs}
-              cycleTimeSec={option.cycleTimeSec}
-              locale={locale}
-              atlasIds={atlasIds}
-              highlightItemId={selectedItemId}
-            />
-          </MenuItem>
-        ))}
-      </TextField>
+      <Box sx={dense ? { flex: '1 1 0', minWidth: 0 } : undefined}>
+        <TextField
+          select
+          fullWidth
+          size="small"
+          sx={dense ? snapshotSelectFieldSx : compactSelectFieldSx}
+          value={selectedRecipeId}
+          disabled={disabled || !selectedItemId || recipeOptions.length === 0}
+          onChange={event => onSelectedRecipeChange(event.target.value)}
+          slotProps={{
+            htmlInput: {
+              'aria-label': recipeLabel,
+            },
+          }}
+        >
+          <MenuItem value="">{emptySelectionLabel}</MenuItem>
+          {recipeOptions.map(option => (
+            <MenuItem key={option.recipeId} value={option.recipeId}>
+              <RecipeOptionLabel
+                recipeName={option.recipeName}
+                inputs={option.inputs}
+                outputs={option.outputs}
+                cycleTimeSec={option.cycleTimeSec}
+                locale={locale}
+                atlasIds={atlasIds}
+                highlightItemId={selectedItemId}
+              />
+            </MenuItem>
+          ))}
+        </TextField>
+      </Box>
     </Box>
   );
 }
