@@ -42,8 +42,8 @@ export type FlowGraphNode = Node<RecipeNodeData, 'recipe'> | Node<ExternalNodeDa
 export type FlowGraphEdge = Edge<ItemEdgeData>;
 
 const EPSILON = 1e-6;
-const MIN_EDGE_WIDTH = 3;
-const MAX_EDGE_WIDTH = 8;
+const MIN_EDGE_WIDTH = 1;
+const MAX_EDGE_WIDTH = 24;
 const DEFAULT_EDGE_WIDTH = 4;
 
 function hashString(str: string): number {
@@ -68,7 +68,13 @@ function computeEdgeWidth(rate: number, minRate: number, maxRate: number): numbe
     return DEFAULT_EDGE_WIDTH;
   }
 
-  return Math.min(MAX_EDGE_WIDTH, Math.max(MIN_EDGE_WIDTH, MIN_EDGE_WIDTH * Math.sqrt(rate / minRate)));
+  const logRange = Math.log(maxRate / minRate);
+  if (logRange < EPSILON) {
+    return DEFAULT_EDGE_WIDTH;
+  }
+
+  const t = Math.log(rate / minRate) / logRange;
+  return MIN_EDGE_WIDTH + (MAX_EDGE_WIDTH - MIN_EDGE_WIDTH) * t;
 }
 
 interface ProducerInfo {
