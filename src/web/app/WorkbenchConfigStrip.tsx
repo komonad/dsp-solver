@@ -183,8 +183,8 @@ export default function WorkbenchConfigStrip() {
                   ? 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(223,236,247,0.92))'
                   : 'rgba(255,255,255,0.88)',
                 boxShadow: isActive
-                  ? '0 12px 26px rgba(24, 88, 163, 0.10)'
-                  : '0 8px 18px rgba(24, 51, 89, 0.05)',
+                  ? '0 2px 8px rgba(24, 88, 163, 0.12)'
+                  : '0 1px 4px rgba(24, 51, 89, 0.06)',
                 minWidth: 0,
                 display: 'grid',
                 gap: 1,
@@ -194,7 +194,7 @@ export default function WorkbenchConfigStrip() {
                 transition: 'border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease',
                 '&:hover': {
                   borderColor: 'rgba(24, 88, 163, 0.24)',
-                  boxShadow: '0 12px 24px rgba(24, 51, 89, 0.09)',
+                  boxShadow: '0 2px 10px rgba(24, 51, 89, 0.10)',
                 },
                 '&:focus-visible': {
                   borderColor: 'rgba(24, 88, 163, 0.34)',
