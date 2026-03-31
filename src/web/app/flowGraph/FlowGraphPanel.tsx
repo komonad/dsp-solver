@@ -82,7 +82,7 @@ function ScreenshotButton() {
       const bounds = getNodesBounds(nodes);
       const width = bounds.width + SCREENSHOT_PADDING * 2;
       const height = bounds.height + SCREENSHOT_PADDING * 2;
-      const viewport = getViewportForBounds(bounds, width, height, 0.1, 3, SCREENSHOT_PADDING);
+      const viewport = getViewportForBounds(bounds, width, height, 0.1, 3, 0);
       const renderOpts = {
         backgroundColor: '#f4f6f8',
         width,

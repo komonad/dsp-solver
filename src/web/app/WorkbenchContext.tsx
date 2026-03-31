@@ -1387,6 +1387,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         activeConfigId: nextConfigId,
       });
 
+      // Immediately mark the target config as active so the old one deactivates
+      // visually before the async catalog load completes.
+      setActiveWorkbenchConfigId(nextConfigId);
+
       // Switch dataset
       setPresetId(foreignEntry.source.presetId);
       setDatasetPath(foreignEntry.source.datasetPath);
