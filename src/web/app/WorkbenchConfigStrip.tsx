@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import DriveFileRenameOutlineIcon from '@mui/icons-material/DriveFileRenameOutline';
 import ForkRightIcon from '@mui/icons-material/ForkRight';
-import { Box, Chip, IconButton, TextField, Typography } from '@mui/material';
+import { Box, Button, Chip, IconButton, TextField, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 import { cardStyle } from './workbenchStyles';
 import { useCatalog } from './CatalogContext';
@@ -131,23 +131,29 @@ export default function WorkbenchConfigStrip() {
           ) : null}
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <IconButton
-            size="small"
-            onClick={createDefaultWorkbenchConfig}
-            aria-label={bundle.workbenchConfigs.createDefaultButton}
-            sx={{ width: 26, height: 26, p: 0 }}
-          >
-            <AddIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-          <IconButton
-            size="small"
-            onClick={forkActiveWorkbenchConfig}
-            disabled={!activeConfig}
-            aria-label={bundle.workbenchConfigs.forkButton}
-            sx={{ width: 26, height: 26, p: 0 }}
-          >
-            <ForkRightIcon sx={{ fontSize: 18 }} />
-          </IconButton>
+          <Tooltip title={bundle.workbenchConfigs.createDefaultButton}>
+            <Button
+              size="small"
+              onClick={createDefaultWorkbenchConfig}
+              startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+              sx={{ textTransform: 'none', fontSize: 12, fontWeight: 600, px: 1, py: 0, minWidth: 0, color: 'rgba(24, 51, 89, 0.7)' }}
+            >
+              {bundle.workbenchConfigs.createDefaultButtonShort}
+            </Button>
+          </Tooltip>
+          <Tooltip title={bundle.workbenchConfigs.forkButton}>
+            <span>
+            <Button
+              size="small"
+              onClick={forkActiveWorkbenchConfig}
+              disabled={!activeConfig}
+              startIcon={<ForkRightIcon sx={{ fontSize: 16 }} />}
+              sx={{ textTransform: 'none', fontSize: 12, fontWeight: 600, px: 1, py: 0, minWidth: 0, color: 'rgba(24, 51, 89, 0.7)' }}
+            >
+              {bundle.workbenchConfigs.forkButtonShort}
+            </Button>
+            </span>
+          </Tooltip>
         </Box>
       </Box>
 

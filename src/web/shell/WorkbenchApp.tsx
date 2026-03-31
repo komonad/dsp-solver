@@ -1,4 +1,5 @@
-import { Box, Container } from '@mui/material';
+import { Box, Button, Container } from '@mui/material';
+import AccountTreeOutlinedIcon from '@mui/icons-material/AccountTreeOutlined';
 import { useState } from 'react';
 import ItemSliceOverlayHost from '../itemSlice/ItemSliceOverlayHost';
 import { WorkbenchProvider, useWorkbench } from '../app/WorkbenchContext';
@@ -14,6 +15,7 @@ import DiagnosticsCard from '../app/results/DiagnosticsCard';
 import RecipePlanList from '../app/results/RecipePlanList';
 import ItemLedgerPanel from '../app/results/ItemLedgerPanel';
 import StrategyWarningSnackbar from '../app/StrategyWarningSnackbar';
+import { FlowGraphPanel } from '../app/flowGraph/FlowGraphPanel';
 import { cardStyle } from '../app/workbenchStyles';
 
 export default function WorkbenchApp() {
@@ -28,6 +30,7 @@ function WorkbenchLayout() {
   const {
     bundle,
     locale,
+    catalog,
     iconAtlasIds,
     preferredRecipeOptionsByItem,
   } = useCatalog();
@@ -48,6 +51,7 @@ function WorkbenchLayout() {
   const hasStatus = !!model?.status;
   const hasModel = !!model;
   const [recipePlansCollapsed, setRecipePlansCollapsed] = useState(false);
+  const [flowGraphOpen, setFlowGraphOpen] = useState(false);
 
   return (
     <Box
@@ -132,6 +136,25 @@ function WorkbenchLayout() {
                   collapsed={recipePlansCollapsed}
                   onToggle={() => setRecipePlansCollapsed(prev => !prev)}
                   summary={model?.recipePlans ? `${model.recipePlans.length}` : undefined}
+                  actions={model?.recipePlans.length ? (
+                    <Button
+                      size="small"
+                      onClick={() => setFlowGraphOpen(true)}
+                      startIcon={<AccountTreeOutlinedIcon sx={{ fontSize: 15 }} />}
+                      sx={{
+                        textTransform: 'none',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        px: 1,
+                        py: 0,
+                        minWidth: 0,
+                        color: 'rgba(24, 88, 163, 0.7)',
+                        '&:hover': { color: '#1858a3', background: 'rgba(24, 88, 163, 0.06)' },
+                      }}
+                    >
+                      {bundle.flowGraph.title}
+                    </Button>
+                  ) : undefined}
                 />
                 {recipePlansCollapsed ? null : (
                   <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
@@ -194,6 +217,15 @@ function WorkbenchLayout() {
         />
         <StrategyWarningSnackbar />
       </Container>
+      {flowGraphOpen && model?.recipePlans.length ? (
+        <FlowGraphPanel
+          recipePlans={model.recipePlans}
+          catalog={catalog}
+          model={model}
+          title={bundle.flowGraph.title}
+          onClose={() => setFlowGraphOpen(false)}
+        />
+      ) : null}
     </Box>
   );
 }

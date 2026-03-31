@@ -122,7 +122,9 @@ export interface LocaleBundle {
   workbenchConfigs: {
     title: string;
     createDefaultButton: string;
+    createDefaultButtonShort: string;
     forkButton: string;
+    forkButtonShort: string;
     renameButton: string;
     deleteButton: string;
     renamePlaceholder: string;
@@ -328,6 +330,9 @@ export interface LocaleBundle {
     modeValue: (key: string) => string;
     modeRecord: (key: string) => string;
   };
+  flowGraph: {
+    title: string;
+  };
 }
 
 const zhCN: LocaleBundle = {
@@ -487,7 +492,9 @@ const zhCN: LocaleBundle = {
   workbenchConfigs: {
     title: '配置切换',
     createDefaultButton: '新建默认配置',
+    createDefaultButtonShort: '新建',
     forkButton: '从当前配置分叉',
+    forkButtonShort: '分叉',
     renameButton: '命名',
     deleteButton: '删除配置',
     renamePlaceholder: '输入配置名称',
@@ -708,6 +715,9 @@ const zhCN: LocaleBundle = {
     numberRecord: key => `${key} 在提供时必须是值为有限数字的对象。`,
     modeValue: key => `${key} 在提供时必须是 none、speed 或 productivity。`,
     modeRecord: key => `${key} 在提供时必须是值为 none、speed 或 productivity 的对象。`,
+  },
+  flowGraph: {
+    title: '物品流图',
   },
 };
 

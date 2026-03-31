@@ -110,3 +110,128 @@ export function getIconFallbackColor(label: string): string {
   const hue = hash % 360;
   return `hsl(${hue} 45% 84%)`;
 }
+
+// ── Icon average color sampling ──
+
+const loadedAtlasImages = new Map<string, HTMLImageElement>();
+const loadingAtlasImages = new Map<string, Promise<HTMLImageElement | null>>();
+const iconColorCache = new Map<string, string>();
+
+function loadAtlasImage(src: string): Promise<HTMLImageElement | null> {
+  const existing = loadingAtlasImages.get(src);
+  if (existing) return existing;
+
+  const promise = new Promise<HTMLImageElement | null>(resolve => {
+    if (typeof Image === 'undefined') {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      loadedAtlasImages.set(src, img);
+      resolve(img);
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+  loadingAtlasImages.set(src, promise);
+  return promise;
+}
+
+function sampleAverageColor(
+  img: HTMLImageElement,
+  sprite: IconSpriteDefinition
+): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = sprite.width;
+  canvas.height = sprite.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return 'hsl(0 0% 60%)';
+
+  ctx.drawImage(
+    img,
+    sprite.x, sprite.y, sprite.width, sprite.height,
+    0, 0, sprite.width, sprite.height
+  );
+
+  const imageData = ctx.getImageData(0, 0, sprite.width, sprite.height);
+  const pixels = imageData.data;
+  let totalR = 0;
+  let totalG = 0;
+  let totalB = 0;
+  let count = 0;
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    const a = pixels[i + 3];
+    if (a < 128) continue; // skip transparent pixels
+    totalR += pixels[i];
+    totalG += pixels[i + 1];
+    totalB += pixels[i + 2];
+    count += 1;
+  }
+
+  if (count === 0) return 'hsl(0 0% 60%)';
+
+  const r = Math.round(totalR / count);
+  const g = Math.round(totalG / count);
+  const b = Math.round(totalB / count);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Synchronously returns a cached icon color, or null if not yet computed.
+ * Call `preloadIconColors` first to populate the cache.
+ */
+export function getIconColor(iconKey: string | undefined, atlasIds?: string[]): string | null {
+  if (!iconKey) return null;
+  const cacheKey = `${normalizeAtlasIds(atlasIds).join(',')}::${iconKey}`;
+  return iconColorCache.get(cacheKey) ?? null;
+}
+
+/**
+ * Preload and cache average colors for a batch of icon keys.
+ * Returns a promise that resolves when all colors are available.
+ */
+export async function preloadIconColors(
+  iconKeys: Array<{ iconKey?: string }>,
+  atlasIds?: string[]
+): Promise<void> {
+  const normalized = normalizeAtlasIds(atlasIds);
+  const toResolve: Array<{ cacheKey: string; resolved: ResolvedIconSprite }> = [];
+
+  for (const { iconKey } of iconKeys) {
+    if (!iconKey) continue;
+    const cacheKey = `${normalized.join(',')}::${iconKey}`;
+    if (iconColorCache.has(cacheKey)) continue;
+    const resolved = getResolvedIconSprite(iconKey, normalized);
+    if (resolved) {
+      toResolve.push({ cacheKey, resolved });
+    }
+  }
+
+  if (toResolve.length === 0) return;
+
+  // Group by atlas src to minimize image loads
+  const bySrc = new Map<string, typeof toResolve>();
+  for (const entry of toResolve) {
+    const group = bySrc.get(entry.resolved.src);
+    if (group) {
+      group.push(entry);
+    } else {
+      bySrc.set(entry.resolved.src, [entry]);
+    }
+  }
+
+  await Promise.all(
+    Array.from(bySrc.entries()).map(async ([src, entries]) => {
+      const img = loadedAtlasImages.get(src) ?? (await loadAtlasImage(src));
+      if (!img) return;
+      for (const { cacheKey, resolved } of entries) {
+        if (!iconColorCache.has(cacheKey)) {
+          iconColorCache.set(cacheKey, sampleAverageColor(img, resolved.sprite));
+        }
+      }
+    })
+  );
+}
