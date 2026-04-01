@@ -43,7 +43,7 @@ export type FlowGraphEdge = Edge<ItemEdgeData>;
 
 const EPSILON = 1e-6;
 const MIN_EDGE_WIDTH = 1;
-const MAX_EDGE_WIDTH = 24;
+const MAX_EDGE_WIDTH = 18;
 const DEFAULT_EDGE_WIDTH = 4;
 
 function hashString(str: string): number {
@@ -63,18 +63,12 @@ export function resolveItemColor(iconKey: string | undefined, itemName: string, 
   return getIconColor(iconKey, atlasIds) ?? fallbackItemColor(itemName);
 }
 
-function computeEdgeWidth(rate: number, minRate: number, maxRate: number): number {
-  if (maxRate - minRate < EPSILON) {
+function computeEdgeWidth(rate: number, maxNodeThroughput: number): number {
+  if (maxNodeThroughput < EPSILON) {
     return DEFAULT_EDGE_WIDTH;
   }
 
-  const logRange = Math.log(maxRate / minRate);
-  if (logRange < EPSILON) {
-    return DEFAULT_EDGE_WIDTH;
-  }
-
-  const t = Math.log(rate / minRate) / logRange;
-  return MIN_EDGE_WIDTH + (MAX_EDGE_WIDTH - MIN_EDGE_WIDTH) * t;
+  return Math.min(MAX_EDGE_WIDTH, Math.max(MIN_EDGE_WIDTH, MAX_EDGE_WIDTH * Math.sqrt(rate / maxNodeThroughput)));
 }
 
 interface ProducerInfo {
@@ -325,10 +319,20 @@ export function buildFlowGraphData(
 
   const dedupedEdges = Array.from(edgeMap.values());
 
-  // Compute edge widths
-  const rates = dedupedEdges.map(e => e.ratePerMin).filter(r => r > EPSILON);
-  const minRate = rates.length > 0 ? Math.min(...rates) : 1;
-  const maxRate = rates.length > 0 ? Math.max(...rates) : 1;
+  // Compute max node throughput (max of total-in or total-out per node)
+  const nodeThroughput = new Map<string, { inFlow: number; outFlow: number }>();
+  for (const e of dedupedEdges) {
+    const src = nodeThroughput.get(e.source) ?? { inFlow: 0, outFlow: 0 };
+    src.outFlow += e.ratePerMin;
+    nodeThroughput.set(e.source, src);
+    const tgt = nodeThroughput.get(e.target) ?? { inFlow: 0, outFlow: 0 };
+    tgt.inFlow += e.ratePerMin;
+    nodeThroughput.set(e.target, tgt);
+  }
+  let maxNodeThroughput = 0;
+  for (const t of nodeThroughput.values()) {
+    maxNodeThroughput = Math.max(maxNodeThroughput, t.inFlow, t.outFlow);
+  }
 
   const edges: FlowGraphEdge[] = dedupedEdges.map(e => ({
     id: e.id,
@@ -341,7 +345,7 @@ export function buildFlowGraphData(
       itemName: e.itemName,
       iconKey: e.iconKey,
       ratePerMin: e.ratePerMin,
-      width: computeEdgeWidth(e.ratePerMin, minRate, maxRate),
+      width: computeEdgeWidth(e.ratePerMin, maxNodeThroughput),
       color: resolveItemColor(e.iconKey, e.itemName, atlasIds),
     },
   }));

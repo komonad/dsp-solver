@@ -16,7 +16,7 @@ import {
 const itemSliceOverlayStyle: React.CSSProperties = {
   position: 'fixed',
   top: 96,
-  right: 24,
+  left: 24,
   bottom: 24,
   width: 'min(560px, calc(100vw - 32px))',
   maxWidth: 'calc(100vw - 32px)',
@@ -152,7 +152,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
       sx={{
         ...itemSliceOverlayStyle,
         opacity: overlayState.isOpen ? 1 : 0,
-        transform: overlayState.isOpen ? 'translateX(0)' : 'translateX(18px)',
+        transform: overlayState.isOpen ? 'translateX(0)' : 'translateX(-18px)',
         pointerEvents: overlayState.isOpen ? 'auto' : 'none',
       }}
     >
