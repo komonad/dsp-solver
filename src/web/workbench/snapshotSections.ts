@@ -1,5 +1,6 @@
 export type WorkbenchSnapshotSectionId =
   | 'targets'
+  | 'rawInputs'
   | 'allowedRecipes'
   | 'disabledRecipes'
   | 'proliferatorPreferences'
@@ -11,6 +12,7 @@ export type WorkbenchSnapshotSectionState = Record<WorkbenchSnapshotSectionId, b
 
 export const DEFAULT_WORKBENCH_SNAPSHOT_SECTION_STATE: WorkbenchSnapshotSectionState = {
   targets: true,
+  rawInputs: true,
   allowedRecipes: true,
   disabledRecipes: true,
   proliferatorPreferences: true,

@@ -408,6 +408,7 @@ test('snapshot section states are stored per source key and preserved alongside 
 
   writeWorkbenchSnapshotSectionState(storage, source, {
     targets: true,
+    rawInputs: true,
     allowedRecipes: false,
     disabledRecipes: true,
     proliferatorPreferences: false,

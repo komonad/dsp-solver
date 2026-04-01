@@ -53,6 +53,7 @@ import DisabledBuildingInlineEditor from './editors/DisabledBuildingInlineEditor
 import DisabledRecipeInlineEditor from './editors/DisabledRecipeInlineEditor';
 import PreferredBuildingInlineEditor from './editors/PreferredBuildingInlineEditor';
 import ProliferatorPreferenceInlineEditor from './editors/ProliferatorPreferenceInlineEditor';
+import RawInputInlineEditor from './editors/RawInputInlineEditor';
 import TargetInlineEditor from './editors/TargetInlineEditor';
 
 export default function SolveSnapshotPanel() {
@@ -94,6 +95,7 @@ export default function SolveSnapshotPanel() {
     removeDisabledBuilding,
     removeRecipePreference,
     removePreferredBuilding,
+    unmarkItemAsRawInput,
     loadedSource,
     presetId,
     isCustomPreset,
@@ -404,6 +406,53 @@ export default function SolveSnapshotPanel() {
                   </Box>
                 </Box>
               ))
+            )}
+          </CollapsibleSnapshotSection>
+
+          <CollapsibleSnapshotSection
+            title={bundle.summary.rawInputsLabel}
+            count={requestSummary.resolvedRawInputs.length}
+            description={sectionDescriptions.rawInputs}
+            expanded={sectionState.rawInputs}
+            onExpandedChange={expanded => setSectionExpanded('rawInputs', expanded)}
+            onAdd={() => toggleAddingSection('rawInputs')}
+            addLabel={bundle.solveRequest.markAsRaw}
+            adding={addingSectionId === 'rawInputs'}
+          >
+            {addingSectionId === 'rawInputs' ? (
+              <RawInputInlineEditor />
+            ) : null}
+            {requestSummary.resolvedRawInputs.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                {bundle.common.none}
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, alignItems: 'flex-start' }}>
+                {requestSummary.resolvedRawInputs.map(entry => (
+                  <Box key={entry.itemId} sx={snapshotEntryGroupSx}>
+                    <Box sx={snapshotEntryCapsuleSx}>
+                      <Tooltip title={entry.itemName}>
+                        <Box sx={{ display: 'inline-flex' }}>
+                          <EntityIcon
+                            label={entry.itemName}
+                            iconKey={entry.iconKey}
+                            atlasIds={iconAtlasIds}
+                            size={18}
+                          />
+                        </Box>
+                      </Tooltip>
+                    </Box>
+                    <Box component="span" sx={snapshotEntryActionSegmentSx}>
+                      <SnapshotRemoveButton
+                        tooltip={bundle.common.removeSuffix}
+                        onClick={() => unmarkItemAsRawInput(entry.itemId)}
+                        disabled={!catalog}
+                        variant="embedded"
+                      />
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
             )}
           </CollapsibleSnapshotSection>
 

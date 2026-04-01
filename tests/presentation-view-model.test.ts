@@ -100,6 +100,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
+    resolvedRawInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore' }],
     allowedRecipeSettings: [],
     disabledRecipeSettings: [],
     disabledRecipes: [],
@@ -183,6 +184,7 @@ test('presentation request summary can be built without a solved result', () => 
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore' }],
+    resolvedRawInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore' }],
     allowedRecipeSettings: [
       {
         itemId: '1101',
@@ -335,6 +337,7 @@ test('presentation model exposes named recipe preference summaries from the requ
     proliferatorPolicyLabel: '自动',
     targets: [{ itemId: '1101', itemName: 'Demo Plate', iconKey: 'demo-plate', ratePerMin: 60 }],
     rawInputs: [],
+    resolvedRawInputs: [{ itemId: '1001', itemName: 'Demo Ore', iconKey: 'demo-ore' }],
     allowedRecipeSettings: [],
     disabledRecipeSettings: [],
     disabledRecipes: [],

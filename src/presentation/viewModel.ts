@@ -73,6 +73,7 @@ export interface PresentationRequestSummary {
   proliferatorPolicyLabel: string;
   targets: PresentationRequestTarget[];
   rawInputs: PresentationNamedItem[];
+  resolvedRawInputs: PresentationNamedItem[];
   allowedRecipeSettings: PresentationAllowedRecipeSetting[];
   disabledRecipeSettings: PresentationDisabledRecipeSetting[];
   disabledRecipes: PresentationNamedItem[];
@@ -982,6 +983,13 @@ export function buildPresentationRequestSummary(
     })),
     rawInputs: sortNamedItems(
       (request.rawInputItemIds ?? []).map(itemId => ({
+        itemId,
+        itemName: getItemName(catalog, itemId),
+        iconKey: getItemIcon(catalog, itemId),
+      }))
+    ),
+    resolvedRawInputs: sortNamedItems(
+      Array.from(buildEffectiveRawInputSet(catalog, request, undefined)).map(itemId => ({
         itemId,
         itemName: getItemName(catalog, itemId),
         iconKey: getItemIcon(catalog, itemId),

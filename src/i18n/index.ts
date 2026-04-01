@@ -149,6 +149,7 @@ export interface LocaleBundle {
     sprayLabel: string;
     statusLabel: string;
     targetsLabel: string;
+    rawInputsLabel: string;
     rawOverridesLabel: string;
     forcedRecipesLabel: string;
     clearForcedRecipeButton: string;
@@ -194,6 +195,7 @@ export interface LocaleBundle {
   snapshot: {
     sectionDescription: {
       targets: string;
+      rawInputs: string;
       allowedRecipes: string;
       disabledRecipes: string;
       proliferatorPreferences: string;
@@ -519,6 +521,7 @@ const zhCN: LocaleBundle = {
     sprayLabel: '增产剂',
     statusLabel: '求解状态',
     targetsLabel: '目标',
+    rawInputsLabel: '原矿',
     rawOverridesLabel: '原矿覆盖',
     forcedRecipesLabel: '允许配方',
     clearForcedRecipeButton: '清除允许配方',
@@ -572,6 +575,8 @@ const zhCN: LocaleBundle = {
     sectionDescription: {
       targets:
         '目标约束：每个条目定义一个物品的净输出速率下界，单位为个/分。求解器仅接受同时满足全部目标条目的可行方案。',
+      rawInputs:
+        '原矿约束：列表中的物品被视为原始输入，求解器不会尝试合成它们。默认原矿由数据集定义，可在此处添加或移除。',
       allowedRecipes:
         '允许配方约束：对某个输出物品，仅允许列表中的配方承担该物品的供给。未列出的同类产出配方会从可行域中排除。',
       disabledRecipes:
