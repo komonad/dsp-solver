@@ -1,6 +1,7 @@
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { getLocaleBundle } from '../src/i18n';
 import { buildWorkbenchConfigDisplayModel } from '../src/web/app/workbenchHelpers';
+import type { WorkbenchPersistedConfig } from '../src/web/workbench/persistence';
 
 const bundle = getLocaleBundle('zh-CN');
 
@@ -52,30 +53,29 @@ function buildDemoDefaults(): CatalogDefaultConfigSpec {
 test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solved results', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
 
-  const display = buildWorkbenchConfigDisplayModel(
-    catalog,
-    {
-      id: 'cfg-1',
-      name: 'My Plan',
-      editorState: {
-        targets: [{ itemId: '1101', ratePerMin: 60 }],
-        objective: 'min_power',
-        balancePolicy: 'allow_surplus',
-        autoPromoteUnavailableItemsToRawInputs: true,
-        proliferatorPolicy: 'auto',
-        rawInputItemIds: [],
-        disabledRawInputItemIds: [],
-        disabledRecipeIds: [],
-        disabledBuildingIds: [],
-        allowedRecipesByItem: {},
-        recipePreferences: [],
-        recipeStrategyOverrides: [],
-        preferredBuildings: [],
-        advancedOverridesText: '',
-      },
+  const config: WorkbenchPersistedConfig = {
+    id: 'cfg-1',
+    name: 'My Plan',
+    editorState: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_power',
+      balancePolicy: 'allow_surplus',
+      autoPromoteUnavailableItemsToRawInputs: true,
+      proliferatorPolicy: 'auto',
+      rawInputItemIds: [],
+      disabledRawInputItemIds: [],
+      disabledRecipeIds: [],
+      disabledBuildingIds: [],
+      allowedRecipesByItem: {},
+      recipePreferences: [],
+      recipeStrategyOverrides: [],
+      preferredBuildings: [],
+      advancedOverridesText: '',
     },
-    'zh-CN',
-    bundle,
+  };
+
+  const display = buildWorkbenchConfigDisplayModel(
+    config,
     {
       result: {
         status: 'optimal',
@@ -116,7 +116,9 @@ test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solve
       },
       error: '',
       activityStatus: 'settled',
-    }
+    },
+    { sourceKey: 'test' },
+    { catalog, locale: 'zh-CN', bundle }
   );
 
   expect(display).toMatchObject({
@@ -137,29 +139,28 @@ test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solve
 test('buildWorkbenchConfigDisplayModel falls back to target summary and running status', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
 
-  const display = buildWorkbenchConfigDisplayModel(
-    catalog,
-    {
-      id: 'cfg-2',
-      editorState: {
-        targets: [{ itemId: '1101', ratePerMin: 90 }],
-        objective: 'min_buildings',
-        balancePolicy: 'force_balance',
-        autoPromoteUnavailableItemsToRawInputs: true,
-        proliferatorPolicy: 'auto',
-        rawInputItemIds: [],
-        disabledRawInputItemIds: [],
-        disabledRecipeIds: [],
-        disabledBuildingIds: [],
-        allowedRecipesByItem: {},
-        recipePreferences: [],
-        recipeStrategyOverrides: [],
-        preferredBuildings: [],
-        advancedOverridesText: '',
-      },
+  const config: WorkbenchPersistedConfig = {
+    id: 'cfg-2',
+    editorState: {
+      targets: [{ itemId: '1101', ratePerMin: 90 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      autoPromoteUnavailableItemsToRawInputs: true,
+      proliferatorPolicy: 'auto',
+      rawInputItemIds: [],
+      disabledRawInputItemIds: [],
+      disabledRecipeIds: [],
+      disabledBuildingIds: [],
+      allowedRecipesByItem: {},
+      recipePreferences: [],
+      recipeStrategyOverrides: [],
+      preferredBuildings: [],
+      advancedOverridesText: '',
     },
-    'zh-CN',
-    bundle,
+  };
+
+  const display = buildWorkbenchConfigDisplayModel(
+    config,
     {
       result: null,
       error: '',
@@ -168,7 +169,9 @@ test('buildWorkbenchConfigDisplayModel falls back to target summary and running 
         staleResult: false,
         stage: 'solving_primary',
       },
-    }
+    },
+    { sourceKey: 'test' },
+    { catalog, locale: 'zh-CN', bundle }
   );
 
   expect(display.title).toBe(`Plate 90/\u5206`);

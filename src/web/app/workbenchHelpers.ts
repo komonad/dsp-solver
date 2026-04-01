@@ -422,15 +422,19 @@ function pickWorkbenchConfigStatus(
 }
 
 export function buildWorkbenchConfigDisplayModel(
-  catalog: ResolvedCatalogModel,
-  config: Pick<WorkbenchPersistedConfig, 'id' | 'name' | 'editorState'>,
-  locale: AppLocale,
-  bundle: LocaleBundle,
-  solveState?: WorkbenchConfigSummarySolveState,
-  extra?: { datasetLabel?: string; sourceKey?: string }
+  config: WorkbenchPersistedConfig,
+  solveState: WorkbenchConfigSummarySolveState | undefined,
+  extra: { datasetLabel?: string; sourceKey?: string },
+  live?: {
+    catalog: ResolvedCatalogModel;
+    locale: AppLocale;
+    bundle: LocaleBundle;
+  }
 ): WorkbenchConfigDisplayModel {
   const customName = config.name?.trim() ?? '';
-  const targetSummary = summarizeWorkbenchTargets(catalog, config.editorState.targets, locale, bundle);
+  const targetSummary = live
+    ? summarizeWorkbenchTargets(live.catalog, config.editorState.targets, live.locale, live.bundle)
+    : config.cachedTargetSummary ?? (customName || config.id);
   const result = solveState?.result ?? null;
 
   return {
@@ -445,36 +449,8 @@ export function buildWorkbenchConfigDisplayModel(
     recipePlanCount: result?.recipePlans.length ?? null,
     roundedBuildingCount:
       result?.buildingSummary.reduce((sum, entry) => sum + entry.roundedUpCount, 0) ?? null,
-    powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, locale) : null,
-    datasetLabel: extra?.datasetLabel ?? '',
+    powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, live?.locale ?? 'zh-CN') : null,
+    datasetLabel: extra?.datasetLabel ?? config.datasetLabel ?? '',
     sourceKey: extra?.sourceKey ?? '',
-  };
-}
-
-export function buildForeignWorkbenchConfigDisplayModel(
-  config: WorkbenchPersistedConfig,
-  sourceKey: string
-): WorkbenchConfigDisplayModel {
-  const customName = config.name?.trim() ?? '';
-  const targetSummary = config.cachedTargetSummary ?? (customName || config.id);
-
-  return {
-    id: config.id,
-    title: customName || targetSummary,
-    customName,
-    hasCustomName: customName.length > 0,
-    targetSummary,
-    objective: config.editorState.objective,
-    balancePolicy: config.editorState.balancePolicy,
-    status: pickWorkbenchConfigStatus(config.solveState),
-    recipePlanCount: config.solveState?.result?.recipePlans.length ?? null,
-    roundedBuildingCount:
-      config.solveState?.result?.buildingSummary.reduce(
-        (sum, entry) => sum + entry.roundedUpCount,
-        0
-      ) ?? null,
-    powerLabel: null,
-    datasetLabel: config.datasetLabel ?? '',
-    sourceKey,
   };
 }

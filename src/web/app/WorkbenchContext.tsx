@@ -101,7 +101,6 @@ import {
 import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
   buildWorkbenchConfigDisplayModel,
-  buildForeignWorkbenchConfigDisplayModel,
   buildDefaultWorkbenchEditorState,
   getBrowserSessionStorage,
   getBrowserStorage,
@@ -1212,41 +1211,37 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const currentSourceKey = loadedSource ? buildWorkbenchCacheKey(loadedSource) : '';
 
   const workbenchConfigDisplayModels = useMemo(() => {
-    const localModels = catalog
-      ? workbenchConfigs.map(config =>
-          buildWorkbenchConfigDisplayModel(
-            catalog,
-            config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
-              ? {
-                  ...config,
-                  editorState: currentWorkbenchEditorState,
-                }
-              : config,
-            locale,
-            bundle,
-            config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig
-              ? autoSolveState
-              : config.solveState,
-            { datasetLabel: catalogLabel, sourceKey: currentSourceKey }
-          )
-        )
-      : workbenchConfigs.map(config =>
-          buildForeignWorkbenchConfigDisplayModel(config, currentSourceKey)
-        );
+    const live = catalog ? { catalog, locale, bundle } : undefined;
 
-    const foreignModels = foreignConfigEntries.flatMap(entry =>
-      entry.collection.configs.map(config =>
-        buildForeignWorkbenchConfigDisplayModel(config, entry.cacheKey)
-      )
-    );
+    // Build a unified list of all config groups across all datasets
+    const configGroups: Array<{ configs: WorkbenchPersistedConfig[]; sourceKey: string; groupLive: typeof live }> = [
+      { configs: workbenchConfigs, sourceKey: currentSourceKey, groupLive: live },
+      ...foreignConfigEntries.map(entry => ({
+        configs: entry.collection.configs,
+        sourceKey: entry.cacheKey,
+        groupLive: undefined as typeof live,
+      })),
+    ];
+    configGroups.sort((a, b) => a.sourceKey.localeCompare(b.sourceKey));
 
-    return [...localModels, ...foreignModels];
+    const models: WorkbenchConfigDisplayModel[] = [];
+    for (const group of configGroups) {
+      for (const config of group.configs) {
+        const isLiveActive = config.id === activeWorkbenchConfigId && !isHydratingActiveWorkbenchConfig && group.groupLive;
+        models.push(buildWorkbenchConfigDisplayModel(
+          isLiveActive ? { ...config, editorState: currentWorkbenchEditorState } : config,
+          isLiveActive ? autoSolveState : config.solveState,
+          { sourceKey: group.sourceKey },
+          group.groupLive
+        ));
+      }
+    }
+    return models;
   }, [
     activeWorkbenchConfigId,
     autoSolveState,
     bundle,
     catalog,
-    catalogLabel,
     currentSourceKey,
     currentWorkbenchEditorState,
     foreignConfigEntries,
