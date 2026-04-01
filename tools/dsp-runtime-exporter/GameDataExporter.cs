@@ -16,6 +16,16 @@ internal static class GameDataExporter
         return items != null && items.Length > 0 && recipes != null && recipes.Length > 0;
     }
 
+    public static int GetItemCount()
+    {
+        return TryGetProtoArray("items")?.Length ?? 0;
+    }
+
+    public static int GetRecipeCount()
+    {
+        return TryGetProtoArray("recipes")?.Length ?? 0;
+    }
+
     public static ExportedDatasetInfo ExportToFile(string outputPath, ManualLogSource logger)
     {
         ExportDataset dataset = BuildDataset(logger);

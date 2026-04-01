@@ -991,7 +991,7 @@
       "IconName": "smelter",
       "GridIndex": 2406,
       "WorkEnergyPerTick": 8000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2303,
@@ -1000,7 +1000,7 @@
       "IconName": "assembler-1",
       "GridIndex": 2401,
       "WorkEnergyPerTick": 6000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2304,
@@ -1009,7 +1009,7 @@
       "IconName": "assembler-2",
       "GridIndex": 2402,
       "WorkEnergyPerTick": 24000.0,
-      "Speed": 20000.0
+      "Speed": 2.0
     },
     {
       "ID": 2305,
@@ -1018,7 +1018,7 @@
       "IconName": "assembler-3",
       "GridIndex": 2403,
       "WorkEnergyPerTick": 96000.0,
-      "Speed": 20000.0
+      "Speed": 2.0
     },
     {
       "ID": 2306,
@@ -1043,7 +1043,7 @@
       "IconName": "oil-refinery",
       "GridIndex": 2309,
       "WorkEnergyPerTick": 30000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2309,
@@ -1052,7 +1052,7 @@
       "IconName": "chemical-plant",
       "GridIndex": 2410,
       "WorkEnergyPerTick": 18000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2310,
@@ -1061,7 +1061,7 @@
       "IconName": "hadron-collider",
       "GridIndex": 2311,
       "WorkEnergyPerTick": 400000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2311,
@@ -1102,7 +1102,7 @@
       "IconName": "smelter-2",
       "GridIndex": 2407,
       "WorkEnergyPerTick": 48000.0,
-      "Speed": 20000.0
+      "Speed": 2.0
     },
     {
       "ID": 2316,
@@ -1119,7 +1119,7 @@
       "IconName": "chemical-plant-2",
       "GridIndex": 2412,
       "WorkEnergyPerTick": 144000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2318,
@@ -1128,7 +1128,7 @@
       "IconName": "assembler-4",
       "GridIndex": 2404,
       "WorkEnergyPerTick": 192000.0,
-      "Speed": 30000.0
+      "Speed": 3.0
     },
     {
       "ID": 2319,
@@ -1137,7 +1137,7 @@
       "IconName": "smelter-3",
       "GridIndex": 2408,
       "WorkEnergyPerTick": 1600.0,
-      "Speed": 30000.0
+      "Speed": 3.0
     },
     {
       "ID": 2401,
@@ -1154,7 +1154,7 @@
       "IconName": "lab",
       "GridIndex": 2312,
       "WorkEnergyPerTick": 8000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 2902,
@@ -1163,7 +1163,7 @@
       "IconName": "lab-2",
       "GridIndex": 2313,
       "WorkEnergyPerTick": 32000.0,
-      "Speed": 30000.0
+      "Speed": 3.0
     },
     {
       "ID": 3001,
@@ -1500,7 +1500,7 @@
       "IconName": "I黑盒2",
       "GridIndex": 2405,
       "WorkEnergyPerTick": 1600000.0,
-      "Speed": 40000.0
+      "Speed": 4.0
     },
     {
       "ID": 6216,
@@ -1709,7 +1709,7 @@
       "IconName": "I生态温室",
       "GridIndex": 2409,
       "WorkEnergyPerTick": 12000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 6255,
@@ -1734,7 +1734,7 @@
       "IconName": "I太空船坞",
       "GridIndex": 2702,
       "WorkEnergyPerTick": 150000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 6258,
@@ -1756,7 +1756,7 @@
       "ID": 6260,
       "Type": 1,
       "Name": "SCP-310恒燃之火",
-      "IconName": "fusion-reactor",
+      "IconName": "I恒燃之火",
       "GridIndex": 0,
       "WorkEnergyPerTick": 0.0
     },
@@ -1783,7 +1783,7 @@
       "IconName": "I轨道水培舱2",
       "GridIndex": 2712,
       "WorkEnergyPerTick": 600000.0,
-      "Speed": 400000.0
+      "Speed": 40.0
     },
     {
       "ID": 6265,
@@ -1792,7 +1792,7 @@
       "IconName": "I星环对撞机",
       "GridIndex": 2709,
       "WorkEnergyPerTick": 12500000.0,
-      "Speed": 500000.0
+      "Speed": 50.0
     },
     {
       "ID": 6266,
@@ -1873,7 +1873,7 @@
       "IconName": "I轨道熔炼站",
       "GridIndex": 2703,
       "WorkEnergyPerTick": 700000.0,
-      "Speed": 300000.0
+      "Speed": 30.0
     },
     {
       "ID": 6502,
@@ -2047,7 +2047,7 @@
       "ID": 6525,
       "Type": 1,
       "Name": "自然降温",
-      "IconName": "电解角标",
+      "IconName": "I伺服器能耗减免",
       "GridIndex": 0,
       "WorkEnergyPerTick": 0.0
     },
@@ -2055,7 +2055,7 @@
       "ID": 6526,
       "Type": 1,
       "Name": "母星特质",
-      "IconName": "硝酸",
+      "IconName": "防御",
       "GridIndex": 0,
       "WorkEnergyPerTick": 0.0
     },
@@ -2118,8 +2118,8 @@
     {
       "ID": 6534,
       "Type": 1,
-      "Name": "异常代码分析",
-      "IconName": "恶意代码攻击",
+      "Name": "无星球特质",
+      "IconName": "I无星球特质",
       "GridIndex": 0,
       "WorkEnergyPerTick": 0.0
     },
@@ -2578,7 +2578,7 @@
       "IconName": "I低温工厂",
       "GridIndex": 2411,
       "WorkEnergyPerTick": 50000.0,
-      "Speed": 10000.0
+      "Speed": 1.0
     },
     {
       "ID": 9480,
@@ -3946,7 +3946,7 @@
       "Items": [
         1016,
         6271,
-        1402
+        7501
       ],
       "ItemCounts": [
         12.0,
@@ -8341,7 +8341,7 @@
         1104
       ],
       "ItemCounts": [
-        2.0,
+        1.0,
         1.0,
         1.0
       ],
@@ -8349,9 +8349,9 @@
         1302
       ],
       "ResultCounts": [
-        6.0
+        16.0
       ],
-      "TimeSpend": 120.0,
+      "TimeSpend": 180.0,
       "Proliferator": 0,
       "IconName": "R纳米晶体管"
     },
@@ -8426,7 +8426,7 @@
         1120
       ],
       "ItemCounts": [
-        3.0,
+        12.0,
         1.0,
         1.0
       ],
@@ -8437,7 +8437,7 @@
         6522
       ],
       "ResultCounts": [
-        3.0,
+        12.0,
         1.0,
         1.0,
         1.0
@@ -10561,9 +10561,7 @@
       "ID": 716,
       "Type": 2,
       "Factories": [
-        2309,
-        2317,
-        7823
+        2309
       ],
       "Name": "富勒醇",
       "Items": [
@@ -10590,9 +10588,7 @@
       "ID": 717,
       "Type": 2,
       "Factories": [
-        2309,
-        2317,
-        7823
+        2309
       ],
       "Name": "富勒烯内嵌银",
       "Items": [
@@ -11142,7 +11138,7 @@
       "ResultCounts": [
         1.0
       ],
-      "TimeSpend": 60.0,
+      "TimeSpend": 360.0,
       "Proliferator": 0,
       "IconName": ""
     },
@@ -12267,10 +12263,9 @@
     },
     {
       "ID": 829,
-      "Type": 4,
+      "Type": 9,
       "Factories": [
-        2303,
-        2304
+        6257
       ],
       "Name": "天枢座",
       "Items": [
@@ -12382,7 +12377,7 @@
         7015
       ],
       "ItemCounts": [
-        3.0,
+        1.0,
         3.0,
         1.0
       ],
@@ -12625,7 +12620,7 @@
         7806
       ],
       "ResultCounts": [
-        1.0
+        2.0
       ],
       "TimeSpend": 720.0,
       "Proliferator": 0,

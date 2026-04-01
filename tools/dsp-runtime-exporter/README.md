@@ -1,268 +1,226 @@
-# DSP Runtime Exporter
+# DSP 运行时导出器
 
-This subproject contains a minimal BepInEx mod that exports the current game's
-runtime-loaded items and recipes to the same dataset shape used by this
-repository.
+本子项目是一个精简的 BepInEx 插件，用于导出游戏运行时加载的物品和配方数据，输出格式与本仓库使用的数据集结构一致。
 
-Current scope:
+功能：
 
-- export `items`
-- export `recipes`
-- read the final runtime `LDB` state after mods have loaded
-- write one `*.json` dataset file compatible with `src/catalog/spec.ts`
+- 导出 `items` 和 `recipes`
+- 导出物品图标（单独 PNG 文件）
+- 读取 mod 加载后的最终运行时 `LDB` 状态
+- 输出一个兼容 `src/catalog/spec.ts` 的 `*.json` 数据集文件
+- 启动时自动导出 + 可选自动退出
+- 离线图标 atlas 生成（PowerShell 脚本）
+- 一键同步管线（`sync-dataset`）
 
-Intentionally out of scope for the first version:
+## 为什么需要这个
 
-- icon atlas generation
-- defaults inference
-- full raw dump / debug dump layers
-- automatic export on every startup by default
+静态解析器适用于原版数据，但无法看到 BepInEx mod 通过 LDBTool/CommonAPI 修改后的最终运行时 proto 状态。本导出器直接读取运行时数据。
 
-## Why this exists
+## 构建前提
 
-Static parsers are useful for vanilla data, but they do not see the final
-runtime proto state after BepInEx mods modify the game through tools such as
-LDBTool/CommonAPI. This exporter reads the loaded runtime data instead.
+需要本地安装了戴森球计划，并且游戏目录中已安装 BepInEx。
 
-## Build prerequisites
+推荐设置方式（类似 `MinimalDSPModTemplate` 的本地配置）：
 
-You need a local Dyson Sphere Program install plus BepInEx already installed
-into that game directory.
+- 复制 `Local.props.example` 为 `Local.props`
+- 填入 `DSPManagedPath`
+- 填入 `BepInExDllPath`
+- 可选：填入 `ProfileRoot` 以使用 `DeployToProfile`
 
-The recommended setup mirrors a typical `MinimalDSPModTemplate`-style local setup:
-
-- copy `Local.props.example` to `Local.props`
-- fill in `DSPManagedPath`
-- fill in `BepInExDllPath`
-- optionally fill in `ProfileRoot` if you want `DeployToProfile`
-
-This is intentionally lighter than the template itself. Public DSP mods use a
-mix of approaches: some check in `Libraries\*.dll`, some use local path files,
-and larger projects can use package-based game libs. For this exporter the
-local-path file is the smallest reasonable choice.
-
-Command-line overrides still work. The project accepts either:
+也可以通过命令行参数覆盖：
 
 - `-p:DSPGameDir="C:\Games\Dyson Sphere Program"`
 
-or both:
+或者同时指定：
 
 - `-p:DSPManagedPath="C:\Games\Dyson Sphere Program\DSPGAME_Data\Managed"`
 - `-p:BepInExDllPath="C:\Games\Dyson Sphere Program\BepInEx\core\BepInEx.dll"`
 
-## Build
+## 构建
 
 ```powershell
 dotnet restore tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj
 dotnet build tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj -c Release
 ```
 
-If you prefer the local helper script:
+或使用辅助脚本：
 
 ```powershell
 tools\dsp-runtime-exporter\scripts\build.cmd
 ```
 
-## Install
+## 安装
 
-Copy the built DLL into a BepInEx plugins folder, for example:
+将编译产物复制到 BepInEx 的 plugins 目录：
 
 ```text
-<DSPGameDir>\BepInEx\plugins\DspCalc.RuntimeExporter\DspCalc.RuntimeExporter.dll
+<游戏目录>\BepInEx\plugins\DspCalc.RuntimeExporter\DspCalc.RuntimeExporter.dll
 ```
 
-Or deploy directly to your configured profile:
+或直接部署到配置的 profile：
 
 ```powershell
 dotnet msbuild tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj /t:DeployToProfile /p:Configuration=Debug
 ```
 
-## Build a zip for r2modman
+## 打包 r2modman zip
 
-The project can also produce a Thunderstore-style zip that r2modman can import
-from a local file:
+可以生成 Thunderstore 格式的 zip，供 r2modman 从本地文件导入：
 
 ```powershell
 dotnet msbuild tools\dsp-runtime-exporter\DspCalc.RuntimeExporter.csproj /t:Package /p:Configuration=Release
 ```
 
-or:
+或：
 
 ```powershell
 tools\dsp-runtime-exporter\scripts\package.cmd
 ```
 
-This writes:
+输出位置：
 
 ```text
 tools\dsp-runtime-exporter\dist\DspCalc.RuntimeExporter.zip
 ```
 
-## Use
+## 一键同步数据集
 
-1. Launch the game with your target mods enabled.
-2. Wait until the game reaches the main menu or an in-game scene.
-3. Press `F8`.
+`sync-dataset` 脚本自动完成全部流程：构建 mod → 配置自动导出 → 通过 Steam 启动游戏 → 等待导出 → 构建 atlas → 部署到 `data/`。
 
-The exporter writes a dataset JSON file to:
-
-```text
-<DSPGameDir>\BepInEx\config\dspcalc-exporter\CurrentGame.json
+```bash
+npm run sync:dataset -- --profile orbitalring --name OrbitalRing
 ```
 
-The hotkey and output location are configurable through the generated BepInEx
-config file.
+参数：
 
-## How to verify success or failure
+- `--profile <name>` — r2modman profile 名称（必须）
+- `--name <name>` — 输出数据集名称，对应 `data/<name>.json` 和 `data/icons/<name>.{json,png}`（必须）
+- `--skip-build` — 跳过 `dotnet build` 和 mod 部署
+- `--skip-atlas` — 跳过 atlas 构建（仅复制数据集 JSON）
+- `--timeout <seconds>` — 导出等待超时，默认 300
 
-The exporter reports status in three places:
+脚本流程：
 
-1. BepInEx log
-   - plugin load
-   - runtime ready
-   - export success / failure
-   - item and recipe counts
-2. In-game realtime tip
-   - on load
-   - when runtime data becomes ready
-   - on export success / failure
-3. Sidecar status file
-   - written next to the dataset file as:
+1. 构建导出器 mod 并部署到 profile
+2. 在 mod 配置中启用 `AutoExportOnStartup` 和 `AutoQuitAfterExport`
+3. 将 profile 的 BepInEx 复制到游戏目录
+4. 通过 `steam://rungameid/1366540` 启动游戏
+5. 轮询导出状态文件
+6. 等待游戏自动退出（超时 30 秒后强制结束）
+7. 清理游戏目录
+8. 验证导出、构建 atlas、复制文件到 `data/`
+9. 恢复原始 mod 配置
 
-```text
-<OutputDirectory>\CurrentGame.status.json
-```
+前提条件：`Local.props` 中需要有有效的 `DSPManagedPath` 和 `BepInExDllPath`。Steam 需要在运行状态。
 
-That status file records:
+## 手动使用
 
-- `success`
-- `reason`
-- `itemCount`
-- `recipeCount`
-- `outputPath`
-- `timestampUtc`
-- `message`
-- `exception` on failure
+1. 启用目标 mod 后启动游戏
+2. 等待到达主菜单或进入游戏场景
+3. 按 `F8`
 
-The exporter also writes a metadata sidecar file:
+导出的数据集 JSON 文件写入：
 
 ```text
-<OutputDirectory>\CurrentGame.metadata.json
+<游戏目录>\BepInEx\config\dspcalc-exporter\CurrentGame.json
 ```
 
-That metadata file records:
+快捷键和输出位置可通过生成的 BepInEx 配置文件修改。
 
-- `datasetName`
-  - manual dataset/config name from the exporter config
-- `datasetDescription`
-- `sourceProfile`
-- `modSummary`
-  - automatically generated from the currently loaded BepInEx plugins
-- `loadedMods`
-  - full detected mod list with `guid`, `name`, `version`
-- `notes`
-- `itemCount`
-- `recipeCount`
-- `itemIconCount`
-- `itemIconDirectory`
-- `exportedAtUtc`
-- `exportedBy`
-- `exporterVersion`
+## 验证导出结果
 
-The exporter also writes item icons to:
+导出器在三个地方报告状态：
+
+1. **BepInEx 日志** — 插件加载、运行时就绪、导出成功/失败、物品和配方数量
+2. **游戏内提示** — 加载时、运行时数据就绪时、导出成功/失败时
+3. **状态文件** — 写在数据集文件旁边：
 
 ```text
-<OutputDirectory>\CurrentGame.icons\items\*.png
+<输出目录>\CurrentGame.status.json
 ```
 
-and a manifest file:
+状态文件记录：`success`、`reason`、`itemCount`、`recipeCount`、`outputPath`、`timestampUtc`、`message`、失败时的 `exception`。
+
+导出器还会写入元数据文件：
 
 ```text
-<OutputDirectory>\CurrentGame.icons.manifest.json
+<输出目录>\CurrentGame.metadata.json
 ```
 
-## Build an item icon atlas
+元数据包括：`datasetName`、`datasetDescription`、`sourceProfile`、`modSummary`（自动生成的已加载 mod 列表）、`loadedMods`（完整 mod 列表含 `guid`/`name`/`version`）、`notes`、物品/配方/图标数量、导出时间等。
 
-Once item icons have been exported, you can build a web atlas from them:
+物品图标写入：
+
+```text
+<输出目录>\CurrentGame.icons\items\*.png
+```
+
+图标清单文件：
+
+```text
+<输出目录>\CurrentGame.icons.manifest.json
+```
+
+## 构建图标 atlas
+
+导出图标后，可以构建 web atlas：
 
 ```powershell
 tools\dsp-runtime-exporter\scripts\build-atlas.cmd "C:\Path\To\CurrentGame.json"
 ```
 
-This writes:
+输出：
 
 ```text
-<OutputDirectory>\CurrentGame.items.atlas.png
-<OutputDirectory>\CurrentGame.items.atlas.json
+<输出目录>\CurrentGame.items.atlas.png
+<输出目录>\CurrentGame.items.atlas.json
 ```
 
-Default behavior:
+默认行为：缺失图标视为 `warning`，损坏文件或无效输出视为 `error`。
 
-- missing icon files are tolerated as `warning`
-- broken source files or invalid atlas output are `error`
-
-If you want missing icon files to fail too:
+如果需要缺失图标也报错：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\dsp-runtime-exporter\scripts\build-atlas.ps1 "C:\Path\To\CurrentGame.json" -StrictMissing
 ```
 
-## Validate an export
-
-You can validate the exported dataset and item icon files with a tolerance for
-missing icon coverage:
+## 验证导出
 
 ```powershell
 node tools\dsp-runtime-exporter\scripts\validate-export.mjs "C:\Path\To\CurrentGame.json"
 ```
 
-or:
-
-```powershell
-tools\dsp-runtime-exporter\scripts\validate-export.cmd "C:\Path\To\CurrentGame.json"
-```
-
-Default behavior:
-
-- missing icon coverage is reported as `warning`
-- broken manifest entries, missing files, empty files, or invalid PNG files are `error`
-
-If you want missing coverage to fail validation too:
+严格模式（缺失覆盖也报错）：
 
 ```powershell
 node tools\dsp-runtime-exporter\scripts\validate-export.mjs "C:\Path\To\CurrentGame.json" --strict-missing
 ```
 
-## Validate an atlas build
-
-You can also validate the generated atlas files:
+## 验证 atlas
 
 ```powershell
-tools\dsp-runtime-exporter\scripts\validate-atlas.cmd "C:\Path\To\CurrentGame.json"
+node tools\dsp-runtime-exporter\scripts\validate-atlas.mjs "C:\Path\To\CurrentGame.json"
 ```
 
-If you want missing atlas coverage to fail too:
+严格模式：
 
 ```powershell
 node tools\dsp-runtime-exporter\scripts\validate-atlas.mjs "C:\Path\To\CurrentGame.json" --strict-missing
 ```
 
-## Output format
+## 输出格式
 
-The exported JSON uses the current canonical raw dataset shape:
+导出的 JSON 使用当前标准的原始数据集结构：
 
-- top-level `items`
-- top-level `recipes`
-- item fields such as `ID`, `Type`, `Name`, `IconName`
-- recipe fields such as `Factories`, `Items`, `ItemCounts`, `Results`,
-  `ResultCounts`, `TimeSpend`, `Proliferator`
+- 顶层 `items` 和 `recipes`
+- 物品字段：`ID`、`Type`、`Name`、`IconName` 等
+- 配方字段：`Factories`、`Items`、`ItemCounts`、`Results`、`ResultCounts`、`TimeSpend`、`Proliferator` 等
 
-Optional fields are emitted only when they can be read reliably at runtime.
+可选字段仅在运行时可靠读取时才输出。
 
-## Notes
+## 备注
 
-- The exporter uses runtime reflection on `LDB.items` and `LDB.recipes`.
-- It does not depend on a particular external data-extraction mod.
-- It exports single item PNG icons first, and atlas generation is handled by
-  the offline scripts above.
-- Plugin GUID: `com.comonad.dspcalc.runtime-exporter`
+- 导出器通过运行时反射访问 `LDB.items` 和 `LDB.recipes`
+- 不依赖任何特定的外部数据提取 mod
+- 先导出单独的物品 PNG 图标，atlas 由上述离线脚本生成
+- 插件 GUID：`com.comonad.dspcalc.runtime-exporter`

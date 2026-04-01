@@ -16,7 +16,8 @@
     "host": "node scripts/host-web.mjs",
     "host:web": "node scripts/host-web.mjs",
     "serve:web": "node scripts/host-web.mjs",
-    "dev:web": "node scripts/dev-web.mjs"
+    "dev:web": "node scripts/dev-web.mjs",
+    "sync:dataset": "node tools/dsp-runtime-exporter/scripts/sync-dataset.mjs"
   },
   "keywords": [
     "dyson-sphere-program",

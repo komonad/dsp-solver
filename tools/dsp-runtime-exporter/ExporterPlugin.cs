@@ -21,6 +21,7 @@ public sealed class ExporterPlugin : BaseUnityPlugin
     private ConfigEntry<string>? outputDirectory;
     private ConfigEntry<string>? outputFileStem;
     private ConfigEntry<bool>? autoExportOnStartup;
+    private ConfigEntry<bool>? autoQuitAfterExport;
     private ConfigEntry<string>? datasetName;
     private ConfigEntry<string>? datasetDescription;
     private ConfigEntry<string>? sourceProfile;
@@ -50,6 +51,11 @@ public sealed class ExporterPlugin : BaseUnityPlugin
             "AutoExportOnStartup",
             false,
             "When enabled, export once after runtime proto data becomes available.");
+        autoQuitAfterExport = Config.Bind(
+            "General",
+            "AutoQuitAfterExport",
+            false,
+            "When enabled alongside AutoExportOnStartup, quit the game after a successful export.");
         datasetName = Config.Bind(
             "Metadata",
             "DatasetName",
@@ -76,7 +82,7 @@ public sealed class ExporterPlugin : BaseUnityPlugin
         string configuredStem = outputFileStem?.Value ?? "CurrentGame";
         Logger.LogInfo(
             $"{PluginName} {PluginVersion} loaded. guid={PluginGuid} shortcut={shortcutLabel} " +
-            $"outputDir={configuredDirectory} fileStem={configuredStem} autoExport={autoExportOnStartup?.Value}");
+            $"outputDir={configuredDirectory} fileStem={configuredStem} autoExport={autoExportOnStartup?.Value} autoQuit={autoQuitAfterExport?.Value}");
         RuntimeNotifier.TryNotifyInfo($"{PluginName} loaded. Press {shortcutLabel} to export.", Logger);
         StartCoroutine(AutoExportWhenReady());
     }
@@ -107,8 +113,60 @@ public sealed class ExporterPlugin : BaseUnityPlugin
 
         if (autoExportOnStartup?.Value == true && !autoExportTriggered)
         {
+            // Wait for DSPGame.IsMenuDemo so that VFPreload, LDBTool
+            // registrations, and CommonAPI post-loading have all completed.
+            Logger.LogInfo("Auto-export: waiting for DSPGame.IsMenuDemo...");
+            while (!IsDSPGameMenuDemo())
+            {
+                yield return null;
+            }
+            Logger.LogInfo("Auto-export: DSPGame.IsMenuDemo is true.");
+
+            // Wait additional time for late LDBTool/CommonAPI registrations
+            // that happen in the same frame or shortly after IsMenuDemo.
+            Logger.LogInfo("Auto-export: waiting 5 seconds for mod registrations to complete...");
+            yield return new WaitForSeconds(5f);
+
+            // Additional stabilization: wait for item/recipe counts to be
+            // stable for 60 frames in case late registrations trickle in.
+            int stableFrames = 0;
+            int lastItemCount = GameDataExporter.GetItemCount();
+            int lastRecipeCount = GameDataExporter.GetRecipeCount();
+            const int requiredStableFrames = 60;
+
+            Logger.LogInfo(
+                $"Auto-export: waiting for proto counts to stabilize " +
+                $"(currently {lastItemCount} items, {lastRecipeCount} recipes)...");
+
+            while (stableFrames < requiredStableFrames)
+            {
+                yield return null;
+                int currentItems = GameDataExporter.GetItemCount();
+                int currentRecipes = GameDataExporter.GetRecipeCount();
+                if (currentItems == lastItemCount && currentRecipes == lastRecipeCount)
+                {
+                    stableFrames++;
+                }
+                else
+                {
+                    stableFrames = 0;
+                    lastItemCount = currentItems;
+                    lastRecipeCount = currentRecipes;
+                }
+            }
+
+            Logger.LogInfo(
+                $"Auto-export: proto counts stable at {lastItemCount} items, {lastRecipeCount} recipes. Exporting.");
+
             autoExportTriggered = true;
             TryExport("startup");
+
+            if (autoQuitAfterExport?.Value == true)
+            {
+                yield return null;
+                Logger.LogInfo("AutoQuitAfterExport is enabled. Quitting application.");
+                Application.Quit();
+            }
         }
     }
 
@@ -273,6 +331,36 @@ public sealed class ExporterPlugin : BaseUnityPlugin
         catch
         {
             return string.Empty;
+        }
+    }
+
+    private static bool IsGameMainRunning()
+    {
+        try
+        {
+            Type? gameMainType = ReflectionHelpers.FindLoadedType("GameMain");
+            if (gameMainType == null) return false;
+            object? value = ReflectionHelpers.GetStaticMemberValue(gameMainType, "isRunning");
+            return value is true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsDSPGameMenuDemo()
+    {
+        try
+        {
+            Type? dspGameType = ReflectionHelpers.FindLoadedType("DSPGame");
+            if (dspGameType == null) return false;
+            object? value = ReflectionHelpers.GetStaticMemberValue(dspGameType, "IsMenuDemo");
+            return value is true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
