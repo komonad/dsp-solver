@@ -309,7 +309,7 @@
       "Type": 2,
       "Name": "反物质",
       "IconName": "anti-matter",
-      "GridIndex": 5703,
+      "GridIndex": 5804,
       "WorkEnergyPerTick": 0.0
     },
     {
@@ -349,7 +349,7 @@
       "Type": 2,
       "Name": "奇异物质",
       "IconName": "strange-matter-generator",
-      "GridIndex": 5702,
+      "GridIndex": 5802,
       "WorkEnergyPerTick": 0.0
     },
     {
@@ -461,7 +461,7 @@
       "Type": 2,
       "Name": "临界光子",
       "IconName": "photon-capacitor-full",
-      "GridIndex": 5803,
+      "GridIndex": 5805,
       "WorkEnergyPerTick": 0.0
     },
     {
@@ -1456,8 +1456,8 @@
     {
       "ID": 6207,
       "Type": 1,
-      "Name": "黄铁矿",
-      "IconName": "I黄铁矿",
+      "Name": "硫磺矿",
+      "IconName": "I硫磺矿",
       "GridIndex": 4802,
       "WorkEnergyPerTick": 0.0
     },
@@ -1667,7 +1667,7 @@
       "Type": 1,
       "Name": "奇夸克样本",
       "IconName": "I奇夸克",
-      "GridIndex": 5802,
+      "GridIndex": 5803,
       "WorkEnergyPerTick": 0.0
     },
     {
@@ -2454,8 +2454,8 @@
     {
       "ID": 7808,
       "Type": 4,
-      "Name": "乾坤-黄铁矿",
-      "IconName": "I乾坤黄铁",
+      "Name": "乾坤-硫磺矿",
+      "IconName": "I乾坤硫磺",
       "GridIndex": 4702,
       "WorkEnergyPerTick": 0.0
     },
@@ -3485,14 +3485,12 @@
         4.0
       ],
       "Results": [
-        1116,
-        1101
+        1116
       ],
       "ResultCounts": [
-        6.0,
-        1.0
+        3.0
       ],
-      "TimeSpend": 360.0,
+      "TimeSpend": 180.0,
       "Proliferator": 0,
       "IconName": "sulphuric-acid"
     },
@@ -10024,35 +10022,28 @@
     },
     {
       "ID": 624,
-      "Type": 14,
+      "Type": 3,
       "Factories": [
-        6254,
-        6264
+        2308
       ],
-      "Name": "高级有机合金",
+      "Name": "加氢脱硫",
       "Items": [
-        6212,
-        1030,
-        1031,
-        1106
+        1114,
+        1120
       ],
       "ItemCounts": [
         1.0,
-        24.0,
-        16.0,
-        12.0
-      ],
-      "Results": [
-        1118,
-        7002
-      ],
-      "ResultCounts": [
-        2.0,
         1.0
       ],
-      "TimeSpend": 1440.0,
+      "Results": [
+        6207
+      ],
+      "ResultCounts": [
+        1.0
+      ],
+      "TimeSpend": 60.0,
       "Proliferator": 0,
-      "IconName": "titan-crystal"
+      "IconName": ""
     },
     {
       "ID": 625,
