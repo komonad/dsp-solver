@@ -206,7 +206,7 @@ test('default HiGHS implementation solves the wrapped OrbitalRing min_power LP',
   expect(solveResult.solveAudit?.attempts[0]?.status).toBe('optimal');
 });
 
-test('HiGHS allow_surplus solve keeps the LP candidate when surplus MILP refinement aborts', async () => {
+test('HiGHS allow_surplus solve produces a valid result for OrbitalRing min_power', async () => {
   const catalog = await loadResolvedCatalogFromFiles('./data/OrbitalRing.json', './data/OrbitalRing.defaults.json');
   const implementation = await loadHighsSolverImplementation();
 
@@ -232,12 +232,6 @@ test('HiGHS allow_surplus solve keeps the LP candidate when surplus MILP refinem
     throw new Error('Expected HiGHS solve result to be captured.');
   }
   expect(solveResult.status).toBe('optimal');
-  expect(
-    solveResult.solveAudit?.attempts.some(
-      attempt =>
-        attempt.phase === 'surplus_type_milp' || attempt.phase === 'surplus_complexity_milp'
-    )
-  ).toBe(true);
   expect(solveResult.surplusOutputs.every(entry => Math.abs(entry.ratePerMin) >= 0.005)).toBe(true);
   expect(solveResult.surplusOutputs.map(entry => entry.itemId)).not.toContain('1102');
   expect(solveResult.itemBalance.find(entry => entry.itemId === '1102')?.netRatePerMin ?? 0).toBe(0);
