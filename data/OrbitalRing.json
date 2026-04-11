@@ -2843,22 +2843,6 @@
       "IconName": "interstellar-logistic-station",
       "GridIndex": 3409,
       "WorkEnergyPerTick": 500000.0
-    },
-    {
-      "ID": 9513,
-      "Type": 7,
-      "Name": "星河卫士勋章",
-      "IconName": "rank10",
-      "GridIndex": 9998,
-      "WorkEnergyPerTick": 0.0
-    },
-    {
-      "ID": 9514,
-      "Type": 2,
-      "Name": "水滴额外伤害",
-      "IconName": "r0-10",
-      "GridIndex": 9999,
-      "WorkEnergyPerTick": 0.0
     }
   ],
   "recipes": [
@@ -7383,30 +7367,6 @@
       "IconName": "Rpump"
     },
     {
-      "ID": 382,
-      "Type": 1,
-      "Factories": [
-        2302,
-        6501
-      ],
-      "Name": "星河卫士奖章Recipe",
-      "Items": [
-        1104
-      ],
-      "ItemCounts": [
-        2.0
-      ],
-      "Results": [
-        9513
-      ],
-      "ResultCounts": [
-        1.0
-      ],
-      "TimeSpend": 60.0,
-      "Proliferator": 0,
-      "IconName": "rank10"
-    },
-    {
       "ID": 401,
       "Type": 2,
       "Factories": [
@@ -11212,7 +11172,7 @@
       ],
       "TimeSpend": 120.0,
       "Proliferator": 0,
-      "IconName": "glass"
+      "IconName": "R石英砂玻璃"
     },
     {
       "ID": 789,

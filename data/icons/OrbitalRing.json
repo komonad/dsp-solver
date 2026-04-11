@@ -4,2687 +4,2671 @@
                  "y":  0,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "3904":  {
-                 "x":  128,
+                 "x":  80,
                  "y":  0,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "accelerator-1":  {
-                          "x":  256,
+                          "x":  160,
                           "y":  0,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "accelerator-2":  {
-                          "x":  384,
+                          "x":  240,
                           "y":  0,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "accelerator-3":  {
-                          "x":  512,
+                          "x":  320,
                           "y":  0,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "accumulator":  {
-                        "x":  640,
+                        "x":  400,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "accumulator-full":  {
-                             "x":  768,
+                             "x":  480,
                              "y":  0,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "anti-matter":  {
-                        "x":  896,
+                        "x":  560,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "antimatter-energy-fuel":  {
-                                   "x":  1024,
+                                   "x":  640,
                                    "y":  0,
                                    "width":  80,
                                    "height":  80,
-                                   "total_width":  2432,
-                                   "total_height":  2304
+                                   "total_width":  1520,
+                                   "total_height":  1440
                                },
     "assembler-1":  {
-                        "x":  1152,
+                        "x":  720,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "assembler-2":  {
-                        "x":  1280,
+                        "x":  800,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "assembler-3":  {
-                        "x":  1408,
+                        "x":  880,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "assembler-4":  {
-                        "x":  1536,
+                        "x":  960,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "bamboo-crystal":  {
-                           "x":  1664,
+                           "x":  1040,
                            "y":  0,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "battle-base":  {
-                        "x":  1792,
+                        "x":  1120,
                         "y":  0,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "belt-1":  {
-                   "x":  1920,
+                   "x":  1200,
                    "y":  0,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "belt-2":  {
-                   "x":  2048,
+                   "x":  1280,
                    "y":  0,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "belt-3":  {
-                   "x":  2176,
+                   "x":  1360,
                    "y":  0,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "bullet":  {
-                   "x":  2304,
+                   "x":  1440,
                    "y":  0,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "bullet-titanium":  {
                             "x":  0,
-                            "y":  128,
+                            "y":  80,
                             "width":  80,
                             "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
+                            "total_width":  1520,
+                            "total_height":  1440
                         },
     "cannonball":  {
-                       "x":  128,
-                       "y":  128,
+                       "x":  80,
+                       "y":  80,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "cannonball-alloy":  {
-                             "x":  256,
-                             "y":  128,
+                             "x":  160,
+                             "y":  80,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "cannonball-cluster":  {
-                               "x":  384,
-                               "y":  128,
+                               "x":  240,
+                               "y":  80,
                                "width":  80,
                                "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
+                               "total_width":  1520,
+                               "total_height":  1440
                            },
     "capsule-antimatter":  {
-                               "x":  512,
-                               "y":  128,
+                               "x":  320,
+                               "y":  80,
                                "width":  80,
                                "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
+                               "total_width":  1520,
+                               "total_height":  1440
                            },
     "capsule-energy":  {
-                           "x":  640,
-                           "y":  128,
+                           "x":  400,
+                           "y":  80,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "casimir-crystal":  {
-                            "x":  768,
-                            "y":  128,
+                            "x":  480,
+                            "y":  80,
                             "width":  80,
                             "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
+                            "total_width":  1520,
+                            "total_height":  1440
                         },
     "charging-pole":  {
-                          "x":  896,
-                          "y":  128,
+                          "x":  560,
+                          "y":  80,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "chemical-plant":  {
-                           "x":  1024,
-                           "y":  128,
+                           "x":  640,
+                           "y":  80,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "chemical-plant-2":  {
-                             "x":  1152,
-                             "y":  128,
+                             "x":  720,
+                             "y":  80,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "circuit-board":  {
-                          "x":  1280,
-                          "y":  128,
+                          "x":  800,
+                          "y":  80,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "c-matrix":  {
-                     "x":  1408,
-                     "y":  128,
+                     "x":  880,
+                     "y":  80,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "coal-ore":  {
-                     "x":  1536,
-                     "y":  128,
+                     "x":  960,
+                     "y":  80,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "compoCrystal":  {
-                         "x":  1664,
-                         "y":  128,
+                         "x":  1040,
+                         "y":  80,
                          "width":  80,
                          "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
+                         "total_width":  1520,
+                         "total_height":  1440
                      },
     "constrainring":  {
-                          "x":  1792,
-                          "y":  128,
+                          "x":  1120,
+                          "y":  80,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "copper-ore":  {
-                       "x":  1920,
-                       "y":  128,
+                       "x":  1200,
+                       "y":  80,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "copper-plate":  {
-                         "x":  2048,
-                         "y":  128,
+                         "x":  1280,
+                         "y":  80,
                          "width":  80,
                          "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
+                         "total_width":  1520,
+                         "total_height":  1440
                      },
     "crystal-rubber":  {
-                           "x":  2176,
-                           "y":  128,
+                           "x":  1360,
+                           "y":  80,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "delivery-drone":  {
-                           "x":  2304,
-                           "y":  128,
+                           "x":  1440,
+                           "y":  80,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "delivery-machine":  {
                              "x":  0,
-                             "y":  256,
+                             "y":  160,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "deuterium":  {
-                      "x":  128,
-                      "y":  256,
+                      "x":  80,
+                      "y":  160,
                       "width":  80,
                       "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
+                      "total_width":  1520,
+                      "total_height":  1440
                   },
     "diamond":  {
-                    "x":  256,
-                    "y":  256,
+                    "x":  160,
+                    "y":  160,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "diamond-ore":  {
-                        "x":  384,
-                        "y":  256,
+                        "x":  240,
+                        "y":  160,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "drop1":  {
-                  "x":  512,
-                  "y":  256,
+                  "x":  320,
+                  "y":  160,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "dyson-sphere-component":  {
-                                   "x":  640,
-                                   "y":  256,
+                                   "x":  400,
+                                   "y":  160,
                                    "width":  80,
                                    "height":  80,
-                                   "total_width":  2432,
-                                   "total_height":  2304
+                                   "total_width":  1520,
+                                   "total_height":  1440
                                },
     "electric-motor":  {
-                           "x":  768,
-                           "y":  256,
+                           "x":  480,
+                           "y":  160,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "elemaginhibitor2":  {
-                             "x":  896,
-                             "y":  256,
+                             "x":  560,
+                             "y":  160,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "e-matrix":  {
-                     "x":  1024,
-                     "y":  256,
+                     "x":  640,
+                     "y":  160,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "em-disturb":  {
-                       "x":  1152,
-                       "y":  256,
+                       "x":  720,
+                       "y":  160,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "em-rail-ejector":  {
-                            "x":  1280,
-                            "y":  256,
+                            "x":  800,
+                            "y":  160,
                             "width":  80,
                             "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
+                            "total_width":  1520,
+                            "total_height":  1440
                         },
     "em-suppress":  {
-                        "x":  1408,
-                        "y":  256,
+                        "x":  880,
+                        "y":  160,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "energy-exchanger":  {
-                             "x":  1536,
-                             "y":  256,
+                             "x":  960,
+                             "y":  160,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "energy-fragment":  {
-                            "x":  1664,
-                            "y":  256,
+                            "x":  1040,
+                            "y":  160,
                             "width":  80,
                             "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
+                            "total_width":  1520,
+                            "total_height":  1440
                         },
     "engine":  {
-                   "x":  1792,
-                   "y":  256,
+                   "x":  1120,
+                   "y":  160,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "explosive":  {
-                      "x":  1920,
-                      "y":  256,
+                      "x":  1200,
+                      "y":  160,
                       "width":  80,
                       "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
+                      "total_width":  1520,
+                      "total_height":  1440
                   },
     "fighter-laser":  {
-                          "x":  2048,
-                          "y":  256,
+                          "x":  1280,
+                          "y":  160,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "fighter-plasma":  {
-                           "x":  2176,
-                           "y":  256,
+                           "x":  1360,
+                           "y":  160,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "fighter-shield":  {
-                           "x":  2304,
-                           "y":  256,
+                           "x":  1440,
+                           "y":  160,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "forceGen":  {
                      "x":  0,
-                     "y":  384,
+                     "y":  240,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "fractal-silica":  {
-                           "x":  128,
-                           "y":  384,
+                           "x":  80,
+                           "y":  240,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "fractionator":  {
-                         "x":  256,
-                         "y":  384,
+                         "x":  160,
+                         "y":  240,
                          "width":  80,
                          "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
+                         "total_width":  1520,
+                         "total_height":  1440
                      },
     "frame-material":  {
-                           "x":  384,
-                           "y":  384,
+                           "x":  240,
+                           "y":  240,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "fuel-plant":  {
-                       "x":  512,
-                       "y":  384,
+                       "x":  320,
+                       "y":  240,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "fuel-thruster":  {
-                          "x":  640,
-                          "y":  384,
+                          "x":  400,
+                          "y":  240,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "fusion-capacitor":  {
-                             "x":  768,
-                             "y":  384,
+                             "x":  480,
+                             "y":  240,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "fusion-power-station":  {
-                                 "x":  896,
-                                 "y":  384,
+                                 "x":  560,
+                                 "y":  240,
                                  "width":  80,
                                  "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
+                                 "total_width":  1520,
+                                 "total_height":  1440
                              },
     "fusion-reactor":  {
-                           "x":  1024,
-                           "y":  384,
+                           "x":  640,
+                           "y":  240,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "gas-hydrate":  {
-                        "x":  1152,
-                        "y":  384,
+                        "x":  720,
+                        "y":  240,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "gear-wheel":  {
-                       "x":  1280,
-                       "y":  384,
+                       "x":  800,
+                       "y":  240,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "geothermal-power-station":  {
-                                     "x":  1408,
-                                     "y":  384,
+                                     "x":  880,
+                                     "y":  240,
                                      "width":  80,
                                      "height":  80,
-                                     "total_width":  2432,
-                                     "total_height":  2304
+                                     "total_width":  1520,
+                                     "total_height":  1440
                                  },
     "glass":  {
-                  "x":  1536,
-                  "y":  384,
+                  "x":  960,
+                  "y":  240,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "gluonGen":  {
-                     "x":  1664,
-                     "y":  384,
+                     "x":  1040,
+                     "y":  240,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "g-matrix":  {
-                     "x":  1792,
-                     "y":  384,
+                     "x":  1120,
+                     "y":  240,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "graphene":  {
-                     "x":  1920,
-                     "y":  384,
+                     "x":  1200,
+                     "y":  240,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "graphite":  {
-                     "x":  2048,
-                     "y":  384,
+                     "x":  1280,
+                     "y":  240,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "grating-ore":  {
-                        "x":  2176,
-                        "y":  384,
+                        "x":  1360,
+                        "y":  240,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "gravitydrill2":  {
-                          "x":  2304,
-                          "y":  384,
+                          "x":  1440,
+                          "y":  240,
                           "width":  80,
                           "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
+                          "total_width":  1520,
+                          "total_height":  1440
                       },
     "gravitygenerator":  {
                              "x":  0,
-                             "y":  512,
+                             "y":  320,
                              "width":  80,
                              "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
+                             "total_width":  1520,
+                             "total_height":  1440
                          },
     "gravity-lens":  {
-                         "x":  128,
-                         "y":  512,
+                         "x":  80,
+                         "y":  320,
                          "width":  80,
                          "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
+                         "total_width":  1520,
+                         "total_height":  1440
                      },
     "hadron-collider":  {
-                            "x":  256,
-                            "y":  512,
+                            "x":  160,
+                            "y":  320,
                             "width":  80,
                             "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
+                            "total_width":  1520,
+                            "total_height":  1440
                         },
     "high-explosive":  {
-                           "x":  384,
-                           "y":  512,
+                           "x":  240,
+                           "y":  320,
                            "width":  80,
                            "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
+                           "total_width":  1520,
+                           "total_height":  1440
                        },
     "hydrogen":  {
-                     "x":  512,
-                     "y":  512,
+                     "x":  320,
+                     "y":  320,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "hydrogen-energy-fuel":  {
-                                 "x":  640,
-                                 "y":  512,
+                                 "x":  400,
+                                 "y":  320,
                                  "width":  80,
                                  "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
+                                 "total_width":  1520,
+                                 "total_height":  1440
                              },
     "hyper-magnetism-ring":  {
-                                 "x":  768,
-                                 "y":  512,
+                                 "x":  480,
+                                 "y":  320,
                                  "width":  80,
                                  "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
+                                 "total_width":  1520,
+                                 "total_height":  1440
                              },
     "iacomponent":  {
-                        "x":  896,
-                        "y":  512,
+                        "x":  560,
+                        "y":  320,
                         "width":  80,
                         "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
+                        "total_width":  1520,
+                        "total_height":  1440
                     },
     "ICPU":  {
-                 "x":  1024,
-                 "y":  512,
+                 "x":  640,
+                 "y":  320,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "i-matrix":  {
-                     "x":  1152,
-                     "y":  512,
+                     "x":  720,
+                     "y":  320,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "inserter-1":  {
-                       "x":  1280,
-                       "y":  512,
+                       "x":  800,
+                       "y":  320,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "inserter-2":  {
-                       "x":  1408,
-                       "y":  512,
+                       "x":  880,
+                       "y":  320,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "inserter-3":  {
-                       "x":  1536,
-                       "y":  512,
+                       "x":  960,
+                       "y":  320,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "inserter-4":  {
-                       "x":  1664,
-                       "y":  512,
+                       "x":  1040,
+                       "y":  320,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "integratedcomponents":  {
-                                 "x":  1792,
-                                 "y":  512,
+                                 "x":  1120,
+                                 "y":  320,
                                  "width":  80,
                                  "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
+                                 "total_width":  1520,
+                                 "total_height":  1440
                              },
     "interstellar-logistic-station":  {
-                                          "x":  1920,
-                                          "y":  512,
+                                          "x":  1200,
+                                          "y":  320,
                                           "width":  80,
                                           "height":  80,
-                                          "total_width":  2432,
-                                          "total_height":  2304
+                                          "total_width":  1520,
+                                          "total_height":  1440
                                       },
     "ion-thruster":  {
-                         "x":  2048,
-                         "y":  512,
+                         "x":  1280,
+                         "y":  320,
                          "width":  80,
                          "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
+                         "total_width":  1520,
+                         "total_height":  1440
                      },
     "iron-ore":  {
-                     "x":  2176,
-                     "y":  512,
+                     "x":  1360,
+                     "y":  320,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "iron-plate":  {
-                       "x":  2304,
-                       "y":  512,
+                       "x":  1440,
+                       "y":  320,
                        "width":  80,
                        "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
+                       "total_width":  1520,
+                       "total_height":  1440
                    },
     "I不可发射":  {
                   "x":  0,
-                  "y":  640,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I纯银2":  {
-                 "x":  128,
-                 "y":  640,
+                 "x":  80,
+                 "y":  400,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I磁流体2":  {
-                  "x":  256,
-                  "y":  640,
+                  "x":  160,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I此科技不用研究":  {
-                     "x":  384,
-                     "y":  640,
+                     "x":  240,
+                     "y":  400,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "I次级维度工厂":  {
-                    "x":  512,
-                    "y":  640,
+                    "x":  320,
+                    "y":  400,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I伺服器能耗减免":  {
-                     "x":  640,
-                     "y":  640,
+                     "x":  400,
+                     "y":  400,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "I伺服天穹":  {
-                  "x":  768,
-                  "y":  640,
+                  "x":  480,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I粗银3":  {
-                 "x":  896,
-                 "y":  640,
+                 "x":  560,
+                 "y":  400,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I低温工厂":  {
-                  "x":  1024,
-                  "y":  640,
+                  "x":  640,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I二阶火箭":  {
-                  "x":  1152,
-                  "y":  640,
+                  "x":  720,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I反物质堆核心":  {
-                    "x":  1280,
-                    "y":  640,
+                    "x":  800,
+                    "y":  400,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I反物质堆基座":  {
-                    "x":  1408,
-                    "y":  640,
+                    "x":  880,
+                    "y":  400,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I富勒醇":  {
-                 "x":  1536,
-                 "y":  640,
+                 "x":  960,
+                 "y":  400,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I富勒烯2":  {
-                  "x":  1664,
-                  "y":  640,
+                  "x":  1040,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I富勒银":  {
-                 "x":  1792,
-                 "y":  640,
+                 "x":  1120,
+                 "y":  400,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I高速连接器":  {
-                   "x":  1920,
-                   "y":  640,
+                   "x":  1200,
+                   "y":  400,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I工业醇":  {
-                 "x":  2048,
-                 "y":  640,
+                 "x":  1280,
+                 "y":  400,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I共生菌核":  {
-                  "x":  2176,
-                  "y":  640,
+                  "x":  1360,
+                  "y":  400,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I轨道观测站":  {
-                   "x":  2304,
-                   "y":  640,
+                   "x":  1440,
+                   "y":  400,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I轨道连接组件":  {
                     "x":  0,
-                    "y":  768,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I轨道熔炼站":  {
-                   "x":  128,
-                   "y":  768,
+                   "x":  80,
+                   "y":  480,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I轨道水培舱2":  {
-                    "x":  256,
-                    "y":  768,
+                    "x":  160,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I黑盒2":  {
-                 "x":  384,
-                 "y":  768,
+                 "x":  240,
+                 "y":  480,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I黑萝卜":  {
-                 "x":  512,
-                 "y":  768,
+                 "x":  320,
+                 "y":  480,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I恒燃之火":  {
-                  "x":  640,
-                  "y":  768,
+                  "x":  400,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I辉银矿2":  {
-                  "x":  768,
-                  "y":  768,
+                  "x":  480,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I激素菌群":  {
-                  "x":  896,
-                  "y":  768,
+                  "x":  560,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I激素营养液":  {
-                   "x":  1024,
-                   "y":  768,
+                   "x":  640,
+                   "y":  480,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I加力推进器":  {
-                   "x":  1152,
-                   "y":  768,
+                   "x":  720,
+                   "y":  480,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I甲烷":  {
-                "x":  1280,
-                "y":  768,
+                "x":  800,
+                "y":  480,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I金属废液":  {
-                  "x":  1408,
-                  "y":  768,
+                  "x":  880,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I金属氢导弹组":  {
-                    "x":  1536,
-                    "y":  768,
+                    "x":  960,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I菌丝母株":  {
-                  "x":  1664,
-                  "y":  768,
+                  "x":  1040,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I勘探船2":  {
-                  "x":  1792,
-                  "y":  768,
+                  "x":  1120,
+                  "y":  480,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I空轨":  {
-                "x":  1920,
-                "y":  768,
+                "x":  1200,
+                "y":  480,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I朗基努斯之枪":  {
-                    "x":  2048,
-                    "y":  768,
+                    "x":  1280,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I粒子加速轨道":  {
-                    "x":  2176,
-                    "y":  768,
+                    "x":  1360,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I粒子加速器2":  {
-                    "x":  2304,
-                    "y":  768,
+                    "x":  1440,
+                    "y":  480,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I量子计算机":  {
                    "x":  0,
-                   "y":  896,
+                   "y":  560,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I量子虚拟生命2":  {
-                     "x":  128,
-                     "y":  896,
+                     "x":  80,
+                     "y":  560,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "I零素矢":  {
-                 "x":  256,
-                 "y":  896,
+                 "x":  160,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I硫磺矿":  {
-                 "x":  384,
-                 "y":  896,
+                 "x":  240,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I培养皿":  {
-                 "x":  512,
-                 "y":  896,
+                 "x":  320,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I贫铀穿甲弹2":  {
-                    "x":  640,
-                    "y":  896,
+                    "x":  400,
+                    "y":  560,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I欺骗型广播塔":  {
-                    "x":  768,
-                    "y":  896,
+                    "x":  480,
+                    "y":  560,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I奇夸克":  {
-                 "x":  896,
-                 "y":  896,
+                 "x":  560,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I启示录":  {
-                 "x":  1024,
-                 "y":  896,
+                 "x":  640,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I起振焦点":  {
-                  "x":  1152,
-                  "y":  896,
+                  "x":  720,
+                  "y":  560,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I气云":  {
-                "x":  1280,
-                "y":  896,
+                "x":  800,
+                "y":  560,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I乾坤":  {
-                "x":  1408,
-                "y":  896,
+                "x":  880,
+                "y":  560,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I乾坤磁石":  {
-                  "x":  1536,
-                  "y":  896,
+                  "x":  960,
+                  "y":  560,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤刺笋":  {
-                  "x":  1664,
-                  "y":  896,
+                  "x":  1040,
+                  "y":  560,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤光栅":  {
-                  "x":  1792,
-                  "y":  896,
+                  "x":  1120,
+                  "y":  560,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤硅":  {
-                 "x":  1920,
-                 "y":  896,
+                 "x":  1200,
+                 "y":  560,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤辉银":  {
-                  "x":  2048,
-                  "y":  896,
+                  "x":  1280,
+                  "y":  560,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤金伯利":  {
-                   "x":  2176,
-                   "y":  896,
+                   "x":  1360,
+                   "y":  560,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I乾坤可燃冰":  {
-                   "x":  2304,
-                   "y":  896,
+                   "x":  1440,
+                   "y":  560,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I乾坤硫磺":  {
                   "x":  0,
-                  "y":  1024,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤煤":  {
-                 "x":  128,
-                 "y":  1024,
+                 "x":  80,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤莫桑":  {
-                  "x":  256,
-                  "y":  1024,
+                  "x":  160,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I乾坤石":  {
-                 "x":  384,
-                 "y":  1024,
+                 "x":  240,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤钛":  {
-                 "x":  512,
-                 "y":  1024,
+                 "x":  320,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤铁":  {
-                 "x":  640,
-                 "y":  1024,
+                 "x":  400,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤铜":  {
-                 "x":  768,
-                 "y":  1024,
+                 "x":  480,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤铀":  {
-                 "x":  896,
-                 "y":  1024,
+                 "x":  560,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I乾坤有机":  {
-                  "x":  1024,
-                  "y":  1024,
+                  "x":  640,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I轻油":  {
-                "x":  1152,
-                "y":  1024,
+                "x":  720,
+                "y":  640,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I曲率引擎":  {
-                  "x":  1280,
-                  "y":  1024,
+                  "x":  800,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I熔融金属":  {
-                  "x":  1408,
-                  "y":  1024,
+                  "x":  880,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I润滑油":  {
-                 "x":  1536,
-                 "y":  1024,
+                 "x":  960,
+                 "y":  640,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I三阶火箭":  {
-                  "x":  1664,
-                  "y":  1024,
+                  "x":  1040,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I深层熔岩2":  {
-                   "x":  1792,
-                   "y":  1024,
+                   "x":  1120,
+                   "y":  640,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I深空货舰2":  {
-                   "x":  1920,
-                   "y":  1024,
+                   "x":  1200,
+                   "y":  640,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I深空物流港":  {
-                   "x":  2048,
-                   "y":  1024,
+                   "x":  1280,
+                   "y":  640,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I神经网络":  {
-                  "x":  2176,
-                  "y":  1024,
+                  "x":  1360,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I生态温室":  {
-                  "x":  2304,
-                  "y":  1024,
+                  "x":  1440,
+                  "y":  640,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I湿件主机":  {
                   "x":  0,
-                  "y":  1152,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I速生林苗":  {
-                  "x":  128,
-                  "y":  1152,
+                  "x":  80,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I损伤定义护盾":  {
-                    "x":  256,
-                    "y":  1152,
+                    "x":  160,
+                    "y":  720,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I太空船坞":  {
-                  "x":  384,
-                  "y":  1152,
+                  "x":  240,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I太空电梯":  {
-                  "x":  512,
-                  "y":  1152,
+                  "x":  320,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I天枢座":  {
-                 "x":  640,
-                 "y":  1152,
+                 "x":  400,
+                 "y":  720,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I甜菜":  {
-                "x":  768,
-                "y":  1152,
+                "x":  480,
+                "y":  720,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I突触凝练机":  {
-                   "x":  896,
-                   "y":  1152,
+                   "x":  560,
+                   "y":  720,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I卫星配电站":  {
-                   "x":  1024,
-                   "y":  1152,
+                   "x":  640,
+                   "y":  720,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I文明的定义":  {
-                   "x":  1152,
-                   "y":  1152,
+                   "x":  720,
+                   "y":  720,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I文明遗物":  {
-                  "x":  1280,
-                  "y":  1152,
+                  "x":  800,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I无尽水罐":  {
-                  "x":  1408,
-                  "y":  1152,
+                  "x":  880,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I无星球特质":  {
-                   "x":  1536,
-                   "y":  1152,
+                   "x":  960,
+                   "y":  720,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I星环电网组件":  {
-                    "x":  1664,
-                    "y":  1152,
+                    "x":  1040,
+                    "y":  720,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "I星环对撞机":  {
-                   "x":  1792,
-                   "y":  1152,
+                   "x":  1120,
+                   "y":  720,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "I星环护盾":  {
-                  "x":  1920,
-                  "y":  1152,
+                  "x":  1200,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I蓄电器":  {
-                 "x":  2048,
-                 "y":  1152,
+                 "x":  1280,
+                 "y":  720,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "I蓄电器满":  {
-                  "x":  2176,
-                  "y":  1152,
+                  "x":  1360,
+                  "y":  720,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I岩浆":  {
-                "x":  2304,
-                "y":  1152,
+                "x":  1440,
+                "y":  720,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "I液态金属":  {
                   "x":  0,
-                  "y":  1280,
+                  "y":  800,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I亿万械国":  {
-                  "x":  128,
-                  "y":  1280,
+                  "x":  80,
+                  "y":  800,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I有机磁胶":  {
-                  "x":  256,
-                  "y":  1280,
+                  "x":  160,
+                  "y":  800,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "I预制星舰模块":  {
-                    "x":  384,
+                    "x":  240,
+                    "y":  800,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "I增生组织":  {
+                  "x":  320,
+                  "y":  800,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "I战术核导弹3":  {
+                    "x":  400,
+                    "y":  800,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "I智能方尖碑":  {
+                   "x":  480,
+                   "y":  800,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "I终末螺旋":  {
+                  "x":  560,
+                  "y":  800,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "I种子":  {
+                "x":  640,
+                "y":  800,
+                "width":  80,
+                "height":  80,
+                "total_width":  1520,
+                "total_height":  1440
+            },
+    "I重型弹射器":  {
+                   "x":  720,
+                   "y":  800,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "I主板2":  {
+                 "x":  800,
+                 "y":  800,
+                 "width":  80,
+                 "height":  80,
+                 "total_width":  1520,
+                 "total_height":  1440
+             },
+    "I转基因工具":  {
+                   "x":  880,
+                   "y":  800,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "lab":  {
+                "x":  960,
+                "y":  800,
+                "width":  80,
+                "height":  80,
+                "total_width":  1520,
+                "total_height":  1440
+            },
+    "lab-2":  {
+                  "x":  1040,
+                  "y":  800,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "lighthouse":  {
+                       "x":  1120,
+                       "y":  800,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "logistic-drone":  {
+                           "x":  1200,
+                           "y":  800,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "logistic-station":  {
+                             "x":  1280,
+                             "y":  800,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "logistic-vessel":  {
+                            "x":  1360,
+                            "y":  800,
+                            "width":  80,
+                            "height":  80,
+                            "total_width":  1520,
+                            "total_height":  1440
+                        },
+    "magnet":  {
+                   "x":  1440,
+                   "y":  800,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "magnetism-wire":  {
+                           "x":  0,
+                           "y":  880,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "mag-turbine":  {
+                        "x":  80,
+                        "y":  880,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "memory":  {
+                   "x":  160,
+                   "y":  880,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "micro-component":  {
+                            "x":  240,
+                            "y":  880,
+                            "width":  80,
+                            "height":  80,
+                            "total_width":  1520,
+                            "total_height":  1440
+                        },
+    "mining-drill":  {
+                         "x":  320,
+                         "y":  880,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "mining-drill-mk2":  {
+                             "x":  400,
+                             "y":  880,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "missile-graviton":  {
+                             "x":  480,
+                             "y":  880,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "missile-supersonic":  {
+                               "x":  560,
+                               "y":  880,
+                               "width":  80,
+                               "height":  80,
+                               "total_width":  1520,
+                               "total_height":  1440
+                           },
+    "monitor":  {
+                    "x":  640,
+                    "y":  880,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "mono-mag-ore":  {
+                         "x":  720,
+                         "y":  880,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "nanotube":  {
+                     "x":  800,
+                     "y":  880,
+                     "width":  80,
+                     "height":  80,
+                     "total_width":  1520,
+                     "total_height":  1440
+                 },
+    "negentropy":  {
+                       "x":  880,
+                       "y":  880,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "oil":  {
+                "x":  960,
+                "y":  880,
+                "width":  80,
+                "height":  80,
+                "total_width":  1520,
+                "total_height":  1440
+            },
+    "oil-extractor":  {
+                          "x":  1040,
+                          "y":  880,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "oil-refinery":  {
+                         "x":  1120,
+                         "y":  880,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "orbital-collector":  {
+                              "x":  1200,
+                              "y":  880,
+                              "width":  80,
+                              "height":  80,
+                              "total_width":  1520,
+                              "total_height":  1440
+                          },
+    "orbital-substation":  {
+                               "x":  1280,
+                               "y":  880,
+                               "width":  80,
+                               "height":  80,
+                               "total_width":  1520,
+                               "total_height":  1440
+                           },
+    "partical-capacitor":  {
+                               "x":  1360,
+                               "y":  880,
+                               "width":  80,
+                               "height":  80,
+                               "total_width":  1520,
+                               "total_height":  1440
+                           },
+    "particle-explosive":  {
+                               "x":  1440,
+                               "y":  880,
+                               "width":  80,
+                               "height":  80,
+                               "total_width":  1520,
+                               "total_height":  1440
+                           },
+    "particle-wide-band":  {
+                               "x":  0,
+                               "y":  960,
+                               "width":  80,
+                               "height":  80,
+                               "total_width":  1520,
+                               "total_height":  1440
+                           },
+    "photon-capacitor-full":  {
+                                  "x":  80,
+                                  "y":  960,
+                                  "width":  80,
+                                  "height":  80,
+                                  "total_width":  1520,
+                                  "total_height":  1440
+                              },
+    "photonprobeflipsmall":  {
+                                 "x":  160,
+                                 "y":  960,
+                                 "width":  80,
+                                 "height":  80,
+                                 "total_width":  1520,
+                                 "total_height":  1440
+                             },
+    "photo-shifter":  {
+                          "x":  240,
+                          "y":  960,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "piler":  {
+                  "x":  320,
+                  "y":  960,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "plane-filter":  {
+                         "x":  400,
+                         "y":  960,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "plant-fuel":  {
+                       "x":  480,
+                       "y":  960,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "plasma-generator":  {
+                             "x":  560,
+                             "y":  960,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "plastic":  {
+                    "x":  640,
+                    "y":  960,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "prism":  {
+                  "x":  720,
+                  "y":  960,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "quantumcomputer3":  {
+                             "x":  800,
+                             "y":  960,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "quantum-processor":  {
+                              "x":  880,
+                              "y":  960,
+                              "width":  80,
+                              "height":  80,
+                              "total_width":  1520,
+                              "total_height":  1440
+                          },
+    "ray-receiver":  {
+                         "x":  960,
+                         "y":  960,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "reassembler":  {
+                        "x":  1040,
+                        "y":  960,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "resonancedisc":  {
+                          "x":  1120,
+                          "y":  960,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "rocket":  {
+                   "x":  1200,
+                   "y":  960,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "rocketAssembly":  {
+                           "x":  1280,
+                           "y":  960,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "rocketCrystal":  {
+                          "x":  1360,
+                          "y":  960,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "rocketMatter":  {
+                         "x":  1440,
+                         "y":  960,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "rocketScience":  {
+                          "x":  0,
+                          "y":  1040,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "rocketStarcannon":  {
+                             "x":  80,
+                             "y":  1040,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "rocketWarp":  {
+                       "x":  160,
+                       "y":  1040,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "silicium-high-purity":  {
+                                 "x":  240,
+                                 "y":  1040,
+                                 "width":  80,
+                                 "height":  80,
+                                 "total_width":  1520,
+                                 "total_height":  1440
+                             },
+    "silicium-ore":  {
+                         "x":  320,
+                         "y":  1040,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "silicium-single-crystal":  {
+                                    "x":  400,
+                                    "y":  1040,
+                                    "width":  80,
+                                    "height":  80,
+                                    "total_width":  1520,
+                                    "total_height":  1440
+                                },
+    "silicon-neuron":  {
+                           "x":  480,
+                           "y":  1040,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "smelter":  {
+                    "x":  560,
+                    "y":  1040,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "smelter-2":  {
+                      "x":  640,
+                      "y":  1040,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "smelter-3":  {
+                      "x":  720,
+                      "y":  1040,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "soil-pile":  {
+                      "x":  800,
+                      "y":  1040,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "solar-collector":  {
+                            "x":  880,
+                            "y":  1040,
+                            "width":  80,
+                            "height":  80,
+                            "total_width":  1520,
+                            "total_height":  1440
+                        },
+    "solar-panel":  {
+                        "x":  960,
+                        "y":  1040,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "space-warper":  {
+                         "x":  1040,
+                         "y":  1040,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "splitter-4dir":  {
+                          "x":  1120,
+                          "y":  1040,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "spray-coater":  {
+                         "x":  1200,
+                         "y":  1040,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "starcannoncompo":  {
+                            "x":  1280,
+                            "y":  1040,
+                            "width":  80,
+                            "height":  80,
+                            "total_width":  1520,
+                            "total_height":  1440
+                        },
+    "starcannonframe":  {
+                            "x":  1360,
+                            "y":  1040,
+                            "width":  80,
+                            "height":  80,
+                            "total_width":  1520,
+                            "total_height":  1440
+                        },
+    "steel-plate":  {
+                        "x":  1440,
+                        "y":  1040,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "stone-brick":  {
+                        "x":  0,
+                        "y":  1120,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "stone-ore":  {
+                      "x":  80,
+                      "y":  1120,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "storage-1":  {
+                      "x":  160,
+                      "y":  1120,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "storage-2":  {
+                      "x":  240,
+                      "y":  1120,
+                      "width":  80,
+                      "height":  80,
+                      "total_width":  1520,
+                      "total_height":  1440
+                  },
+    "storage-tank":  {
+                         "x":  320,
+                         "y":  1120,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "strange-matter-generator":  {
+                                     "x":  400,
+                                     "y":  1120,
+                                     "width":  80,
+                                     "height":  80,
+                                     "total_width":  1520,
+                                     "total_height":  1440
+                                 },
+    "strIntOverloader":  {
+                             "x":  480,
+                             "y":  1120,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "sulphuric-acid":  {
+                           "x":  560,
+                           "y":  1120,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "terrain-tool":  {
+                         "x":  640,
+                         "y":  1120,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "tesla-coil":  {
+                       "x":  720,
+                       "y":  1120,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "titan-crystal":  {
+                          "x":  800,
+                          "y":  1120,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "titan-glass":  {
+                        "x":  880,
+                        "y":  1120,
+                        "width":  80,
+                        "height":  80,
+                        "total_width":  1520,
+                        "total_height":  1440
+                    },
+    "titanium-alloy":  {
+                           "x":  960,
+                           "y":  1120,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "titanium-ore":  {
+                         "x":  1040,
+                         "y":  1120,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "titanium-plate":  {
+                           "x":  1120,
+                           "y":  1120,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "t-matrix":  {
+                     "x":  1200,
+                     "y":  1120,
+                     "width":  80,
+                     "height":  80,
+                     "total_width":  1520,
+                     "total_height":  1440
+                 },
+    "tunnelingexciter2":  {
+                              "x":  1280,
+                              "y":  1120,
+                              "width":  80,
+                              "height":  80,
+                              "total_width":  1520,
+                              "total_height":  1440
+                          },
+    "turret-cannon":  {
+                          "x":  1360,
+                          "y":  1120,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "turret-disturb":  {
+                           "x":  1440,
+                           "y":  1120,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "turret-gauss":  {
+                         "x":  0,
+                         "y":  1200,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "turret-laser":  {
+                         "x":  80,
+                         "y":  1200,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "turret-missile":  {
+                           "x":  160,
+                           "y":  1200,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "turret-plasma":  {
+                          "x":  240,
+                          "y":  1200,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "turret-plasma-ground":  {
+                                 "x":  320,
+                                 "y":  1200,
+                                 "width":  80,
+                                 "height":  80,
+                                 "total_width":  1520,
+                                 "total_height":  1440
+                             },
+    "turret-shield":  {
+                          "x":  400,
+                          "y":  1200,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "turret-signal":  {
+                          "x":  480,
+                          "y":  1200,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "u-matrix":  {
+                     "x":  560,
+                     "y":  1200,
+                     "width":  80,
+                     "height":  80,
+                     "total_width":  1520,
+                     "total_height":  1440
+                 },
+    "vertical-launching-silo":  {
+                                    "x":  640,
+                                    "y":  1200,
+                                    "width":  80,
+                                    "height":  80,
+                                    "total_width":  1520,
+                                    "total_height":  1440
+                                },
+    "virtual-energy-fuel":  {
+                                "x":  720,
+                                "y":  1200,
+                                "width":  80,
+                                "height":  80,
+                                "total_width":  1520,
+                                "total_height":  1440
+                            },
+    "virtual-particle":  {
+                             "x":  800,
+                             "y":  1200,
+                             "width":  80,
+                             "height":  80,
+                             "total_width":  1520,
+                             "total_height":  1440
+                         },
+    "warship-laser":  {
+                          "x":  880,
+                          "y":  1200,
+                          "width":  80,
+                          "height":  80,
+                          "total_width":  1520,
+                          "total_height":  1440
+                      },
+    "warship-plasma":  {
+                           "x":  960,
+                           "y":  1200,
+                           "width":  80,
+                           "height":  80,
+                           "total_width":  1520,
+                           "total_height":  1440
+                       },
+    "water":  {
+                  "x":  1040,
+                  "y":  1200,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "water-pump":  {
+                       "x":  1120,
+                       "y":  1200,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "wind-turbine":  {
+                         "x":  1200,
+                         "y":  1200,
+                         "width":  80,
+                         "height":  80,
+                         "total_width":  1520,
+                         "total_height":  1440
+                     },
+    "wood":  {
+                 "x":  1280,
+                 "y":  1200,
+                 "width":  80,
+                 "height":  80,
+                 "total_width":  1520,
+                 "total_height":  1440
+             },
+    "氨":  {
+              "x":  1360,
+              "y":  1200,
+              "width":  80,
+              "height":  80,
+              "total_width":  1520,
+              "total_height":  1440
+          },
+    "丙烯_新":  {
+                 "x":  1440,
+                 "y":  1200,
+                 "width":  80,
+                 "height":  80,
+                 "total_width":  1520,
+                 "total_height":  1440
+             },
+    "防御":  {
+               "x":  0,
+               "y":  1280,
+               "width":  80,
+               "height":  80,
+               "total_width":  1520,
+               "total_height":  1440
+           },
+    "放射晶体矿_新":  {
+                    "x":  80,
                     "y":  1280,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
-    "I增生组织":  {
-                  "x":  512,
+    "放射性同位素温差电池":  {
+                       "x":  160,
+                       "y":  1280,
+                       "width":  80,
+                       "height":  80,
+                       "total_width":  1520,
+                       "total_height":  1440
+                   },
+    "钢芯弹药箱":  {
+                  "x":  240,
                   "y":  1280,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
-    "I战术核导弹3":  {
-                    "x":  640,
-                    "y":  1280,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "I智能方尖碑":  {
-                   "x":  768,
+    "光学信息传输纤维":  {
+                     "x":  320,
+                     "y":  1280,
+                     "width":  80,
+                     "height":  80,
+                     "total_width":  1520,
+                     "total_height":  1440
+                 },
+    "环氧树脂_新":  {
+                   "x":  400,
                    "y":  1280,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
-    "I终末螺旋":  {
-                  "x":  896,
+    "基础机械组件":  {
+                   "x":  480,
+                   "y":  1280,
+                   "width":  80,
+                   "height":  80,
+                   "total_width":  1520,
+                   "total_height":  1440
+               },
+    "尖端机械组件_新":  {
+                     "x":  560,
+                     "y":  1280,
+                     "width":  80,
+                     "height":  80,
+                     "total_width":  1520,
+                     "total_height":  1440
+                 },
+    "金属氢单元":  {
+                  "x":  640,
                   "y":  1280,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
-    "I种子":  {
-                "x":  1024,
+    "量子储液罐":  {
+                  "x":  720,
+                  "y":  1280,
+                  "width":  80,
+                  "height":  80,
+                  "total_width":  1520,
+                  "total_height":  1440
+              },
+    "量子箱":  {
+                "x":  800,
                 "y":  1280,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
-    "I重型弹射器":  {
-                   "x":  1152,
-                   "y":  1280,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "I主板2":  {
+    "煤焦油":  {
+                "x":  880,
+                "y":  1280,
+                "width":  80,
+                "height":  80,
+                "total_width":  1520,
+                "total_height":  1440
+            },
+    "煤矿粉":  {
+                "x":  960,
+                "y":  1280,
+                "width":  80,
+                "height":  80,
+                "total_width":  1520,
+                "total_height":  1440
+            },
+    "人造恒星MK2":  {
+                    "x":  1040,
+                    "y":  1280,
+                    "width":  80,
+                    "height":  80,
+                    "total_width":  1520,
+                    "total_height":  1440
+                },
+    "日志01":  {
+                 "x":  1120,
+                 "y":  1280,
+                 "width":  80,
+                 "height":  80,
+                 "total_width":  1520,
+                 "total_height":  1440
+             },
+    "日志02":  {
+                 "x":  1200,
+                 "y":  1280,
+                 "width":  80,
+                 "height":  80,
+                 "total_width":  1520,
+                 "total_height":  1440
+             },
+    "日志03":  {
                  "x":  1280,
                  "y":  1280,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
-             },
-    "I转基因工具":  {
-                   "x":  1408,
-                   "y":  1280,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "lab":  {
-                "x":  1536,
-                "y":  1280,
-                "width":  80,
-                "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
-            },
-    "lab-2":  {
-                  "x":  1664,
-                  "y":  1280,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "lighthouse":  {
-                       "x":  1792,
-                       "y":  1280,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "logistic-drone":  {
-                           "x":  1920,
-                           "y":  1280,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "logistic-station":  {
-                             "x":  2048,
-                             "y":  1280,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "logistic-vessel":  {
-                            "x":  2176,
-                            "y":  1280,
-                            "width":  80,
-                            "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
-                        },
-    "magnet":  {
-                   "x":  2304,
-                   "y":  1280,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "magnetism-wire":  {
-                           "x":  0,
-                           "y":  1408,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "mag-turbine":  {
-                        "x":  128,
-                        "y":  1408,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "memory":  {
-                   "x":  256,
-                   "y":  1408,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "micro-component":  {
-                            "x":  384,
-                            "y":  1408,
-                            "width":  80,
-                            "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
-                        },
-    "mining-drill":  {
-                         "x":  512,
-                         "y":  1408,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "mining-drill-mk2":  {
-                             "x":  640,
-                             "y":  1408,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "missile-graviton":  {
-                             "x":  768,
-                             "y":  1408,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "missile-supersonic":  {
-                               "x":  896,
-                               "y":  1408,
-                               "width":  80,
-                               "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
-                           },
-    "monitor":  {
-                    "x":  1024,
-                    "y":  1408,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "mono-mag-ore":  {
-                         "x":  1152,
-                         "y":  1408,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "nanotube":  {
-                     "x":  1280,
-                     "y":  1408,
-                     "width":  80,
-                     "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
-                 },
-    "negentropy":  {
-                       "x":  1408,
-                       "y":  1408,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "oil":  {
-                "x":  1536,
-                "y":  1408,
-                "width":  80,
-                "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
-            },
-    "oil-extractor":  {
-                          "x":  1664,
-                          "y":  1408,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "oil-refinery":  {
-                         "x":  1792,
-                         "y":  1408,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "orbital-collector":  {
-                              "x":  1920,
-                              "y":  1408,
-                              "width":  80,
-                              "height":  80,
-                              "total_width":  2432,
-                              "total_height":  2304
-                          },
-    "orbital-substation":  {
-                               "x":  2048,
-                               "y":  1408,
-                               "width":  80,
-                               "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
-                           },
-    "partical-capacitor":  {
-                               "x":  2176,
-                               "y":  1408,
-                               "width":  80,
-                               "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
-                           },
-    "particle-explosive":  {
-                               "x":  2304,
-                               "y":  1408,
-                               "width":  80,
-                               "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
-                           },
-    "particle-wide-band":  {
-                               "x":  0,
-                               "y":  1536,
-                               "width":  80,
-                               "height":  80,
-                               "total_width":  2432,
-                               "total_height":  2304
-                           },
-    "photon-capacitor-full":  {
-                                  "x":  128,
-                                  "y":  1536,
-                                  "width":  80,
-                                  "height":  80,
-                                  "total_width":  2432,
-                                  "total_height":  2304
-                              },
-    "photonprobeflipsmall":  {
-                                 "x":  256,
-                                 "y":  1536,
-                                 "width":  80,
-                                 "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
-                             },
-    "photo-shifter":  {
-                          "x":  384,
-                          "y":  1536,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "piler":  {
-                  "x":  512,
-                  "y":  1536,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "plane-filter":  {
-                         "x":  640,
-                         "y":  1536,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "plant-fuel":  {
-                       "x":  768,
-                       "y":  1536,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "plasma-generator":  {
-                             "x":  896,
-                             "y":  1536,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "plastic":  {
-                    "x":  1024,
-                    "y":  1536,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "prism":  {
-                  "x":  1152,
-                  "y":  1536,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "quantumcomputer3":  {
-                             "x":  1280,
-                             "y":  1536,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "quantum-processor":  {
-                              "x":  1408,
-                              "y":  1536,
-                              "width":  80,
-                              "height":  80,
-                              "total_width":  2432,
-                              "total_height":  2304
-                          },
-    "r0-10":  {
-                  "x":  1536,
-                  "y":  1536,
-                  "width":  128,
-                  "height":  128,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "rank10":  {
-                   "x":  1664,
-                   "y":  1536,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "ray-receiver":  {
-                         "x":  1792,
-                         "y":  1536,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "reassembler":  {
-                        "x":  1920,
-                        "y":  1536,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "resonancedisc":  {
-                          "x":  2048,
-                          "y":  1536,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "rocket":  {
-                   "x":  2176,
-                   "y":  1536,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "rocketAssembly":  {
-                           "x":  2304,
-                           "y":  1536,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "rocketCrystal":  {
-                          "x":  0,
-                          "y":  1664,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "rocketMatter":  {
-                         "x":  128,
-                         "y":  1664,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "rocketScience":  {
-                          "x":  256,
-                          "y":  1664,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "rocketStarcannon":  {
-                             "x":  384,
-                             "y":  1664,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "rocketWarp":  {
-                       "x":  512,
-                       "y":  1664,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "silicium-high-purity":  {
-                                 "x":  640,
-                                 "y":  1664,
-                                 "width":  80,
-                                 "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
-                             },
-    "silicium-ore":  {
-                         "x":  768,
-                         "y":  1664,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "silicium-single-crystal":  {
-                                    "x":  896,
-                                    "y":  1664,
-                                    "width":  80,
-                                    "height":  80,
-                                    "total_width":  2432,
-                                    "total_height":  2304
-                                },
-    "silicon-neuron":  {
-                           "x":  1024,
-                           "y":  1664,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "smelter":  {
-                    "x":  1152,
-                    "y":  1664,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "smelter-2":  {
-                      "x":  1280,
-                      "y":  1664,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "smelter-3":  {
-                      "x":  1408,
-                      "y":  1664,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "soil-pile":  {
-                      "x":  1536,
-                      "y":  1664,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "solar-collector":  {
-                            "x":  1664,
-                            "y":  1664,
-                            "width":  80,
-                            "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
-                        },
-    "solar-panel":  {
-                        "x":  1792,
-                        "y":  1664,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "space-warper":  {
-                         "x":  1920,
-                         "y":  1664,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "splitter-4dir":  {
-                          "x":  2048,
-                          "y":  1664,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "spray-coater":  {
-                         "x":  2176,
-                         "y":  1664,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "starcannoncompo":  {
-                            "x":  2304,
-                            "y":  1664,
-                            "width":  80,
-                            "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
-                        },
-    "starcannonframe":  {
-                            "x":  0,
-                            "y":  1792,
-                            "width":  80,
-                            "height":  80,
-                            "total_width":  2432,
-                            "total_height":  2304
-                        },
-    "steel-plate":  {
-                        "x":  128,
-                        "y":  1792,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "stone-brick":  {
-                        "x":  256,
-                        "y":  1792,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "stone-ore":  {
-                      "x":  384,
-                      "y":  1792,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "storage-1":  {
-                      "x":  512,
-                      "y":  1792,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "storage-2":  {
-                      "x":  640,
-                      "y":  1792,
-                      "width":  80,
-                      "height":  80,
-                      "total_width":  2432,
-                      "total_height":  2304
-                  },
-    "storage-tank":  {
-                         "x":  768,
-                         "y":  1792,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "strange-matter-generator":  {
-                                     "x":  896,
-                                     "y":  1792,
-                                     "width":  80,
-                                     "height":  80,
-                                     "total_width":  2432,
-                                     "total_height":  2304
-                                 },
-    "strIntOverloader":  {
-                             "x":  1024,
-                             "y":  1792,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "sulphuric-acid":  {
-                           "x":  1152,
-                           "y":  1792,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "terrain-tool":  {
-                         "x":  1280,
-                         "y":  1792,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "tesla-coil":  {
-                       "x":  1408,
-                       "y":  1792,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "titan-crystal":  {
-                          "x":  1536,
-                          "y":  1792,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "titan-glass":  {
-                        "x":  1664,
-                        "y":  1792,
-                        "width":  80,
-                        "height":  80,
-                        "total_width":  2432,
-                        "total_height":  2304
-                    },
-    "titanium-alloy":  {
-                           "x":  1792,
-                           "y":  1792,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "titanium-ore":  {
-                         "x":  1920,
-                         "y":  1792,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "titanium-plate":  {
-                           "x":  2048,
-                           "y":  1792,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "t-matrix":  {
-                     "x":  2176,
-                     "y":  1792,
-                     "width":  80,
-                     "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
-                 },
-    "tunnelingexciter2":  {
-                              "x":  2304,
-                              "y":  1792,
-                              "width":  80,
-                              "height":  80,
-                              "total_width":  2432,
-                              "total_height":  2304
-                          },
-    "turret-cannon":  {
-                          "x":  0,
-                          "y":  1920,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "turret-disturb":  {
-                           "x":  128,
-                           "y":  1920,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "turret-gauss":  {
-                         "x":  256,
-                         "y":  1920,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "turret-laser":  {
-                         "x":  384,
-                         "y":  1920,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "turret-missile":  {
-                           "x":  512,
-                           "y":  1920,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "turret-plasma":  {
-                          "x":  640,
-                          "y":  1920,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "turret-plasma-ground":  {
-                                 "x":  768,
-                                 "y":  1920,
-                                 "width":  80,
-                                 "height":  80,
-                                 "total_width":  2432,
-                                 "total_height":  2304
-                             },
-    "turret-shield":  {
-                          "x":  896,
-                          "y":  1920,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "turret-signal":  {
-                          "x":  1024,
-                          "y":  1920,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "u-matrix":  {
-                     "x":  1152,
-                     "y":  1920,
-                     "width":  80,
-                     "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
-                 },
-    "vertical-launching-silo":  {
-                                    "x":  1280,
-                                    "y":  1920,
-                                    "width":  80,
-                                    "height":  80,
-                                    "total_width":  2432,
-                                    "total_height":  2304
-                                },
-    "virtual-energy-fuel":  {
-                                "x":  1408,
-                                "y":  1920,
-                                "width":  80,
-                                "height":  80,
-                                "total_width":  2432,
-                                "total_height":  2304
-                            },
-    "virtual-particle":  {
-                             "x":  1536,
-                             "y":  1920,
-                             "width":  80,
-                             "height":  80,
-                             "total_width":  2432,
-                             "total_height":  2304
-                         },
-    "warship-laser":  {
-                          "x":  1664,
-                          "y":  1920,
-                          "width":  80,
-                          "height":  80,
-                          "total_width":  2432,
-                          "total_height":  2304
-                      },
-    "warship-plasma":  {
-                           "x":  1792,
-                           "y":  1920,
-                           "width":  80,
-                           "height":  80,
-                           "total_width":  2432,
-                           "total_height":  2304
-                       },
-    "water":  {
-                  "x":  1920,
-                  "y":  1920,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "water-pump":  {
-                       "x":  2048,
-                       "y":  1920,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "wind-turbine":  {
-                         "x":  2176,
-                         "y":  1920,
-                         "width":  80,
-                         "height":  80,
-                         "total_width":  2432,
-                         "total_height":  2304
-                     },
-    "wood":  {
-                 "x":  2304,
-                 "y":  1920,
-                 "width":  80,
-                 "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
-             },
-    "氨":  {
-              "x":  0,
-              "y":  2048,
-              "width":  80,
-              "height":  80,
-              "total_width":  2432,
-              "total_height":  2304
-          },
-    "丙烯_新":  {
-                 "x":  128,
-                 "y":  2048,
-                 "width":  80,
-                 "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
-             },
-    "防御":  {
-               "x":  256,
-               "y":  2048,
-               "width":  80,
-               "height":  80,
-               "total_width":  2432,
-               "total_height":  2304
-           },
-    "放射晶体矿_新":  {
-                    "x":  384,
-                    "y":  2048,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "放射性同位素温差电池":  {
-                       "x":  512,
-                       "y":  2048,
-                       "width":  80,
-                       "height":  80,
-                       "total_width":  2432,
-                       "total_height":  2304
-                   },
-    "钢芯弹药箱":  {
-                  "x":  640,
-                  "y":  2048,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "光学信息传输纤维":  {
-                     "x":  768,
-                     "y":  2048,
-                     "width":  80,
-                     "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
-                 },
-    "环氧树脂_新":  {
-                   "x":  896,
-                   "y":  2048,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "基础机械组件":  {
-                   "x":  1024,
-                   "y":  2048,
-                   "width":  80,
-                   "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
-               },
-    "尖端机械组件_新":  {
-                     "x":  1152,
-                     "y":  2048,
-                     "width":  80,
-                     "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
-                 },
-    "金属氢单元":  {
-                  "x":  1280,
-                  "y":  2048,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "量子储液罐":  {
-                  "x":  1408,
-                  "y":  2048,
-                  "width":  80,
-                  "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
-              },
-    "量子箱":  {
-                "x":  1536,
-                "y":  2048,
-                "width":  80,
-                "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
-            },
-    "煤焦油":  {
-                "x":  1664,
-                "y":  2048,
-                "width":  80,
-                "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
-            },
-    "煤矿粉":  {
-                "x":  1792,
-                "y":  2048,
-                "width":  80,
-                "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
-            },
-    "人造恒星MK2":  {
-                    "x":  1920,
-                    "y":  2048,
-                    "width":  80,
-                    "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
-                },
-    "日志01":  {
-                 "x":  2048,
-                 "y":  2048,
-                 "width":  80,
-                 "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
-             },
-    "日志02":  {
-                 "x":  2176,
-                 "y":  2048,
-                 "width":  80,
-                 "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
-             },
-    "日志03":  {
-                 "x":  2304,
-                 "y":  2048,
-                 "width":  80,
-                 "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "日志04":  {
-                 "x":  0,
-                 "y":  2176,
+                 "x":  1360,
+                 "y":  1280,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "三氯化铁":  {
-                 "x":  128,
-                 "y":  2176,
+                 "x":  1440,
+                 "y":  1280,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "三元精金_新":  {
-                   "x":  256,
-                   "y":  2176,
+                   "x":  0,
+                   "y":  1360,
                    "width":  80,
                    "height":  80,
-                   "total_width":  2432,
-                   "total_height":  2304
+                   "total_width":  1520,
+                   "total_height":  1440
                },
     "生物神经":  {
-                 "x":  384,
-                 "y":  2176,
+                 "x":  80,
+                 "y":  1360,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "钛矿粉":  {
-                "x":  512,
-                "y":  2176,
+                "x":  160,
+                "y":  1360,
                 "width":  80,
                 "height":  80,
-                "total_width":  2432,
-                "total_height":  2304
+                "total_width":  1520,
+                "total_height":  1440
             },
     "稳定矩阵":  {
-                 "x":  640,
-                 "y":  2176,
+                 "x":  240,
+                 "y":  1360,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "先进机械组件_新":  {
-                     "x":  768,
-                     "y":  2176,
+                     "x":  320,
+                     "y":  1360,
                      "width":  80,
                      "height":  80,
-                     "total_width":  2432,
-                     "total_height":  2304
+                     "total_width":  1520,
+                     "total_height":  1440
                  },
     "硝基柴油燃料棒":  {
-                    "x":  896,
-                    "y":  2176,
+                    "x":  400,
+                    "y":  1360,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "行星采集器":  {
-                  "x":  1024,
-                  "y":  2176,
+                  "x":  480,
+                  "y":  1360,
                   "width":  80,
                   "height":  80,
-                  "total_width":  2432,
-                  "total_height":  2304
+                  "total_width":  1520,
+                  "total_height":  1440
               },
     "行星精密组装厂":  {
-                    "x":  1152,
-                    "y":  2176,
+                    "x":  560,
+                    "y":  1360,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 },
     "虚空矩阵":  {
-                 "x":  1280,
-                 "y":  2176,
+                 "x":  640,
+                 "y":  1360,
                  "width":  80,
                  "height":  80,
-                 "total_width":  2432,
-                 "total_height":  2304
+                 "total_width":  1520,
+                 "total_height":  1440
              },
     "盐水":  {
-               "x":  1408,
-               "y":  2176,
+               "x":  720,
+               "y":  1360,
                "width":  80,
                "height":  80,
-               "total_width":  2432,
-               "total_height":  2304
+               "total_width":  1520,
+               "total_height":  1440
            },
     "铀235燃料棒":  {
-                    "x":  1536,
-                    "y":  2176,
+                    "x":  800,
+                    "y":  1360,
                     "width":  80,
                     "height":  80,
-                    "total_width":  2432,
-                    "total_height":  2304
+                    "total_width":  1520,
+                    "total_height":  1440
                 }
 }

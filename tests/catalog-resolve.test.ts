@@ -177,7 +177,7 @@ test.each([
   {
     datasetPath: './data/OrbitalRing.json',
     defaultsPath: './data/OrbitalRing.defaults.json',
-    expectedRecipeCount: 366,
+    expectedRecipeCount: 365,
     expectedBuildingCount: 21,
     expectedIconAtlasIds: ['OrbitalRing'],
     expectedRecommendedSolve: {

@@ -125,7 +125,11 @@ function setBepInExConfigValue(content, key, value) {
     return content.replace(regex, `$1${value}`);
   }
   // If key doesn't exist, append under [General]
-  return content.replace(/(\[General\][^\[]*)/s, `$1${key} = ${value}\n`);
+  if (/\[General\]/i.test(content)) {
+    return content.replace(/(\[General\][^\[]*)/s, `$1${key} = ${value}\n`);
+  }
+  // No [General] section at all (e.g. new/empty config) — create one
+  return `${content}[General]\n${key} = ${value}\n`;
 }
 
 function writeBepInExConfig(configPath, content) {
@@ -214,6 +218,7 @@ async function main() {
   log('config', 'Enabling AutoExportOnStartup and AutoQuitAfterExport...');
   let configContent = readBepInExConfig(exporterConfigPath);
   const configBackup = configContent;
+  configContent = setBepInExConfigValue(configContent, 'OutputDirectory', exportOutputDir);
   configContent = setBepInExConfigValue(configContent, 'AutoExportOnStartup', 'true');
   configContent = setBepInExConfigValue(configContent, 'AutoQuitAfterExport', 'true');
   writeBepInExConfig(exporterConfigPath, configContent);
