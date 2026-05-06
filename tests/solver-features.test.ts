@@ -332,6 +332,124 @@ function buildComplexityTradeoffDataset(): VanillaDatasetSpec {
   };
 }
 
+function buildFootprintTradeoffDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 2 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Compact Smelter',
+        IconName: 'compact-smelter',
+        GridIndex: 3,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+        Space: 1,
+      },
+      {
+        ID: 5002,
+        Type: 6,
+        Name: 'Wide Smelter',
+        IconName: 'wide-smelter',
+        GridIndex: 4,
+        Speed: 10,
+        WorkEnergyPerTick: workEnergyForOneMW,
+        Space: 20,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001, 5002],
+        Name: 'Ore to Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+    ],
+  };
+}
+
+function buildPowerBalanceDataset(): VanillaDatasetSpec {
+  return {
+    items: [
+      { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+      { ID: 1006, Type: 1, Name: 'Coal', IconName: 'coal', GridIndex: 2 },
+      { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 3 },
+      {
+        ID: 5001,
+        Type: 6,
+        Name: 'Assembler',
+        IconName: 'assembler',
+        GridIndex: 4,
+        Speed: 1,
+        WorkEnergyPerTick: workEnergyForOneMW,
+        Space: 1,
+      },
+      {
+        ID: 6001,
+        Type: 6,
+        Name: 'Coal Generator',
+        IconName: 'coal-generator',
+        GridIndex: 5,
+      },
+    ],
+    recipes: [
+      {
+        ID: 1,
+        Type: 1,
+        Factories: [5001],
+        Name: 'Ore to Plate',
+        Items: [1001],
+        ItemCounts: [1],
+        Results: [1101],
+        ResultCounts: [1],
+        TimeSpend: 60,
+        Proliferator: 0,
+        IconName: 'plate',
+      },
+    ],
+  };
+}
+
+function buildPowerBalanceDefaults(): CatalogDefaultConfigSpec {
+  return {
+    powerDemand: {
+      ItemID: -9001,
+      Name: 'Power',
+      IconName: 'power',
+    },
+    powerGenerationRules: [
+      {
+        ID: -900101,
+        BuildingID: 6001,
+        Name: 'Coal Power',
+        PowerMW: 2,
+        Inputs: [{ ItemID: 1006, RatePerMin: 4 }],
+        IconName: 'coal-generator',
+      },
+    ],
+    buildingRules: [
+      { ID: 5001, Category: 'assembler' },
+      {
+        ID: 6001,
+        Category: 'power',
+        SpaceOverride: 3,
+        SpeedMultiplierOverride: 1,
+        WorkPowerMWOverride: 0,
+      },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  };
+}
+
 function buildPartialPreferredRecipeDataset(): VanillaDatasetSpec {
   return {
     items: [
@@ -583,6 +701,242 @@ test('min_complexity prefers the shorter production chain before lower power', (
   expect(lowComplexityResult.powerSummary.activePowerMW).toBeGreaterThan(
     lowPowerResult.powerSummary.activePowerMW
   );
+});
+
+test('min_buildings minimizes footprint-weighted building usage', () => {
+  const catalog = resolveCatalogModel(buildFootprintTradeoffDataset(), {
+    buildingRules: [
+      { ID: 5001, Category: 'smelter' },
+      { ID: 5002, Category: 'smelter' },
+    ],
+    recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+    recommendedRawItemTypeIds: [1],
+  });
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '1',
+    buildingId: '5001',
+  });
+  expect(result.recipePlans[0].exactBuildingCount).toBeCloseTo(1, 6);
+});
+
+test('reported placement power blends work and idle power for partial buildings', () => {
+  const catalog = resolveCatalogModel(
+    {
+      items: [
+        { ID: 1001, Type: 1, Name: 'Ore', IconName: 'ore', GridIndex: 1 },
+        { ID: 1101, Type: 2, Name: 'Plate', IconName: 'plate', GridIndex: 2 },
+        {
+          ID: 5001,
+          Type: 6,
+          Name: 'Assembler',
+          IconName: 'assembler',
+          GridIndex: 3,
+          Speed: 1,
+          WorkEnergyPerTick: workEnergyForOneMW * 10,
+        },
+      ],
+      recipes: [
+        {
+          ID: 1,
+          Type: 1,
+          Factories: [5001],
+          Name: 'Ore to Plate',
+          Items: [1001],
+          ItemCounts: [1],
+          Results: [1101],
+          ResultCounts: [1],
+          TimeSpend: 60,
+          Proliferator: 0,
+          IconName: 'plate',
+        },
+      ],
+    },
+    {
+      buildingRules: [{ ID: 5001, Category: 'assembler', IdlePowerMW: 2 }],
+      recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
+      recommendedRawItemTypeIds: [1],
+    }
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 30 }],
+    objective: 'min_power',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0].exactBuildingCount).toBeCloseTo(0.5, 6);
+  expect(result.recipePlans[0].roundedUpBuildingCount).toBe(1);
+  expect(result.recipePlans[0].activePowerMW).toBeCloseTo(5, 6);
+  expect(result.recipePlans[0].roundedPlacementPowerMW).toBeCloseTo(6, 6);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(5, 6);
+  expect(result.powerSummary.roundedPlacementPowerMW).toBeCloseTo(6, 6);
+});
+
+test('power demand can be satisfied by configured generation recipes', () => {
+  const catalog = resolveCatalogModel(buildPowerBalanceDataset(), buildPowerBalanceDefaults());
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.map(plan => plan.recipeId).sort()).toEqual(['-900101', '1']);
+  expect(result.recipePlans.find(plan => plan.recipeId === '-900101')).toMatchObject({
+    buildingId: '6001',
+    exactBuildingCount: 0.5,
+    roundedUpBuildingCount: 1,
+  });
+  expect(result.externalInputs).toEqual([
+    { itemId: '1001', ratePerMin: 60 },
+    { itemId: '1006', ratePerMin: 2 },
+  ]);
+  const powerBalance = result.itemBalance.find(entry => entry.itemId === '-9001');
+  expect(powerBalance?.producedRatePerMin).toBeCloseTo(1, 6);
+  expect(powerBalance?.consumedRatePerMin).toBeCloseTo(1, 6);
+  expect(powerBalance?.netRatePerMin).toBe(0);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(1, 6);
+});
+
+test('productivity proliferator raises non-star generator output without raising fuel use', () => {
+  const catalog = resolveCatalogModel(
+    {
+      items: [
+        { ID: 1006, Type: 1, Name: 'Coal', IconName: 'coal', GridIndex: 1 },
+        { ID: 1141, Type: 5, Name: 'Spray', IconName: 'spray', GridIndex: 2 },
+        { ID: 6001, Type: 6, Name: 'Fuel Generator', IconName: 'fuel-generator', GridIndex: 3 },
+      ],
+      recipes: [],
+    },
+    {
+      powerDemand: { ItemID: -9001, Name: 'Power', IconName: 'power' },
+      powerGenerationRules: [
+        {
+          ID: -900201,
+          BuildingID: 6001,
+          Name: 'Fuel Power',
+          PowerMW: 10,
+          Inputs: [{ ItemID: 1006, RatePerMin: 10 }],
+          SupportedModes: ['productivity'],
+        },
+      ],
+      proliferatorLevels: [
+        { Level: 0, SpeedMultiplier: 1, ProductivityMultiplier: 1, PowerMultiplier: 1 },
+        {
+          Level: 1,
+          ItemID: 1141,
+          SprayCount: 100,
+          SpeedMultiplier: 2,
+          ProductivityMultiplier: 2,
+          PowerMultiplier: 1,
+        },
+      ],
+      buildingRules: [
+        {
+          ID: 6001,
+          Category: 'power',
+          SpeedMultiplierOverride: 1,
+          WorkPowerMWOverride: 0,
+        },
+      ],
+      recommendedRawItemTypeIds: [1],
+    }
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '-9001', ratePerMin: 20 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+    forcedProliferatorModeByRecipe: { '-900201': 'productivity' },
+    forcedProliferatorLevelByRecipe: { '-900201': 1 },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '-900201',
+    proliferatorMode: 'productivity',
+    proliferatorLevel: 1,
+    runsPerMin: 1,
+    exactBuildingCount: 1,
+    outputs: [{ itemId: '-9001', ratePerMin: 20 }],
+  });
+  expect(result.externalInputs.find(input => input.itemId === '1006')?.ratePerMin).toBeCloseTo(10, 6);
+  expect(result.externalInputs.find(input => input.itemId === '1141')?.ratePerMin).toBeCloseTo(0.1, 6);
+});
+
+test('speed proliferator raises artificial-star output and fuel use together', () => {
+  const catalog = resolveCatalogModel(
+    {
+      items: [
+        { ID: 1803, Type: 4, Name: 'Antimatter Fuel Rod', IconName: 'antimatter', GridIndex: 1 },
+        { ID: 1141, Type: 5, Name: 'Spray', IconName: 'spray', GridIndex: 2 },
+        { ID: 2210, Type: 6, Name: 'Artificial Star', IconName: 'star', GridIndex: 3 },
+      ],
+      recipes: [],
+    },
+    {
+      powerDemand: { ItemID: -9001, Name: 'Power', IconName: 'power' },
+      powerGenerationRules: [
+        {
+          ID: -900301,
+          BuildingID: 2210,
+          Name: 'Artificial Star Power',
+          PowerMW: 10,
+          Inputs: [{ ItemID: 1803, RatePerMin: 10 }],
+          SupportedModes: ['speed'],
+        },
+      ],
+      proliferatorLevels: [
+        { Level: 0, SpeedMultiplier: 1, ProductivityMultiplier: 1, PowerMultiplier: 1 },
+        {
+          Level: 1,
+          ItemID: 1141,
+          SprayCount: 100,
+          SpeedMultiplier: 2,
+          ProductivityMultiplier: 2,
+          PowerMultiplier: 1,
+        },
+      ],
+      buildingRules: [
+        {
+          ID: 2210,
+          Category: 'power',
+          SpeedMultiplierOverride: 1,
+          WorkPowerMWOverride: 0,
+        },
+      ],
+    }
+  );
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '-9001', ratePerMin: 20 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    forcedProliferatorModeByRecipe: { '-900301': 'speed' },
+    forcedProliferatorLevelByRecipe: { '-900301': 1 },
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '-900301',
+    proliferatorMode: 'speed',
+    proliferatorLevel: 1,
+    runsPerMin: 2,
+    exactBuildingCount: 1,
+    outputs: [{ itemId: '-9001', ratePerMin: 20 }],
+  });
+  expect(result.externalInputs.find(input => input.itemId === '1803')?.ratePerMin).toBeCloseTo(20, 6);
+  expect(result.externalInputs.find(input => input.itemId === '1141')?.ratePerMin).toBeCloseTo(0.2, 6);
 });
 
 test('solver supports multiple target item rates in one request', () => {
@@ -1509,6 +1863,29 @@ test('vanilla proliferator items can be produced through their own recipe chain'
     true
   );
   expect(result.externalInputs.some(input => input.itemId === '1141')).toBe(false);
+});
+
+test('VanillaMkIV proliferator item can be produced through its profile recipe', () => {
+  const dataset = parseJsonText<VanillaDatasetSpec>(
+    readFileSync(join(__dirname, '..', 'data', 'VanillaMkIV.json'), 'utf8')
+  );
+  const defaults = parseJsonText<CatalogDefaultConfigSpec>(
+    readFileSync(join(__dirname, '..', 'data', 'VanillaMkIV.defaults.json'), 'utf8')
+  );
+  const catalog = resolveCatalogModel(dataset, defaults);
+
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '9441', ratePerMin: 60 }],
+    objective: 'min_external_input',
+    balancePolicy: 'force_balance',
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans.some(plan => plan.recipeId === '9441')).toBe(true);
+  expect(result.recipePlans.some(plan => plan.outputs.some(output => output.itemId === '9441'))).toBe(
+    true
+  );
+  expect(result.externalInputs.some(input => input.itemId === '9441')).toBe(false);
 });
 
 test('orbital ring material matrix surplus milp does not introduce water electrolysis', () => {

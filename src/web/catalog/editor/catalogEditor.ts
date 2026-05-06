@@ -40,6 +40,15 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       ...rule,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
+    powerDemand: defaultConfig.powerDemand
+      ? { ...defaultConfig.powerDemand }
+      : undefined,
+    powerGenerationRules: defaultConfig.powerGenerationRules?.map(rule => ({
+      ...rule,
+      Inputs: rule.Inputs ? rule.Inputs.map(input => ({ ...input })) : undefined,
+      SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
+      Tags: rule.Tags ? [...rule.Tags] : undefined,
+    })),
     recipeRules: defaultConfig.recipeRules?.map(rule => ({
       ...rule,
       AllowedBuildingIds: rule.AllowedBuildingIds ? [...rule.AllowedBuildingIds] : undefined,

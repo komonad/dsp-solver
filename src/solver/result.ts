@@ -148,11 +148,11 @@ export interface RecipePlan {
   runsPerMin: number;
   /** Continuous building count derived from runsPerMin. */
   exactBuildingCount: number;
-  /** User-facing rounded-up building count for placement/power summaries. */
+  /** User-facing rounded-up building count for placement summaries. */
   roundedUpBuildingCount: number;
-  /** Working power in MW reported with current solver semantics. */
+  /** Working power in MW for the active load. */
   activePowerMW: number;
-  /** Rounded placement power in MW for user-facing summaries. */
+  /** Placement power in MW, with the last partial building blended against idle power. */
   roundedPlacementPowerMW: number;
   /** Actual consumed item rates for this plan entry. */
   inputs: ItemRate[];
@@ -172,7 +172,7 @@ export interface BuildingSummary {
   roundedUpCount: number;
   /** Aggregated working power in MW for this building type. */
   activePowerMW: number;
-  /** Aggregated rounded placement power in MW for this building type. */
+  /** Aggregated placement power in MW, including idle-weighted partial buildings. */
   roundedPlacementPowerMW: number;
 }
 
@@ -182,7 +182,7 @@ export interface BuildingSummary {
 export interface PowerSummary {
   /** Total working power in MW under current reporting semantics. */
   activePowerMW: number;
-  /** Total rounded placement power in MW. */
+  /** Total placement power in MW, including idle-weighted partial buildings. */
   roundedPlacementPowerMW: number;
 }
 
@@ -256,7 +256,7 @@ export interface CompiledOption {
   powerMultiplier: number;
   /** Effective runs per minute provided by one building of this option. */
   singleBuildingRunsPerMin: number;
-  /** Exact building cost per one run/min of this option. */
+  /** Footprint-weighted building cost per one run/min of this option. */
   buildingCostPerRunPerMin: number;
   /** Exact working-power cost in MW per one run/min of this option. */
   powerCostMWPerRunPerMin: number;

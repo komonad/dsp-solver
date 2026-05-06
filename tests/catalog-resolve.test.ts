@@ -3,6 +3,7 @@ import {
   loadCatalogDefaultConfigFromFile,
   loadResolvedCatalogFromFiles,
   resolveCatalogModel,
+  type CatalogDefaultConfigSpec,
   type VanillaDatasetSpec,
   validateCatalogDefaultConfigSpec,
 } from '../src/catalog';
@@ -29,6 +30,12 @@ test('Vanilla.defaults.json is internally valid', async () => {
     PowerMultiplier: 1.3,
   });
   expect(defaultConfig.iconAtlasIds).toEqual(['Vanilla']);
+  expect(defaultConfig.powerDemand).toEqual({
+    ItemID: -9001,
+    Name: '电力',
+    IconName: 'energy-fragment',
+  });
+  expect(defaultConfig.powerGenerationRules).toHaveLength(4);
   expect(defaultConfig.recommendedDisabledBuildingIds).toEqual([1]);
   expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
 });
@@ -56,9 +63,10 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   const resolved = resolveCatalogModel(dataset, defaultConfig);
 
   expect(resolved.version).toBe('vanilla-compatible@1');
-  expect(resolved.items).toHaveLength(174);
-  expect(resolved.recipes).toHaveLength(238);
-  expect(resolved.buildings).toHaveLength(24);
+  expect(resolved.items).toHaveLength(175);
+  expect(resolved.recipes).toHaveLength(242);
+  expect(resolved.buildings).toHaveLength(27);
+  expect(resolved.powerItemId).toBe('-9001');
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
   expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
   expect(resolved.proliferatorLevelMap.get(1)).toMatchObject({
@@ -86,10 +94,26 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
 
   const assembler4 = resolved.buildingMap.get('2318');
   const fractionator = resolved.buildingMap.get('2314');
+  const fuelPlant = resolved.buildingMap.get('2204');
+  const artificialStar = resolved.buildingMap.get('2210');
   expect(assembler4).toBeDefined();
   expect(assembler4?.category).toBe('assembler');
   expect(assembler4?.speedMultiplier).toBe(3);
+  expect(assembler4?.space).toBeCloseTo(10.24, 6);
   expect(assembler4?.workPowerMW).toBeCloseTo(2.7, 6);
+  expect(fuelPlant).toMatchObject({
+    category: 'power',
+    speedMultiplier: 1,
+    space: 12.96,
+    workPowerMW: 0,
+  });
+  expect(artificialStar).toMatchObject({
+    category: 'power',
+    speedMultiplier: 1,
+    space: 36,
+    workPowerMW: 0,
+    tags: ['power-generator', 'artificial-star'],
+  });
   expect(fractionator).toMatchObject({
     category: 'fractionator',
     fractionatorBeltSpeedItemsPerMin: 1800,
@@ -130,6 +154,71 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   const universeMatrix = resolved.itemMap.get('6006');
   expect(ironOre?.kind).toBe('raw');
   expect(universeMatrix?.kind).toBe('product');
+  expect(resolved.itemMap.get('-9001')).toMatchObject({
+    name: '电力',
+    kind: 'utility',
+  });
+  expect(resolved.recipeMap.get('-900101')).toMatchObject({
+    name: '火力发电（煤矿）',
+    isSynthetic: false,
+    tags: ['power-generation'],
+    allowedBuildingIds: ['2204'],
+    supportsProliferatorModes: ['none', 'productivity'],
+    maxProliferatorLevel: 3,
+    outputs: [{ itemId: '-9001', amount: 2.16 }],
+  });
+  expect(resolved.recipeMap.get('-900103')).toMatchObject({
+    name: '人造恒星（反物质燃料棒）',
+    allowedBuildingIds: ['2210'],
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 3,
+    inputs: [{ itemId: '1803', amount: 0.6 }],
+    outputs: [{ itemId: '-9001', amount: 72 }],
+  });
+});
+
+test('VanillaMkIV profile adds a fourth proliferator level and recipe', async () => {
+  const dataset = JSON.parse(
+    readFileSync('./data/VanillaMkIV.json', 'utf8').replace(/^\uFEFF/, '')
+  ) as VanillaDatasetSpec;
+  const defaultConfig = JSON.parse(
+    readFileSync('./data/VanillaMkIV.defaults.json', 'utf8').replace(/^\uFEFF/, '')
+  ) as CatalogDefaultConfigSpec;
+  const validation = validateCatalogDefaultConfigSpec(defaultConfig);
+  expect(validation.valid).toBe(true);
+  expect(validation.errors).toEqual([]);
+
+  const resolved = resolveCatalogModel(dataset, defaultConfig);
+
+  expect(resolved.items).toHaveLength(176);
+  expect(resolved.recipes).toHaveLength(243);
+  expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3, 4]);
+  expect(resolved.proliferatorLevelMap.get(4)).toMatchObject({
+    itemId: '9441',
+    sprayCount: 161,
+    speedMultiplier: 3,
+    productivityMultiplier: 1.35,
+    powerMultiplier: 4.1,
+  });
+  expect(resolved.iconAtlasIds).toEqual(['ProliferatorMk4', 'Vanilla']);
+  expect(resolved.itemMap.get('9441')).toMatchObject({
+    name: '增产剂 Mk.IV',
+    icon: 'proliferator-mk4',
+  });
+  expect(resolved.recipeMap.get('9441')).toMatchObject({
+    name: '增产剂 Mk.IV',
+    icon: 'proliferator-mk4',
+    maxProliferatorLevel: 4,
+  });
+  expect(resolved.recipeMap.get('-900104')).toMatchObject({
+    name: '人造恒星（奇异湮灭燃料棒）',
+    supportsProliferatorModes: ['none', 'speed'],
+    maxProliferatorLevel: 4,
+    inputs: [{ itemId: '1804', amount: 0.12 }],
+    outputs: [{ itemId: '-9001', amount: 144 }],
+  });
+  expect(resolved.recipeMap.get('1')?.maxProliferatorLevel).toBe(4);
+  expect(resolved.recipeMap.get('115')?.maxProliferatorLevel).toBe(4);
 });
 
 test('resolveCatalogModel still returns a valid fallback model without default config', () => {

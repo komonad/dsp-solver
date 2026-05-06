@@ -14,7 +14,7 @@ test('i18n formatters emit zh-CN UI labels', () => {
   expect(formatRate(60)).toBe('60.00 / 分');
   expect(formatPower(12.5)).toBe('12.50 MW');
   expect(formatSolveObjective('min_complexity')).toBe('复杂度优先');
-  expect(formatSolveObjective('min_buildings')).toBe('最少建筑');
+  expect(formatSolveObjective('min_buildings')).toBe('最少占地');
   expect(formatBalancePolicy('allow_surplus')).toBe('允许冗余产物');
   expect(formatSolveStatus('optimal')).toBe('最优');
   expect(formatProliferatorLabel('speed', 2)).toBe('加速 等级 2');
@@ -25,6 +25,10 @@ test('dataset preset text comes from the locale bundle', () => {
   expect(getDatasetPresetText('vanilla')).toEqual({
     label: '原版',
     description: '完整的原版兼容数据集，以及配套的默认配置。',
+  });
+  expect(getDatasetPresetText('vanillaMkIV')).toEqual({
+    label: '原版 + 四级增产剂',
+    description: '原版兼容数据集，追加 4 级增产剂物品、配方和喷涂等级规则。',
   });
   expect(getDatasetPresetText('custom').label).toBe('自定义路径');
 });

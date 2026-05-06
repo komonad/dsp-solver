@@ -1,10 +1,27 @@
-import { loadResolvedCatalogFromFiles } from '../src/catalog';
+import { readFileSync } from 'fs';
+import {
+  loadResolvedCatalogFromFiles,
+  parseJsonText,
+  resolveCatalogModel,
+  type CatalogDefaultConfigSpec,
+  type VanillaDatasetSpec,
+} from '../src/catalog';
 import { solveCatalogRequest } from '../src/solver';
 
 const vanillaDatasetPath = './data/Vanilla.json';
 const vanillaDefaultConfigPath = './data/Vanilla.defaults.json';
 const ironPlateItemId = '1101';
 const ironPlateRecipeId = '1';
+
+function loadVanillaCatalogWithoutPowerBalance() {
+  const dataset = parseJsonText<VanillaDatasetSpec>(readFileSync(vanillaDatasetPath, 'utf8'));
+  const defaultConfig = parseJsonText<CatalogDefaultConfigSpec>(
+    readFileSync(vanillaDefaultConfigPath, 'utf8')
+  );
+  delete defaultConfig.powerDemand;
+  delete defaultConfig.powerGenerationRules;
+  return resolveCatalogModel(dataset, defaultConfig);
+}
 
 test.each([
   {
@@ -21,7 +38,7 @@ test.each([
     expectedBuildingId: '2315',
     expectedExactBuildingCount: 2.5,
     expectedRoundedBuildingCount: 3,
-    expectedPowerMW: 4.32,
+    expectedPowerMW: 3.6,
   },
   {
     ratePerMin: 540,
@@ -41,7 +58,7 @@ test.each([
     expectedRoundedBuildingCount,
     expectedPowerMW,
   }) => {
-    const catalog = await loadResolvedCatalogFromFiles(vanillaDatasetPath, vanillaDefaultConfigPath);
+    const catalog = loadVanillaCatalogWithoutPowerBalance();
     const result = solveCatalogRequest(catalog, {
       targets: [{ itemId: ironPlateItemId, ratePerMin }],
       objective: 'min_external_input',

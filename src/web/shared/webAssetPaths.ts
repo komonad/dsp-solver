@@ -7,6 +7,10 @@ export const BUNDLED_DATASET_PATHS = {
     datasetPath: normalizeBundledAssetPath('Vanilla.json'),
     defaultConfigPath: normalizeBundledAssetPath('Vanilla.defaults.json'),
   },
+  vanillaMkIV: {
+    datasetPath: normalizeBundledAssetPath('VanillaMkIV.json'),
+    defaultConfigPath: normalizeBundledAssetPath('VanillaMkIV.defaults.json'),
+  },
   orbitalRing: {
     datasetPath: normalizeBundledAssetPath('OrbitalRing.json'),
     defaultConfigPath: normalizeBundledAssetPath('OrbitalRing.defaults.json'),
@@ -18,4 +22,5 @@ export const ICON_ATLAS_IMAGE_PATHS = {
   GenesisBook: normalizeBundledAssetPath('icons/GenesisBook.png'),
   MoreMegaStructure: normalizeBundledAssetPath('icons/MoreMegaStructure.png'),
   OrbitalRing: normalizeBundledAssetPath('icons/OrbitalRing.png'),
+  ProliferatorMk4: normalizeBundledAssetPath('icons/ProliferatorMk4.png'),
 } as const;

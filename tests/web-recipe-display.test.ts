@@ -12,6 +12,11 @@ describe('buildRecipeFlowDisplay', () => {
     ],
     recipes: [],
   }, {
+    powerDemand: {
+      ItemID: -9001,
+      Name: 'Power',
+      IconName: 'power',
+    },
     proliferatorLevels: [
       { Level: 0, SpeedMultiplier: 1, ProductivityMultiplier: 1, PowerMultiplier: 1 },
       {
@@ -64,5 +69,17 @@ describe('buildRecipeFlowDisplay', () => {
     const display = buildRecipeFlowDisplay(catalog, plan);
     expect(display.visibleInputs.map(item => item.itemId)).toEqual(['1', '1143']);
     expect(display.auxiliaryProliferatorInput).toBeNull();
+  });
+
+  it('hides virtual power inputs from the visible formula', () => {
+    const plan = makePlan();
+    plan.inputs = [
+      ...plan.inputs,
+      { itemId: '-9001', itemName: 'Power', iconKey: 'power', ratePerMin: 2.5 },
+    ];
+
+    const display = buildRecipeFlowDisplay(catalog, plan);
+    expect(display.visibleInputs.map(item => item.itemId)).toEqual(['1']);
+    expect(display.auxiliaryProliferatorInput?.itemId).toBe('1143');
   });
 });

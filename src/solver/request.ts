@@ -1,10 +1,20 @@
 import type { ProliferatorMode } from '../catalog';
 
 /**
+ * Per-building parameter override applied at solve time.
+ */
+export interface BuildingParameterOverride {
+  /** Stack layers (divides effective placement space). Must be a positive integer. */
+  stackLayers?: number;
+  /** Override fractionator belt speed in items/min. Must be positive. */
+  beltSpeedItemsPerMin?: number;
+}
+
+/**
  * Primary optimization target for one solve request.
  *
- * - `min_buildings`: minimize exact continuous building usage, with small
- *   secondary tie-breaks
+ * - `min_buildings`: minimize footprint-weighted continuous building usage,
+ *   with small secondary tie-breaks
  * - `min_complexity`: minimize the total number of involved item types,
  *   recipe types, and building types, then break ties by power
  * - `min_power`: minimize working power
@@ -115,4 +125,6 @@ export interface SolveRequest {
    * takes precedence when both are present.
    */
   globalPreferredProliferatorLevel?: number;
+  /** Per-building parameter overrides, keyed by building ID. */
+  buildingOverrides?: Record<string, BuildingParameterOverride>;
 }

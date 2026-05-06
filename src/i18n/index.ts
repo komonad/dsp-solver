@@ -4,6 +4,7 @@ import type { BalancePolicy, SolveObjective, SolveStatus } from '../solver';
 export type AppLocale = 'zh-CN';
 export type DatasetPresetId =
   | 'vanilla'
+  | 'vanillaMkIV'
   | 'orbitalring'
   | 'custom';
 export type WorkbenchProliferatorPolicyLabel = 'auto' | 'none' | 'speed' | 'productivity';
@@ -109,6 +110,9 @@ export interface LocaleBundle {
     preferredBuildingGlobalScope: string;
     advancedOverridesLabel: string;
     advancedOverridesHelp: string;
+    buildingParametersLabel: string;
+    labStackLayersLabel: string;
+    beltSpeedLabel: string;
     startSolveButton: string;
     restartSolveButton: string;
     cancelSolveButton: string;
@@ -201,6 +205,7 @@ export interface LocaleBundle {
       proliferatorPreferences: string;
       disabledBuildings: string;
       preferredBuildings: string;
+      buildingParameters: string;
       dataset: string;
     };
     metricDescription: {
@@ -331,6 +336,10 @@ export interface LocaleBundle {
     numberRecord: (key: string) => string;
     modeValue: (key: string) => string;
     modeRecord: (key: string) => string;
+    buildingOverridesInvalid: string;
+    buildingOverrideEntryInvalid: (buildingId: string) => string;
+    buildingOverrideStackLayersInvalid: (buildingId: string) => string;
+    buildingOverrideBeltSpeedInvalid: (buildingId: string) => string;
   };
   flowGraph: {
     title: string;
@@ -351,7 +360,7 @@ const zhCN: LocaleBundle = {
   },
   enums: {
     objective: {
-      min_buildings: '最少建筑',
+      min_buildings: '最少占地',
       min_complexity: '复杂度优先',
       min_power: '最低功耗',
       min_external_input: '最少外部输入',
@@ -381,6 +390,10 @@ const zhCN: LocaleBundle = {
     vanilla: {
       label: '原版',
       description: '完整的原版兼容数据集，以及配套的默认配置。',
+    },
+    vanillaMkIV: {
+      label: '原版 + 四级增产剂',
+      description: '原版兼容数据集，追加 4 级增产剂物品、配方和喷涂等级规则。',
     },
     orbitalring: {
       label: '星环组合',
@@ -443,7 +456,7 @@ const zhCN: LocaleBundle = {
     addTarget: '添加目标',
     removeTarget: '移除',
     objectiveOptions: {
-      min_buildings: '最少建筑',
+      min_buildings: '最少占地',
       min_complexity: '复杂度优先',
       min_power: '最低功耗',
       min_external_input: '最少外部输入',
@@ -481,6 +494,9 @@ const zhCN: LocaleBundle = {
     advancedOverridesLabel: '高级覆盖 JSON',
     advancedOverridesHelp:
       '用于填写偏好/强制建筑、配方、增产剂等高级请求字段。',
+    buildingParametersLabel: '建筑参数',
+    labStackLayersLabel: '研究站堆叠层数',
+    beltSpeedLabel: '传送带速度 (物品/分)',
     startSolveButton: '立即求解',
     restartSolveButton: '重新求解',
     cancelSolveButton: '中断求解',
@@ -587,12 +603,14 @@ const zhCN: LocaleBundle = {
         '禁用建筑约束：列表中的建筑会被全局移出候选建筑集合。求解器不得将任何配方分配到这些建筑上。',
       preferredBuildings:
         '偏好建筑约束：定义全局或配方级的建筑选择偏好。配方级条目优先于全局条目，并用于约束或引导对应配方的建筑分配。',
+      buildingParameters:
+        '建筑参数：覆盖建筑的运行参数。研究站堆叠层数影响占地面积计算，传送带速度影响分馏器吞吐。',
       dataset:
         '数据集配置：选择或自定义游戏数据集，包括物品、配方和建筑定义。更改数据集后需要重新加载。',
     },
     metricDescription: {
       objective:
-        '目标函数：定义求解器在满足全部约束后所最小化的主目标，例如建筑数、功耗或外部输入。',
+        '目标函数：定义求解器在满足全部约束后所最小化的主目标，例如占地、功耗或外部输入。',
       balance:
         '配平策略：定义中间产物流的守恒约束形式。强制配平要求内部流量严格守恒；允许盈余则允许产生未被继续消费的剩余输出。',
       spray:
@@ -615,10 +633,10 @@ const zhCN: LocaleBundle = {
     actualLabel: '实际',
     noExternalInputs: '没有外部输入。',
     exactLabel: '精确',
-    roundedLabel: '取整',
+    roundedLabel: '放置',
     powerLabel: '功耗',
     activeLabel: '工作功耗',
-    roundedPlacementLabel: '按取整建筑计算',
+    roundedPlacementLabel: '按工作/待机负载加权',
   },
   recipePlans: {
     title: '配方方案',
@@ -720,6 +738,10 @@ const zhCN: LocaleBundle = {
     numberRecord: key => `${key} 在提供时必须是值为有限数字的对象。`,
     modeValue: key => `${key} 在提供时必须是 none、speed 或 productivity。`,
     modeRecord: key => `${key} 在提供时必须是值为 none、speed 或 productivity 的对象。`,
+    buildingOverridesInvalid: 'buildingOverrides 必须是以建筑 ID 为键的对象。',
+    buildingOverrideEntryInvalid: buildingId => `buildingOverrides["${buildingId}"] 必须是一个对象。`,
+    buildingOverrideStackLayersInvalid: buildingId => `buildingOverrides["${buildingId}"].stackLayers 必须是正整数。`,
+    buildingOverrideBeltSpeedInvalid: buildingId => `buildingOverrides["${buildingId}"].beltSpeedItemsPerMin 必须是正数。`,
   },
   flowGraph: {
     title: '物品流图',

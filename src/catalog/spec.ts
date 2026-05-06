@@ -127,6 +127,8 @@ export interface CatalogBuildingRuleSpec {
   ID: number;
   /** Optional building category for grouping, filtering, or batch preferences. */
   Category?: string;
+  /** Optional placement-size override when raw dataset space metadata is absent. */
+  SpaceOverride?: number;
   /** Optional idle power metadata in MW. Not currently used by solver output. */
   IdlePowerMW?: number;
   /** Optional built-in output bonus applied to recipe outputs on this building. */
@@ -145,6 +147,58 @@ export interface CatalogBuildingRuleSpec {
    * this building.
    */
   FractionatorMaxItemStack?: number;
+  /** Optional free-form tags for presentation or grouping. */
+  Tags?: string[];
+}
+
+/**
+ * Optional virtual item used to express factory power draw as a material
+ * balance dimension.
+ */
+export interface CatalogPowerDemandSpec {
+  /** Numeric item ID reserved for the virtual power-balance item. */
+  ItemID: number;
+  /** Display name for the virtual power-balance item. */
+  Name: string;
+  /** Optional icon resource name for presentation. */
+  IconName?: string;
+}
+
+/**
+ * Per-building input rate for a configured power-generation option.
+ */
+export interface CatalogPowerGenerationInputSpec {
+  /** Concrete item consumed by this generator option. */
+  ItemID: number;
+  /** Full-load consumption in items/min for one generator building. */
+  RatePerMin: number;
+}
+
+/**
+ * Data-driven recipe that converts fuel or other resources into power.
+ */
+export interface CatalogPowerGenerationRuleSpec {
+  /** Stable numeric synthetic recipe ID. */
+  ID: number;
+  /** Building item ID used by this generation option. */
+  BuildingID: number;
+  /** Display name for the generated recipe. */
+  Name: string;
+  /** Full-load power output in MW for one generator building. */
+  PowerMW: number;
+  /** Optional full-load input rates in items/min for one generator building. */
+  Inputs?: CatalogPowerGenerationInputSpec[];
+  /**
+   * Optional proliferator modes supported by this generator option.
+   *
+   * Productivity mode increases generated power per fuel item. Speed mode
+   * increases both generated power and fuel consumption per building.
+   */
+  SupportedModes?: ProliferatorMode[];
+  /** Optional highest proliferator level allowed for this generator option. */
+  MaxLevel?: number;
+  /** Optional icon resource name for presentation. */
+  IconName?: string;
   /** Optional free-form tags for presentation or grouping. */
   Tags?: string[];
 }
@@ -266,6 +320,10 @@ export interface CatalogDefaultConfigSpec {
   proliferatorLevels?: ProliferatorLevelConfigSpec[];
   /** Optional building metadata/defaults keyed by building ID. */
   buildingRules?: CatalogBuildingRuleSpec[];
+  /** Optional virtual item used to include power draw in material balance. */
+  powerDemand?: CatalogPowerDemandSpec;
+  /** Optional data-driven power generation options. */
+  powerGenerationRules?: CatalogPowerGenerationRuleSpec[];
   /** Optional per-recipe overrides for gaps in the raw exported dataset. */
   recipeRules?: CatalogRecipeRuleSpec[];
   /** Optional policies used to reinterpret raw recipe modifier codes. */
@@ -403,6 +461,8 @@ export interface ResolvedBuildingSpec {
   category: string;
   /** Effective building speed multiplier used by solver math. */
   speedMultiplier: number;
+  /** Placement-size weight used by the building-minimization objective. */
+  space: number;
   /** Working power in MW at base load, before proliferator power multipliers. */
   workPowerMW: number;
   /** Optional conveyor throughput in items per minute for fractionation-like recipes. */
@@ -467,6 +527,8 @@ export interface ResolvedCatalogModel {
   buildings: ResolvedBuildingSpec[];
   /** Resolved proliferator level list. */
   proliferatorLevels: ResolvedProliferatorLevelSpec[];
+  /** Optional virtual item ID used for power-balance accounting. */
+  powerItemId?: string;
   /** Fast lookup map for items. */
   itemMap: Map<string, ResolvedItemSpec>;
   /** Fast lookup map for recipes. */
@@ -695,6 +757,14 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     pushIssue(errors, '$.buildingRules', 'buildingRules must be an array when present.');
   }
 
+  if (value.powerDemand !== undefined && !isRecord(value.powerDemand)) {
+    pushIssue(errors, '$.powerDemand', 'powerDemand must be an object when present.');
+  }
+
+  if (value.powerGenerationRules !== undefined && !Array.isArray(value.powerGenerationRules)) {
+    pushIssue(errors, '$.powerGenerationRules', 'powerGenerationRules must be an array when present.');
+  }
+
   if (value.recipeRules !== undefined && !Array.isArray(value.recipeRules)) {
     pushIssue(errors, '$.recipeRules', 'recipeRules must be an array when present.');
   }
@@ -793,6 +863,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
   const config = value as unknown as CatalogDefaultConfigSpec;
   const levels = new Set<number>();
   const buildingIds = new Set<number>();
+  const powerGenerationRecipeIds = new Set<number>();
   const recipeRuleIds = new Set<number>();
   const modifierCodes = new Set<number>();
   const modeSet = new Set<ProliferatorMode>(['none', 'speed', 'productivity']);
@@ -805,6 +876,14 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
   ]);
   const balancePolicySet = new Set(['allow_surplus', 'force_balance']);
   const proliferatorPolicySet = new Set(['auto', 'none', 'speed', 'productivity']);
+
+  if ((config.powerGenerationRules ?? []).length > 0 && config.powerDemand === undefined) {
+    pushIssue(
+      errors,
+      '$.powerDemand',
+      'powerDemand is required when powerGenerationRules are present.'
+    );
+  }
 
   if (config.recommendedSolve !== undefined) {
     if (
@@ -880,6 +959,7 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
     if (rule.Category !== undefined && (typeof rule.Category !== 'string' || rule.Category.length === 0)) {
       pushIssue(errors, `${path}.Category`, 'Category must be a non-empty string when present.');
     }
+    if (rule.SpaceOverride !== undefined && (!isFiniteNumber(rule.SpaceOverride) || rule.SpaceOverride < 0)) pushIssue(errors, `${path}.SpaceOverride`, 'SpaceOverride must be a non-negative finite number when present.');
     if (rule.IdlePowerMW !== undefined && (!isFiniteNumber(rule.IdlePowerMW) || rule.IdlePowerMW < 0)) pushIssue(errors, `${path}.IdlePowerMW`, 'IdlePowerMW must be a non-negative finite number when present.');
     if (rule.IntrinsicProductivityBonus !== undefined && (!isFiniteNumber(rule.IntrinsicProductivityBonus) || rule.IntrinsicProductivityBonus < 0)) pushIssue(errors, `${path}.IntrinsicProductivityBonus`, 'IntrinsicProductivityBonus must be a non-negative finite number when present.');
     if (rule.SpeedMultiplierOverride !== undefined && (!isFiniteNumber(rule.SpeedMultiplierOverride) || rule.SpeedMultiplierOverride <= 0)) pushIssue(errors, `${path}.SpeedMultiplierOverride`, 'SpeedMultiplierOverride must be a positive finite number when present.');
@@ -893,6 +973,64 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         pushIssue(errors, `${path}.ID`, `Duplicate building rule ID ${rule.ID}.`);
       }
       buildingIds.add(rule.ID);
+    }
+  });
+
+  if (config.powerDemand !== undefined) {
+    const powerDemand = config.powerDemand;
+
+    if (!isRecord(powerDemand)) {
+      pushIssue(errors, '$.powerDemand', 'powerDemand must be an object.');
+    } else {
+      if (!isFiniteNumber(powerDemand.ItemID)) pushIssue(errors, '$.powerDemand.ItemID', 'ItemID must be a finite number.');
+      if (typeof powerDemand.Name !== 'string' || powerDemand.Name.length === 0) pushIssue(errors, '$.powerDemand.Name', 'Name must be a non-empty string.');
+      if (powerDemand.IconName !== undefined && typeof powerDemand.IconName !== 'string') pushIssue(errors, '$.powerDemand.IconName', 'IconName must be a string when present.');
+    }
+  }
+
+  (config.powerGenerationRules ?? []).forEach((rule, index) => {
+    const path = `$.powerGenerationRules[${index}]`;
+
+    if (!isRecord(rule)) {
+      pushIssue(errors, path, 'Power generation rule must be an object.');
+      return;
+    }
+
+    if (!isFiniteNumber(rule.ID)) pushIssue(errors, `${path}.ID`, 'ID must be a finite number.');
+    if (!isFiniteNumber(rule.BuildingID)) pushIssue(errors, `${path}.BuildingID`, 'BuildingID must be a finite number.');
+    if (typeof rule.Name !== 'string' || rule.Name.length === 0) pushIssue(errors, `${path}.Name`, 'Name must be a non-empty string.');
+    if (!isFiniteNumber(rule.PowerMW) || rule.PowerMW <= 0) pushIssue(errors, `${path}.PowerMW`, 'PowerMW must be a positive finite number.');
+    if (rule.Inputs !== undefined && !Array.isArray(rule.Inputs)) pushIssue(errors, `${path}.Inputs`, 'Inputs must be an array when present.');
+    if (rule.SupportedModes !== undefined && !isStringArray(rule.SupportedModes)) pushIssue(errors, `${path}.SupportedModes`, 'SupportedModes must be a string array when present.');
+    if (rule.MaxLevel !== undefined && (!isFiniteNumber(rule.MaxLevel) || rule.MaxLevel < 0 || !Number.isInteger(rule.MaxLevel))) pushIssue(errors, `${path}.MaxLevel`, 'MaxLevel must be a non-negative integer when present.');
+    if (rule.IconName !== undefined && typeof rule.IconName !== 'string') pushIssue(errors, `${path}.IconName`, 'IconName must be a string when present.');
+    if (rule.Tags !== undefined && !isStringArray(rule.Tags)) pushIssue(errors, `${path}.Tags`, 'Tags must be a string array when present.');
+
+    (rule.SupportedModes ?? []).forEach((mode, modeIndex) => {
+      if (!modeSet.has(mode)) {
+        pushIssue(
+          errors,
+          `${path}.SupportedModes[${modeIndex}]`,
+          'SupportedModes entries must be none, speed, or productivity.'
+        );
+      }
+    });
+
+    (rule.Inputs ?? []).forEach((input, inputIndex) => {
+      const inputPath = `${path}.Inputs[${inputIndex}]`;
+      if (!isRecord(input)) {
+        pushIssue(errors, inputPath, 'Power generation input must be an object.');
+        return;
+      }
+      if (!isFiniteNumber(input.ItemID)) pushIssue(errors, `${inputPath}.ItemID`, 'ItemID must be a finite number.');
+      if (!isFiniteNumber(input.RatePerMin) || input.RatePerMin <= 0) pushIssue(errors, `${inputPath}.RatePerMin`, 'RatePerMin must be a positive finite number.');
+    });
+
+    if (isFiniteNumber(rule.ID)) {
+      if (powerGenerationRecipeIds.has(rule.ID)) {
+        pushIssue(errors, `${path}.ID`, `Duplicate power generation rule ID ${rule.ID}.`);
+      }
+      powerGenerationRecipeIds.add(rule.ID);
     }
   });
 

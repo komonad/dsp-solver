@@ -6,10 +6,52 @@
     { "Level": 2, "ItemID": 1142, "SprayCount": 28, "SpeedMultiplier": 1.5, "ProductivityMultiplier": 1.2, "PowerMultiplier": 1.7 },
     { "Level": 3, "ItemID": 1143, "SprayCount": 75, "SpeedMultiplier": 2, "ProductivityMultiplier": 1.25, "PowerMultiplier": 2.5 }
   ],
+  "powerDemand": { "ItemID": -9001, "Name": "电力", "IconName": "energy-fragment" },
+  "powerGenerationRules": [
+    {
+      "ID": -900101,
+      "BuildingID": 2204,
+      "Name": "火力发电（煤矿）",
+      "PowerMW": 2.16,
+      "Inputs": [{ "ItemID": 1006, "RatePerMin": 60 }],
+      "SupportedModes": ["productivity"],
+      "IconName": "fuel-plant"
+    },
+    {
+      "ID": -900102,
+      "BuildingID": 2211,
+      "Name": "聚变发电（氘核燃料棒）",
+      "PowerMW": 15,
+      "Inputs": [{ "ItemID": 1802, "RatePerMin": 1.5 }],
+      "SupportedModes": ["productivity"],
+      "IconName": "fusion-power-station"
+    },
+    {
+      "ID": -900103,
+      "BuildingID": 2210,
+      "Name": "人造恒星（反物质燃料棒）",
+      "PowerMW": 72,
+      "Inputs": [{ "ItemID": 1803, "RatePerMin": 0.6 }],
+      "SupportedModes": ["speed"],
+      "IconName": "fusion-reactor"
+    },
+    {
+      "ID": -900104,
+      "BuildingID": 2210,
+      "Name": "人造恒星（奇异湮灭燃料棒）",
+      "PowerMW": 144,
+      "Inputs": [{ "ItemID": 1804, "RatePerMin": 0.12 }],
+      "SupportedModes": ["speed"],
+      "IconName": "fusion-reactor"
+    }
+  ],
   "buildingRules": [
     { "ID": 0, "Category": "synthetic", "Tags": ["synthetic-factory", "ikarus"] },
     { "ID": 1, "Category": "synthetic", "Tags": ["synthetic-factory", "planetary-base"] },
     { "ID": 2105, "Category": "orbital", "Tags": ["orbital-collector"] },
+    { "ID": 2204, "Category": "power", "SpaceOverride": 12.96, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
+    { "ID": 2210, "Category": "power", "SpaceOverride": 36, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator", "artificial-star"] },
+    { "ID": 2211, "Category": "power", "SpaceOverride": 20.25, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
     { "ID": 2207, "Category": "energy-storage", "Tags": ["charge"] },
     { "ID": 2208, "Category": "ray-receiver", "Tags": ["special-modifier"] },
     { "ID": 2209, "Category": "energy-exchanger", "Tags": ["charge"] },

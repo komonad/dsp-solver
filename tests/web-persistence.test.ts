@@ -356,6 +356,19 @@ test('workbench cache accepts orbitalring as a persisted dataset preset', () => 
   expect(readActiveWorkbenchCacheSource(storage)).toEqual(source);
 });
 
+test('workbench cache accepts VanillaMkIV as a persisted dataset preset', () => {
+  const storage = createMemoryStorage();
+  const source: WorkbenchCacheSource = {
+    presetId: 'vanillaMkIV',
+    datasetPath: './VanillaMkIV.json',
+    defaultConfigPath: './VanillaMkIV.defaults.json',
+  };
+
+  writeActiveWorkbenchCacheSource(storage, source);
+
+  expect(readActiveWorkbenchCacheSource(storage)).toEqual(source);
+});
+
 test('sanitizeWorkbenchEditorState downgrades hidden min_complexity objective to min_buildings', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
 
@@ -414,6 +427,7 @@ test('snapshot section states are stored per source key and preserved alongside 
     proliferatorPreferences: false,
     disabledBuildings: true,
     preferredBuildings: false,
+    buildingParameters: false,
     dataset: false,
   });
 

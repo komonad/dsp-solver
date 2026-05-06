@@ -119,6 +119,10 @@ export default function SolveSnapshotPanel() {
     setDatasetPath,
     setDefaultConfigPath,
     catalogLabel,
+    labStackLayers,
+    setLabStackLayers,
+    beltSpeedItemsPerMin,
+    setBeltSpeedItemsPerMin,
   } = useWorkbench();
 
   const browserStorage = useMemo(() => getBrowserStorage(), []);
@@ -659,11 +663,52 @@ export default function SolveSnapshotPanel() {
             )}
           </CollapsibleSnapshotSection>
 
-          <Divider />
-
           <CollapsibleSnapshotSection
-            title={bundle.datasetSource.title}
-            description={sectionDescriptions.dataset}
+            title={bundle.solveRequest.buildingParametersLabel}
+            description={sectionDescriptions.buildingParameters}
+            expanded={sectionState.buildingParameters}
+            onExpandedChange={expanded => setSectionExpanded('buildingParameters', expanded)}
+          >
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                type="number"
+                label={bundle.solveRequest.labStackLayersLabel}
+                value={labStackLayers ?? ''}
+                placeholder="15"
+                onChange={event => {
+                  const val = event.target.value;
+                  if (!val) {
+                    setLabStackLayers(undefined);
+                  } else {
+                    const num = Math.max(1, Math.round(Number(val)));
+                    setLabStackLayers(Number.isFinite(num) ? num : undefined);
+                  }
+                }}
+                slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                sx={{ width: 140 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label={bundle.solveRequest.beltSpeedLabel}
+                value={beltSpeedItemsPerMin ?? ''}
+                onChange={event => {
+                  const val = event.target.value;
+                  if (!val) {
+                    setBeltSpeedItemsPerMin(undefined);
+                  } else {
+                    const num = Number(val);
+                    setBeltSpeedItemsPerMin(Number.isFinite(num) && num > 0 ? num : undefined);
+                  }
+                }}
+                slotProps={{ htmlInput: { min: 1 } }}
+                sx={{ width: 180 }}
+              />
+            </Box>
+          </CollapsibleSnapshotSection>
+
+          <Divider />
             expanded={sectionState.dataset}
             onExpandedChange={expanded => setSectionExpanded('dataset', expanded)}
           >

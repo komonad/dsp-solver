@@ -35,6 +35,12 @@ test('icon registry can resolve mod atlas packs when requested', () => {
   expect(getIconAtlasSrc('Ccoal', ['MoreMegaStructure'])).toBe('./icons/MoreMegaStructure.png');
   expect(getResolvedIconSprite('iron-ore', ['OrbitalRing'])?.atlasId).toBe('OrbitalRing');
   expect(getIconAtlasSrc('iron-ore', ['OrbitalRing'])).toBe('./icons/OrbitalRing.png');
+  expect(getResolvedIconSprite('proliferator-mk4', ['ProliferatorMk4', 'Vanilla'])?.atlasId).toBe(
+    'ProliferatorMk4'
+  );
+  expect(getIconAtlasSrc('proliferator-mk4', ['ProliferatorMk4', 'Vanilla'])).toBe(
+    './icons/ProliferatorMk4.png'
+  );
 });
 
 test('icon fallback text supports ascii and non-ascii labels', () => {

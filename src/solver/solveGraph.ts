@@ -5,7 +5,7 @@ import type {
   ResolvedProliferatorLevelSpec,
   ResolvedRecipeSpec,
 } from '../catalog';
-import type { SolveRequest } from './request';
+import type { BuildingParameterOverride, SolveRequest } from './request';
 import type {
   CompiledItemAmountEntry,
   CompiledOption,
@@ -395,11 +395,16 @@ function finalizeCompiledOption(
 
 function buildNoneVariant(
   recipe: ResolvedRecipeSpec,
-  building: ResolvedBuildingSpec
+  building: ResolvedBuildingSpec,
+  powerItemId?: string
 ): CompiledOption {
   const singleBuildingRunsPerMin = buildSingleBuildingBaseRunsPerMin(recipe, building);
   const outputPerRun = buildOutputPerRun(recipe, building);
   const inputPerRun = buildInputPerRun(recipe);
+  const powerCostMWPerRunPerMin = building.workPowerMW / singleBuildingRunsPerMin;
+  if (powerItemId && powerCostMWPerRunPerMin > EPSILON) {
+    inputPerRun[powerItemId] = (inputPerRun[powerItemId] ?? 0) + powerCostMWPerRunPerMin;
+  }
 
   return finalizeCompiledOption({
     optionId: `${recipe.recipeId}:${building.buildingId}:none:0`,
@@ -409,8 +414,8 @@ function buildNoneVariant(
     proliferatorMode: 'none',
     powerMultiplier: 1,
     singleBuildingRunsPerMin,
-    buildingCostPerRunPerMin: 1 / singleBuildingRunsPerMin,
-    powerCostMWPerRunPerMin: building.workPowerMW / singleBuildingRunsPerMin,
+    buildingCostPerRunPerMin: building.space / singleBuildingRunsPerMin,
+    powerCostMWPerRunPerMin,
     inputPerRun,
     outputPerRun,
   });
@@ -424,7 +429,8 @@ function buildProliferatorVariant(
   recipe: ResolvedRecipeSpec,
   building: ResolvedBuildingSpec,
   level: ResolvedProliferatorLevelSpec,
-  mode: Exclude<ProliferatorMode, 'none'>
+  mode: Exclude<ProliferatorMode, 'none'>,
+  powerItemId?: string
 ): CompiledOption {
   const baseRunsPerMin = buildSingleBuildingBaseRunsPerMin(recipe, building);
   const speedModeMultiplier = mode === 'speed' ? level.speedMultiplier : 1;
@@ -436,6 +442,11 @@ function buildProliferatorVariant(
   const proliferatorItemId = createProliferatorItemId(level);
   inputPerRun[proliferatorItemId] =
     (inputPerRun[proliferatorItemId] ?? 0) + totalInputAmountPerRun / (level.sprayCount ?? 1);
+  const powerCostMWPerRunPerMin =
+    (building.workPowerMW * powerMultiplier) / singleBuildingRunsPerMin;
+  if (powerItemId && powerCostMWPerRunPerMin > EPSILON) {
+    inputPerRun[powerItemId] = (inputPerRun[powerItemId] ?? 0) + powerCostMWPerRunPerMin;
+  }
 
   const outputPerRun = buildOutputPerRun(recipe, building, productivityModeMultiplier);
 
@@ -448,9 +459,8 @@ function buildProliferatorVariant(
     proliferatorItemId,
     powerMultiplier,
     singleBuildingRunsPerMin,
-    buildingCostPerRunPerMin: 1 / singleBuildingRunsPerMin,
-    powerCostMWPerRunPerMin:
-      (building.workPowerMW * powerMultiplier) / singleBuildingRunsPerMin,
+    buildingCostPerRunPerMin: building.space / singleBuildingRunsPerMin,
+    powerCostMWPerRunPerMin,
     inputPerRun,
     outputPerRun,
   });
@@ -507,7 +517,7 @@ function getStaticRecipeOptionCompilation(
     }
 
     options.push({
-      option: buildNoneVariant(recipe, building),
+      option: buildNoneVariant(recipe, building, catalog.powerItemId),
       recipe,
       building,
     });
@@ -519,7 +529,7 @@ function getStaticRecipeOptionCompilation(
 
       if (recipe.supportsProliferatorModes.includes('speed')) {
         options.push({
-          option: buildProliferatorVariant(recipe, building, level, 'speed'),
+          option: buildProliferatorVariant(recipe, building, level, 'speed', catalog.powerItemId),
           recipe,
           building,
         });
@@ -527,7 +537,7 @@ function getStaticRecipeOptionCompilation(
 
       if (recipe.supportsProliferatorModes.includes('productivity')) {
         options.push({
-          option: buildProliferatorVariant(recipe, building, level, 'productivity'),
+          option: buildProliferatorVariant(recipe, building, level, 'productivity', catalog.powerItemId),
           recipe,
           building,
         });
@@ -586,26 +596,91 @@ export function setCachedSolvedRequestResult(
   }
 }
 
-function collectResolvableAuxiliaryItemIds(
-  compiledOptions: CompiledOptionContext[],
-  recipeOutputIndex: Map<string, ResolvedRecipeSpec[]>
+function collectAuxiliaryInputItemIds(
+  compiledOptions: CompiledOptionContext[]
 ): string[] {
   const auxiliaryItemIds = new Set<string>();
 
-  for (const { option } of compiledOptions) {
-    const proliferatorItemId = option.proliferatorItemId;
-    if (!proliferatorItemId) {
-      continue;
+  for (const { option, recipe } of compiledOptions) {
+    const recipeInputIds = new Set(recipe.inputs.map(input => input.itemId));
+    for (const [itemId] of option.inputEntries) {
+      if (!recipeInputIds.has(itemId)) {
+        auxiliaryItemIds.add(itemId);
+      }
     }
-
-    if ((recipeOutputIndex.get(proliferatorItemId) ?? []).length === 0) {
-      continue;
-    }
-
-    auxiliaryItemIds.add(proliferatorItemId);
   }
 
   return Array.from(auxiliaryItemIds).sort((left, right) => left.localeCompare(right));
+}
+
+function applyBuildingOverride(
+  option: CompiledOption,
+  recipe: ResolvedRecipeSpec,
+  building: ResolvedBuildingSpec,
+  override: BuildingParameterOverride,
+  powerItemId?: string
+): CompiledOption {
+  const needsBeltSpeedOverride =
+    isFractionationRecipe(recipe) &&
+    override.beltSpeedItemsPerMin !== undefined &&
+    override.beltSpeedItemsPerMin > 0;
+
+  if (!needsBeltSpeedOverride && (override.stackLayers === undefined || override.stackLayers <= 1)) {
+    return option;
+  }
+
+  if (needsBeltSpeedOverride) {
+    const beltSpeed = override.beltSpeedItemsPerMin!;
+    const maxStack = building.fractionatorMaxItemStack ?? 1;
+    const singleBuildingRunsPerMin = beltSpeed * maxStack * recipe.fractionationProbability!;
+    const effectiveSpace = building.space / (override.stackLayers ?? 1);
+    const powerCostMWPerRunPerMin =
+      (building.workPowerMW * option.powerMultiplier) / singleBuildingRunsPerMin;
+    const inputPerRun = { ...option.inputPerRun };
+    if (powerItemId) {
+      const oldPower = (building.workPowerMW * option.powerMultiplier) / option.singleBuildingRunsPerMin;
+      if (oldPower > EPSILON) {
+        inputPerRun[powerItemId] = (inputPerRun[powerItemId] ?? 0) - oldPower + (powerCostMWPerRunPerMin > EPSILON ? powerCostMWPerRunPerMin : 0);
+      } else if (powerCostMWPerRunPerMin > EPSILON) {
+        inputPerRun[powerItemId] = (inputPerRun[powerItemId] ?? 0) + powerCostMWPerRunPerMin;
+      }
+    }
+    return finalizeCompiledOption({
+      ...option,
+      singleBuildingRunsPerMin,
+      buildingCostPerRunPerMin: effectiveSpace / singleBuildingRunsPerMin,
+      powerCostMWPerRunPerMin,
+      inputPerRun,
+    });
+  }
+
+  const effectiveSpace = building.space / (override.stackLayers ?? 1);
+  return {
+    ...option,
+    buildingCostPerRunPerMin: effectiveSpace / option.singleBuildingRunsPerMin,
+  };
+}
+
+function applyBuildingOverrides(
+  options: CompiledOptionContext[],
+  recipe: ResolvedRecipeSpec,
+  buildingOverrides: Record<string, BuildingParameterOverride>,
+  powerItemId?: string
+): CompiledOptionContext[] {
+  let anyChanged = false;
+  const result = options.map(ctx => {
+    const override = buildingOverrides[ctx.building.buildingId];
+    if (!override) {
+      return ctx;
+    }
+    const newOption = applyBuildingOverride(ctx.option, recipe, ctx.building, override, powerItemId);
+    if (newOption === ctx.option) {
+      return ctx;
+    }
+    anyChanged = true;
+    return { ...ctx, option: newOption };
+  });
+  return anyChanged ? result : options;
 }
 
 function compileRecipeOptions(
@@ -673,8 +748,11 @@ function compileRecipeOptions(
     ({ option }) =>
       allowedBuildingIdSet.has(option.buildingId) && isOptionAllowedByForce(option, recipe, request)
   );
+  const overriddenOptions = request.buildingOverrides
+    ? applyBuildingOverrides(filteredOptions, recipe, request.buildingOverrides, catalog.powerItemId)
+    : filteredOptions;
   const compiledOptions = pruneDominatedCompiledOptions(
-    filteredOptions,
+    overriddenOptions,
     request.preferredBuildingByRecipe?.[recipe.recipeId]
   );
 
@@ -915,9 +993,7 @@ export function compileSolveGraph(
   disabledRecipeIds: Set<string>,
   disabledBuildingIds: Set<string>
 ): CompiledSolveGraph {
-  const catalogSolveCache = getCatalogSolveCache(catalog);
   const availableRecipeOutputIndex = getRecipeOutputIndexForDisabledRecipes(catalog, disabledRecipeIds);
-  const anyRecipeOutputIndex = catalogSolveCache.anyRecipeOutputIndex;
   const diagnostics = new Set<string>();
   const infoDiagnostics = new Set<string>();
   const recipeOptionCache = new Map<string, CachedRecipeOptionCompilation>();
@@ -972,10 +1048,7 @@ export function compileSolveGraph(
       compiledOptionsForRecipes.push(...getCompiledRecipeOptions(recipe));
     }
 
-    const auxiliaryItemIds = collectResolvableAuxiliaryItemIds(
-      compiledOptionsForRecipes,
-      anyRecipeOutputIndex
-    );
+    const auxiliaryItemIds = collectAuxiliaryInputItemIds(compiledOptionsForRecipes);
     const nextRequiredItemIds = new Set([...targetItemIds, ...auxiliaryItemIds]);
     const nextRecipeIdSet = new Set(collected.recipes.map(recipe => recipe.recipeId));
 
@@ -1076,15 +1149,12 @@ export function collectExternalItemIds(
 ): Set<string> {
   const externalItemIds = new Set(rawInputItemIds);
 
-  for (const { option } of compiledOptions) {
-    if (option.proliferatorMode === 'none') {
-      continue;
-    }
-
-    const proliferatorItemId =
-      option.proliferatorItemId ?? `__proliferator_level_${option.proliferatorLevel}`;
-    if ((recipeOutputIndex.get(proliferatorItemId) ?? []).length === 0) {
-      externalItemIds.add(proliferatorItemId);
+  for (const { option, recipe } of compiledOptions) {
+    const recipeInputIds = new Set(recipe.inputs.map(input => input.itemId));
+    for (const [itemId] of option.inputEntries) {
+      if (!recipeInputIds.has(itemId) && (recipeOutputIndex.get(itemId) ?? []).length === 0) {
+        externalItemIds.add(itemId);
+      }
     }
   }
 

@@ -25,6 +25,26 @@ export function roundUpCount(value: number): number {
   return Math.ceil(value - EPSILON);
 }
 
+function calculateWorkingPowerMW(
+  building: { workPowerMW: number },
+  option: { powerMultiplier: number },
+  exactBuildingCount: number
+): number {
+  return exactBuildingCount * building.workPowerMW * option.powerMultiplier;
+}
+
+function calculateWeightedPlacementPowerMW(
+  building: { workPowerMW: number; idlePowerMW?: number },
+  option: { powerMultiplier: number },
+  exactBuildingCount: number,
+  roundedUpBuildingCount: number
+): number {
+  const workingPowerMW = calculateWorkingPowerMW(building, option, exactBuildingCount);
+  const idleBuildingCount = Math.max(0, roundedUpBuildingCount - exactBuildingCount);
+
+  return workingPowerMW + idleBuildingCount * (building.idlePowerMW ?? 0);
+}
+
 function normalizeReportedRate(value: number): number {
   return Math.abs(value) < REPORTED_RATE_EPSILON ? 0 : value;
 }
@@ -235,7 +255,13 @@ export function buildResultFromSolution(params: {
     const { option, building } = compiled;
     const exactBuildingCount = value / option.singleBuildingRunsPerMin;
     const roundedUpBuildingCount = roundUpCount(exactBuildingCount);
-    const powerMW = roundedUpBuildingCount * building.workPowerMW * option.powerMultiplier;
+    const activePowerMW = calculateWorkingPowerMW(building, option, exactBuildingCount);
+    const weightedPlacementPowerMW = calculateWeightedPlacementPowerMW(
+      building,
+      option,
+      exactBuildingCount,
+      roundedUpBuildingCount
+    );
 
     const inputs = option.inputEntries.map(([itemId, amount]) => ({
       itemId,
@@ -262,8 +288,8 @@ export function buildResultFromSolution(params: {
       runsPerMin: value,
       exactBuildingCount,
       roundedUpBuildingCount,
-      activePowerMW: powerMW,
-      roundedPlacementPowerMW: powerMW,
+      activePowerMW,
+      roundedPlacementPowerMW: weightedPlacementPowerMW,
       inputs: inputs.sort((left, right) => left.itemId.localeCompare(right.itemId)),
       outputs: outputs.sort((left, right) => left.itemId.localeCompare(right.itemId)),
     });

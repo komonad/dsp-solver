@@ -55,7 +55,7 @@ test('refinery balance scenario uses both refinery recipes to eliminate heavy-oi
   ]);
   expect(getItemBalance(result, '1116').netRatePerMin).toBeCloseTo(0, 6);
   expect(result.surplusOutputs).toEqual([]);
-  expect(result.powerSummary.activePowerMW).toBeCloseTo(2, 6);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(2 / 3, 6);
 });
 
 test.each([
@@ -104,7 +104,7 @@ test('fullerene loop force-balance uses the regular plant for the methane loop a
   expect(getExternalRate(result, '10002')).toBeCloseTo(20, 6);
   expect(getExternalRate(result, '12001')).toBeCloseTo(40, 6);
   expect(result.surplusOutputs).toEqual([]);
-  expect(result.powerSummary.activePowerMW).toBeCloseTo(4.88, 6);
+  expect(result.powerSummary.activePowerMW).toBeCloseTo(3.44, 6);
 });
 
 test('fullerene loop remains feasible with the low-temperature plant on the export cycle while the methane loop stays on the regular plant', async () => {

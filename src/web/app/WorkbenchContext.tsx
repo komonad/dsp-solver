@@ -175,6 +175,11 @@ export interface WorkbenchContextValue {
   // Preferred buildings
   preferredBuildings: EditablePreferredBuilding[];
   setPreferredBuildings: React.Dispatch<React.SetStateAction<EditablePreferredBuilding[]>>;
+  // Building parameters
+  labStackLayers: number | undefined;
+  setLabStackLayers: React.Dispatch<React.SetStateAction<number | undefined>>;
+  beltSpeedItemsPerMin: number | undefined;
+  setBeltSpeedItemsPerMin: React.Dispatch<React.SetStateAction<number | undefined>>;
 
   // Refs
   itemLedgerScrollRef: React.MutableRefObject<HTMLDivElement | null>;
@@ -329,6 +334,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [advancedOverridesText, setAdvancedOverridesText] = useState('');
   const [recipeStrategyWarning, setRecipeStrategyWarning] = useState('');
   const [preferredBuildings, setPreferredBuildings] = useState<EditablePreferredBuilding[]>([]);
+  const [labStackLayers, setLabStackLayers] = useState<number | undefined>(undefined);
+  const [beltSpeedItemsPerMin, setBeltSpeedItemsPerMin] = useState<number | undefined>(undefined);
   const [revealedRecipePlanKey, setRevealedRecipePlanKey] = useState('');
   const [revealedRecipePlanNonce, setRevealedRecipePlanNonce] = useState(0);
 
@@ -374,6 +381,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     setAdvancedOverridesText(editorState.advancedOverridesText);
     setRecipeStrategyWarning('');
     setPreferredBuildings(editorState.preferredBuildings);
+    setLabStackLayers(editorState.labStackLayers);
+    setBeltSpeedItemsPerMin(editorState.beltSpeedItemsPerMin);
   }
 
   function buildCurrentWorkbenchEditorState(): WorkbenchEditorState {
@@ -393,6 +402,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       recipeStrategyOverrides,
       preferredBuildings,
       advancedOverridesText,
+      labStackLayers,
+      beltSpeedItemsPerMin,
     };
   }
 
@@ -414,6 +425,8 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       recipePreferences,
       recipeStrategyOverrides,
       targets,
+      labStackLayers,
+      beltSpeedItemsPerMin,
     ]
   );
 
@@ -2147,6 +2160,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setAdvancedOverridesText,
       preferredBuildings,
       setPreferredBuildings,
+      labStackLayers,
+      setLabStackLayers,
+      beltSpeedItemsPerMin,
+      setBeltSpeedItemsPerMin,
 
       // Refs
       itemLedgerScrollRef,

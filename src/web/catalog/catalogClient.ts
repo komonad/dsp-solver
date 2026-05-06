@@ -16,6 +16,11 @@ export const DATASET_PRESETS: DatasetPresetDefinition[] = [
     defaultConfigPath: BUNDLED_DATASET_PATHS.vanilla.defaultConfigPath,
   },
   {
+    id: 'vanillaMkIV',
+    datasetPath: BUNDLED_DATASET_PATHS.vanillaMkIV.datasetPath,
+    defaultConfigPath: BUNDLED_DATASET_PATHS.vanillaMkIV.defaultConfigPath,
+  },
+  {
     id: 'orbitalring',
     datasetPath: BUNDLED_DATASET_PATHS.orbitalRing.datasetPath,
     defaultConfigPath: BUNDLED_DATASET_PATHS.orbitalRing.defaultConfigPath,

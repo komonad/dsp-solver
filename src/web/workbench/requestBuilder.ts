@@ -1,6 +1,6 @@
 import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
 import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
-import type { BalancePolicy, SolveObjective, SolveRequest } from '../../solver';
+import type { BalancePolicy, BuildingParameterOverride, SolveObjective, SolveRequest } from '../../solver';
 
 export type AdvancedSolveOverrides = Omit<
   SolveRequest,
@@ -197,6 +197,48 @@ function readOptionalMode(
   return value as ProliferatorMode;
 }
 
+function readOptionalBuildingOverrides(
+  source: Record<string, unknown>,
+  errors: string[],
+  locale: AppLocale
+): Record<string, BuildingParameterOverride> | undefined {
+  const value = source['buildingOverrides'];
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    errors.push(getLocaleBundle(locale).advancedOverrides.buildingOverridesInvalid);
+    return undefined;
+  }
+  const bundle = getLocaleBundle(locale);
+  const result: Record<string, BuildingParameterOverride> = {};
+  for (const [buildingId, entry] of Object.entries(value)) {
+    if (!isRecord(entry)) {
+      errors.push(bundle.advancedOverrides.buildingOverrideEntryInvalid(buildingId));
+      return undefined;
+    }
+    const override: BuildingParameterOverride = {};
+    if (entry.stackLayers !== undefined) {
+      if (typeof entry.stackLayers !== 'number' || !Number.isFinite(entry.stackLayers) || entry.stackLayers < 1 || !Number.isInteger(entry.stackLayers)) {
+        errors.push(bundle.advancedOverrides.buildingOverrideStackLayersInvalid(buildingId));
+        return undefined;
+      }
+      override.stackLayers = entry.stackLayers;
+    }
+    if (entry.beltSpeedItemsPerMin !== undefined) {
+      if (typeof entry.beltSpeedItemsPerMin !== 'number' || !Number.isFinite(entry.beltSpeedItemsPerMin) || entry.beltSpeedItemsPerMin <= 0) {
+        errors.push(bundle.advancedOverrides.buildingOverrideBeltSpeedInvalid(buildingId));
+        return undefined;
+      }
+      override.beltSpeedItemsPerMin = entry.beltSpeedItemsPerMin;
+    }
+    if (Object.keys(override).length > 0) {
+      result[buildingId] = override;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function mergeUniqueStringArrays(left?: string[], right?: string[]): string[] | undefined {
   const merged = Array.from(new Set([...(left ?? []), ...(right ?? [])]));
   return merged.length > 0 ? merged : undefined;
@@ -305,6 +347,7 @@ export function parseAdvancedSolveOverrides(
       errors,
       locale
     ),
+    buildingOverrides: readOptionalBuildingOverrides(source, errors, locale),
   };
 
   if (errors.length > 0) {

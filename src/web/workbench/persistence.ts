@@ -37,6 +37,8 @@ export interface WorkbenchEditorState {
   recipeStrategyOverrides: EditableRecipeStrategyOverride[];
   preferredBuildings: EditablePreferredBuilding[];
   advancedOverridesText: string;
+  labStackLayers?: number;
+  beltSpeedItemsPerMin?: number;
 }
 
 export interface WorkbenchPersistedConfig {
@@ -111,6 +113,7 @@ function sanitizePersistedSolveState(
 function isDatasetPresetId(value: unknown): value is DatasetPresetId {
   return (
     value === 'vanilla' ||
+    value === 'vanillaMkIV' ||
     value === 'orbitalring' ||
     value === 'custom'
   );
@@ -786,5 +789,17 @@ export function sanitizeWorkbenchEditorState(
     preferredBuildings,
     advancedOverridesText:
       typeof state.advancedOverridesText === 'string' ? state.advancedOverridesText : '',
+    labStackLayers:
+      typeof (state as Record<string, unknown>).labStackLayers === 'number' &&
+      Number.isFinite((state as Record<string, unknown>).labStackLayers) &&
+      ((state as Record<string, unknown>).labStackLayers as number) >= 1
+        ? (state as Record<string, unknown>).labStackLayers as number
+        : undefined,
+    beltSpeedItemsPerMin:
+      typeof (state as Record<string, unknown>).beltSpeedItemsPerMin === 'number' &&
+      Number.isFinite((state as Record<string, unknown>).beltSpeedItemsPerMin) &&
+      ((state as Record<string, unknown>).beltSpeedItemsPerMin as number) > 0
+        ? (state as Record<string, unknown>).beltSpeedItemsPerMin as number
+        : undefined,
   };
 }

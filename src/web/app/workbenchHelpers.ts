@@ -129,7 +129,7 @@ export function buildRecipePlanCardDisplayModel(
       plan.roundedUpBuildingCount,
       locale
     ),
-    powerLabel: formatPower(plan.activePowerMW, locale),
+    powerLabel: formatPower(plan.roundedPlacementPowerMW, locale),
     proliferatorLabel: plan.proliferatorLabel,
     visibleInputs,
     outputs: plan.outputs,
@@ -215,6 +215,29 @@ export function pickDefaultTarget(catalog: ResolvedCatalogModel): string {
 
 export function pickDefaultRecipePreference(catalog: ResolvedCatalogModel): string {
   return catalog.recipes[0]?.recipeId ?? '';
+}
+
+function buildItemPickerOptions(
+  catalog: ResolvedCatalogModel,
+  predicate: (item: ResolvedCatalogModel['items'][number]) => boolean
+): ItemPickerOption[] {
+  return catalog.items
+    .filter(predicate)
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map(item => ({
+      itemId: item.itemId,
+      name: item.name,
+      icon: item.icon,
+    }));
+}
+
+export function buildTargetItemOptions(catalog: ResolvedCatalogModel | null): ItemPickerOption[] {
+  return catalog ? buildItemPickerOptions(catalog, item => item.kind !== 'utility') : [];
+}
+
+export function buildRecipeItemOptions(catalog: ResolvedCatalogModel | null): ItemPickerOption[] {
+  return catalog ? buildItemPickerOptions(catalog, () => true) : [];
 }
 
 export function buildRecipeOptionsByOutputItem(

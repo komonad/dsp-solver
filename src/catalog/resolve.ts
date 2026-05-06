@@ -1,6 +1,7 @@
 import {
   type CatalogBuildingRuleSpec,
   type CatalogDefaultConfigSpec,
+  type CatalogPowerGenerationRuleSpec,
   type CatalogRecipeBuildingExpansionGroupSpec,
   type CatalogRecipeModifierPolicySpec,
   type CatalogRecipeRuleSpec,
@@ -24,6 +25,15 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
     proliferatorLevels: defaultConfig.proliferatorLevels?.map(level => ({ ...level })),
     buildingRules: defaultConfig.buildingRules?.map(rule => ({
       ...rule,
+      Tags: rule.Tags ? [...rule.Tags] : undefined,
+    })),
+    powerDemand: defaultConfig.powerDemand
+      ? { ...defaultConfig.powerDemand }
+      : undefined,
+    powerGenerationRules: defaultConfig.powerGenerationRules?.map(rule => ({
+      ...rule,
+      Inputs: rule.Inputs ? rule.Inputs.map(input => ({ ...input })) : undefined,
+      SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,
       Tags: rule.Tags ? [...rule.Tags] : undefined,
     })),
     recipeRules: defaultConfig.recipeRules?.map(rule => ({
@@ -161,6 +171,18 @@ function defaultNoneMode(): ProliferatorMode[] {
   return ['none'];
 }
 
+function normalizeConfiguredProliferatorModes(modes?: ProliferatorMode[]): ProliferatorMode[] {
+  if (!modes || modes.length === 0) {
+    return defaultNoneMode();
+  }
+
+  return normalizeModes({
+    Code: 0,
+    Kind: 'proliferator',
+    SupportedModes: modes,
+  });
+}
+
 function matchesSpeedOnlyPolicy(
   recipe: VanillaDatasetSpec['recipes'][number],
   policy?: CatalogRecipeModifierPolicySpec
@@ -244,6 +266,21 @@ function deriveSpeedMultiplier(
   }
 
   return buildingItem.Speed;
+}
+
+function deriveBuildingSpace(
+  buildingItem: { Space?: number },
+  rule?: CatalogBuildingRuleSpec
+): number {
+  if (rule?.SpaceOverride !== undefined) {
+    return rule.SpaceOverride;
+  }
+
+  if (buildingItem.Space !== undefined) {
+    return buildingItem.Space;
+  }
+
+  return 1;
 }
 
 function deriveBuildingCategory(rule?: CatalogBuildingRuleSpec): string {
@@ -344,6 +381,60 @@ function buildRecipeTags(params: {
   };
 }
 
+function buildPowerGenerationRecipe(
+  rule: CatalogPowerGenerationRuleSpec,
+  powerItemId: string,
+  highestConfiguredProliferatorLevel: number
+): ResolvedRecipeSpec {
+  const supportedModes = normalizeConfiguredProliferatorModes(rule.SupportedModes);
+  const supportsProliferator = supportedModes.some(mode => mode !== 'none');
+  const maxProliferatorLevel = supportsProliferator
+    ? (rule.MaxLevel ?? highestConfiguredProliferatorLevel)
+    : 0;
+  const sourceRecipe = {
+    ID: rule.ID,
+    Type: -2,
+    Factories: [rule.BuildingID],
+    Name: rule.Name,
+    Items: (rule.Inputs ?? []).map(input => input.ItemID),
+    ItemCounts: (rule.Inputs ?? []).map(input => input.RatePerMin),
+    Results: [Number(powerItemId)],
+    ResultCounts: [rule.PowerMW],
+    TimeSpend: 3600,
+    Proliferator: 0,
+    IconName: rule.IconName ?? '',
+  };
+
+  return {
+    recipeId: rule.ID.toString(),
+    typeId: -2,
+    name: rule.Name,
+    icon: rule.IconName,
+    cycleTimeSec: 60,
+    timeSpend: 3600,
+    inputs: (rule.Inputs ?? []).map(input => ({
+      itemId: input.ItemID.toString(),
+      amount: input.RatePerMin,
+    })),
+    outputs: [
+      {
+        itemId: powerItemId,
+        amount: rule.PowerMW,
+      },
+    ],
+    allowedBuildingIds: [rule.BuildingID.toString()],
+    modifierCode: sourceRecipe.Proliferator,
+    modifierKind: supportsProliferator ? 'proliferator' : 'none',
+    supportsProliferatorModes: supportedModes,
+    maxProliferatorLevel,
+    isSynthetic: false,
+    tags: ['power-generation', ...(rule.Tags ?? [])],
+    source: {
+      recipe: sourceRecipe,
+    },
+  };
+}
+
 export function resolveCatalogModel(
   dataset: VanillaDatasetSpec,
   defaultConfig: CatalogDefaultConfigSpec = {}
@@ -373,17 +464,38 @@ export function resolveCatalogModel(
   const modifierRuleMap = new Map<number, RecipeModifierRuleSpec>(
     (resolvedDefaultConfig.recipeModifierRules ?? []).map(rule => [rule.Code, rule])
   );
+  const powerItemId = resolvedDefaultConfig.powerDemand?.ItemID.toString();
+  const powerGenerationRules = resolvedDefaultConfig.powerGenerationRules ?? [];
   const itemById = new Map(dataset.items.map(item => [item.ID, item]));
+
+  if (resolvedDefaultConfig.powerDemand && itemById.has(resolvedDefaultConfig.powerDemand.ItemID)) {
+    throw new Error(`Power demand item ${resolvedDefaultConfig.powerDemand.ItemID} collides with a dataset item.`);
+  }
+
+  const datasetRecipeIds = new Set(dataset.recipes.map(recipe => recipe.ID));
+  for (const rule of powerGenerationRules) {
+    if (datasetRecipeIds.has(rule.ID)) {
+      throw new Error(`Power generation recipe ${rule.ID} collides with a dataset recipe.`);
+    }
+  }
+
   const usedFactoryIds = Array.from(
     new Set([
       ...dataset.recipes.flatMap(recipe => recipe.Factories),
       ...(resolvedDefaultConfig.recipeRules ?? []).flatMap(rule => rule.AllowedBuildingIds ?? []),
       ...recipeBuildingExpansionGroups.flatMap(group => group.BuildingIds),
       ...recipeBuildingUniversalIds,
+      ...powerGenerationRules.map(rule => rule.BuildingID),
     ])
   ).sort((a, b) => a - b);
-  const producedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Results));
-  const consumedItemIds = new Set(dataset.recipes.flatMap(recipe => recipe.Items));
+  const producedItemIds = new Set([
+    ...dataset.recipes.flatMap(recipe => recipe.Results),
+    ...(resolvedDefaultConfig.powerDemand ? [resolvedDefaultConfig.powerDemand.ItemID] : []),
+  ]);
+  const consumedItemIds = new Set([
+    ...dataset.recipes.flatMap(recipe => recipe.Items),
+    ...powerGenerationRules.flatMap(rule => (rule.Inputs ?? []).map(input => input.ItemID)),
+  ]);
   const highestConfiguredProliferatorLevel = Math.max(
     0,
     ...(resolvedDefaultConfig.proliferatorLevels ?? []).map(level => level.Level)
@@ -393,23 +505,43 @@ export function resolveCatalogModel(
       ? Array.from(new Set(resolvedDefaultConfig.iconAtlasIds.map(entry => entry.trim()).filter(Boolean)))
       : ['Vanilla'];
 
-  const items: ResolvedItemSpec[] = dataset.items.map(item => ({
-    itemId: item.ID.toString(),
-    typeId: item.Type,
-    name: item.Name,
-    kind: inferItemKind({
-      itemType: item.Type,
-      itemId: item.ID,
-      recommendedRawItemIdSet,
-      recommendedRawItemTypeSet,
-      producedItemIds,
-      consumedItemIds,
-    }),
-    icon: item.IconName,
-    source: item,
-  }));
+  const items: ResolvedItemSpec[] = [
+    ...dataset.items.map(item => ({
+      itemId: item.ID.toString(),
+      typeId: item.Type,
+      name: item.Name,
+      kind: inferItemKind({
+        itemType: item.Type,
+        itemId: item.ID,
+        recommendedRawItemIdSet,
+        recommendedRawItemTypeSet,
+        producedItemIds,
+        consumedItemIds,
+      }),
+      icon: item.IconName,
+      source: item,
+    })),
+    ...(resolvedDefaultConfig.powerDemand
+      ? [
+          {
+            itemId: resolvedDefaultConfig.powerDemand.ItemID.toString(),
+            typeId: -2,
+            name: resolvedDefaultConfig.powerDemand.Name,
+            kind: 'utility' as const,
+            icon: resolvedDefaultConfig.powerDemand.IconName,
+            tags: ['power-demand'],
+            source: {
+              ID: resolvedDefaultConfig.powerDemand.ItemID,
+              Type: -2,
+              Name: resolvedDefaultConfig.powerDemand.Name,
+              IconName: resolvedDefaultConfig.powerDemand.IconName ?? '',
+            },
+          },
+        ]
+      : []),
+  ];
 
-  const recipes: ResolvedRecipeSpec[] = dataset.recipes.map(recipe => {
+  const baseRecipes: ResolvedRecipeSpec[] = dataset.recipes.map(recipe => {
     const recipeRule = recipeRuleMap.get(recipe.ID);
     const effectiveModifierCode = deriveEffectiveModifierCode(
       recipe,
@@ -472,6 +604,15 @@ export function resolveCatalogModel(
     };
   });
 
+  const recipes: ResolvedRecipeSpec[] = [
+    ...baseRecipes,
+    ...(powerItemId
+      ? powerGenerationRules.map(rule =>
+          buildPowerGenerationRecipe(rule, powerItemId, highestConfiguredProliferatorLevel)
+        )
+      : []),
+  ];
+
   const buildings: ResolvedBuildingSpec[] = usedFactoryIds.map(factoryId => {
     const item = itemById.get(factoryId);
     const rule = buildingRuleMap.get(factoryId);
@@ -487,6 +628,7 @@ export function resolveCatalogModel(
       icon: item.IconName,
       category: deriveBuildingCategory(rule),
       speedMultiplier: deriveSpeedMultiplier(item, rule),
+      space: deriveBuildingSpace(item, rule),
       workPowerMW: deriveWorkPowerMW(item, rule),
       fractionatorBeltSpeedItemsPerMin: rule?.FractionatorBeltSpeedItemsPerMin,
       fractionatorMaxItemStack: rule?.FractionatorMaxItemStack,
@@ -543,6 +685,7 @@ export function resolveCatalogModel(
     recipes,
     buildings,
     proliferatorLevels,
+    powerItemId,
     itemMap,
     recipeMap,
     buildingMap,

@@ -116,7 +116,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     roundedBuildingCount: 1,
     recipeTypeCount: 1,
   });
-  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(4, 6);
+  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(2, 6);
   expect(model.targets).toEqual([
     {
       itemId: '1101',
@@ -143,8 +143,8 @@ test('presentation model carries frontend-visible names and totals from a solved
     exactCount: 0.5,
     roundedUpCount: 1,
   });
-  expect(model.buildingSummary[0].activePowerMW).toBeCloseTo(4, 6);
-  expect(model.buildingSummary[0].roundedPlacementPowerMW).toBeCloseTo(4, 6);
+  expect(model.buildingSummary[0].activePowerMW).toBeCloseTo(2, 6);
+  expect(model.buildingSummary[0].roundedPlacementPowerMW).toBeCloseTo(2, 6);
   expect(model.recipePlans).toHaveLength(1);
   expect(model.recipePlans[0]).toMatchObject({
     recipeId: '1',
@@ -158,7 +158,7 @@ test('presentation model carries frontend-visible names and totals from a solved
     exactBuildingCount: 0.5,
     roundedUpBuildingCount: 1,
   });
-  expect(model.recipePlans[0].activePowerMW).toBeCloseTo(4, 6);
+  expect(model.recipePlans[0].activePowerMW).toBeCloseTo(2, 6);
 });
 
 test('presentation request summary can be built without a solved result', () => {
@@ -542,7 +542,7 @@ test('presentation model groups the item ledger into net inputs, outputs, and in
     roundedBuildingCount: 1,
     recipeTypeCount: 1,
   });
-  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(4, 6);
+  expect(model.solvedSummary?.roundedPlacementPowerMW).toBeCloseTo(2, 6);
 });
 
 test('presentation model exposes per-item slices with producer and consumer plans', () => {
