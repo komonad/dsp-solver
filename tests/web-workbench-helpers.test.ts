@@ -288,4 +288,9 @@ test('buildGlobalProliferatorPreferenceDisplayEntry returns a displayable global
     recipeName: '*',
     proliferatorPreferenceLabel: '\u52a0\u901f \u7b49\u7ea7 2',
   });
+  expect(buildGlobalProliferatorPreferenceDisplayEntry('auto', 3, 'zh-CN')).toEqual({
+    recipeId: '*',
+    recipeName: '*',
+    proliferatorPreferenceLabel: '\u81ea\u52a8\u6a21\u5f0f \u7b49\u7ea7 3',
+  });
 });

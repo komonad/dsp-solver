@@ -49,8 +49,7 @@ function log(stage, msg) {
 }
 
 function fatal(msg) {
-  console.error(`FATAL: ${msg}`);
-  process.exit(1);
+  throw new Error(`FATAL: ${msg}`);
 }
 
 function sleep(ms) {
@@ -196,13 +195,13 @@ async function main() {
   const exportStatusPath = join(exportOutputDir, 'CurrentGame.status.json');
 
   // Stage 2: Build & deploy mod
+  const pluginDir = join(profileBepInExDir, 'plugins', 'DspCalc.RuntimeExporter');
   if (!opts.skipBuild) {
     log('build', 'Building exporter mod...');
     const csproj = join(EXPORTER_ROOT, 'DspCalc.RuntimeExporter.csproj');
     run(`dotnet build "${csproj}" -c Release`);
 
     const builtDll = join(EXPORTER_ROOT, 'bin', 'Release', 'DspCalc.RuntimeExporter.dll');
-    const pluginDir = join(profileBepInExDir, 'plugins', 'DspCalc.RuntimeExporter');
     mkdirSync(pluginDir, { recursive: true });
     copyFileSync(builtDll, join(pluginDir, 'DspCalc.RuntimeExporter.dll'));
 
@@ -223,124 +222,146 @@ async function main() {
   configContent = setBepInExConfigValue(configContent, 'AutoQuitAfterExport', 'true');
   writeBepInExConfig(exporterConfigPath, configContent);
 
-  // Stage 4: Clear old status file
-  if (existsSync(exportStatusPath)) {
-    unlinkSync(exportStatusPath);
-    log('config', 'Cleared old status file');
-  }
-
-  // Stage 5: Deploy BepInEx to game dir & launch
-  deployBepInExToGameDir(profileBepInExDir, gameBepInExDir);
-
-  log('launch', 'Starting game via Steam...');
-  exec('start steam://rungameid/1366540', { shell: true });
-
-  // Stage 6: Wait for export
-  log('wait', `Polling for export status (timeout ${opts.timeout}s)...`);
-  const deadline = Date.now() + opts.timeout * 1000;
-  let exportSucceeded = false;
-  let exportedIconCount = 0;
-
-  while (Date.now() < deadline) {
-    await sleep(3000);
-
+  // Cleanup after configuration changes is required even when launch/export fails.
+  try {
+    // Stage 4: Clear old status file
     if (existsSync(exportStatusPath)) {
-      try {
-        const status = JSON.parse(readFileSync(exportStatusPath, 'utf8'));
-        if (status.success) {
-          log('wait', `Export succeeded: ${status.itemCount} items, ${status.recipeCount} recipes, ${status.itemIconCount} icons`);
-          exportSucceeded = true;
-          exportedIconCount = status.itemIconCount ?? 0;
-          break;
-        } else if (status.message) {
-          log('wait', `Export status: ${status.message}`);
+      unlinkSync(exportStatusPath);
+      log('config', 'Cleared old status file');
+    }
+
+    // Stage 5: Deploy BepInEx to game dir & launch
+    deployBepInExToGameDir(profileBepInExDir, gameBepInExDir);
+
+    log('launch', 'Starting game via Steam...');
+    exec('start steam://rungameid/1366540', { shell: true });
+
+    // Stage 6: Wait for export
+    log('wait', `Polling for export status (timeout ${opts.timeout}s)...`);
+    const deadline = Date.now() + opts.timeout * 1000;
+    let exportSucceeded = false;
+    let exportedIconCount = 0;
+
+    while (Date.now() < deadline) {
+      await sleep(3000);
+
+      if (existsSync(exportStatusPath)) {
+        try {
+          const status = JSON.parse(readFileSync(exportStatusPath, 'utf8'));
+          if (status.success) {
+            log('wait', `Export succeeded: ${status.itemCount} items, ${status.recipeCount} recipes, ${status.itemIconCount} icons`);
+            exportSucceeded = true;
+            exportedIconCount = status.itemIconCount ?? 0;
+            break;
+          } else if (status.message) {
+            log('wait', `Export status: ${status.message}`);
+          }
+        } catch {
+          // Status file might be partially written
         }
-      } catch {
-        // Status file might be partially written
+      }
+
+      const gameRunning = isProcessRunning('DSPGAME.exe');
+      if (!gameRunning && !existsSync(exportStatusPath)) {
+        fatal('Game exited before producing a status file. Check BepInEx logs for errors.');
       }
     }
 
-    const gameRunning = isProcessRunning('DSPGAME.exe');
-    if (!gameRunning && !existsSync(exportStatusPath)) {
-      fatal('Game exited before producing a status file. Check BepInEx logs for errors.');
+    if (!exportSucceeded) {
+      fatal(`Export timed out after ${opts.timeout}s. Check if the game started correctly.`);
     }
-  }
 
-  if (!exportSucceeded) {
-    fatal(`Export timed out after ${opts.timeout}s. Check if the game started correctly.`);
-  }
-
-  // Stage 7: Wait for game exit
-  log('wait', 'Waiting for game to exit...');
-  const quitDeadline = Date.now() + 30_000;
-  while (isProcessRunning('DSPGAME.exe')) {
-    if (Date.now() > quitDeadline) {
-      log('wait', 'Game did not exit in time, killing process...');
-      killProcess('DSPGAME.exe');
+    // Stage 7: Wait for game exit
+    log('wait', 'Waiting for game to exit...');
+    const quitDeadline = Date.now() + 30_000;
+    while (isProcessRunning('DSPGAME.exe')) {
+      if (Date.now() > quitDeadline) {
+        log('wait', 'Game did not exit in time, killing process...');
+        killProcess('DSPGAME.exe');
+        await sleep(2000);
+        break;
+      }
       await sleep(2000);
-      break;
     }
-    await sleep(2000);
-  }
-  log('wait', 'Game has exited');
+    log('wait', 'Game has exited');
 
-  // Stage 8: Save BepInEx log then clean game directory
-  const gameLogPath = join(gameBepInExDir, 'LogOutput.log');
-  if (existsSync(gameLogPath)) {
-    const savedLogPath = join(exportOutputDir, 'LastRun.log');
-    copyFileSync(gameLogPath, savedLogPath);
-    log('cleanup', `Saved BepInEx log → ${savedLogPath}`);
-  }
-  cleanBepInExFromGameDir(gameBepInExDir);
-
-  // Stage 9: Post-processing
-  log('post', 'Validating export...');
-  try {
-    run(`node "${join(EXPORTER_ROOT, 'scripts', 'validate-export.mjs')}" "${exportDatasetPath}"`);
-  } catch (e) {
-    log('post', `Warning: export validation reported issues (continuing anyway)`);
-  }
-
-  const dataDir = join(PROJECT_ROOT, 'data');
-  const iconsDir = join(dataDir, 'icons');
-  mkdirSync(iconsDir, { recursive: true });
-
-  const skipAtlas = opts.skipAtlas || exportedIconCount === 0;
-  if (exportedIconCount === 0 && !opts.skipAtlas) {
-    log('post', 'No icons were exported (sprites not loaded at auto-export time). Skipping atlas build; existing atlas files will be kept.');
-  }
-
-  if (!skipAtlas) {
-    log('post', 'Building icon atlas...');
-    run(`powershell -ExecutionPolicy Bypass -File "${join(EXPORTER_ROOT, 'scripts', 'build-atlas.ps1')}" "${exportDatasetPath}"`);
-
-    const atlasJsonSrc = join(exportOutputDir, 'CurrentGame.items.atlas.json');
-    const atlasPngSrc = join(exportOutputDir, 'CurrentGame.items.atlas.png');
-
-    if (!existsSync(atlasJsonSrc) || !existsSync(atlasPngSrc)) {
-      fatal(`Atlas build did not produce expected output files in ${exportOutputDir}`);
+    // Stage 8: Save BepInEx log then clean game directory
+    const gameLogPath = join(gameBepInExDir, 'LogOutput.log');
+    if (existsSync(gameLogPath)) {
+      const savedLogPath = join(exportOutputDir, 'LastRun.log');
+      copyFileSync(gameLogPath, savedLogPath);
+      log('cleanup', `Saved BepInEx log → ${savedLogPath}`);
     }
+    cleanBepInExFromGameDir(gameBepInExDir);
 
-    log('post', `Copying atlas → data/icons/${opts.name}.json + .png`);
-    copyFileSync(atlasJsonSrc, join(iconsDir, `${opts.name}.json`));
-    copyFileSync(atlasPngSrc, join(iconsDir, `${opts.name}.png`));
-
-    log('post', 'Validating atlas...');
+    // Stage 9: Post-processing
+    log('post', 'Validating export...');
     try {
-      run(`node "${join(EXPORTER_ROOT, 'scripts', 'validate-atlas.mjs')}" "${exportDatasetPath}"`);
+      run(`node "${join(EXPORTER_ROOT, 'scripts', 'validate-export.mjs')}" "${exportDatasetPath}"`);
     } catch (e) {
-      log('post', `Warning: atlas validation reported issues`);
+      log('post', `Warning: export validation reported issues (continuing anyway)`);
+    }
+
+    const dataDir = join(PROJECT_ROOT, 'data');
+    const iconsDir = join(dataDir, 'icons');
+    mkdirSync(iconsDir, { recursive: true });
+
+    const skipAtlas = opts.skipAtlas || exportedIconCount === 0;
+    if (exportedIconCount === 0 && !opts.skipAtlas) {
+      log('post', 'No icons were exported (sprites not loaded at auto-export time). Skipping atlas build; existing atlas files will be kept.');
+    }
+
+    if (!skipAtlas) {
+      log('post', 'Building icon atlas...');
+      run(`powershell -ExecutionPolicy Bypass -File "${join(EXPORTER_ROOT, 'scripts', 'build-atlas.ps1')}" "${exportDatasetPath}"`);
+
+      const atlasJsonSrc = join(exportOutputDir, 'CurrentGame.items.atlas.json');
+      const atlasPngSrc = join(exportOutputDir, 'CurrentGame.items.atlas.png');
+
+      if (!existsSync(atlasJsonSrc) || !existsSync(atlasPngSrc)) {
+        fatal(`Atlas build did not produce expected output files in ${exportOutputDir}`);
+      }
+
+      log('post', `Copying atlas → data/icons/${opts.name}.json + .png`);
+      copyFileSync(atlasJsonSrc, join(iconsDir, `${opts.name}.json`));
+      copyFileSync(atlasPngSrc, join(iconsDir, `${opts.name}.png`));
+
+      log('post', 'Validating atlas...');
+      try {
+        run(`node "${join(EXPORTER_ROOT, 'scripts', 'validate-atlas.mjs')}" "${exportDatasetPath}"`);
+      } catch (e) {
+        log('post', `Warning: atlas validation reported issues`);
+      }
+    }
+
+    log('post', `Copying dataset → data/${opts.name}.json`);
+    copyFileSync(exportDatasetPath, join(dataDir, `${opts.name}.json`));
+
+    log('done', `Dataset "${opts.name}" synced successfully.`);
+  } finally {
+    // Stage 10: Restore config; always runs, even on failure
+    log('config', 'Restoring mod config...');
+    if (configBackup) {
+      writeBepInExConfig(exporterConfigPath, configBackup);
+    } else {
+      // Reset generated config auto flags when no prior config exists.
+      try {
+        let currentConfig = readBepInExConfig(exporterConfigPath);
+        currentConfig = setBepInExConfigValue(currentConfig, 'AutoExportOnStartup', 'false');
+        currentConfig = setBepInExConfigValue(currentConfig, 'AutoQuitAfterExport', 'false');
+        writeBepInExConfig(exporterConfigPath, currentConfig);
+      } catch {
+        // Config reset is best effort because cleanup should continue.
+        log('config', 'Warning: could not reset auto flags in config');
+      }
+    }
+
+    // Stage 11: Remove deployed mod from profile to keep r2modman profile clean
+    if (existsSync(pluginDir)) {
+      rmSync(pluginDir, { recursive: true, force: true });
+      log('cleanup', `Removed exporter plugin from profile: ${pluginDir}`);
     }
   }
-
-  log('post', `Copying dataset → data/${opts.name}.json`);
-  copyFileSync(exportDatasetPath, join(dataDir, `${opts.name}.json`));
-
-  // Stage 10: Restore config
-  log('config', 'Restoring mod config...');
-  writeBepInExConfig(exporterConfigPath, configBackup);
-
-  log('done', `Dataset "${opts.name}" synced successfully.`);
 }
 
 main().catch(err => {

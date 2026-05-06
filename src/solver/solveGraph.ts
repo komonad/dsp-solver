@@ -868,7 +868,8 @@ export function getPreferredOptionPenalty(
   }
 
   const forcedLevel = getForcedProliferatorLevelForRecipe(request, recipe);
-  const preferredLevel = request.preferredProliferatorLevelByRecipe?.[recipe.recipeId];
+  const preferredLevel = request.preferredProliferatorLevelByRecipe?.[recipe.recipeId]
+    ?? request.globalPreferredProliferatorLevel;
   if (preferredLevel !== undefined && forcedLevel === undefined && preferredLevel !== option.proliferatorLevel) {
     penalty += 1;
   }

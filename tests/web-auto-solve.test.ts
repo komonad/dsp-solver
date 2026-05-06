@@ -375,3 +375,29 @@ test('computeWorkbenchSolve keeps the global proliferator policy as request-leve
   expect(autoSolve.result?.recipePlans[0].proliferatorMode).toBe('speed');
   expect(autoSolve.result?.recipePlans[0].proliferatorLevel).toBe(1);
 });
+
+test('computeWorkbenchSolve keeps auto proliferator level as a global preference', () => {
+  const catalog = resolveCatalogModel(buildProliferatorDataset(), buildProliferatorDefaults());
+  const autoSolve = computeWorkbenchSolve({
+    catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'allow_surplus',
+    proliferatorPolicy: 'auto',
+    globalProliferatorLevel: 1,
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    preferredBuildings: [],
+    advancedOverridesText: '',
+  });
+
+  expect(autoSolve.error).toBe('');
+  expect(autoSolve.request?.globalPreferredProliferatorLevel).toEqual(1);
+  expect(autoSolve.request?.globalForcedProliferatorMode).toBeUndefined();
+  expect(autoSolve.request?.globalForcedProliferatorLevel).toBeUndefined();
+});

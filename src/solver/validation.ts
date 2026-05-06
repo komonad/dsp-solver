@@ -176,6 +176,17 @@ export function validateSolveRequest(catalog: ResolvedCatalogModel, request: Sol
     messages.push('globalForcedProliferatorLevel must be 0 or a known proliferator level.');
   }
 
+  if (
+    request.globalPreferredProliferatorLevel !== undefined &&
+    !(
+      request.globalPreferredProliferatorLevel > 0 &&
+      Number.isInteger(request.globalPreferredProliferatorLevel) &&
+      catalog.proliferatorLevelMap.has(request.globalPreferredProliferatorLevel)
+    )
+  ) {
+    messages.push('globalPreferredProliferatorLevel must be a known proliferator level.');
+  }
+
   messages.push(
     ...validateNumericRecordMap(
       catalog,

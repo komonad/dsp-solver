@@ -176,12 +176,19 @@ export function buildGlobalProliferatorPreferenceDisplayEntry(
   globalProliferatorLevel: '' | number,
   locale: AppLocale
 ): RecipeProliferatorPreferenceDisplayEntry | null {
-  if (proliferatorPolicy === 'auto') {
+  if (
+    proliferatorPolicy === 'auto' &&
+    (typeof globalProliferatorLevel !== 'number' || globalProliferatorLevel <= 0)
+  ) {
     return null;
   }
 
   const proliferatorPreferenceLabel = formatPreferredProliferatorLabel(
-    proliferatorPolicy === 'none' ? 'none' : proliferatorPolicy,
+    proliferatorPolicy === 'auto'
+      ? undefined
+      : proliferatorPolicy === 'none'
+        ? 'none'
+        : proliferatorPolicy,
     typeof globalProliferatorLevel === 'number' ? globalProliferatorLevel : undefined,
     locale
   );

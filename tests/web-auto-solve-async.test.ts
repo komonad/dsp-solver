@@ -345,6 +345,70 @@ test('persistWorkbenchSolveState stores a settled input key and allows reuse che
   ).toBeNull();
 });
 
+test('persisted worker crash states do not block a retry for the same input', () => {
+  const inputKey = buildWorkbenchSolveInputKey({
+    catalogSignature: 'demo-catalog',
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    proliferatorPolicy: 'auto',
+    autoPromoteUnavailableItemsToRawInputs: false,
+    rawInputItemIds: [],
+    disabledRawInputItemIds: [],
+    disabledRecipeIds: [],
+    disabledBuildingIds: [],
+    allowedRecipesByItem: {},
+    preferredBuildings: [],
+    recipePreferences: [],
+    recipeStrategyOverrides: [],
+    advancedOverridesText: '',
+    locale: 'zh-CN',
+    isLoading: false,
+  });
+  const crashedState = restoreWorkbenchSolveState({
+    request: {
+      targets: [{ itemId: '1101', ratePerMin: 60 }],
+      objective: 'min_buildings',
+      balancePolicy: 'force_balance',
+      rawInputItemIds: [],
+    },
+    result: null,
+    error: 'Solve worker crashed.',
+    activityStatus: 'settled',
+  });
+
+  const persisted = persistWorkbenchSolveState(crashedState, { inputKey });
+
+  expect(persisted.inputKey).toBeUndefined();
+  expect(
+    findReusableWorkbenchSolveInputKey(
+      {
+        ...persisted,
+        inputKey,
+      },
+      {
+        catalogSignature: 'demo-catalog',
+        targets: [{ itemId: '1101', ratePerMin: 60 }],
+        objective: 'min_buildings',
+        balancePolicy: 'force_balance',
+        proliferatorPolicy: 'auto',
+        autoPromoteUnavailableItemsToRawInputs: false,
+        rawInputItemIds: [],
+        disabledRawInputItemIds: [],
+        disabledRecipeIds: [],
+        disabledBuildingIds: [],
+        allowedRecipesByItem: {},
+        preferredBuildings: [],
+        recipePreferences: [],
+        recipeStrategyOverrides: [],
+        advancedOverridesText: '',
+        locale: 'zh-CN',
+        isLoading: false,
+      }
+    )
+  ).toBeNull();
+});
+
 test('preserveReusableSettledWorkbenchSolveState keeps a matching settled solve when the next state is empty idle', () => {
   const existingState = {
     request: {
@@ -381,6 +445,37 @@ test('preserveReusableSettledWorkbenchSolveState keeps a matching settled solve 
         activityStatus: 'idle',
       },
       expectedInputKey: 'other-key',
+    })
+  ).toEqual({
+    request: undefined,
+    result: null,
+    error: '',
+    activityStatus: 'idle',
+  });
+});
+
+test('preserveReusableSettledWorkbenchSolveState does not keep transient worker crashes', () => {
+  expect(
+    preserveReusableSettledWorkbenchSolveState({
+      existingState: {
+        request: {
+          targets: [{ itemId: '1101', ratePerMin: 60 }],
+          objective: 'min_buildings',
+          balancePolicy: 'force_balance',
+          rawInputItemIds: [],
+        },
+        result: null,
+        error: 'Solve worker crashed.',
+        activityStatus: 'settled',
+        inputKey: 'matching-key',
+      },
+      nextState: {
+        request: undefined,
+        result: null,
+        error: '',
+        activityStatus: 'idle',
+      },
+      expectedInputKey: 'matching-key',
     })
   ).toEqual({
     request: undefined,

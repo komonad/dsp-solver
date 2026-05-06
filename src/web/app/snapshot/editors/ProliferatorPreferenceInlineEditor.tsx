@@ -30,10 +30,10 @@ export default function ProliferatorPreferenceInlineEditor() {
   const modeOptions = selectedRecipeId ? getRecipeModeOptions(selectedRecipeId) : [];
   const levelOptions = selectedRecipeId ? getRecipeLevelOptions(selectedRecipeId) : [];
 
-  const canAdd = !!selectedRecipeId && mode !== '';
+  const canAdd = !!selectedRecipeId && (mode !== '' || (typeof level === 'number' && level > 0));
 
   function handleAdd() {
-    if (!selectedRecipeId || mode === '') return;
+    if (!selectedRecipeId || !canAdd) return;
     setRecipePreferredProliferator(selectedRecipeId, mode, mode === 'none' ? 0 : level);
     setSelectedRecipeId('');
     setMode('');
@@ -84,7 +84,7 @@ export default function ProliferatorPreferenceInlineEditor() {
           </MenuItem>
         ))}
       </TextField>
-      {mode !== '' && mode !== 'none' ? (
+      {mode !== 'none' ? (
         <TextField
           select
           size="small"

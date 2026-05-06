@@ -96,6 +96,7 @@ test('parseAdvancedSolveOverrides accepts supported override fields', () => {
     "forcedBuildingByRecipe": { "2": "5002" },
     "globalForcedProliferatorMode": "none",
     "globalForcedProliferatorLevel": 0,
+    "globalPreferredProliferatorLevel": 2,
     "preferredProliferatorModeByRecipe": { "2": "speed" },
     "forcedProliferatorLevelByRecipe": { "2": 3 }
   }`);
@@ -107,6 +108,7 @@ test('parseAdvancedSolveOverrides accepts supported override fields', () => {
     forcedBuildingByRecipe: { '2': '5002' },
     globalForcedProliferatorMode: 'none',
     globalForcedProliferatorLevel: 0,
+    globalPreferredProliferatorLevel: 2,
     preferredProliferatorModeByRecipe: { '2': 'speed' },
     forcedProliferatorLevelByRecipe: { '2': 3 },
   });
@@ -188,6 +190,7 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
       disabledBuildingIds: ['5001'],
       preferredBuildingByRecipe: { '1': '5001' },
       preferredProliferatorModeByRecipe: { '1': 'speed' },
+      globalPreferredProliferatorLevel: 2,
     },
     {
       disabledRecipeIds: ['2'],
@@ -195,6 +198,7 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
       preferredBuildingByRecipe: { '2': '5002' },
       globalForcedProliferatorMode: 'speed',
       globalForcedProliferatorLevel: 1,
+      globalPreferredProliferatorLevel: 3,
       preferredProliferatorModeByRecipe: { '1': 'productivity' },
       preferredProliferatorLevelByRecipe: { '1': 3 },
     }
@@ -209,6 +213,7 @@ test('mergeAdvancedSolveOverrides deep merges arrays and per-recipe records', ()
     },
     globalForcedProliferatorMode: 'speed',
     globalForcedProliferatorLevel: 1,
+    globalPreferredProliferatorLevel: 3,
     preferredProliferatorModeByRecipe: {
       '1': 'productivity',
     },
@@ -234,4 +239,12 @@ test('buildGlobalProliferatorOverrides emits compact global proliferator fields'
     globalForcedProliferatorMode: 'speed',
     globalForcedProliferatorLevel: 1,
   });
+});
+
+test('buildGlobalProliferatorOverrides emits preferred level for auto policy with level', () => {
+  expect(buildGlobalProliferatorOverrides('auto', 3)).toEqual({
+    globalPreferredProliferatorLevel: 3,
+  });
+  expect(buildGlobalProliferatorOverrides('auto', '')).toEqual({});
+  expect(buildGlobalProliferatorOverrides('auto')).toEqual({});
 });

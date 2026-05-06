@@ -100,7 +100,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
         ? String(selectedLevelValue)
         : '';
   const levelSelectDisabled =
-    levelChoices.length === 0 || selectedMode === '' || selectedMode === 'none';
+    levelChoices.length === 0 || selectedMode === 'none';
 
   React.useEffect(() => {
     if (!isRevealed || revealedRecipePlanNonce === 0) {

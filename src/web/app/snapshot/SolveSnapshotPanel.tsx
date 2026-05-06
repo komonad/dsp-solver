@@ -290,11 +290,13 @@ export default function SolveSnapshotPanel() {
             const nextPolicy = event.target.value as WorkbenchProliferatorPolicy;
             setProliferatorPolicy(nextPolicy);
             setGlobalProliferatorLevel(current =>
-              nextPolicy === 'auto' || nextPolicy === 'none'
+              nextPolicy === 'none'
                 ? ''
                 : typeof current === 'number' && current > 0
                   ? current
-                  : pickDefaultGlobalProliferatorLevel(catalog)
+                  : nextPolicy === 'auto'
+                    ? ''
+                    : pickDefaultGlobalProliferatorLevel(catalog)
             );
           }}
         >

@@ -535,6 +535,25 @@ test('preferred proliferator mode breaks ties when the objective is otherwise eq
   expect(result.diagnostics.unmetPreferences).toEqual([]);
 });
 
+test('global preferred proliferator level breaks level ties in auto mode', () => {
+  const catalog = resolveCatalogModel(buildSingleRecipeDataset([5001]), buildTieBreakerDefaults());
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }],
+    objective: 'min_power',
+    balancePolicy: 'force_balance',
+    preferredProliferatorModeByRecipe: { '1': 'productivity' },
+    globalPreferredProliferatorLevel: 2,
+  });
+
+  expect(result.status).toBe('optimal');
+  expect(result.recipePlans).toHaveLength(1);
+  expect(result.recipePlans[0]).toMatchObject({
+    recipeId: '1',
+    proliferatorMode: 'productivity',
+    proliferatorLevel: 2,
+  });
+});
+
 test('min_complexity prefers the shorter production chain before lower power', () => {
   const catalog = resolveCatalogModel(buildComplexityTradeoffDataset(), {
     buildingRules: [

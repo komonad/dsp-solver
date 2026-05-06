@@ -269,6 +269,12 @@ export function parseAdvancedSolveOverrides(
       errors,
       locale
     ),
+    globalPreferredProliferatorLevel: readOptionalNumber(
+      source,
+      'globalPreferredProliferatorLevel',
+      errors,
+      locale
+    ),
     globalForcedProliferatorMode: readOptionalMode(
       source,
       'globalForcedProliferatorMode',
@@ -442,9 +448,12 @@ export function buildGlobalProliferatorOverrides(
   level?: '' | number
 ): Pick<
   AdvancedSolveOverrides,
-  'globalForcedProliferatorMode' | 'globalForcedProliferatorLevel'
+  'globalForcedProliferatorMode' | 'globalForcedProliferatorLevel' | 'globalPreferredProliferatorLevel'
 > {
   if (policy === 'auto') {
+    if (typeof level === 'number' && Number.isFinite(level) && level > 0) {
+      return { globalPreferredProliferatorLevel: level };
+    }
     return {};
   }
 
@@ -521,6 +530,12 @@ export function mergeAdvancedSolveOverrides(
     merged.globalForcedProliferatorMode = override.globalForcedProliferatorMode;
   } else if (base.globalForcedProliferatorMode !== undefined) {
     merged.globalForcedProliferatorMode = base.globalForcedProliferatorMode;
+  }
+
+  if (override.globalPreferredProliferatorLevel !== undefined) {
+    merged.globalPreferredProliferatorLevel = override.globalPreferredProliferatorLevel;
+  } else if (base.globalPreferredProliferatorLevel !== undefined) {
+    merged.globalPreferredProliferatorLevel = base.globalPreferredProliferatorLevel;
   }
 
   const forcedProliferatorLevelByRecipe = mergeRecord(

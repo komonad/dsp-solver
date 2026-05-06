@@ -1194,7 +1194,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   );
 
   const globalProliferatorLevelDisabled =
-    proliferatorPolicy === 'auto' ||
     proliferatorPolicy === 'none' ||
     globalProliferatorLevelOptions.length === 0;
 

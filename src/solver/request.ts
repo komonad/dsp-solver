@@ -106,4 +106,13 @@ export interface SolveRequest {
   forcedProliferatorModeByRecipe?: Record<string, ProliferatorMode>;
   /** Soft per-recipe proliferator mode preference. */
   preferredProliferatorModeByRecipe?: Record<string, ProliferatorMode>;
+  /**
+   * Soft global proliferator level preference (used when mode is auto).
+   *
+   * Unlike `globalForcedProliferatorLevel`, this does not constrain mode or
+   * level selection; it only adds a small preference penalty for options
+   * that use a different level. Per-recipe `preferredProliferatorLevelByRecipe`
+   * takes precedence when both are present.
+   */
+  globalPreferredProliferatorLevel?: number;
 }

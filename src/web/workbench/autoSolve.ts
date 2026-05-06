@@ -131,6 +131,8 @@ interface PreparedWorkbenchSolve {
   earlyState?: WorkbenchSolveState;
 }
 
+const TRANSIENT_SOLVE_ERRORS = new Set(['Solve worker crashed.']);
+
 function currentTimeMs(): number {
   return typeof performance !== 'undefined' && typeof performance.now === 'function'
     ? performance.now()
@@ -214,6 +216,10 @@ function normalizePersistedWorkbenchSolveActivityStatus(
   return state.activity.status;
 }
 
+function hasTransientSolveError(state: Pick<PersistedWorkbenchSolveState, 'error'>): boolean {
+  return TRANSIENT_SOLVE_ERRORS.has(state.error);
+}
+
 export function persistWorkbenchSolveState(
   state: WorkbenchSolveState,
   options: {
@@ -227,7 +233,10 @@ export function persistWorkbenchSolveState(
     error: state.error,
     fallback: state.fallback,
     activityStatus,
-    inputKey: activityStatus === 'settled' ? options.inputKey : undefined,
+    inputKey:
+      activityStatus === 'settled' && !hasTransientSolveError(state)
+        ? options.inputKey
+        : undefined,
   };
 }
 
@@ -274,6 +283,7 @@ export function preserveReusableSettledWorkbenchSolveState(params: {
   if (
     isEmptyIdlePersistedWorkbenchSolveState(nextState) &&
     existingState?.activityStatus === 'settled' &&
+    !hasTransientSolveError(existingState) &&
     expectedInputKey &&
     existingState.inputKey === expectedInputKey
   ) {
@@ -313,7 +323,12 @@ export function findReusableWorkbenchSolveInputKey(
   state: PersistedWorkbenchSolveState | null | undefined,
   params: WorkbenchSolveInputKeyParams
 ): string | null {
-  if (!state || state.activityStatus !== 'settled' || !state.inputKey) {
+  if (
+    !state ||
+    state.activityStatus !== 'settled' ||
+    !state.inputKey ||
+    hasTransientSolveError(state)
+  ) {
     return null;
   }
 
