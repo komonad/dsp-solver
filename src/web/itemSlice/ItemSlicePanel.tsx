@@ -12,17 +12,19 @@ import {
   Typography,
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
-import { formatPower, formatRate, getLocaleBundle, type AppLocale } from '../../i18n';
+import { formatPower, getLocaleBundle, type AppLocale } from '../../i18n';
 import { getWorkbenchExtraBundle } from '../../i18n/workbenchExtra';
 import type { PresentationItemSlice } from '../../presentation';
 import { EntityLabelButton } from '../shared/EntityIcon';
 import { buildRecipePlanRevealKey } from '../shared/recipePlanReveal';
 import { FlowRateSequence } from '../app/components/FlowRateDisplay';
 import { RecipeOptionLabel, type RecipeOptionIO } from '../app/components/SelectOption';
+import { formatItemRateLabel } from '../app/workbenchHelpers';
 
 interface ItemSlicePanelProps {
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   slice?: PresentationItemSlice;
   preferredRecipeIds: string[];
   preferredRecipeOptions: Array<{
@@ -50,6 +52,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
   const {
     locale,
     atlasIds,
+    powerItemId,
     slice,
     preferredRecipeIds = [],
     preferredRecipeOptions,
@@ -121,12 +124,30 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>
         {[
-          { label: localeBundle.diagnostics.producedLabel, value: formatRate(slice.producedRatePerMin, locale) },
-          { label: localeBundle.diagnostics.consumedLabel, value: formatRate(slice.consumedRatePerMin, locale) },
-          { label: localeBundle.diagnostics.netLabel, value: formatRate(slice.netRatePerMin, locale) },
-          { label: bundle.itemSlice.targetRateLabel, value: formatRate(slice.targetRatePerMin, locale) },
-          { label: bundle.itemSlice.externalInputLabel, value: formatRate(slice.externalInputRatePerMin, locale) },
-          { label: bundle.itemSlice.surplusLabel, value: formatRate(slice.surplusRatePerMin, locale) },
+          {
+            label: localeBundle.diagnostics.producedLabel,
+            value: formatItemRateLabel(slice.itemId, slice.producedRatePerMin, locale, powerItemId),
+          },
+          {
+            label: localeBundle.diagnostics.consumedLabel,
+            value: formatItemRateLabel(slice.itemId, slice.consumedRatePerMin, locale, powerItemId),
+          },
+          {
+            label: localeBundle.diagnostics.netLabel,
+            value: formatItemRateLabel(slice.itemId, slice.netRatePerMin, locale, powerItemId),
+          },
+          {
+            label: bundle.itemSlice.targetRateLabel,
+            value: formatItemRateLabel(slice.itemId, slice.targetRatePerMin, locale, powerItemId),
+          },
+          {
+            label: bundle.itemSlice.externalInputLabel,
+            value: formatItemRateLabel(slice.itemId, slice.externalInputRatePerMin, locale, powerItemId),
+          },
+          {
+            label: bundle.itemSlice.surplusLabel,
+            value: formatItemRateLabel(slice.itemId, slice.surplusRatePerMin, locale, powerItemId),
+          },
         ].map(entry => (
           <Card key={entry.label} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
             <Box sx={{ p: 1.75 }}>
@@ -177,6 +198,7 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
                       locale={locale}
                       atlasIds={atlasIds}
                       highlightItemId={slice.itemId}
+                      powerItemId={powerItemId}
                     />
                   </MenuItem>
                 ))}
@@ -229,7 +251,9 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
                   </Button>
                 </Box>
                 <Stack direction="row" useFlexGap flexWrap="wrap" gap={1} sx={{ mt: 1, color: 'text.secondary' }}>
-                  <Typography variant="caption">产出 {formatRate(plan.itemRatePerMin, locale)}</Typography>
+                  <Typography variant="caption">
+                    产出 {formatItemRateLabel(slice.itemId, plan.itemRatePerMin, locale, powerItemId)}
+                  </Typography>
                   <Typography variant="caption">{plan.proliferatorLabel}</Typography>
                   <Typography variant="caption">{plan.roundedUpBuildingCount} 台</Typography>
                   <Typography variant="caption">{formatPower(plan.roundedPlacementPowerMW, locale)}</Typography>
@@ -237,9 +261,21 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
               </Box>
               <Divider />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.inputsLabel}</Typography>
-              <FlowRateSequence items={plan.inputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
+              <FlowRateSequence
+                items={plan.inputs}
+                locale={locale}
+                atlasIds={atlasIds}
+                noneText={localeBundle.common.none}
+                powerItemId={powerItemId}
+              />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.outputsLabel}</Typography>
-              <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
+              <FlowRateSequence
+                items={plan.outputs}
+                locale={locale}
+                atlasIds={atlasIds}
+                noneText={localeBundle.common.none}
+                powerItemId={powerItemId}
+              />
             </Box>
           </Card>
         )) : <Typography variant="body2" color="text.secondary">{bundle.itemSlice.noProducerPlans}</Typography>}
@@ -266,7 +302,9 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
                   </Button>
                 </Box>
                 <Stack direction="row" useFlexGap flexWrap="wrap" gap={1} sx={{ mt: 1, color: 'text.secondary' }}>
-                  <Typography variant="caption">消耗 {formatRate(plan.itemRatePerMin, locale)}</Typography>
+                  <Typography variant="caption">
+                    消耗 {formatItemRateLabel(slice.itemId, plan.itemRatePerMin, locale, powerItemId)}
+                  </Typography>
                   <Typography variant="caption">{plan.proliferatorLabel}</Typography>
                   <Typography variant="caption">{plan.roundedUpBuildingCount} 台</Typography>
                   <Typography variant="caption">{formatPower(plan.roundedPlacementPowerMW, locale)}</Typography>
@@ -274,9 +312,21 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
               </Box>
               <Divider />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.inputsLabel}</Typography>
-              <FlowRateSequence items={plan.inputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
+              <FlowRateSequence
+                items={plan.inputs}
+                locale={locale}
+                atlasIds={atlasIds}
+                noneText={localeBundle.common.none}
+                powerItemId={powerItemId}
+              />
               <Typography variant="caption" color="text.secondary" fontWeight={700}>{localeBundle.recipePlans.outputsLabel}</Typography>
-              <FlowRateSequence items={plan.outputs} locale={locale} atlasIds={atlasIds} noneText={localeBundle.common.none} />
+              <FlowRateSequence
+                items={plan.outputs}
+                locale={locale}
+                atlasIds={atlasIds}
+                noneText={localeBundle.common.none}
+                powerItemId={powerItemId}
+              />
             </Box>
           </Card>
         )) : <Typography variant="body2" color="text.secondary">{bundle.itemSlice.noConsumerPlans}</Typography>}

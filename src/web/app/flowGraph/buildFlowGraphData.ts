@@ -1,4 +1,5 @@
 import type { ResolvedCatalogModel } from '../../../catalog';
+import type { AppLocale } from '../../../i18n';
 import type {
   PresentationItemRate,
   PresentationModel,
@@ -7,6 +8,7 @@ import type {
 import { buildRecipeFlowDisplay } from '../../shared/recipeDisplay';
 import { getIconColor } from '../../shared/iconRegistry';
 import type { Node, Edge } from '@xyflow/react';
+import { formatCompactItemRateLabel } from '../workbenchHelpers';
 
 export interface RecipeNodeData {
   [key: string]: unknown;
@@ -22,18 +24,22 @@ export interface RecipeNodeData {
 
 export interface ExternalNodeData {
   [key: string]: unknown;
+  itemId: string;
   itemName: string;
   iconKey?: string;
   ratePerMin: number;
+  rateLabel: string;
   kind: 'input' | 'output';
   atlasIds?: string[];
 }
 
 export interface ItemEdgeData {
   [key: string]: unknown;
+  itemId: string;
   itemName: string;
   iconKey?: string;
   ratePerMin: number;
+  rateLabel: string;
   width: number;
   color: string;
 }
@@ -91,13 +97,15 @@ interface RawEdge {
 export function buildFlowGraphData(
   recipePlans: PresentationRecipePlan[],
   catalog: ResolvedCatalogModel | null,
-  model: PresentationModel
+  model: PresentationModel,
+  locale: AppLocale = 'zh-CN'
 ): { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] } {
   if (recipePlans.length === 0) {
     return { nodes: [], edges: [] };
   }
 
   const atlasIds = model.catalogSummary.iconAtlasIds;
+  const powerItemId = catalog?.powerItemId;
   const nodes: FlowGraphNode[] = [];
   const rawEdges: RawEdge[] = [];
 
@@ -164,9 +172,11 @@ export function buildFlowGraphData(
         type: 'external',
         position: { x: 0, y: 0 },
         data: {
+          itemId: ext.itemId,
           itemName: ext.itemName,
           iconKey: ext.iconKey,
           ratePerMin: ext.ratePerMin,
+          rateLabel: formatCompactItemRateLabel(ext.itemId, ext.ratePerMin, locale, powerItemId),
           kind: 'input',
           atlasIds,
         },
@@ -202,9 +212,11 @@ export function buildFlowGraphData(
         type: 'external',
         position: { x: 0, y: 0 },
         data: {
+          itemId,
           itemName: info.itemName,
           iconKey: info.iconKey,
           ratePerMin: info.ratePerMin,
+          rateLabel: formatCompactItemRateLabel(itemId, info.ratePerMin, locale, powerItemId),
           kind: 'output',
           atlasIds,
         },
@@ -342,9 +354,11 @@ export function buildFlowGraphData(
     targetHandle: e.targetHandle,
     type: 'item',
     data: {
+      itemId: e.itemId,
       itemName: e.itemName,
       iconKey: e.iconKey,
       ratePerMin: e.ratePerMin,
+      rateLabel: formatCompactItemRateLabel(e.itemId, e.ratePerMin, locale, powerItemId),
       width: computeEdgeWidth(e.ratePerMin, maxNodeThroughput),
       color: resolveItemColor(e.iconKey, e.itemName, atlasIds),
     },

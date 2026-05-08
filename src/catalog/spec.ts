@@ -129,7 +129,7 @@ export interface CatalogBuildingRuleSpec {
   Category?: string;
   /** Optional placement-size override when raw dataset space metadata is absent. */
   SpaceOverride?: number;
-  /** Optional idle power metadata in MW. Not currently used by solver output. */
+  /** Optional idle power metadata in MW for placement-power reporting. */
   IdlePowerMW?: number;
   /** Optional built-in output bonus applied to recipe outputs on this building. */
   IntrinsicProductivityBonus?: number;

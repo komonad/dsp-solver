@@ -1,8 +1,12 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import type { AppLocale } from '../../../i18n';
 import { EntityIcon } from '../../shared/EntityIcon';
 import RecipeCycleArrow from '../results/RecipeCycleArrow';
-import { formatRecipeAmount, shouldOmitRecipeAmount } from '../workbenchHelpers';
+import {
+  formatItemAmountLabel,
+  shouldOmitItemAmount,
+} from '../workbenchHelpers';
 
 // ---------------------------------------------------------------------------
 // SelectOption
@@ -49,9 +53,10 @@ export interface RecipeOptionLabelProps {
   inputs: RecipeOptionIO[];
   outputs: RecipeOptionIO[];
   cycleTimeSec: number;
-  locale: string;
+  locale: AppLocale;
   atlasIds?: string[];
   highlightItemId?: string;
+  powerItemId?: string | null;
 }
 
 export function RecipeOptionLabel({
@@ -62,6 +67,7 @@ export function RecipeOptionLabel({
   locale,
   atlasIds,
   highlightItemId,
+  powerItemId,
 }: RecipeOptionLabelProps) {
   return (
     <Box
@@ -73,17 +79,25 @@ export function RecipeOptionLabel({
         whiteSpace: 'nowrap',
         fontSize: 13,
         minWidth: 0,
+        maxWidth: '100%',
+        overflow: 'hidden',
       }}
     >
       <span style={{ fontWeight: 600 }}>{recipeName}</span>
       <span style={{ color: 'rgba(24,51,89,0.4)' }}>:</span>
-      <IoTokens items={inputs} locale={locale} atlasIds={atlasIds} />
+      <IoTokens
+        items={inputs}
+        locale={locale}
+        atlasIds={atlasIds}
+        powerItemId={powerItemId}
+      />
       <RecipeCycleArrow cycleTimeSec={cycleTimeSec} locale={locale} variant="inline" />
       <IoTokens
         items={outputs}
         locale={locale}
         atlasIds={atlasIds}
         highlightItemId={highlightItemId}
+        powerItemId={powerItemId}
       />
     </Box>
   );
@@ -94,11 +108,13 @@ function IoTokens({
   locale,
   atlasIds,
   highlightItemId,
+  powerItemId,
 }: {
   items: RecipeOptionIO[];
-  locale: string;
+  locale: AppLocale;
   atlasIds?: string[];
   highlightItemId?: string;
+  powerItemId?: string | null;
 }) {
   return (
     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.375 }}>
@@ -107,9 +123,9 @@ function IoTokens({
           {index > 0 ? (
             <span style={{ fontWeight: 700, color: 'rgba(24,51,89,0.5)', fontSize: 10 }}>+</span>
           ) : null}
-          {shouldOmitRecipeAmount(item.amount) ? null : (
+          {shouldOmitItemAmount(item.itemId, item.amount, powerItemId) ? null : (
             <span style={{ fontWeight: 400, color: '#183359', fontSize: 11 }}>
-              {formatRecipeAmount(item.amount, locale)}
+              {formatItemAmountLabel(item.itemId, item.amount, locale, powerItemId)}
             </span>
           )}
           <Box

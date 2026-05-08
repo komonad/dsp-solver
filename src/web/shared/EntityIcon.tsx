@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import {
   getIconFallbackColor,
   getIconFallbackText,
+  getEmojiIconText,
   getResolvedIconSprite,
 } from './iconRegistry';
 
@@ -68,6 +69,8 @@ function EntityIconImpl(props: EntityIconProps) {
   );
   const sprite = resolvedIcon?.sprite;
   const atlasSrc = resolvedIcon?.src;
+  const emojiText = getEmojiIconText(iconKey);
+  const fallbackText = getIconFallbackText(label, iconKey);
 
   if (sprite && atlasSrc) {
     const scale = size / sprite.width;
@@ -101,13 +104,15 @@ function EntityIconImpl(props: EntityIconProps) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: Math.max(10, Math.round(size * 0.45)),
+        fontSize: emojiText
+          ? Math.max(12, Math.round(size * 0.72))
+          : Math.max(10, Math.round(size * 0.45)),
         fontWeight: 700,
         lineHeight: 1,
         flex: '0 0 auto',
       }}
     >
-      {getIconFallbackText(label)}
+      {fallbackText}
     </span>
   );
 }

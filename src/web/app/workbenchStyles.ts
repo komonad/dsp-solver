@@ -278,6 +278,7 @@ export const snapshotEntryGroupSx = {
   width: 'fit-content',
   maxWidth: '100%',
   minWidth: 0,
+  overflow: 'hidden',
   alignSelf: 'flex-start',
   px: 0.875,
   py: 0.5,

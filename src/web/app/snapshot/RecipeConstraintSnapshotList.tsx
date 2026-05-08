@@ -29,6 +29,7 @@ export interface RecipeConstraintSnapshotListProps {
   noneText: string;
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   entries: RecipeConstraintSnapshotEntry[];
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
@@ -47,6 +48,7 @@ export default function RecipeConstraintSnapshotList({
   noneText,
   locale,
   atlasIds,
+  powerItemId,
   entries,
   expanded,
   onExpandedChange,
@@ -101,6 +103,7 @@ export default function RecipeConstraintSnapshotList({
                     noneText={noneText}
                     locale={locale}
                     atlasIds={atlasIds}
+                    powerItemId={powerItemId}
                     highlightItemId={entry.highlightItemId}
                   />
                 </Box>
@@ -137,6 +140,7 @@ function RecipeFlowContent({
   noneText,
   locale,
   atlasIds,
+  powerItemId,
   highlightItemId,
 }: {
   inputs: PresentationItemRate[];
@@ -145,6 +149,7 @@ function RecipeFlowContent({
   noneText: string;
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   highlightItemId?: string;
 }) {
   return (
@@ -170,6 +175,7 @@ function RecipeFlowContent({
           items={inputs}
           locale={locale}
           atlasIds={atlasIds}
+          powerItemId={powerItemId}
           noneText={noneText}
         />
       </Box>
@@ -186,6 +192,7 @@ function RecipeFlowContent({
           highlightItemId={highlightItemId}
           locale={locale}
           atlasIds={atlasIds}
+          powerItemId={powerItemId}
           noneText={noneText}
         />
       </Box>

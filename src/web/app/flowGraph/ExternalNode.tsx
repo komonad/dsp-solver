@@ -4,12 +4,6 @@ import React from 'react';
 import { EntityIcon } from '../../shared/EntityIcon';
 import type { ExternalNodeData } from './buildFlowGraphData';
 
-function formatRate(rate: number): string {
-  if (rate >= 100) return Math.round(rate).toString();
-  if (rate >= 10) return rate.toFixed(1);
-  return rate.toFixed(2);
-}
-
 const hiddenHandle: React.CSSProperties = {
   opacity: 0,
   width: 0,
@@ -21,7 +15,7 @@ const hiddenHandle: React.CSSProperties = {
 };
 
 function ExternalNodeImpl({ data }: NodeProps) {
-  const { itemName, iconKey, ratePerMin, kind, atlasIds } = data as unknown as ExternalNodeData;
+  const { itemName, iconKey, rateLabel, kind, atlasIds } = data as unknown as ExternalNodeData;
   const isInput = kind === 'input';
 
   return (
@@ -69,7 +63,7 @@ function ExternalNodeImpl({ data }: NodeProps) {
             {itemName}
           </span>
           <span style={{ fontSize: 10, color: 'rgba(24, 51, 89, 0.55)' }}>
-            {formatRate(ratePerMin)}/分
+            {rateLabel}
           </span>
         </div>
       </div>

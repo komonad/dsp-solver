@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useMediaQuery, useTheme } from '@mui/material';
-import { formatRate, formatPower, type AppLocale } from '../../../i18n';
+import { formatPower, type AppLocale } from '../../../i18n';
 import { EntityLabel } from '../../shared/EntityIcon';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { useCatalog } from '../CatalogContext';
 import { useSolve } from '../SolveContext';
+import { formatItemRateLabel } from '../workbenchHelpers';
 import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
 
 const summarySectionStyle: React.CSSProperties = {
@@ -46,38 +47,43 @@ export interface SummaryItemRateListProps {
   }>;
   locale: AppLocale;
   atlasIds: string[];
+  powerItemId?: string | null;
 }
 
 export function SummaryItemRateList({
   items,
   locale,
   atlasIds,
+  powerItemId,
 }: SummaryItemRateListProps) {
   return (
     <div style={summaryRateListStyle}>
-      {items.map(item => (
-        <div
-          key={item.itemId}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-          title={`${item.itemName}: ${formatRate(item.ratePerMin, locale)}`}
-        >
-          <ClickableItemLabel
-            itemId={item.itemId}
-            itemName={item.itemName}
-            iconKey={item.iconKey}
-            iconOnly
-            iconSize={18}
-            atlasIds={atlasIds}
-          />
-          <span style={summaryRateTextStyle}>{formatRate(item.ratePerMin, locale)}</span>
-        </div>
-      ))}
+      {items.map(item => {
+        const rateLabel = formatItemRateLabel(item.itemId, item.ratePerMin, locale, powerItemId);
+        return (
+          <div
+            key={item.itemId}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            title={`${item.itemName}: ${rateLabel}`}
+          >
+            <ClickableItemLabel
+              itemId={item.itemId}
+              itemName={item.itemName}
+              iconKey={item.iconKey}
+              iconOnly
+              iconSize={18}
+              atlasIds={atlasIds}
+            />
+            <span style={summaryRateTextStyle}>{rateLabel}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export default function SummaryCard() {
-  const { bundle, locale, iconAtlasIds } = useCatalog();
+  const { bundle, locale, iconAtlasIds, catalog } = useCatalog();
   const { model } = useSolve();
   const theme = useTheme();
   const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
@@ -125,7 +131,12 @@ export default function SummaryCard() {
           {netInputItems.length === 0 ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
           ) : (
-            <SummaryItemRateList items={netInputItems} locale={locale} atlasIds={iconAtlasIds} />
+            <SummaryItemRateList
+              items={netInputItems}
+              locale={locale}
+              atlasIds={iconAtlasIds}
+              powerItemId={catalog?.powerItemId}
+            />
           )}
         </div>
 
@@ -136,7 +147,12 @@ export default function SummaryCard() {
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {targetOutputItems.length > 0 ? (
-                <SummaryItemRateList items={targetOutputItems} locale={locale} atlasIds={iconAtlasIds} />
+                <SummaryItemRateList
+                  items={targetOutputItems}
+                  locale={locale}
+                  atlasIds={iconAtlasIds}
+                  powerItemId={catalog?.powerItemId}
+                />
               ) : null}
               {surplusOutputItems.length > 0 ? (
                 <div
@@ -152,6 +168,7 @@ export default function SummaryCard() {
                     items={surplusOutputItems}
                     locale={locale}
                     atlasIds={iconAtlasIds}
+                    powerItemId={catalog?.powerItemId}
                   />
                 </div>
               ) : null}

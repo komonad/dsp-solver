@@ -9,8 +9,9 @@ export default function AllowedRecipeInlineEditor() {
   const {
     bundle,
     locale,
+    catalog,
     iconAtlasIds,
-    itemOptions,
+    recipeItemOptions,
     preferredRecipeOptionsByItem,
   } = useCatalog();
   const { allowedRecipesByItem, applyAllowedRecipesForItem } = useWorkbench();
@@ -39,7 +40,8 @@ export default function AllowedRecipeInlineEditor() {
         <ProducedRecipeSelector
           locale={locale}
           atlasIds={iconAtlasIds}
-          itemOptions={itemOptions}
+          powerItemId={catalog?.powerItemId}
+          itemOptions={recipeItemOptions}
           recipeOptionsByItem={preferredRecipeOptionsByItem}
           selectedItemId={selectedItemId}
           onSelectedItemChange={itemId => {

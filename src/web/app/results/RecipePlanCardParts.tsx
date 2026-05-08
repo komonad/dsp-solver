@@ -1,9 +1,12 @@
 import React from 'react';
 import { Box, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
-import { formatRate, type AppLocale } from '../../../i18n';
+import type { AppLocale } from '../../../i18n';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
 import { EntityIcon } from '../../shared/EntityIcon';
-import type { RecipePlanCardDisplayModel } from '../workbenchHelpers';
+import {
+  formatItemRateLabel,
+  type RecipePlanCardDisplayModel,
+} from '../workbenchHelpers';
 import {
   recipePlanIconToggleButtonSx,
   recipePlanToggleButtonSx,
@@ -17,6 +20,7 @@ function RecipePlanFlowToken({
   ratePerMin,
   locale,
   atlasIds,
+  powerItemId,
   subtle = false,
 }: {
   itemId: string;
@@ -25,6 +29,7 @@ function RecipePlanFlowToken({
   ratePerMin: number;
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   subtle?: boolean;
 }) {
   return (
@@ -54,7 +59,7 @@ function RecipePlanFlowToken({
           color: subtle ? 'rgba(24, 51, 89, 0.72)' : 'text.secondary',
         }}
       >
-        {formatRate(ratePerMin, locale)}
+        {formatItemRateLabel(itemId, ratePerMin, locale, powerItemId)}
       </Typography>
     </button>
   );
@@ -65,12 +70,14 @@ export function RecipePlanFlowSequence({
   locale,
   atlasIds,
   noneText,
+  powerItemId,
   subtle = false,
 }: {
   items: RecipePlanCardDisplayModel['visibleInputs'];
   locale: AppLocale;
   atlasIds?: string[];
   noneText: string;
+  powerItemId?: string | null;
   subtle?: boolean;
 }) {
   if (items.length === 0) {
@@ -105,6 +112,7 @@ export function RecipePlanFlowSequence({
             ratePerMin={item.ratePerMin}
             locale={locale}
             atlasIds={atlasIds}
+            powerItemId={powerItemId}
             subtle={subtle}
           />
         </React.Fragment>
@@ -198,10 +206,12 @@ export function RecipePlanAuxiliaryInput({
   item,
   locale,
   atlasIds,
+  powerItemId,
 }: {
   item: RecipePlanCardDisplayModel['auxiliaryProliferatorInput'];
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
 }) {
   if (!item) {
     return null;
@@ -225,6 +235,7 @@ export function RecipePlanAuxiliaryInput({
         ratePerMin={item.ratePerMin}
         locale={locale}
         atlasIds={atlasIds}
+        powerItemId={powerItemId}
         subtle
       />
       <span>)</span>

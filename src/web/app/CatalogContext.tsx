@@ -4,7 +4,9 @@ import type { AppLocale } from '../../i18n';
 import { getLocaleBundle } from '../../i18n';
 import type { ItemPickerOption } from '../shared/itemPickerModel';
 import {
+  buildRecipeItemOptions,
   buildRecipeOptionsByOutputItem,
+  buildTargetItemOptions,
   sortModeOptions,
   type WorkbenchRecipeOption,
 } from './workbenchHelpers';
@@ -21,6 +23,7 @@ export interface CatalogContextValue {
 
   // Sorted, catalog-derived option lists (stable after catalog load)
   itemOptions: ItemPickerOption[];
+  recipeItemOptions: ItemPickerOption[];
   recipeOptions: ResolvedRecipeSpec[];
   buildingOptions: ResolvedCatalogModel['buildings'];
   preferredRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
@@ -59,16 +62,12 @@ export function CatalogProvider({
   children: React.ReactNode;
 }) {
   const itemOptions = useMemo<ItemPickerOption[]>(
-    () =>
-      catalog?.items
-        .filter(item => item.kind !== 'utility')
-        .slice()
-        .sort((left, right) => left.name.localeCompare(right.name))
-        .map(item => ({
-          itemId: item.itemId,
-          name: item.name,
-          icon: item.icon,
-        })) ?? [],
+    () => buildTargetItemOptions(catalog),
+    [catalog]
+  );
+
+  const recipeItemOptions = useMemo<ItemPickerOption[]>(
+    () => buildRecipeItemOptions(catalog),
     [catalog]
   );
 
@@ -152,6 +151,7 @@ export function CatalogProvider({
       catalog,
       iconAtlasIds,
       itemOptions,
+      recipeItemOptions,
       recipeOptions,
       buildingOptions,
       preferredRecipeOptionsByItem,
@@ -167,6 +167,7 @@ export function CatalogProvider({
       catalog,
       iconAtlasIds,
       itemOptions,
+      recipeItemOptions,
       recipeOptions,
       buildingOptions,
       preferredRecipeOptionsByItem,

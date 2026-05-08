@@ -2,11 +2,13 @@ import type { ProliferatorMode, ResolvedCatalogModel } from '../../catalog';
 import {
   formatPower,
   formatPreferredProliferatorLabel,
+  formatRate,
   type AppLocale,
   type LocaleBundle,
 } from '../../i18n';
 import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
 import type { SolveResult } from '../../solver';
+import type { ItemPickerOption } from '../shared/itemPickerModel';
 import { buildRecipeFlowDisplay } from '../shared/recipeDisplay';
 import type {
   PersistedWorkbenchSolveState,
@@ -88,6 +90,51 @@ export function formatRecipeAmount(amount: number, locale: string): string {
 
 export function shouldOmitRecipeAmount(amount: number): boolean {
   return Math.abs(amount - 1) < 1e-9;
+}
+
+export function isPowerItem(itemId: string, powerItemId?: string | null): boolean {
+  return Boolean(powerItemId && itemId === powerItemId);
+}
+
+export function formatItemRateLabel(
+  itemId: string,
+  ratePerMin: number,
+  locale: AppLocale,
+  powerItemId?: string | null
+): string {
+  return isPowerItem(itemId, powerItemId)
+    ? formatPower(ratePerMin, locale)
+    : formatRate(ratePerMin, locale);
+}
+
+export function formatCompactItemRateLabel(
+  itemId: string,
+  ratePerMin: number,
+  locale: AppLocale,
+  powerItemId?: string | null
+): string {
+  return isPowerItem(itemId, powerItemId)
+    ? formatPower(ratePerMin, locale)
+    : `${formatRecipeAmount(ratePerMin, locale)}/分`;
+}
+
+export function formatItemAmountLabel(
+  itemId: string,
+  amount: number,
+  locale: AppLocale,
+  powerItemId?: string | null
+): string {
+  return isPowerItem(itemId, powerItemId)
+    ? formatPower(amount, locale)
+    : formatRecipeAmount(amount, locale);
+}
+
+export function shouldOmitItemAmount(
+  itemId: string,
+  amount: number,
+  powerItemId?: string | null
+): boolean {
+  return !isPowerItem(itemId, powerItemId) && shouldOmitRecipeAmount(amount);
 }
 
 export function formatRecipeCycleTime(seconds: number, locale: string): string {
@@ -416,7 +463,12 @@ function summarizeWorkbenchTargets(
 
   const visibleTargets = targets.slice(0, 2).map(target => {
     const itemName = catalog.itemMap.get(target.itemId)?.name ?? target.itemId;
-    return `${itemName} ${formatRecipeAmount(target.ratePerMin, locale)}/分`;
+    return `${itemName} ${formatCompactItemRateLabel(
+      target.itemId,
+      target.ratePerMin,
+      locale,
+      catalog.powerItemId
+    )}`;
   });
 
   if (targets.length > 2) {

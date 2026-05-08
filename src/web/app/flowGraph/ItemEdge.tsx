@@ -3,12 +3,6 @@ import type { EdgeProps } from '@xyflow/react';
 import React, { useRef, useLayoutEffect, useState } from 'react';
 import type { ItemEdgeData } from './buildFlowGraphData';
 
-function formatRate(rate: number): string {
-  if (rate >= 100) return Math.round(rate).toString();
-  if (rate >= 10) return rate.toFixed(1);
-  return rate.toFixed(2);
-}
-
 const LABEL_T = 0.3;
 const CHEVRON_SPACING = 70;
 
@@ -20,7 +14,7 @@ interface ChevronPoint {
 
 function ItemEdgeImpl(props: EdgeProps) {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data } = props;
-  const { itemName, ratePerMin, width, color } = data as unknown as ItemEdgeData;
+  const { itemName, rateLabel, width, color } = data as unknown as ItemEdgeData;
   const [hovered, setHovered] = useState(false);
   const pathRef = useRef<SVGPathElement>(null);
   const [labelPos, setLabelPos] = useState<{ x: number; y: number } | null>(null);
@@ -60,7 +54,7 @@ function ItemEdgeImpl(props: EdgeProps) {
     setChevrons(pts);
   }, [edgePath]);
 
-  const labelText = `${itemName} ${formatRate(ratePerMin)}/分`;
+  const labelText = `${itemName} ${rateLabel}`;
   const lx = labelPos?.x ?? sourceX;
   const ly = labelPos?.y ?? sourceY;
 

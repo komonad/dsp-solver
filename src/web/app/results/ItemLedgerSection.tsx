@@ -1,10 +1,10 @@
 import React from 'react';
-import { formatRate } from '../../../i18n';
 import type { PresentationModel } from '../../../presentation';
 import { EntityLabelButton } from '../../shared/EntityIcon';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
 import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
+import { formatItemRateLabel } from '../workbenchHelpers';
 import { compactLedgerButtonStyle } from '../workbenchStyles';
 
 export interface ItemLedgerSectionProps {
@@ -14,7 +14,7 @@ export interface ItemLedgerSectionProps {
 const ItemLedgerSection = React.memo(function ItemLedgerSection({
   section,
 }: ItemLedgerSectionProps) {
-  const { bundle, locale, iconAtlasIds } = useCatalog();
+  const { bundle, locale, iconAtlasIds, catalog } = useCatalog();
   const {
     markItemAsRawInput,
     unmarkItemAsRawInput,
@@ -71,10 +71,10 @@ const ItemLedgerSection = React.memo(function ItemLedgerSection({
                   ) : null}
                 </div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 12, color: 'rgba(24, 51, 89, 0.78)' }}>
-                  <span>{bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)}</span>
-                  <span>{bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)}</span>
+                  <span>{bundle.diagnostics.producedLabel} {formatItemRateLabel(entry.itemId, entry.producedRatePerMin, locale, catalog?.powerItemId)}</span>
+                  <span>{bundle.diagnostics.consumedLabel} {formatItemRateLabel(entry.itemId, entry.consumedRatePerMin, locale, catalog?.powerItemId)}</span>
                   {Math.abs(entry.netRatePerMin) > 1e-8 ? (
-                    <span>{bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}</span>
+                    <span>{bundle.diagnostics.netLabel} {formatItemRateLabel(entry.itemId, entry.netRatePerMin, locale, catalog?.powerItemId)}</span>
                   ) : null}
                 </div>
               </div>

@@ -7,11 +7,17 @@ import {
   buildDefaultWorkbenchEditorState,
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipePlanCardDisplayModel,
+  buildRecipeItemOptions,
   buildRecipeOptionsByOutputItem,
   buildRecipeProliferatorPreferenceDisplayEntries,
+  buildTargetItemOptions,
   filterItemOptionsByRecipeAvailability,
   filterRecipeOptionsByExclusion,
+  formatCompactItemRateLabel,
+  formatItemAmountLabel,
+  formatItemRateLabel,
   formatRecipePlanBuildingCount,
+  shouldOmitItemAmount,
 } from '../src/web/app/workbenchHelpers';
 
 function workEnergyForMW(megawatts: number): number {
@@ -65,6 +71,21 @@ function buildRecipeOptionCatalog() {
     ],
   };
   const defaults: CatalogDefaultConfigSpec = {
+    powerDemand: {
+      ItemID: -9001,
+      Name: 'Power',
+      IconName: 'emoji:⚡',
+    },
+    powerGenerationRules: [
+      {
+        ID: -900101,
+        BuildingID: 5001,
+        Name: 'Smelter Power',
+        PowerMW: 1,
+        Inputs: [{ ItemID: 1001, RatePerMin: 2 }],
+        IconName: 'smelter',
+      },
+    ],
     buildingRules: [{ ID: 5001, Category: 'smelter' }],
     recipeModifierRules: [{ Code: 0, Kind: 'none', SupportedModes: ['none'], MaxLevel: 0 }],
     recommendedRawItemTypeIds: [1],
@@ -162,6 +183,24 @@ test('buildRecipeOptionsByOutputItem groups recipe details by produced item and 
       recipeName: 'Plate Recycling',
     }),
   ]);
+  expect(optionsByItem['-9001']).toEqual([
+    expect.objectContaining({
+      recipeId: '-900101',
+      recipeName: 'Smelter Power',
+      outputs: [{ itemId: '-9001', itemName: 'Power', iconKey: 'emoji:⚡', amount: 1 }],
+    }),
+  ]);
+});
+
+test('recipe item options include utility outputs while target options hide them', () => {
+  const catalog = buildRecipeOptionCatalog();
+
+  expect(buildTargetItemOptions(catalog).map(item => item.itemId)).not.toContain('-9001');
+  expect(buildRecipeItemOptions(catalog)).toContainEqual({
+    itemId: '-9001',
+    name: 'Power',
+    icon: 'emoji:⚡',
+  });
 });
 
 test('buildDefaultWorkbenchEditorState falls back when dataset recommends hidden min_complexity objective', () => {
@@ -200,6 +239,16 @@ test('recipe availability helpers hide items whose remaining recipes are fully e
 test('formatRecipePlanBuildingCount renders exact and rounded building counts together', () => {
   expect(formatRecipePlanBuildingCount(1.25, 2, 'zh-CN')).toBe('1.25(2)');
   expect(formatRecipePlanBuildingCount(2, 2, 'zh-CN')).toBe('2');
+});
+
+test('item flow labels render power demand values as MW', () => {
+  expect(formatItemRateLabel('-9001', 2.5, 'zh-CN', '-9001')).toBe('2.50 MW');
+  expect(formatItemRateLabel('1001', 60, 'zh-CN', '-9001')).toBe('60.00 / 分');
+  expect(formatCompactItemRateLabel('-9001', 2.5, 'zh-CN', '-9001')).toBe('2.50 MW');
+  expect(formatCompactItemRateLabel('1001', 60, 'zh-CN', '-9001')).toBe('60/分');
+  expect(formatItemAmountLabel('-9001', 1, 'zh-CN', '-9001')).toBe('1.00 MW');
+  expect(shouldOmitItemAmount('-9001', 1, '-9001')).toBe(false);
+  expect(shouldOmitItemAmount('1001', 1, '-9001')).toBe(true);
 });
 
 test('buildRecipePlanCardDisplayModel keeps recipe card display data independently testable', () => {

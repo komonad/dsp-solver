@@ -1,9 +1,13 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { formatRate, type AppLocale } from '../../../i18n';
+import type { AppLocale } from '../../../i18n';
 import { EntityIcon, EntityLabelButton } from '../../shared/EntityIcon';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
-import { formatRecipeAmount, shouldOmitRecipeAmount } from '../workbenchHelpers';
+import {
+  formatItemAmountLabel,
+  formatItemRateLabel,
+  shouldOmitItemAmount,
+} from '../workbenchHelpers';
 
 // ---------------------------------------------------------------------------
 // FlowRateToken
@@ -16,9 +20,18 @@ export interface FlowRateTokenProps {
   ratePerMin: number;
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
 }
 
-export function FlowRateToken({ itemId, itemName, iconKey, ratePerMin, locale, atlasIds }: FlowRateTokenProps) {
+export function FlowRateToken({
+  itemId,
+  itemName,
+  iconKey,
+  ratePerMin,
+  locale,
+  atlasIds,
+  powerItemId,
+}: FlowRateTokenProps) {
   return (
     <Box
       sx={{
@@ -43,7 +56,7 @@ export function FlowRateToken({ itemId, itemName, iconKey, ratePerMin, locale, a
         color="text.secondary"
         sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}
       >
-        {formatRate(ratePerMin, locale)}
+        {formatItemRateLabel(itemId, ratePerMin, locale, powerItemId)}
       </Typography>
     </Box>
   );
@@ -63,9 +76,16 @@ export interface FlowRateSequenceProps {
   locale: AppLocale;
   atlasIds?: string[];
   noneText: string;
+  powerItemId?: string | null;
 }
 
-export function FlowRateSequence({ items, locale, atlasIds, noneText }: FlowRateSequenceProps) {
+export function FlowRateSequence({
+  items,
+  locale,
+  atlasIds,
+  noneText,
+  powerItemId,
+}: FlowRateSequenceProps) {
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -98,6 +118,7 @@ export function FlowRateSequence({ items, locale, atlasIds, noneText }: FlowRate
             ratePerMin={item.ratePerMin}
             locale={locale}
             atlasIds={atlasIds}
+            powerItemId={powerItemId}
           />
         </React.Fragment>
       ))}
@@ -120,9 +141,17 @@ export interface RecipeIoSequenceProps {
   atlasIds?: string[];
   noneText: string;
   highlightItemId?: string;
+  powerItemId?: string | null;
 }
 
-export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightItemId }: RecipeIoSequenceProps) {
+export function RecipeIoSequence({
+  items,
+  locale,
+  atlasIds,
+  noneText,
+  highlightItemId,
+  powerItemId,
+}: RecipeIoSequenceProps) {
   if (items.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary">
@@ -158,12 +187,12 @@ export function RecipeIoSequence({ items, locale, atlasIds, noneText, highlightI
               maxWidth: '100%',
             }}
           >
-            {shouldOmitRecipeAmount(item.ratePerMin) ? null : (
+            {shouldOmitItemAmount(item.itemId, item.ratePerMin, powerItemId) ? null : (
               <Typography
                 variant="caption"
                 sx={{ whiteSpace: 'nowrap', fontWeight: 400, color: '#183359' }}
               >
-                {formatRecipeAmount(item.ratePerMin, locale)}
+                {formatItemAmountLabel(item.itemId, item.ratePerMin, locale, powerItemId)}
               </Typography>
             )}
             <Box

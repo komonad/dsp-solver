@@ -14,7 +14,7 @@ import RecipePreferenceSnapshotList from './RecipePreferenceSnapshotList';
 import SnapshotRemoveButton from './SnapshotRemoveButton';
 import SolveSnapshotRecipeFlowSummary from './SolveSnapshotRecipeFlowSummary';
 import SolveSnapshotSummaryChips from './SolveSnapshotSummaryChips';
-import { pickDefaultGlobalProliferatorLevel } from '../workbenchHelpers';
+import { isPowerItem, pickDefaultGlobalProliferatorLevel } from '../workbenchHelpers';
 import {
   cardStyle,
   compactSelectFieldSx,
@@ -57,7 +57,6 @@ import RawInputInlineEditor from './editors/RawInputInlineEditor';
 import TargetInlineEditor from './editors/TargetInlineEditor';
 
 export default function SolveSnapshotPanel() {
-  const rateUnitLabel = '/\u5206';
   const {
     bundle,
     locale,
@@ -377,7 +376,7 @@ export default function SolveSnapshotPanel() {
                       component="input"
                       type="text"
                       inputMode="decimal"
-                      aria-label={`${bundle.overview.requestLabel} (\u6bcf\u5206\u949f)`}
+                      aria-label={`${bundle.overview.requestLabel} (${isPowerItem(target.itemId, catalog?.powerItemId) ? 'MW' : '\u6bcf\u5206\u949f'})`}
                       sx={snapshotTargetInputSx}
                       value={targets[index]?.ratePerMin ?? target.ratePerMin}
                       onChange={event =>
@@ -399,7 +398,7 @@ export default function SolveSnapshotPanel() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {rateUnitLabel}
+                      {isPowerItem(target.itemId, catalog?.powerItemId) ? 'MW' : '/\u5206'}
                     </Typography>
                   </Box>
                   <Box component="span" sx={snapshotEntryActionSegmentSx}>
@@ -470,6 +469,7 @@ export default function SolveSnapshotPanel() {
             noneText={bundle.common.none}
             locale={locale}
             atlasIds={iconAtlasIds}
+            powerItemId={catalog?.powerItemId}
             entries={requestSummary.allowedRecipeSettings.map(setting => ({
               key: `${setting.itemId}:${setting.recipeId}`,
               recipeName: setting.recipeName,
@@ -498,6 +498,7 @@ export default function SolveSnapshotPanel() {
             noneText={bundle.common.none}
             locale={locale}
             atlasIds={iconAtlasIds}
+            powerItemId={catalog?.powerItemId}
             entries={requestSummary.disabledRecipeSettings.map(setting => ({
               key: setting.recipeId,
               recipeName: setting.recipeName,
@@ -709,6 +710,9 @@ export default function SolveSnapshotPanel() {
           </CollapsibleSnapshotSection>
 
           <Divider />
+          <CollapsibleSnapshotSection
+            title={bundle.summary.datasetLabel}
+            description={sectionDescriptions.dataset}
             expanded={sectionState.dataset}
             onExpandedChange={expanded => setSectionExpanded('dataset', expanded)}
           >

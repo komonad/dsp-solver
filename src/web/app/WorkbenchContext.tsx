@@ -102,6 +102,8 @@ import { recordWorkbenchPerf } from '../workbench/workbenchPerf';
 import {
   buildWorkbenchConfigDisplayModel,
   buildDefaultWorkbenchEditorState,
+  buildTargetItemOptions,
+  formatCompactItemRateLabel,
   getBrowserSessionStorage,
   getBrowserStorage,
   pickDefaultGlobalProliferatorLevel,
@@ -619,16 +621,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------------------------
 
   const itemOptions = useMemo<ItemPickerOption[]>(
-    () =>
-      catalog?.items
-        .filter(item => item.kind !== 'utility')
-        .slice()
-        .sort((left, right) => left.name.localeCompare(right.name))
-        .map(item => ({
-          itemId: item.itemId,
-          name: item.name,
-          icon: item.icon,
-        })) ?? [],
+    () => buildTargetItemOptions(catalog),
     [catalog]
   );
 
@@ -697,7 +690,12 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
             .slice(0, 2)
             .map(t => {
               const itemName = catalog.itemMap.get(t.itemId)?.name ?? t.itemId;
-              return `${itemName} ${t.ratePerMin}/分`;
+              return `${itemName} ${formatCompactItemRateLabel(
+                t.itemId,
+                t.ratePerMin,
+                locale,
+                catalog.powerItemId
+              )}`;
             })
             .join(' · ')
         : '';

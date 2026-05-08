@@ -14,8 +14,9 @@ export default function PreferredBuildingInlineEditor() {
   const {
     bundle,
     locale,
+    catalog,
     iconAtlasIds,
-    itemOptions,
+    recipeItemOptions,
     buildingOptions,
     preferredRecipeOptionsByItem,
     getRecipeBuildingOptions,
@@ -74,7 +75,8 @@ export default function PreferredBuildingInlineEditor() {
           <ProducedRecipeSelector
             locale={locale}
             atlasIds={iconAtlasIds}
-            itemOptions={itemOptions}
+            powerItemId={catalog?.powerItemId}
+            itemOptions={recipeItemOptions}
             recipeOptionsByItem={preferredRecipeOptionsByItem}
             selectedItemId={selectedItemId}
             onSelectedItemChange={itemId => {

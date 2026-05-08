@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button } from '@mui/material';
-import { formatRate } from '../../../i18n';
 import { copyText } from '../../shared/copyText';
 import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
@@ -8,11 +7,12 @@ import { FlowRateSequence } from '../components/FlowRateDisplay';
 import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import { useSolve } from '../SolveContext';
+import { formatItemRateLabel } from '../workbenchHelpers';
 import { cardStyle } from '../workbenchStyles';
 import SolveAuditSection from './SolveAuditSection';
 
 export default function DiagnosticsCard() {
-  const { bundle, locale, iconAtlasIds } = useCatalog();
+  const { bundle, locale, iconAtlasIds, catalog } = useCatalog();
   const {
     model,
     fallbackModel,
@@ -116,13 +116,25 @@ export default function DiagnosticsCard() {
               {fallbackModel.solvedSummary?.netInputs.length ? (
                 <div>
                   <strong>{bundle.diagnostics.fallbackNetInputsLabel}</strong>{' '}
-                  <FlowRateSequence items={fallbackModel.solvedSummary.netInputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
+                  <FlowRateSequence
+                    items={fallbackModel.solvedSummary.netInputs}
+                    locale={locale}
+                    atlasIds={iconAtlasIds}
+                    noneText={bundle.common.none}
+                    powerItemId={catalog?.powerItemId}
+                  />
                 </div>
               ) : null}
               {fallbackModel.surplusOutputs.length ? (
                 <div>
                   <strong>{bundle.diagnostics.fallbackSurplusLabel}</strong>{' '}
-                  <FlowRateSequence items={fallbackModel.surplusOutputs} locale={locale} atlasIds={iconAtlasIds} noneText={bundle.common.none} />
+                  <FlowRateSequence
+                    items={fallbackModel.surplusOutputs}
+                    locale={locale}
+                    atlasIds={iconAtlasIds}
+                    noneText={bundle.common.none}
+                    powerItemId={catalog?.powerItemId}
+                  />
                 </div>
               ) : null}
             </div>
@@ -162,7 +174,7 @@ export default function DiagnosticsCard() {
                 />
               </div>
               <div style={{ fontSize: 13 }}>
-                {bundle.diagnostics.producedLabel} {formatRate(entry.producedRatePerMin, locale)} / {bundle.diagnostics.consumedLabel} {formatRate(entry.consumedRatePerMin, locale)} / {bundle.diagnostics.netLabel} {formatRate(entry.netRatePerMin, locale)}
+                {bundle.diagnostics.producedLabel} {formatItemRateLabel(entry.itemId, entry.producedRatePerMin, locale, catalog?.powerItemId)} / {bundle.diagnostics.consumedLabel} {formatItemRateLabel(entry.itemId, entry.consumedRatePerMin, locale, catalog?.powerItemId)} / {bundle.diagnostics.netLabel} {formatItemRateLabel(entry.itemId, entry.netRatePerMin, locale, catalog?.powerItemId)}
               </div>
             </div>
           ))}

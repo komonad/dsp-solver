@@ -27,6 +27,7 @@ const itemSliceOverlayStyle: React.CSSProperties = {
 interface ItemSliceOverlayHostProps {
   locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   itemSlicesById: Record<string, PresentationItemSlice>;
   allowedRecipesByItem: Record<string, string[]>;
   allowedRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
@@ -42,6 +43,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
   const {
     locale,
     atlasIds,
+    powerItemId,
     itemSlicesById,
     allowedRecipesByItem,
     allowedRecipeOptionsByItem,
@@ -202,6 +204,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
           <ItemSlicePanel
             locale={locale}
             atlasIds={atlasIds}
+            powerItemId={powerItemId}
             slice={selectedItemSlice}
             preferredRecipeIds={allowedRecipesByItem[selectedItemSlice.itemId] ?? []}
             preferredRecipeOptions={allowedRecipeOptions}

@@ -14,8 +14,9 @@ export default function ProliferatorPreferenceInlineEditor() {
   const {
     bundle,
     locale,
+    catalog,
     iconAtlasIds,
-    itemOptions,
+    recipeItemOptions,
     preferredRecipeOptionsByItem,
     getRecipeModeOptions,
     getRecipeLevelOptions,
@@ -45,7 +46,8 @@ export default function ProliferatorPreferenceInlineEditor() {
       <ProducedRecipeSelector
         locale={locale}
         atlasIds={iconAtlasIds}
-        itemOptions={itemOptions}
+        powerItemId={catalog?.powerItemId}
+        itemOptions={recipeItemOptions}
         recipeOptionsByItem={preferredRecipeOptionsByItem}
         selectedItemId={selectedItemId}
         onSelectedItemChange={setSelectedItemId}

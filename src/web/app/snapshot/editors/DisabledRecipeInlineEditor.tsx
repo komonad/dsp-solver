@@ -9,8 +9,9 @@ export default function DisabledRecipeInlineEditor() {
   const {
     bundle,
     locale,
+    catalog,
     iconAtlasIds,
-    itemOptions,
+    recipeItemOptions,
     preferredRecipeOptionsByItem,
   } = useCatalog();
   const { disabledRecipeIds, addDisabledRecipe } = useWorkbench();
@@ -24,11 +25,12 @@ export default function DisabledRecipeInlineEditor() {
   }
 
   return (
-    <Box sx={{ ...snapshotInlineEditorSx, display: 'flex', flexWrap: 'nowrap', alignItems: 'start' }}>
+    <Box sx={snapshotInlineEditorSx}>
       <ProducedRecipeSelector
         locale={locale}
         atlasIds={iconAtlasIds}
-        itemOptions={itemOptions}
+        powerItemId={catalog?.powerItemId}
+        itemOptions={recipeItemOptions}
         recipeOptionsByItem={preferredRecipeOptionsByItem}
         selectedItemId={selectedItemId}
         onSelectedItemChange={setSelectedItemId}

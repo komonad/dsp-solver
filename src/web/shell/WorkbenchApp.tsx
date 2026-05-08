@@ -205,6 +205,7 @@ function WorkbenchLayout() {
         <ItemSliceOverlayHost
           locale={locale}
           atlasIds={iconAtlasIds}
+          powerItemId={catalog?.powerItemId}
           itemSlicesById={model?.itemSlicesById ?? {}}
           allowedRecipesByItem={allowedRecipesByItem}
           allowedRecipeOptionsByItem={preferredRecipeOptionsByItem}
@@ -222,6 +223,7 @@ function WorkbenchLayout() {
           recipePlans={model.recipePlans}
           catalog={catalog}
           model={model}
+          locale={locale}
           title={bundle.flowGraph.title}
           onClose={() => setFlowGraphOpen(false)}
         />

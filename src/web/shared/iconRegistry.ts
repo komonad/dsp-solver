@@ -87,7 +87,23 @@ export function getIconAtlasSrc(iconKey: string | undefined, atlasIds?: string[]
   return getResolvedIconSprite(iconKey, atlasIds)?.src;
 }
 
-export function getIconFallbackText(label: string): string {
+export function getEmojiIconText(iconKey: string | undefined): string | undefined {
+  const prefix = 'emoji:';
+  const trimmed = iconKey?.trim();
+  if (!trimmed?.startsWith(prefix)) {
+    return undefined;
+  }
+
+  const emoji = trimmed.slice(prefix.length).trim();
+  return emoji || undefined;
+}
+
+export function getIconFallbackText(label: string, iconKey?: string): string {
+  const emoji = getEmojiIconText(iconKey);
+  if (emoji) {
+    return emoji;
+  }
+
   const trimmed = label.trim();
   if (!trimmed) {
     return '?';

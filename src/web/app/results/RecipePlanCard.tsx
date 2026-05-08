@@ -161,15 +161,15 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
               fontWeight={700}
               noWrap
               title={plan.recipeName}
-              sx={{ minWidth: 0, flex: '1 1 auto' }}
+              sx={{ minWidth: 0, flex: '0 1 auto' }}
             >
               {plan.recipeName}
             </Typography>
 
             <Box
               sx={{
-                flex: '0 1 auto',
-                minWidth: 0,
+                flex: '1 1 auto',
+                minWidth: 'fit-content',
                 ml: 'auto',
                 display: 'flex',
                 alignItems: 'center',
@@ -363,6 +363,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
               locale={locale}
               atlasIds={iconAtlasIds}
               noneText={bundle.common.none}
+              powerItemId={catalog?.powerItemId}
             />
             <EastRoundedIcon sx={{ color: 'text.secondary', fontSize: 20, flexShrink: 0 }} />
             <RecipePlanFlowSequence
@@ -370,11 +371,13 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
               locale={locale}
               atlasIds={iconAtlasIds}
               noneText={bundle.common.none}
+              powerItemId={catalog?.powerItemId}
             />
             <RecipePlanAuxiliaryInput
               item={displayModel.auxiliaryProliferatorInput}
               locale={locale}
               atlasIds={iconAtlasIds}
+              powerItemId={catalog?.powerItemId}
             />
           </Box>
           <Typography

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Box, MenuItem, TextField } from '@mui/material';
+import type { AppLocale } from '../../../i18n';
 import type { ItemPickerOption } from '../../shared/itemPickerModel';
 import ItemGridPicker from '../../shared/ItemGridPicker';
 import {
@@ -14,8 +15,9 @@ import {
 import { RecipeOptionLabel } from '../components/SelectOption';
 
 export interface ProducedRecipeSelectorProps {
-  locale: string;
+  locale: AppLocale;
   atlasIds?: string[];
+  powerItemId?: string | null;
   itemOptions: ItemPickerOption[];
   recipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
   selectedItemId: string;
@@ -36,6 +38,7 @@ export interface ProducedRecipeSelectorProps {
 export default function ProducedRecipeSelector({
   locale,
   atlasIds,
+  powerItemId,
   itemOptions,
   recipeOptionsByItem,
   selectedItemId,
@@ -100,7 +103,7 @@ export default function ProducedRecipeSelector({
       sx={{
         display: 'flex',
         gap: dense ? 0.5 : 1,
-        flexWrap: dense ? 'nowrap' : 'wrap',
+        flexWrap: 'wrap',
         alignItems: 'start',
         ...(dense ? {} : { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' } }),
       }}
@@ -154,6 +157,7 @@ export default function ProducedRecipeSelector({
                 locale={locale}
                 atlasIds={atlasIds}
                 highlightItemId={selectedItemId}
+                powerItemId={powerItemId}
               />
             </MenuItem>
           ))}

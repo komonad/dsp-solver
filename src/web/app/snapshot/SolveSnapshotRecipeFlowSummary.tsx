@@ -44,6 +44,7 @@ export default function SolveSnapshotRecipeFlowSummary({
           })}
           locale={locale}
           atlasIds={atlasIds}
+          powerItemId={catalog?.powerItemId}
           noneText={noneText}
         />
       </Box>
@@ -61,6 +62,7 @@ export default function SolveSnapshotRecipeFlowSummary({
           })}
           locale={locale}
           atlasIds={atlasIds}
+          powerItemId={catalog?.powerItemId}
           noneText={noneText}
         />
       </Box>

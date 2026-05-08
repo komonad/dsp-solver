@@ -1,5 +1,6 @@
 import {
   getIconAtlasSrc,
+  getEmojiIconText,
   getIconFallbackText,
   getResolvedIconSprite,
   getIconSprite,
@@ -47,4 +48,9 @@ test('icon fallback text supports ascii and non-ascii labels', () => {
   expect(getIconFallbackText('Demo Ore')).toBe('DE');
   expect(getIconFallbackText('核心素')).toBe('核心');
   expect(getIconFallbackText(' x ')).toBe('X');
+});
+
+test('icon fallback text supports configured emoji icons', () => {
+  expect(getEmojiIconText('emoji:⚡')).toBe('⚡');
+  expect(getIconFallbackText('电力', 'emoji:⚡')).toBe('⚡');
 });

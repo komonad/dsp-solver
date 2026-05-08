@@ -1,4 +1,5 @@
 import { buildFlowGraphData } from '../src/web/app/flowGraph/buildFlowGraphData';
+import type { ResolvedCatalogModel } from '../src/catalog';
 import type { PresentationModel, PresentationRecipePlan, PresentationItemRate } from '../src/presentation';
 
 function makeItemRate(itemId: string, name: string, rate: number): PresentationItemRate {
@@ -185,5 +186,35 @@ describe('buildFlowGraphData', () => {
 
     const outputNodes = result.nodes.filter(n => n.id.startsWith('output-'));
     expect(outputNodes.some(n => n.id === 'output-slag')).toBe(true);
+  });
+
+  it('labels power item flows with MW units', () => {
+    const catalog = {
+      powerItemId: '-9001',
+      proliferatorLevels: [],
+    } as unknown as ResolvedCatalogModel;
+    const plans: PresentationRecipePlan[] = [
+      makeRecipePlan({
+        inputs: [makeItemRate('fuel', 'Fuel', 2)],
+        outputs: [makeItemRate('-9001', 'Power', 20)],
+      }),
+    ];
+    const model = makeModel({
+      targets: [
+        {
+          itemId: '-9001',
+          itemName: 'Power',
+          requestedRatePerMin: 20,
+          actualRatePerMin: 20,
+        },
+      ],
+    });
+
+    const result = buildFlowGraphData(plans, catalog, model);
+    const powerOutput = result.nodes.find(node => node.id === 'output--9001');
+    const powerEdge = result.edges.find(edge => edge.target === 'output--9001');
+
+    expect(powerOutput?.data.rateLabel).toBe('20.00 MW');
+    expect(powerEdge?.data?.rateLabel).toBe('20.00 MW');
   });
 });

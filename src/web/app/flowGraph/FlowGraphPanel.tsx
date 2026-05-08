@@ -18,6 +18,7 @@ import '@xyflow/react/dist/style.css';
 import { toBlob, toPng } from 'html-to-image';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResolvedCatalogModel } from '../../../catalog';
+import type { AppLocale } from '../../../i18n';
 import type { PresentationModel, PresentationRecipePlan } from '../../../presentation';
 import { preloadIconColors } from '../../shared/iconRegistry';
 import { buildFlowGraphData } from './buildFlowGraphData';
@@ -40,6 +41,7 @@ export interface FlowGraphPanelProps {
   recipePlans: PresentationRecipePlan[];
   catalog: ResolvedCatalogModel | null;
   model: PresentationModel;
+  locale: AppLocale;
   title: string;
   onClose: () => void;
 }
@@ -137,7 +139,7 @@ function ScreenshotButton() {
   );
 }
 
-function FlowGraphPanelImpl({ recipePlans, catalog, model, title, onClose }: FlowGraphPanelProps) {
+function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClose }: FlowGraphPanelProps) {
   const atlasIds = model.catalogSummary.iconAtlasIds;
   const [colorsReady, setColorsReady] = useState(false);
 
@@ -168,8 +170,8 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, title, onClose }: Flo
   }, [recipePlans, model, atlasIds]);
 
   const { nodes: rawNodes, edges: rawEdges } = useMemo(
-    () => (colorsReady ? buildFlowGraphData(recipePlans, catalog, model) : { nodes: [], edges: [] }),
-    [recipePlans, catalog, model, colorsReady]
+    () => (colorsReady ? buildFlowGraphData(recipePlans, catalog, model, locale) : { nodes: [], edges: [] }),
+    [recipePlans, catalog, model, locale, colorsReady]
   );
 
   const { nodes: layoutNodes, edges, ready } = useFlowLayout(rawNodes, rawEdges);
