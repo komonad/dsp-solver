@@ -18,7 +18,147 @@
       "PowerMultiplier": 2.5
     }
   ],
+  "powerDemand": { "ItemID": -9001, "Name": "电力", "IconName": "emoji:⚡" },
+  "powerGenerationRules": [
+    {
+      "ID": -900101,
+      "BuildingID": 2204,
+      "Name": "火力发电（化学燃料棒）",
+      "PowerMW": 8.64,
+      "Inputs": [{ "ItemID": 6217, "RatePerMin": 12 }],
+      "SupportedModes": ["productivity"],
+      "IconName": "fuel-plant"
+    },
+    {
+      "ID": -900102,
+      "BuildingID": 2211,
+      "Name": "裂变重水堆（铀燃料棒）",
+      "PowerMW": 48,
+      "Inputs": [{ "ItemID": 6242, "RatePerMin": 1.2 }],
+      "SupportedModes": ["productivity"],
+      "IconName": "fusion-power-station"
+    },
+    {
+      "ID": -900103,
+      "BuildingID": 2210,
+      "Name": "「地上太阳」（氘核燃料棒）",
+      "PowerMW": 288,
+      "Inputs": [{ "ItemID": 1802, "RatePerMin": 2 }],
+      "SupportedModes": ["productivity"],
+      "IconName": "fusion-reactor"
+    },
+    {
+      "ID": -900104,
+      "BuildingID": 6261,
+      "Name": "轨道反物质堆（反物质燃料棒）",
+      "PowerMW": 12000,
+      "Inputs": [{ "ItemID": 1803, "RatePerMin": 10 }],
+      "SupportedModes": ["speed"],
+      "IconName": "人造恒星MK2"
+    },
+    {
+      "ID": -900105,
+      "BuildingID": 6261,
+      "Name": "轨道反物质堆（奇异湮灭燃料棒）",
+      "PowerMW": 24000,
+      "Inputs": [{ "ItemID": 1804, "RatePerMin": 2 }],
+      "SupportedModes": ["speed"],
+      "IconName": "人造恒星MK2"
+    },
+    {
+      "ID": -900106,
+      "BuildingID": 2203,
+      "Name": "风力涡轮机",
+      "PowerMW": 0.36,
+      "IconName": "wind-turbine"
+    },
+    {
+      "ID": -900107,
+      "BuildingID": 2205,
+      "Name": "太阳能板",
+      "PowerMW": 1.08,
+      "IconName": "solar-panel"
+    },
+    {
+      "ID": -900108,
+      "BuildingID": 2213,
+      "Name": "地热发电站",
+      "PowerMW": 14.4,
+      "IconName": "geothermal-power-station"
+    },
+    {
+      "ID": -900109,
+      "BuildingID": 6221,
+      "Name": "同位素温差发电机",
+      "PowerMW": 2.1,
+      "IconName": "放射性同位素温差电池"
+    }
+  ],
   "buildingRules": [
+    {
+      "ID": 2204,
+      "Category": "power",
+      "SpaceOverride": 12.96,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 2210,
+      "Category": "power",
+      "SpaceOverride": 36,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 2211,
+      "Category": "power",
+      "SpaceOverride": 20.25,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 6261,
+      "Category": "power",
+      "SpaceOverride": 50,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 2203,
+      "Category": "power",
+      "SpaceOverride": 3.24,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 2205,
+      "Category": "power",
+      "SpaceOverride": 1.44,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 2213,
+      "Category": "power",
+      "SpaceOverride": 12.96,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
+    {
+      "ID": 6221,
+      "Category": "power",
+      "SpaceOverride": 4,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": ["power-generator"]
+    },
     {
       "ID": 2302,
       "Category": "smelter"
@@ -88,11 +228,13 @@
     },
     {
       "ID": 6254,
-      "Category": "farming"
+      "Category": "farming",
+      "SpaceOverride": 50
     },
     {
       "ID": 6257,
-      "Category": "shipyard"
+      "Category": "shipyard",
+      "SpaceOverride": 50
     },
     {
       "ID": 6264,
@@ -100,11 +242,13 @@
     },
     {
       "ID": 6265,
-      "Category": "particle"
+      "Category": "particle",
+      "SpaceOverride": 200
     },
     {
       "ID": 6501,
-      "Category": "smelter"
+      "Category": "smelter",
+      "SpaceOverride": 50
     },
     {
       "ID": 7823,

@@ -152,7 +152,7 @@ test('OrbitalRing heavy-water fractionation uses the configured probability and 
     targets: [{ itemId: '7018', ratePerMin: 72 }],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
-    rawInputItemIds: ['1000', '1143'],
+    rawInputItemIds: ['1000', '1143', '-9001'],
     allowedRecipesByItem: { '7018': ['106'] },
     forcedProliferatorModeByRecipe: { '106': 'speed' },
     forcedProliferatorLevelByRecipe: { '106': 3 },
@@ -168,7 +168,7 @@ test('OrbitalRing heavy-water fractionation uses the configured probability and 
     runsPerMin: 72,
   });
   expect(result.recipePlans[0].exactBuildingCount).toBeCloseTo(0.5, 6);
-  expect(result.recipePlans[0].inputs[0]).toEqual({ itemId: '1000', ratePerMin: 72 });
+  expect(result.recipePlans[0].inputs.find(i => i.itemId === '1000')).toEqual({ itemId: '1000', ratePerMin: 72 });
   expect(result.recipePlans[0].outputs[0]).toEqual({ itemId: '7018', ratePerMin: 72 });
   expect(result.diagnostics.messages).toContain(
     'Fractionation recipe 106 skips building 6215 because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.'
@@ -184,7 +184,7 @@ test('disabled buildings suppress unrelated fractionation skip diagnostics', asy
     targets: [{ itemId: '7018', ratePerMin: 72 }],
     objective: 'min_buildings',
     balancePolicy: 'force_balance',
-    rawInputItemIds: ['1000', '1143'],
+    rawInputItemIds: ['1000', '1143', '-9001'],
     disabledBuildingIds: ['6215'],
     allowedRecipesByItem: { '7018': ['106'] },
     forcedProliferatorModeByRecipe: { '106': 'speed' },

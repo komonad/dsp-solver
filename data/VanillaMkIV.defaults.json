@@ -46,7 +46,7 @@
   "powerDemand": {
     "ItemID": -9001,
     "Name": "电力",
-    "IconName": "energy-fragment"
+    "IconName": "emoji:⚡"
   },
   "powerGenerationRules": [
     {
@@ -112,6 +112,27 @@
         "speed"
       ],
       "IconName": "fusion-reactor"
+    },
+    {
+      "ID": -900105,
+      "BuildingID": 2203,
+      "Name": "风力涡轮机",
+      "PowerMW": 0.3,
+      "IconName": "wind-turbine"
+    },
+    {
+      "ID": -900106,
+      "BuildingID": 2205,
+      "Name": "太阳能板",
+      "PowerMW": 0.36,
+      "IconName": "solar-panel"
+    },
+    {
+      "ID": -900107,
+      "BuildingID": 2213,
+      "Name": "地热发电站",
+      "PowerMW": 2.4,
+      "IconName": "geothermal-power-station"
     }
   ],
   "buildingRules": [
@@ -152,6 +173,36 @@
       "ID": 2211,
       "Category": "power",
       "SpaceOverride": 20.25,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": [
+        "power-generator"
+      ]
+    },
+    {
+      "ID": 2203,
+      "Category": "power",
+      "SpaceOverride": 3.24,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": [
+        "power-generator"
+      ]
+    },
+    {
+      "ID": 2205,
+      "Category": "power",
+      "SpaceOverride": 1.44,
+      "SpeedMultiplierOverride": 1,
+      "WorkPowerMWOverride": 0,
+      "Tags": [
+        "power-generator"
+      ]
+    },
+    {
+      "ID": 2213,
+      "Category": "power",
+      "SpaceOverride": 12.96,
       "SpeedMultiplierOverride": 1,
       "WorkPowerMWOverride": 0,
       "Tags": [

@@ -33,9 +33,9 @@ test('Vanilla.defaults.json is internally valid', async () => {
   expect(defaultConfig.powerDemand).toEqual({
     ItemID: -9001,
     Name: '电力',
-    IconName: 'energy-fragment',
+    IconName: 'emoji:⚡',
   });
-  expect(defaultConfig.powerGenerationRules).toHaveLength(4);
+  expect(defaultConfig.powerGenerationRules).toHaveLength(7);
   expect(defaultConfig.recommendedDisabledBuildingIds).toEqual([1]);
   expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
 });
@@ -64,8 +64,8 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
 
   expect(resolved.version).toBe('vanilla-compatible@1');
   expect(resolved.items).toHaveLength(175);
-  expect(resolved.recipes).toHaveLength(242);
-  expect(resolved.buildings).toHaveLength(27);
+  expect(resolved.recipes).toHaveLength(245);
+  expect(resolved.buildings).toHaveLength(30);
   expect(resolved.powerItemId).toBe('-9001');
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
   expect(resolved.iconAtlasIds).toEqual(['Vanilla']);
@@ -157,6 +157,7 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   expect(resolved.itemMap.get('-9001')).toMatchObject({
     name: '电力',
     kind: 'utility',
+    icon: 'emoji:⚡',
   });
   expect(resolved.recipeMap.get('-900101')).toMatchObject({
     name: '火力发电（煤矿）',
@@ -191,7 +192,7 @@ test('VanillaMkIV profile adds a fourth proliferator level and recipe', async ()
   const resolved = resolveCatalogModel(dataset, defaultConfig);
 
   expect(resolved.items).toHaveLength(176);
-  expect(resolved.recipes).toHaveLength(243);
+  expect(resolved.recipes).toHaveLength(246);
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3, 4]);
   expect(resolved.proliferatorLevelMap.get(4)).toMatchObject({
     itemId: '9441',
@@ -266,8 +267,8 @@ test.each([
   {
     datasetPath: './data/OrbitalRing.json',
     defaultsPath: './data/OrbitalRing.defaults.json',
-    expectedRecipeCount: 365,
-    expectedBuildingCount: 21,
+    expectedRecipeCount: 374,
+    expectedBuildingCount: 29,
     expectedIconAtlasIds: ['OrbitalRing'],
     expectedRecommendedSolve: {
       objective: 'min_power',

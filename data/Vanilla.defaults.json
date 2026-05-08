@@ -6,7 +6,7 @@
     { "Level": 2, "ItemID": 1142, "SprayCount": 28, "SpeedMultiplier": 1.5, "ProductivityMultiplier": 1.2, "PowerMultiplier": 1.7 },
     { "Level": 3, "ItemID": 1143, "SprayCount": 75, "SpeedMultiplier": 2, "ProductivityMultiplier": 1.25, "PowerMultiplier": 2.5 }
   ],
-  "powerDemand": { "ItemID": -9001, "Name": "电力", "IconName": "energy-fragment" },
+  "powerDemand": { "ItemID": -9001, "Name": "电力", "IconName": "emoji:⚡" },
   "powerGenerationRules": [
     {
       "ID": -900101,
@@ -43,6 +43,27 @@
       "Inputs": [{ "ItemID": 1804, "RatePerMin": 0.12 }],
       "SupportedModes": ["speed"],
       "IconName": "fusion-reactor"
+    },
+    {
+      "ID": -900105,
+      "BuildingID": 2203,
+      "Name": "风力涡轮机",
+      "PowerMW": 0.3,
+      "IconName": "wind-turbine"
+    },
+    {
+      "ID": -900106,
+      "BuildingID": 2205,
+      "Name": "太阳能板",
+      "PowerMW": 0.36,
+      "IconName": "solar-panel"
+    },
+    {
+      "ID": -900107,
+      "BuildingID": 2213,
+      "Name": "地热发电站",
+      "PowerMW": 2.4,
+      "IconName": "geothermal-power-station"
     }
   ],
   "buildingRules": [
@@ -52,6 +73,9 @@
     { "ID": 2204, "Category": "power", "SpaceOverride": 12.96, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
     { "ID": 2210, "Category": "power", "SpaceOverride": 36, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator", "artificial-star"] },
     { "ID": 2211, "Category": "power", "SpaceOverride": 20.25, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
+    { "ID": 2203, "Category": "power", "SpaceOverride": 3.24, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
+    { "ID": 2205, "Category": "power", "SpaceOverride": 1.44, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
+    { "ID": 2213, "Category": "power", "SpaceOverride": 12.96, "SpeedMultiplierOverride": 1, "WorkPowerMWOverride": 0, "Tags": ["power-generator"] },
     { "ID": 2207, "Category": "energy-storage", "Tags": ["charge"] },
     { "ID": 2208, "Category": "ray-receiver", "Tags": ["special-modifier"] },
     { "ID": 2209, "Category": "energy-exchanger", "Tags": ["charge"] },
