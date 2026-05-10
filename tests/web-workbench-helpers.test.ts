@@ -192,10 +192,10 @@ test('buildRecipeOptionsByOutputItem groups recipe details by produced item and 
   ]);
 });
 
-test('recipe item options include utility outputs while target options hide them', () => {
+test('target options include power-demand item; recipe options include all utility outputs', () => {
   const catalog = buildRecipeOptionCatalog();
 
-  expect(buildTargetItemOptions(catalog).map(item => item.itemId)).not.toContain('-9001');
+  expect(buildTargetItemOptions(catalog).map(item => item.itemId)).toContain('-9001');
   expect(buildRecipeItemOptions(catalog)).toContainEqual({
     itemId: '-9001',
     name: 'Power',

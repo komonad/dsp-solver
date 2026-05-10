@@ -301,7 +301,7 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
     './data/OrbitalRing.defaults.json'
   );
 
-  expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 3]);
+  expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
   expect(resolved.proliferatorLevelMap.get(3)).toMatchObject({
     itemId: '1143',
     sprayCount: 75,
@@ -309,8 +309,20 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
     productivityMultiplier: 1.25,
     powerMultiplier: 2.5,
   });
-  expect(resolved.proliferatorLevelMap.has(1)).toBe(false);
-  expect(resolved.proliferatorLevelMap.has(2)).toBe(false);
+  expect(resolved.proliferatorLevelMap.get(1)).toMatchObject({
+    itemId: '1141',
+    sprayCount: 13,
+    speedMultiplier: 1.25,
+    productivityMultiplier: 1.125,
+    powerMultiplier: 1.3,
+  });
+  expect(resolved.proliferatorLevelMap.get(2)).toMatchObject({
+    itemId: '1142',
+    sprayCount: 28,
+    speedMultiplier: 1.5,
+    productivityMultiplier: 1.2,
+    powerMultiplier: 1.7,
+  });
 
   expect(resolved.buildingMap.get('2317')).toMatchObject({
     buildingId: '2317',

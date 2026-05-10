@@ -280,7 +280,9 @@ function buildItemPickerOptions(
 }
 
 export function buildTargetItemOptions(catalog: ResolvedCatalogModel | null): ItemPickerOption[] {
-  return catalog ? buildItemPickerOptions(catalog, item => item.kind !== 'utility') : [];
+  return catalog ? buildItemPickerOptions(catalog, item =>
+    item.kind !== 'utility' || (item.tags?.includes('power-demand') ?? false)
+  ) : [];
 }
 
 export function buildRecipeItemOptions(catalog: ResolvedCatalogModel | null): ItemPickerOption[] {
