@@ -215,6 +215,8 @@ export interface RecipeModifierRuleSpec {
   SupportedModes?: ProliferatorMode[];
   /** Highest allowed proliferator level when Kind is `proliferator`. */
   MaxLevel?: number;
+  /** Lowest allowed proliferator level when Kind is `proliferator` (default 1). */
+  MinLevel?: number;
   /** Optional free-form tags attached to recipes using this code. */
   Tags?: string[];
 }
@@ -259,6 +261,13 @@ export interface CatalogRecipeModifierPolicySpec {
    * amount appears in both its inputs and outputs.
    */
   speedOnlyWhenInputOutputCountsMatch?: boolean;
+  /** Default modifier code for recipes whose raw Proliferator field is 0 (overridden by speedOnly). */
+  defaultModifierCode?: number;
+  /** Factory-specific modifier code overrides. Checked before defaultModifierCode. */
+  factorySpecificModifierCodes?: Array<{
+    factoryIds: number[];
+    code: number;
+  }>;
 }
 
 /**
@@ -434,6 +443,8 @@ export interface ResolvedRecipeSpec {
   supportsProliferatorModes: ProliferatorMode[];
   /** Highest allowed proliferator level for this recipe after resolution. */
   maxProliferatorLevel: number;
+  /** Lowest allowed proliferator level for this recipe (default 1). */
+  minProliferatorLevel: number;
   /** Whether this recipe is treated as synthetic/default-disabled for upstream expansion. */
   isSynthetic: boolean;
   /** Optional normalized tags. */

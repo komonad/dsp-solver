@@ -350,29 +350,40 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
   expect(resolved.recipeMap.get('32')).toMatchObject({
     recipeId: '32',
     allowedBuildingIds: ['2309', '7823', '2317', '6215'],
-    modifierCode: 3,
+    modifierCode: 2,
     supportsProliferatorModes: ['none', 'speed', 'productivity'],
     maxProliferatorLevel: 3,
+    minProliferatorLevel: 3,
   });
   expect(resolved.recipeMap.get('509')).toMatchObject({
     recipeId: '509',
-    modifierCode: 3,
+    modifierCode: 2,
     supportsProliferatorModes: ['none', 'speed', 'productivity'],
     maxProliferatorLevel: 3,
+    minProliferatorLevel: 3,
   });
   expect(resolved.recipeMap.get('716')).toMatchObject({
     recipeId: '716',
     allowedBuildingIds: ['2309', '2317', '7823', '6215'],
+    modifierCode: 2,
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+    maxProliferatorLevel: 3,
+    minProliferatorLevel: 3,
+  });
+  expect(resolved.recipeMap.get('2')).toMatchObject({
+    recipeId: '2',
     modifierCode: 3,
     supportsProliferatorModes: ['none', 'speed', 'productivity'],
     maxProliferatorLevel: 3,
+    minProliferatorLevel: 1,
   });
   expect(resolved.recipeMap.get('717')).toMatchObject({
     recipeId: '717',
     allowedBuildingIds: ['2309', '2317', '7823', '6215'],
-    modifierCode: 3,
+    modifierCode: 2,
     supportsProliferatorModes: ['none', 'speed', 'productivity'],
     maxProliferatorLevel: 3,
+    minProliferatorLevel: 3,
   });
   expect(resolved.recipeMap.get('1')).toMatchObject({
     recipeId: '1',

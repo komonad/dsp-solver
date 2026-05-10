@@ -46,6 +46,9 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
           speedOnlyRecipeIds: defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds
             ? [...defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds]
             : undefined,
+          factorySpecificModifierCodes: defaultConfig.recipeModifierPolicy.factorySpecificModifierCodes?.map(
+            entry => ({ factoryIds: [...entry.factoryIds], code: entry.code })
+          ),
         }
       : undefined,
     recipeBuildingExpansionGroups: defaultConfig.recipeBuildingExpansionGroups?.map(group => ({
@@ -225,6 +228,18 @@ function deriveEffectiveModifierCode(
 
   if (matchesSpeedOnlyPolicy(recipe, policy)) {
     return 1;
+  }
+
+  if (policy?.factorySpecificModifierCodes) {
+    for (const entry of policy.factorySpecificModifierCodes) {
+      if (recipe.Factories.some(f => entry.factoryIds.includes(f))) {
+        return entry.code;
+      }
+    }
+  }
+
+  if (policy?.defaultModifierCode !== undefined && recipe.Proliferator === 0) {
+    return policy.defaultModifierCode;
   }
 
   return recipe.Proliferator;
@@ -427,6 +442,7 @@ function buildPowerGenerationRecipe(
     modifierKind: supportsProliferator ? 'proliferator' : 'none',
     supportsProliferatorModes: supportedModes,
     maxProliferatorLevel,
+    minProliferatorLevel: 1,
     isSynthetic: false,
     tags: ['power-generation', ...(rule.Tags ?? [])],
     source: {
@@ -556,6 +572,10 @@ export function resolveCatalogModel(
       modifierKind === 'proliferator'
         ? (modifier?.MaxLevel ?? highestConfiguredProliferatorLevel)
         : 0;
+    const minProliferatorLevel =
+      modifierKind === 'proliferator'
+        ? (modifier?.MinLevel ?? 1)
+        : 1;
     const allowedBuildingIds = expandAllowedBuildingIds(
       recipeRule?.AllowedBuildingIds ?? recipe.Factories,
       recipeBuildingExpansionGroups,
@@ -595,6 +615,7 @@ export function resolveCatalogModel(
       modifierKind,
       supportsProliferatorModes,
       maxProliferatorLevel,
+      minProliferatorLevel,
       isSynthetic,
       tags: tags.length > 0 ? tags : undefined,
       source: {

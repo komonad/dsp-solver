@@ -142,6 +142,10 @@ export function getForcedProliferatorLevelForRecipe(
     return undefined;
   }
 
+  if (globalLevel > 0 && globalLevel < recipe.minProliferatorLevel) {
+    return undefined;
+  }
+
   return globalLevel;
 }
 
@@ -523,7 +527,7 @@ function getStaticRecipeOptionCompilation(
     });
 
     for (const level of catalog.proliferatorLevels) {
-      if (level.level === 0 || level.level > recipe.maxProliferatorLevel) {
+      if (level.level === 0 || level.level > recipe.maxProliferatorLevel || level.level < recipe.minProliferatorLevel) {
         continue;
       }
 
@@ -740,6 +744,13 @@ function compileRecipeOptions(
   if (forcedLevel !== undefined && forcedLevel > recipe.maxProliferatorLevel) {
     messages?.push(
       `Forced proliferator level ${forcedLevel} exceeds max level for recipe ${recipe.recipeId}.`
+    );
+    return [];
+  }
+
+  if (forcedLevel !== undefined && forcedLevel > 0 && forcedLevel < recipe.minProliferatorLevel) {
+    messages?.push(
+      `Forced proliferator level ${forcedLevel} is below min level for recipe ${recipe.recipeId}.`
     );
     return [];
   }
