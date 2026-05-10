@@ -11,24 +11,25 @@ import {
 } from '../workbench/requestBuilder';
 import type { WorkbenchEditorState } from '../workbench/persistence';
 
-const DEFAULT_LAB_STACK_LAYERS = 15;
+const FALLBACK_STACK_LAYERS = 15;
 
 function buildBuildingOverridesFromEditorState(
   catalog: ResolvedCatalogModel,
   editorState: WorkbenchEditorState
 ): Record<string, BuildingParameterOverride> | undefined {
-  const labStackLayers = editorState.labStackLayers ?? DEFAULT_LAB_STACK_LAYERS;
+  const defaultStackLayers = catalog.recommendedSolve.defaultStackLayers ?? FALLBACK_STACK_LAYERS;
+  const stackLayers = editorState.labStackLayers ?? defaultStackLayers;
   const beltSpeed = editorState.beltSpeedItemsPerMin;
-  if (labStackLayers <= 1 && !beltSpeed) {
+  if (stackLayers <= 1 && !beltSpeed) {
     return undefined;
   }
 
   const overrides: Record<string, BuildingParameterOverride> = {};
   for (const building of catalog.buildings) {
-    if (labStackLayers && labStackLayers > 1 && building.category === 'lab') {
+    if (stackLayers && stackLayers > 1 && (building.category === 'lab' || building.category === 'farming')) {
       overrides[building.buildingId] = {
         ...(overrides[building.buildingId] ?? {}),
-        stackLayers: labStackLayers,
+        stackLayers,
       };
     }
     if (beltSpeed && beltSpeed > 0 && building.fractionatorBeltSpeedItemsPerMin) {

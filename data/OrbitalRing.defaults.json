@@ -1804,7 +1804,8 @@
   ],
   "recommendedSolve": {
     "objective": "min_power",
-    "proliferatorPolicy": "none"
+    "proliferatorPolicy": "none",
+    "defaultStackLayers": 9
   },
   "recommendedRawItemIds": [
     1000,

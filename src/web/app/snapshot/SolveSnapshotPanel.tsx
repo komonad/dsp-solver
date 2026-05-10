@@ -676,7 +676,7 @@ export default function SolveSnapshotPanel() {
                 type="number"
                 label={bundle.solveRequest.labStackLayersLabel}
                 value={labStackLayers ?? ''}
-                placeholder="15"
+                placeholder={String(catalog?.recommendedSolve.defaultStackLayers ?? 15)}
                 onChange={event => {
                   const val = event.target.value;
                   if (!val) {

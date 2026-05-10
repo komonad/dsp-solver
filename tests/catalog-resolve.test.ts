@@ -273,6 +273,7 @@ test.each([
     expectedRecommendedSolve: {
       objective: 'min_power',
       proliferatorPolicy: 'none',
+      defaultStackLayers: 9,
     },
   },
 ])(

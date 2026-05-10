@@ -305,6 +305,8 @@ export interface CatalogRecommendedSolveSpec {
   balancePolicy?: 'allow_surplus' | 'force_balance';
   /** Optional recommended global proliferator policy. */
   proliferatorPolicy?: 'auto' | 'none' | 'speed' | 'productivity';
+  /** Optional default stack layers for lab/farming buildings (default 15 if unset). */
+  defaultStackLayers?: number;
 }
 
 /**
