@@ -232,46 +232,56 @@
     },
     {
       "ID": 2302,
-      "Category": "smelter"
+      "Category": "smelter",
+      "SpaceOverride": 5.76
     },
     {
       "ID": 2303,
-      "Category": "assembler"
+      "Category": "assembler",
+      "SpaceOverride": 10.24
     },
     {
       "ID": 2304,
-      "Category": "assembler"
+      "Category": "assembler",
+      "SpaceOverride": 10.24
     },
     {
       "ID": 2305,
-      "Category": "assembler"
+      "Category": "assembler",
+      "SpaceOverride": 10.24
     },
     {
       "ID": 2308,
-      "Category": "refinery"
+      "Category": "refinery",
+      "SpaceOverride": 18
     },
     {
       "ID": 2309,
-      "Category": "chemical"
+      "Category": "chemical",
+      "SpaceOverride": 23.76
     },
     {
       "ID": 2310,
-      "Category": "particle"
+      "Category": "particle",
+      "SpaceOverride": 45.12
     },
     {
       "ID": 2314,
       "Category": "fractionator",
+      "SpaceOverride": 12.96,
       "SpeedMultiplierOverride": 1,
       "FractionatorBeltSpeedItemsPerMin": 1800,
       "FractionatorMaxItemStack": 4
     },
     {
       "ID": 2315,
-      "Category": "smelter"
+      "Category": "smelter",
+      "SpaceOverride": 5.76
     },
     {
       "ID": 2317,
       "Category": "chemical",
+      "SpaceOverride": 23.76,
       "IntrinsicProductivityBonus": 1,
       "Tags": [
         "quantum-chemical"
@@ -279,51 +289,58 @@
     },
     {
       "ID": 2318,
-      "Category": "assembler"
+      "Category": "assembler",
+      "SpaceOverride": 10.24
     },
     {
       "ID": 2319,
-      "Category": "smelter"
+      "Category": "smelter",
+      "SpaceOverride": 5.76
     },
     {
       "ID": 2901,
-      "Category": "lab"
+      "Category": "lab",
+      "SpaceOverride": 20.25
     },
     {
       "ID": 2902,
-      "Category": "lab"
+      "Category": "lab",
+      "SpaceOverride": 20.25
     },
     {
       "ID": 6215,
-      "Category": "black-box"
+      "Category": "black-box",
+      "SpaceOverride": 9
     },
     {
       "ID": 6254,
       "Category": "farming",
-      "SpaceOverride": 50
+      "SpaceOverride": 20.25
     },
     {
       "ID": 6257,
       "Category": "shipyard",
-      "SpaceOverride": 50
+      "SpaceOverride": 1000
     },
     {
       "ID": 6264,
-      "Category": "farming"
+      "Category": "farming",
+      "SpaceOverride": 1000
     },
     {
       "ID": 6265,
       "Category": "particle",
-      "SpaceOverride": 200
+      "SpaceOverride": 1000
     },
     {
       "ID": 6501,
       "Category": "smelter",
-      "SpaceOverride": 50
+      "SpaceOverride": 1000
     },
     {
       "ID": 7823,
       "Category": "chemical",
+      "SpaceOverride": 23.76,
       "IntrinsicProductivityBonus": 0.25,
       "Tags": [
         "cryogenic-chemical"
