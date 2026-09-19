@@ -14,7 +14,7 @@ interface ChevronPoint {
 
 function ItemEdgeImpl(props: EdgeProps) {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data } = props;
-  const { itemName, rateLabel, width, color } = data as unknown as ItemEdgeData;
+  const { itemName, rateLabel, width, color, dimmed } = data as unknown as ItemEdgeData;
   const [hovered, setHovered] = useState(false);
   const pathRef = useRef<SVGPathElement>(null);
   const [labelPos, setLabelPos] = useState<{ x: number; y: number } | null>(null);
@@ -62,6 +62,8 @@ function ItemEdgeImpl(props: EdgeProps) {
     <g
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      opacity={dimmed ? 0.2 : 1}
+      style={{ transition: 'opacity 150ms ease' }}
     >
       {/* Invisible wider path for easier hover targeting */}
       <path

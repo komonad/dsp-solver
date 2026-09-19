@@ -21,7 +21,11 @@ import type { ResolvedCatalogModel } from '../../../catalog';
 import type { AppLocale } from '../../../i18n';
 import type { PresentationModel, PresentationRecipePlan } from '../../../presentation';
 import { preloadIconColors } from '../../shared/iconRegistry';
-import { buildFlowGraphData } from './buildFlowGraphData';
+import { useFocusFilter } from '../useFocusFilter';
+import { applyFlowGraphFocus, buildFlowGraphData } from './buildFlowGraphData';
+import FocusFilterBar from '../results/FocusFilterBar';
+import { focusGraphToolbarStyle } from '../workbenchStyles';
+import { useCatalog } from '../CatalogContext';
 import type { FlowGraphNode } from './buildFlowGraphData';
 import { ExternalNode } from './ExternalNode';
 import { ItemEdge } from './ItemEdge';
@@ -49,6 +53,8 @@ export interface FlowGraphPanelProps {
 const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
+  height: '100dvh',
+  minHeight: 0,
   zIndex: 1300,
   display: 'flex',
   flexDirection: 'column',
@@ -141,7 +147,9 @@ function ScreenshotButton() {
 
 function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClose }: FlowGraphPanelProps) {
   const atlasIds = model.catalogSummary.iconAtlasIds;
+  const { bundle } = useCatalog();
   const [colorsReady, setColorsReady] = useState(false);
+  const focusResult = useFocusFilter();
 
   // Preload icon colors from atlas sprite sheets
   useEffect(() => {
@@ -179,6 +187,11 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
   const [displayNodes, setDisplayNodes] = useState<FlowGraphNode[]>([]);
   useEffect(() => { setDisplayNodes(layoutNodes); }, [layoutNodes]);
 
+  const focusedGraph = useMemo(
+    () => applyFlowGraphFocus({ nodes: displayNodes, edges }, focusResult),
+    [displayNodes, edges, focusResult],
+  );
+
   const onNodesChange: OnNodesChange = useCallback((changes) => {
     setDisplayNodes(nds => applyNodeChanges(changes, nds) as FlowGraphNode[]);
   }, []);
@@ -192,16 +205,19 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
         </Typography>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {ready && displayNodes.length > 0 && <ScreenshotButton />}
-          <IconButton size="small" onClick={onClose} sx={{ width: 30, height: 30 }}>
+          <IconButton aria-label={bundle.common.closeButton} size="small" onClick={onClose} sx={{ width: 30, height: 30 }}>
             <CloseIcon sx={{ fontSize: 18 }} />
           </IconButton>
         </div>
       </div>
+      <div style={focusGraphToolbarStyle}>
+        <FocusFilterBar />
+      </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         {ready && displayNodes.length > 0 ? (
           <ReactFlow
-            nodes={displayNodes}
-            edges={edges}
+            nodes={focusedGraph.nodes}
+            edges={focusedGraph.edges}
             onNodesChange={onNodesChange}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}

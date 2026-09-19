@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import type { ItemPickerOption } from '../shared/itemPickerModel';
+import type { FocusFilterResult } from '../../presentation';
 
 // ---------------------------------------------------------------------------
 // Context value interface
@@ -23,6 +24,13 @@ export interface WorkbenchDraftContextValue {
   // Strategy warning (transient UI)
   recipeStrategyWarning: string;
   setRecipeStrategyWarning: React.Dispatch<React.SetStateAction<string>>;
+
+  // Focus filter (transient UI — not persisted in snapshot)
+  focusItemIds: string[];
+  focusResult: FocusFilterResult | null;
+  addFocusItem: (itemId: string) => void;
+  removeFocusItem: (itemId: string) => void;
+  clearFocusItems: () => void;
 }
 
 // ---------------------------------------------------------------------------

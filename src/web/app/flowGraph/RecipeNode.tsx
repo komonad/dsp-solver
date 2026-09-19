@@ -22,11 +22,11 @@ const hiddenHandle: React.CSSProperties = {
 };
 
 function RecipeNodeImpl({ data }: NodeProps) {
-  const { buildingName, buildingIconKey, buildingCount, exactBuildingCount, recipeName, atlasIds, inputItemIds, outputItemIds } =
+  const { buildingName, buildingIconKey, buildingCount, exactBuildingCount, recipeName, atlasIds, inputItemIds, outputItemIds, dimmed } =
     data as unknown as RecipeNodeData;
 
   return (
-    <div style={{ width: 140, height: 64, position: 'relative' }}>
+    <div style={{ width: 140, height: 64, position: 'relative', opacity: dimmed ? 0.25 : 1, transition: 'opacity 0.15s' }}>
       {inputItemIds.length > 0
         ? inputItemIds.map((itemId, idx) => (
             <Handle

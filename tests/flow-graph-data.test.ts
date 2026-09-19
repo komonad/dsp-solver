@@ -1,4 +1,5 @@
-import { buildFlowGraphData } from '../src/web/app/flowGraph/buildFlowGraphData';
+import { applyFlowGraphFocus, buildFlowGraphData } from '../src/web/app/flowGraph/buildFlowGraphData';
+import { computeFocusFilter } from '../src/presentation';
 import type { ResolvedCatalogModel } from '../src/catalog';
 import type { PresentationModel, PresentationRecipePlan, PresentationItemRate } from '../src/presentation';
 
@@ -52,6 +53,32 @@ function makeModel(overrides: Partial<PresentationModel> = {}): PresentationMode
 }
 
 describe('buildFlowGraphData', () => {
+  it('dims branches sharing a focused item and restores the graph without moving nodes', () => {
+    const plans = [
+      makeRecipePlan({ recipeId: 'smelt', inputs: [makeItemRate('ore', 'Ore', 60)], outputs: [makeItemRate('plate', 'Plate', 60)] }),
+      makeRecipePlan({ recipeId: 'gear', inputs: [makeItemRate('plate', 'Plate', 30)], outputs: [makeItemRate('gear', 'Gear', 30), makeItemRate('slag', 'Slag', 5)] }),
+      makeRecipePlan({ recipeId: 'circuit', inputs: [makeItemRate('plate', 'Plate', 30)], outputs: [makeItemRate('circuit', 'Circuit', 30)] }),
+    ];
+    const model = makeModel({
+      recipePlans: plans,
+      externalInputs: [makeItemRate('ore', 'Ore', 60)],
+      targets: ['gear', 'circuit'].map(itemId => ({ itemId, itemName: itemId, requestedRatePerMin: 30, actualRatePerMin: 30 })),
+      surplusOutputs: [makeItemRate('slag', 'Slag', 5)],
+    });
+    const graph = buildFlowGraphData(plans, null, model);
+    graph.nodes[0].position = { x: 123, y: 456 };
+    const focus = computeFocusFilter(['gear'], plans, new Set(['ore']));
+    const focused = applyFlowGraphFocus(graph, focus);
+    expect(focused.nodes.filter(node => node.data.dimmed).map(node => node.id)).toEqual(['recipe-2', 'output-circuit']);
+    expect(focused.edges.find(edge => edge.source === 'recipe-0' && edge.target === 'recipe-1')?.data?.dimmed).toBe(false);
+    expect(focused.edges.find(edge => edge.source === 'recipe-0' && edge.target === 'recipe-2')?.data?.dimmed).toBe(true);
+    expect(focused.edges.find(edge => edge.target === 'output-slag')?.data?.dimmed).toBe(false);
+    expect(focused.nodes[0].position).toEqual({ x: 123, y: 456 });
+    expect(focused.edges.map(edge => edge.data?.ratePerMin)).toEqual(graph.edges.map(edge => edge.data?.ratePerMin));
+    expect(applyFlowGraphFocus(focused, null)).toEqual(graph);
+    expect(buildFlowGraphData(plans, null, model, 'zh-CN', focus).edges).toEqual(focused.edges);
+  });
+
   it('returns empty for no recipe plans', () => {
     const result = buildFlowGraphData([], null, makeModel());
     expect(result.nodes).toHaveLength(0);

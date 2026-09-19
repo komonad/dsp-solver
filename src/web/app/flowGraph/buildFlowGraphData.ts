@@ -1,6 +1,7 @@
 import type { ResolvedCatalogModel } from '../../../catalog';
 import type { AppLocale } from '../../../i18n';
 import type {
+  FocusFilterResult,
   PresentationItemRate,
   PresentationModel,
   PresentationRecipePlan,
@@ -20,6 +21,7 @@ export interface RecipeNodeData {
   atlasIds?: string[];
   inputItemIds: string[];
   outputItemIds: string[];
+  dimmed?: boolean;
 }
 
 export interface ExternalNodeData {
@@ -31,6 +33,7 @@ export interface ExternalNodeData {
   rateLabel: string;
   kind: 'input' | 'output';
   atlasIds?: string[];
+  dimmed?: boolean;
 }
 
 export interface ItemEdgeData {
@@ -42,6 +45,7 @@ export interface ItemEdgeData {
   rateLabel: string;
   width: number;
   color: string;
+  dimmed?: boolean;
 }
 
 export type FlowGraphNode = Node<RecipeNodeData, 'recipe'> | Node<ExternalNodeData, 'external'>;
@@ -98,7 +102,8 @@ export function buildFlowGraphData(
   recipePlans: PresentationRecipePlan[],
   catalog: ResolvedCatalogModel | null,
   model: PresentationModel,
-  locale: AppLocale = 'zh-CN'
+  locale: AppLocale = 'zh-CN',
+  focusResult?: FocusFilterResult | null,
 ): { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] } {
   if (recipePlans.length === 0) {
     return { nodes: [], edges: [] };
@@ -346,23 +351,53 @@ export function buildFlowGraphData(
     maxNodeThroughput = Math.max(maxNodeThroughput, t.inFlow, t.outFlow);
   }
 
-  const edges: FlowGraphEdge[] = dedupedEdges.map(e => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    sourceHandle: e.sourceHandle,
-    targetHandle: e.targetHandle,
-    type: 'item',
+  const edges: FlowGraphEdge[] = dedupedEdges.map(e => {
+    return {
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+      type: 'item',
+      data: {
+        itemId: e.itemId,
+        itemName: e.itemName,
+        iconKey: e.iconKey,
+        ratePerMin: e.ratePerMin,
+        rateLabel: formatCompactItemRateLabel(e.itemId, e.ratePerMin, locale, powerItemId),
+        width: computeEdgeWidth(e.ratePerMin, maxNodeThroughput),
+        color: resolveItemColor(e.iconKey, e.itemName, atlasIds),
+      },
+    };
+  });
+
+  return applyFlowGraphFocus({ nodes, edges }, focusResult);
+}
+
+/** Focus changes preserve layout positions, handles and flow quantities. */
+export function applyFlowGraphFocus(
+  graph: { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] },
+  focusResult?: FocusFilterResult | null,
+): { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] } {
+  const nodes = graph.nodes.map(node => ({
+    ...node,
     data: {
-      itemId: e.itemId,
-      itemName: e.itemName,
-      iconKey: e.iconKey,
-      ratePerMin: e.ratePerMin,
-      rateLabel: formatCompactItemRateLabel(e.itemId, e.ratePerMin, locale, powerItemId),
-      width: computeEdgeWidth(e.ratePerMin, maxNodeThroughput),
-      color: resolveItemColor(e.iconKey, e.itemName, atlasIds),
+      ...node.data,
+      dimmed: !!focusResult && (node.type === 'recipe'
+        ? !focusResult.focusedRecipeIndices.has(Number(node.id.slice('recipe-'.length)))
+        : !focusResult.focusedItemIds.has(node.data.itemId)),
+    },
+  })) as FlowGraphNode[];
+  const dimmedNodeIds = new Set(nodes.filter(node => node.data.dimmed).map(node => node.id));
+  const edges = graph.edges.map(edge => ({
+    ...edge,
+    data: {
+      ...edge.data!,
+      dimmed: !!focusResult && (
+        !focusResult.focusedItemIds.has(edge.data!.itemId) ||
+        dimmedNodeIds.has(edge.source) || dimmedNodeIds.has(edge.target)
+      ),
     },
   }));
-
   return { nodes, edges };
 }

@@ -15,11 +15,11 @@ const hiddenHandle: React.CSSProperties = {
 };
 
 function ExternalNodeImpl({ data }: NodeProps) {
-  const { itemName, iconKey, rateLabel, kind, atlasIds } = data as unknown as ExternalNodeData;
+  const { itemName, iconKey, rateLabel, kind, atlasIds, dimmed } = data as unknown as ExternalNodeData;
   const isInput = kind === 'input';
 
   return (
-    <div style={{ width: 120, height: 48, position: 'relative' }}>
+    <div style={{ width: 120, height: 48, position: 'relative', opacity: dimmed ? 0.25 : 1, transition: 'opacity 0.15s' }}>
       {!isInput && (
         <Handle type="target" position={Position.Left} style={hiddenHandle} />
       )}

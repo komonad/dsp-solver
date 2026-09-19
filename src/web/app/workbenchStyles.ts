@@ -428,3 +428,88 @@ export const sectionHeadingStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: '0.08em',
 };
+
+export const focusDimmedStyle: React.CSSProperties = {
+  minWidth: 0,
+  opacity: 0.4,
+  transition: 'opacity 0.15s',
+};
+
+export const focusDividerStyle: React.CSSProperties = {
+  borderTop: '2px dashed rgba(24, 51, 89, 0.15)',
+  margin: '8px 0',
+  position: 'relative',
+};
+
+export const focusDividerLabelStyle: React.CSSProperties = {
+  position: 'absolute',
+  top: -9,
+  left: 8,
+  background: '#fff',
+  padding: '0 6px',
+  fontSize: 11,
+  fontWeight: 700,
+  color: 'rgba(24, 51, 89, 0.65)',
+};
+
+export const focusButtonStyle: React.CSSProperties = {
+  ...compactLedgerButtonStyle,
+  fontSize: 11,
+  padding: '2px 6px',
+  minWidth: 0,
+};
+
+export const focusBarStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  flexWrap: 'wrap',
+  minWidth: 0,
+  padding: '8px 14px',
+  background: 'rgba(24, 88, 163, 0.04)',
+  borderRadius: 14,
+  border: '1px solid rgba(24, 88, 163, 0.12)',
+};
+
+export const focusChipStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  padding: '3px 8px 3px 5px',
+  borderRadius: 999,
+  background: 'rgba(24, 88, 163, 0.10)',
+  fontSize: 12,
+  fontWeight: 600,
+  color: '#183359',
+  maxWidth: '100%',
+  overflowWrap: 'anywhere',
+};
+
+export const focusChipRemoveStyle: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  padding: 4,
+  fontSize: 16,
+  lineHeight: 1,
+  color: 'rgba(24, 51, 89, 0.7)',
+};
+
+export const focusClearButtonStyle: React.CSSProperties = {
+  border: 'none',
+  background: 'transparent',
+  cursor: 'pointer',
+  padding: '2px 6px',
+  fontSize: 12,
+  color: 'rgba(24, 51, 89, 0.7)',
+  whiteSpace: 'nowrap',
+};
+
+export const focusGraphToolbarStyle: React.CSSProperties = {
+  flexShrink: 0,
+  maxHeight: '35vh',
+  minHeight: 0,
+  overflow: 'auto',
+  overscrollBehavior: 'contain',
+  padding: 8,
+};

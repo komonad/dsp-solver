@@ -13,6 +13,7 @@ import CollapsibleCardHeader from '../app/components/CollapsibleCardHeader';
 import SummaryCard from '../app/results/SummaryCard';
 import DiagnosticsCard from '../app/results/DiagnosticsCard';
 import RecipePlanList from '../app/results/RecipePlanList';
+import FocusFilterBar from '../app/results/FocusFilterBar';
 import ItemLedgerPanel from '../app/results/ItemLedgerPanel';
 import StrategyWarningSnackbar from '../app/StrategyWarningSnackbar';
 import { FlowGraphPanel } from '../app/flowGraph/FlowGraphPanel';
@@ -44,7 +45,7 @@ function WorkbenchLayout() {
     clearAllowedRecipesForItem,
     locateItemInLedger,
   } = useWorkbench();
-  const { revealRecipePlan } = useWorkbenchDraft();
+  const { revealRecipePlan, focusItemIds, addFocusItem, removeFocusItem } = useWorkbenchDraft();
   const isSolveRunning = autoSolveState.activity.status === 'running';
   const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 
@@ -73,6 +74,9 @@ function WorkbenchLayout() {
       >
         {/* 配置切换条 — 全宽 */}
         <WorkbenchConfigStrip />
+
+        {/* 关注过滤 — 全宽 */}
+        {hasStatus ? <FocusFilterBar /> : null}
 
         {/* 三栏主体 */}
         <Box
@@ -209,8 +213,11 @@ function WorkbenchLayout() {
           itemSlicesById={model?.itemSlicesById ?? {}}
           allowedRecipesByItem={allowedRecipesByItem}
           allowedRecipeOptionsByItem={preferredRecipeOptionsByItem}
+          focusItemIds={focusItemIds}
           onMarkRaw={markItemAsRawInput}
           onUnmarkRaw={unmarkItemAsRawInput}
+          onAddFocus={addFocusItem}
+          onRemoveFocus={removeFocusItem}
           onApplyPreferredRecipes={applyAllowedRecipesForItem}
           onClearAllowedRecipes={clearAllowedRecipesForItem}
           onLocateInLedger={locateItemInLedger}

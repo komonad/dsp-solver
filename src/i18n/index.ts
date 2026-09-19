@@ -27,6 +27,7 @@ export interface LocaleBundle {
     notSet: string;
     notSolvedYet: string;
     removeSuffix: string;
+    closeButton: string;
   };
   enums: {
     objective: Record<SolveObjective, string>;
@@ -344,6 +345,16 @@ export interface LocaleBundle {
   flowGraph: {
     title: string;
   };
+  focusFilter: {
+    description: string;
+    fullLineLabel: string;
+    placeholder: string;
+    clearButton: string;
+    focusedSectionTitle: string;
+    unfocusedSectionTitle: string;
+    addFocusButton: string;
+    removeFocusButton: string;
+  };
 }
 
 const zhCN: LocaleBundle = {
@@ -357,6 +368,7 @@ const zhCN: LocaleBundle = {
     notSet: '（未设置）',
     notSolvedYet: '尚未求解',
     removeSuffix: '移除',
+    closeButton: '关闭',
   },
   enums: {
     objective: {
@@ -745,6 +757,16 @@ const zhCN: LocaleBundle = {
   },
   flowGraph: {
     title: '物品流图',
+  },
+  focusFilter: {
+    description: '选择当前产线中的物品，查看其上游子图（含副产物）。多个物品取并集；用量保留当前产线数值，范围外内容淡化。',
+    fullLineLabel: '全产线',
+    placeholder: '关注物品…',
+    clearButton: '清除关注',
+    focusedSectionTitle: '关注范围',
+    unfocusedSectionTitle: '范围外',
+    addFocusButton: '关注',
+    removeFocusButton: '取消关注',
   },
 };
 

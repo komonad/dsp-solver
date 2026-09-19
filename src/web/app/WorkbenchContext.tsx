@@ -19,6 +19,7 @@ import {
 import {
   buildPresentationModel,
   buildPresentationRequestSummary,
+  computeFocusFilter,
 } from '../../presentation';
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import {
@@ -340,6 +341,19 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [beltSpeedItemsPerMin, setBeltSpeedItemsPerMin] = useState<number | undefined>(undefined);
   const [revealedRecipePlanKey, setRevealedRecipePlanKey] = useState('');
   const [revealedRecipePlanNonce, setRevealedRecipePlanNonce] = useState(0);
+
+  const [focusItemIds, setFocusItemIds] = useState<string[]>([]);
+  const addFocusItem = useCallback((itemId: string) => {
+    setFocusItemIds(prev => prev.includes(itemId) ? prev : [...prev, itemId]);
+  }, []);
+  const removeFocusItem = useCallback((itemId: string) => {
+    setFocusItemIds(prev => prev.filter(id => id !== itemId));
+  }, []);
+  const clearFocusItems = useCallback(() => {
+    setFocusItemIds([]);
+  }, []);
+
+  useEffect(clearFocusItems, [activeWorkbenchConfigId, loadedSource, clearFocusItems]);
 
   // -------------------------------------------------------------------------
   // Refs
@@ -1156,6 +1170,27 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     });
     return nextModel;
   }, [catalog, lastRequest, result, catalogLabel, datasetPath, defaultConfigPath, locale]);
+
+  const activeFocusItemIds = useMemo(
+    () => focusItemIds.filter(itemId => !!model?.itemSlicesById[itemId]),
+    [focusItemIds, model],
+  );
+  const focusResult = useMemo(
+    () => model && activeFocusItemIds.length > 0
+      ? computeFocusFilter(
+          activeFocusItemIds,
+          model.recipePlans,
+          new Set(model.requestSummary?.resolvedRawInputs.map(item => item.itemId) ?? []),
+        )
+      : null,
+    [activeFocusItemIds, model],
+  );
+
+  useEffect(() => {
+    if (model?.status && activeFocusItemIds.length !== focusItemIds.length) {
+      setFocusItemIds(activeFocusItemIds);
+    }
+  }, [activeFocusItemIds, focusItemIds.length, model]);
 
   const iconAtlasIds =
     model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
@@ -2290,6 +2325,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       revealRecipePlan,
       recipeStrategyWarning,
       setRecipeStrategyWarning,
+      focusItemIds: activeFocusItemIds,
+      focusResult,
+      addFocusItem,
+      removeFocusItem,
+      clearFocusItems,
     }),
     [
       targetDraftItemId,
@@ -2300,6 +2340,11 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       revealedRecipePlanNonce,
       revealRecipePlan,
       recipeStrategyWarning,
+      activeFocusItemIds,
+      focusResult,
+      addFocusItem,
+      removeFocusItem,
+      clearFocusItems,
     ]
   );
 

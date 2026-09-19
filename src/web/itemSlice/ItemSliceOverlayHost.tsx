@@ -18,6 +18,7 @@ const itemSliceOverlayStyle: React.CSSProperties = {
   top: 96,
   left: 24,
   bottom: 24,
+  minHeight: 0,
   width: 'min(560px, calc(100vw - 32px))',
   maxWidth: 'calc(100vw - 32px)',
   zIndex: 1200,
@@ -31,8 +32,11 @@ interface ItemSliceOverlayHostProps {
   itemSlicesById: Record<string, PresentationItemSlice>;
   allowedRecipesByItem: Record<string, string[]>;
   allowedRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
+  focusItemIds?: string[];
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
+  onAddFocus?: (itemId: string) => void;
+  onRemoveFocus?: (itemId: string) => void;
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
   onClearAllowedRecipes: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
@@ -47,8 +51,11 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     itemSlicesById,
     allowedRecipesByItem,
     allowedRecipeOptionsByItem,
+    focusItemIds,
     onMarkRaw,
     onUnmarkRaw,
+    onAddFocus,
+    onRemoveFocus,
     onApplyPreferredRecipes,
     onClearAllowedRecipes,
     onLocateInLedger,
@@ -162,6 +169,7 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
         elevation={0}
         sx={{
           height: '100%',
+          minHeight: 0,
           display: 'grid',
           gridTemplateRows: 'auto minmax(0, 1fr)',
           backgroundColor: 'rgba(248, 251, 253, 0.95)',
@@ -208,9 +216,12 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             slice={selectedItemSlice}
             preferredRecipeIds={allowedRecipesByItem[selectedItemSlice.itemId] ?? []}
             preferredRecipeOptions={allowedRecipeOptions}
+            isFocused={focusItemIds?.includes(selectedItemSlice.itemId)}
             onSelectItem={openItemSliceOverlay}
             onMarkRaw={onMarkRaw}
             onUnmarkRaw={onUnmarkRaw}
+            onAddFocus={onAddFocus}
+            onRemoveFocus={onRemoveFocus}
             onApplyPreferredRecipes={onApplyPreferredRecipes}
             onClearPreferredRecipe={onClearAllowedRecipes}
             onLocateInLedger={onLocateInLedger}

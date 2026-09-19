@@ -35,9 +35,12 @@ interface ItemSlicePanelProps {
     inputs: RecipeOptionIO[];
     outputs: RecipeOptionIO[];
   }>;
+  isFocused?: boolean;
   onSelectItem: (itemId: string) => void;
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
+  onAddFocus?: (itemId: string) => void;
+  onRemoveFocus?: (itemId: string) => void;
   onApplyPreferredRecipes: (itemId: string, recipeIds: string[]) => { accepted: boolean; message: string };
   onClearPreferredRecipe: (itemId: string) => void;
   onLocateInLedger: (itemId: string) => void;
@@ -56,9 +59,12 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
     slice,
     preferredRecipeIds = [],
     preferredRecipeOptions,
+    isFocused,
     onSelectItem,
     onMarkRaw,
     onUnmarkRaw,
+    onAddFocus,
+    onRemoveFocus,
     onApplyPreferredRecipes,
     onClearPreferredRecipe,
     onLocateInLedger,
@@ -120,6 +126,24 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
         {slice.isRawInput ? <Chip label={localeBundle.itemLedger.rawBadge} color="primary" variant="outlined" /> : null}
         {slice.isTarget ? <Chip label={localeBundle.itemLedger.targetBadge} color="warning" variant="outlined" /> : null}
         {slice.surplusRatePerMin > 1e-8 ? <Chip label={localeBundle.itemLedger.surplusBadge} color="success" variant="outlined" /> : null}
+        {onAddFocus && onRemoveFocus ? (
+          isFocused ? (
+            <Chip
+              label={localeBundle.focusFilter.removeFocusButton}
+              color="info"
+              variant="filled"
+              onClick={() => onRemoveFocus(slice.itemId)}
+              onDelete={() => onRemoveFocus(slice.itemId)}
+            />
+          ) : (
+            <Chip
+              label={localeBundle.focusFilter.addFocusButton}
+              color="default"
+              variant="outlined"
+              onClick={() => onAddFocus(slice.itemId)}
+            />
+          )
+        ) : null}
       </Stack>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1.5 }}>

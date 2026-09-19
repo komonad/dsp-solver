@@ -31,6 +31,26 @@ export interface WorkbenchRecipeOptionIO {
   amount: number;
 }
 
+export function splitByFocus<T>(
+  entries: T[],
+  isFocused: (entry: T, index: number) => boolean,
+): { focused: T[]; unfocused: T[] } {
+  const focused: T[] = [];
+  const unfocused: T[] = [];
+  entries.forEach((entry, index) => {
+    (isFocused(entry, index) ? focused : unfocused).push(entry);
+  });
+  return { focused, unfocused };
+}
+
+export function buildFocusItemOptions(
+  items: ItemPickerOption[],
+  currentItemIds: ReadonlySet<string>,
+  selectedItemIds: ReadonlySet<string>,
+): ItemPickerOption[] {
+  return items.filter(item => currentItemIds.has(item.itemId) && !selectedItemIds.has(item.itemId));
+}
+
 export interface WorkbenchRecipeOption {
   recipeId: string;
   recipeName: string;

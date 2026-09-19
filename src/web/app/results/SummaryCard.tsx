@@ -6,7 +6,8 @@ import { ClickableItemLabel } from '../components/ClickableItemLabel';
 import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { useCatalog } from '../CatalogContext';
 import { useSolve } from '../SolveContext';
-import { formatItemRateLabel } from '../workbenchHelpers';
+import { useFocusFilter } from '../useFocusFilter';
+import { formatItemRateLabel, splitByFocus } from '../workbenchHelpers';
 import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
 
 const summarySectionStyle: React.CSSProperties = {
@@ -85,6 +86,7 @@ export function SummaryItemRateList({
 export default function SummaryCard() {
   const { bundle, locale, iconAtlasIds, catalog } = useCatalog();
   const { model } = useSolve();
+  const focusResult = useFocusFilter();
   const theme = useTheme();
   const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
   const [collapsed, setCollapsed] = useState(false);
@@ -109,10 +111,32 @@ export default function SummaryCard() {
     ? `${model.buildingSummary.reduce((s, b) => s + b.roundedUpCount, 0)} ${bundle.summary.buildingsLabel}  ${formatPower(model.solvedSummary.roundedPlacementPowerMW, locale)}`
     : undefined;
 
+  type RateItem = { itemId: string; itemName: string; iconKey?: string; ratePerMin: number };
+  const renderSplitItemList = (items: RateItem[]) => {
+    const { focused, unfocused } = splitByFocus(items, item => !focusResult || focusResult.focusedItemIds.has(item.itemId));
+    return (
+      <div style={{ display: 'grid', gap: 6 }}>
+        {focused.length > 0 ? (
+          <SummaryItemRateList items={focused} locale={locale} atlasIds={iconAtlasIds} powerItemId={catalog?.powerItemId} />
+        ) : null}
+        {unfocused.length > 0 ? (
+          <>
+            {focused.length > 0 ? (
+              <div style={{ borderTop: '1px dashed rgba(24, 51, 89, 0.12)', margin: '2px 0' }} />
+            ) : null}
+            <div style={{ opacity: 0.35 }}>
+              <SummaryItemRateList items={unfocused} locale={locale} atlasIds={iconAtlasIds} powerItemId={catalog?.powerItemId} />
+            </div>
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <article style={cardStyle}>
       <CollapsibleCardHeader
-        title={bundle.overview.summaryTitle}
+        title={focusResult ? `${bundle.overview.summaryTitle} · ${bundle.focusFilter.fullLineLabel}` : bundle.overview.summaryTitle}
         collapsed={collapsed}
         onToggle={() => setCollapsed(prev => !prev)}
         summary={summaryText}
@@ -130,6 +154,8 @@ export default function SummaryCard() {
           <div style={sectionHeadingStyle}>{bundle.itemLedger.netInputsTitle}</div>
           {netInputItems.length === 0 ? (
             <div style={{ color: 'rgba(24, 51, 89, 0.68)' }}>{bundle.common.none}</div>
+          ) : focusResult ? (
+            renderSplitItemList(netInputItems)
           ) : (
             <SummaryItemRateList
               items={netInputItems}
@@ -147,12 +173,14 @@ export default function SummaryCard() {
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {targetOutputItems.length > 0 ? (
-                <SummaryItemRateList
-                  items={targetOutputItems}
-                  locale={locale}
-                  atlasIds={iconAtlasIds}
-                  powerItemId={catalog?.powerItemId}
-                />
+                focusResult ? renderSplitItemList(targetOutputItems) : (
+                  <SummaryItemRateList
+                    items={targetOutputItems}
+                    locale={locale}
+                    atlasIds={iconAtlasIds}
+                    powerItemId={catalog?.powerItemId}
+                  />
+                )
               ) : null}
               {surplusOutputItems.length > 0 ? (
                 <div
@@ -164,12 +192,14 @@ export default function SummaryCard() {
                   }}
                 >
                   <div style={surplusGroupLabelStyle}>{bundle.overview.surplusOutputsTitle}</div>
-                  <SummaryItemRateList
-                    items={surplusOutputItems}
-                    locale={locale}
-                    atlasIds={iconAtlasIds}
-                    powerItemId={catalog?.powerItemId}
-                  />
+                  {focusResult ? renderSplitItemList(surplusOutputItems) : (
+                    <SummaryItemRateList
+                      items={surplusOutputItems}
+                      locale={locale}
+                      atlasIds={iconAtlasIds}
+                      powerItemId={catalog?.powerItemId}
+                    />
+                  )}
                 </div>
               ) : null}
             </div>
