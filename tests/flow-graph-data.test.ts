@@ -53,7 +53,7 @@ function makeModel(overrides: Partial<PresentationModel> = {}): PresentationMode
 }
 
 describe('buildFlowGraphData', () => {
-  it('represents power as a view supply and only counts retained consumers', () => {
+  it('cuts the power upstream without exposing electricity flows', () => {
     const catalog = { powerItemId: 'power', proliferatorLevels: [] } as unknown as ResolvedCatalogModel;
     const plans = [
       makeRecipePlan({ recipeId: 'fuel', inputs: [makeItemRate('ore', 'Ore', 20), makeItemRate('power', 'Power', 2)], outputs: [makeItemRate('fuel', 'Fuel', 10)] }),
@@ -64,14 +64,17 @@ describe('buildFlowGraphData', () => {
     const before = JSON.stringify(model);
     const focus = computeFocusFilter(['white'], plans, new Set(['ore']), { viewRawInputItemIds: ['power'] });
     const graph = buildFlowGraphData(plans, catalog, model, 'zh-CN', focus);
+    expect(graph.nodes.find(node => node.id === 'recipe-0')?.data.dimmed).toBe(true);
     expect(graph.nodes.find(node => node.id === 'recipe-1')?.data.dimmed).toBe(true);
-    expect(graph.nodes.find(node => node.id === 'recipe-2')?.data.inputItemIds).toContain('power');
-    expect(graph.nodes.find(node => node.id === 'view-input-power')?.data).toMatchObject({
-      kind: 'input', viewRawInput: true, ratePerMin: 10, rateLabel: '10.00 MW', dimmed: false,
+    expect(graph.nodes.find(node => node.id === 'recipe-2')?.data).toMatchObject({
+      inputItemIds: ['ore'], dimmed: false,
     });
-    expect(graph.edges.filter(edge => edge.data?.itemId === 'power' && !edge.data.dimmed)).toMatchObject([
-      { source: 'view-input-power', target: 'recipe-2', data: { ratePerMin: 10 } },
-    ]);
+    expect(graph.nodes.find(node => node.id === 'recipe-1')?.data.outputItemIds).toEqual([]);
+    expect(graph.nodes.some(node => node.data.itemId === 'power')).toBe(false);
+    expect(graph.edges.some(edge => edge.data?.itemId === 'power')).toBe(false);
+    expect(graph.edges.find(edge => edge.target === 'output-white')?.data).toMatchObject({
+      itemId: 'white', ratePerMin: 60, dimmed: false,
+    });
     expect(JSON.stringify(model)).toBe(before);
     const restored = buildFlowGraphData(plans, catalog, model);
     expect(restored.nodes.some(node => node.data.viewRawInput)).toBe(false);
@@ -283,7 +286,7 @@ describe('buildFlowGraphData', () => {
     expect(outputNodes.some(n => n.id === 'output-slag')).toBe(true);
   });
 
-  it('labels power item flows with MW units', () => {
+  it.each([false, true])('omits electricity imports, targets and surplus while retaining material flows (view supply: %s)', viewSupply => {
     const catalog = {
       powerItemId: '-9001',
       proliferatorLevels: [],
@@ -291,25 +294,40 @@ describe('buildFlowGraphData', () => {
     const plans: PresentationRecipePlan[] = [
       makeRecipePlan({
         inputs: [makeItemRate('fuel', 'Fuel', 2)],
-        outputs: [makeItemRate('-9001', 'Power', 20)],
+        outputs: [makeItemRate('-9001', 'Power', 20), makeItemRate('spent-fuel', 'Spent fuel', 1)],
+      }),
+      makeRecipePlan({
+        inputs: [makeItemRate('ore', 'Ore', 60), makeItemRate('-9001', 'Power', 10)],
+        outputs: [makeItemRate('plate', 'Plate', 60)],
       }),
     ];
     const model = makeModel({
+      recipePlans: plans,
+      externalInputs: [makeItemRate('fuel', 'Fuel', 2), makeItemRate('ore', 'Ore', 60), makeItemRate('-9001', 'Power', 5)],
       targets: [
+        { itemId: 'plate', itemName: 'Plate', requestedRatePerMin: 60, actualRatePerMin: 60 },
         {
           itemId: '-9001',
           itemName: 'Power',
-          requestedRatePerMin: 20,
-          actualRatePerMin: 20,
+          requestedRatePerMin: 10,
+          actualRatePerMin: 10,
         },
       ],
+      surplusOutputs: [makeItemRate('-9001', 'Power', 5), makeItemRate('spent-fuel', 'Spent fuel', 1)],
     });
 
-    const result = buildFlowGraphData(plans, catalog, model);
-    const powerOutput = result.nodes.find(node => node.id === 'output--9001');
-    const powerEdge = result.edges.find(edge => edge.target === 'output--9001');
-
-    expect(powerOutput?.data.rateLabel).toBe('20.00 MW');
-    expect(powerEdge?.data?.rateLabel).toBe('20.00 MW');
+    const before = JSON.stringify(model);
+    const result = buildFlowGraphData(plans, catalog, model, 'zh-CN', null, viewSupply ? ['-9001'] : []);
+    expect(result.nodes.map(node => node.id)).toEqual([
+      'recipe-0', 'recipe-1', 'input-fuel', 'input-ore', 'output-plate', 'output-spent-fuel',
+    ]);
+    expect(result.nodes.find(node => node.id === 'recipe-0')?.data).toMatchObject({
+      inputItemIds: ['fuel'], outputItemIds: ['spent-fuel'],
+    });
+    expect(result.nodes.find(node => node.id === 'recipe-1')?.data).toMatchObject({
+      inputItemIds: ['ore'], outputItemIds: ['plate'],
+    });
+    expect(result.edges.map(edge => edge.data?.itemId).sort()).toEqual(['fuel', 'ore', 'plate', 'spent-fuel']);
+    expect(JSON.stringify(model)).toBe(before);
   });
 });

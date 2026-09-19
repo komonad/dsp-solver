@@ -177,11 +177,11 @@ export default function SolveSnapshotPanel() {
         </Box>
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 1.5, pt: 0.5 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 0.75, rowGap: 1.5, pt: 0.5 }}>
         <TextField
           select
           size="small"
-          sx={{ ...snapshotSelectFieldSx, minWidth: 100 }}
+          sx={{ ...snapshotSelectFieldSx, flex: '1 1 96px', minWidth: 96 }}
           label={bundle.summary.objectiveLabel}
           value={objective}
           onChange={event => setObjective(event.target.value as SolveObjective)}
@@ -193,7 +193,7 @@ export default function SolveSnapshotPanel() {
         <TextField
           select
           size="small"
-          sx={{ ...snapshotSelectFieldSx, minWidth: 100 }}
+          sx={{ ...snapshotSelectFieldSx, flex: '1 1 130px', minWidth: 130 }}
           label={bundle.summary.sprayLabel}
           value={proliferatorPolicy}
           onChange={event => {
@@ -219,8 +219,9 @@ export default function SolveSnapshotPanel() {
           <TextField
             select
             size="small"
-            sx={{ ...snapshotSelectFieldSx, minWidth: 80 }}
+            sx={{ ...snapshotSelectFieldSx, flex: '1 1 88px', minWidth: 88 }}
             label={bundle.solveRequest.preferredSprayLevelLabel}
+            slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true } }}
             value={globalProliferatorLevel === '' ? '' : String(globalProliferatorLevel)}
             onChange={event =>
               setGlobalProliferatorLevel(event.target.value ? Number(event.target.value) : '')

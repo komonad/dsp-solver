@@ -1,6 +1,6 @@
 import { getLocaleBundle, type AppLocale } from '../../../i18n';
 import type { PresentationItemRate, PresentationModel, PresentationRecipePlan } from '../../../presentation';
-import { formatCompactItemRateLabel } from '../workbenchHelpers';
+import { formatCompactItemRateLabel, isPowerItem } from '../workbenchHelpers';
 import type { FlowGraphEdge, FlowGraphNode } from './buildFlowGraphData';
 
 /** Adds separate view-supply nodes so actual external inputs retain their solved quantities. */
@@ -16,7 +16,7 @@ export function addViewRawFlowInputs(
   const inputs = new Map<string, PresentationItemRate>();
   const edges = [...graph.edges];
   function addInput(input: PresentationItemRate, target: string, targetHandle?: string) {
-    if (!itemIds.has(input.itemId) || input.ratePerMin < 1e-6) return;
+    if (!itemIds.has(input.itemId) || input.ratePerMin < 1e-6 || isPowerItem(input.itemId, powerItemId)) return;
     const existing = inputs.get(input.itemId);
     inputs.set(input.itemId, { ...input, ratePerMin: (existing?.ratePerMin ?? 0) + input.ratePerMin });
     const source = `view-input-${input.itemId}`;

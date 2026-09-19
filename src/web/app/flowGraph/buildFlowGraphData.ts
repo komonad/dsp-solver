@@ -9,7 +9,7 @@ import type {
 import { buildRecipeFlowDisplay } from '../../shared/recipeDisplay';
 import { getIconColor } from '../../shared/iconRegistry';
 import type { Node, Edge } from '@xyflow/react';
-import { formatCompactItemRateLabel } from '../workbenchHelpers';
+import { formatCompactItemRateLabel, isPowerItem } from '../workbenchHelpers';
 import { addViewRawFlowInputs } from './viewRawFlowGraph';
 
 export interface RecipeNodeData {
@@ -126,14 +126,16 @@ export function buildFlowGraphData(
     const plan = recipePlans[i];
     const flowDisplay = buildRecipeFlowDisplay(catalog, plan);
     const visibleIds = new Set(flowDisplay.visibleInputs.map(input => input.itemId));
-    const visibleInputs = plan.inputs.filter(input => visibleIds.has(input.itemId) || viewRawInputIds.has(input.itemId));
+    const visibleInputs = plan.inputs.filter(input =>
+      !isPowerItem(input.itemId, powerItemId) && (visibleIds.has(input.itemId) || viewRawInputIds.has(input.itemId))
+    );
     recipeVisibleInputs.push(visibleInputs);
 
     const inputItemIds = visibleInputs
       .filter(inp => inp.ratePerMin > EPSILON)
       .map(inp => inp.itemId);
     const outputItemIds = plan.outputs
-      .filter(out => out.ratePerMin > EPSILON)
+      .filter(out => out.ratePerMin > EPSILON && !isPowerItem(out.itemId, powerItemId))
       .map(out => out.itemId);
 
     nodes.push({
@@ -157,7 +159,7 @@ export function buildFlowGraphData(
   const producersByItem = new Map<string, ProducerInfo[]>();
   for (let i = 0; i < recipePlans.length; i++) {
     for (const output of recipePlans[i].outputs) {
-      if (output.ratePerMin < EPSILON) continue;
+      if (output.ratePerMin < EPSILON || isPowerItem(output.itemId, powerItemId)) continue;
       let producers = producersByItem.get(output.itemId);
       if (!producers) {
         producers = [];
@@ -176,7 +178,7 @@ export function buildFlowGraphData(
   // Create external input nodes
   const createdExternalNodes = new Set<string>();
   for (const ext of model.externalInputs) {
-    if (ext.ratePerMin < EPSILON) continue;
+    if (ext.ratePerMin < EPSILON || isPowerItem(ext.itemId, powerItemId)) continue;
     const nodeId = `input-${ext.itemId}`;
     if (!createdExternalNodes.has(nodeId)) {
       createdExternalNodes.add(nodeId);
@@ -200,6 +202,7 @@ export function buildFlowGraphData(
   // Create target/surplus output nodes
   const outputRateByItem = new Map<string, { itemName: string; iconKey?: string; ratePerMin: number }>();
   for (const t of model.targets) {
+    if (isPowerItem(t.itemId, powerItemId)) continue;
     const existing = outputRateByItem.get(t.itemId);
     outputRateByItem.set(t.itemId, {
       itemName: t.itemName,
@@ -208,6 +211,7 @@ export function buildFlowGraphData(
     });
   }
   for (const s of model.surplusOutputs) {
+    if (isPowerItem(s.itemId, powerItemId)) continue;
     const existing = outputRateByItem.get(s.itemId);
     outputRateByItem.set(s.itemId, {
       itemName: existing?.itemName ?? s.itemName,
