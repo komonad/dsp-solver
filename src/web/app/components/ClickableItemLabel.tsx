@@ -1,5 +1,5 @@
 import React from 'react';
-import { EntityIcon, EntityLabelButton } from '../../shared/EntityIcon';
+import { EntityIcon, EntityLabel } from '../../shared/EntityIcon';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
 
 // ---------------------------------------------------------------------------
@@ -49,13 +49,12 @@ export function ClickableItemLabel({
           size={iconSize}
         />
       ) : (
-        <EntityLabelButton
+        <EntityLabel
           label={itemName}
           iconKey={iconKey}
           atlasIds={atlasIds}
           size={iconSize}
           gap={8}
-          onClick={() => openItemSliceOverlay(itemId)}
         />
       )}
     </button>

@@ -4,10 +4,9 @@ import { EntityLabelButton } from '../../shared/EntityIcon';
 import { openItemSliceOverlay } from '../../itemSlice/state/itemSliceStore';
 import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
-import { useWorkbenchDraft } from '../WorkbenchDraftContext';
 import { useFocusFilter } from '../useFocusFilter';
 import { formatItemRateLabel, splitByFocus } from '../workbenchHelpers';
-import { compactLedgerButtonStyle, focusButtonStyle, focusDimmedStyle, focusDividerStyle, focusDividerLabelStyle } from '../workbenchStyles';
+import { compactLedgerButtonStyle, focusDimmedStyle, focusDividerStyle, focusDividerLabelStyle } from '../workbenchStyles';
 
 export interface ItemLedgerSectionProps {
   section: PresentationModel['itemLedgerSections'][number];
@@ -22,10 +21,6 @@ const ItemRow = React.memo(function ItemRow({
 }) {
   const { bundle, locale, iconAtlasIds, catalog } = useCatalog();
   const { markItemAsRawInput, unmarkItemAsRawInput } = useWorkbench();
-  const { focusItemIds, addFocusItem, removeFocusItem, viewRawInputItemIds, addViewRawInput, removeViewRawInput } = useWorkbenchDraft();
-
-  const isFocused = focusItemIds.includes(entry.itemId);
-  const isViewRawInput = viewRawInputItemIds.includes(entry.itemId);
 
   return (
     <div
@@ -77,25 +72,6 @@ const ItemRow = React.memo(function ItemRow({
         </div>
       </div>
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: 100 }}>
-        <button type="button" aria-pressed={isViewRawInput} style={focusButtonStyle}
-          title={bundle.focusFilter.viewRawDescription}
-          onClick={() => isViewRawInput ? removeViewRawInput(entry.itemId) : addViewRawInput(entry.itemId)}>
-          {isViewRawInput ? bundle.focusFilter.removeViewRawButton : bundle.focusFilter.addViewRawButton}
-        </button>
-        <button
-          type="button"
-          aria-pressed={isFocused}
-          onClick={() =>
-            isFocused
-              ? removeFocusItem(entry.itemId)
-              : addFocusItem(entry.itemId)
-          }
-          style={focusButtonStyle}
-        >
-          {isFocused
-            ? bundle.focusFilter.removeFocusButton
-            : bundle.focusFilter.addFocusButton}
-        </button>
         <button
           type="button"
           onClick={() =>

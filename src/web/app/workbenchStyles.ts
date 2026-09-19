@@ -25,13 +25,13 @@ export const summarySectionStyle: React.CSSProperties = {
 
 export const paneSidebarSx = {
   minWidth: 0, minHeight: 0, position: { lg: 'sticky' }, top: { lg: 16 },
-  maxHeight: { lg: 'calc(100dvh - 32px)' }, overflowY: { lg: 'auto' },
+  maxHeight: { lg: 'var(--workbench-pane-height, calc(100dvh - 32px))' }, overflowY: { lg: 'auto' },
   overscrollBehavior: 'contain', borderRadius: 1.5,
 } as const;
 
 export const paneSeparatorSx = {
   display: { xs: 'none', lg: 'flex' }, alignItems: 'center', justifyContent: 'center',
-  minWidth: 0, minHeight: 0, height: 'calc(100dvh - 32px)', position: 'sticky', top: 16,
+  minWidth: 0, minHeight: 0, height: 'var(--workbench-pane-height, calc(100dvh - 32px))', position: 'sticky', top: 16,
   cursor: 'col-resize', touchAction: 'none', borderRadius: 1,
   '&::before': { content: '""', position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: '#e0e6ef' },
   '& svg': { zIndex: 1, backgroundColor: '#f5f7fb' },
@@ -470,13 +470,6 @@ export const focusDividerLabelStyle: React.CSSProperties = {
   fontSize: 11,
   fontWeight: 700,
   color: 'rgba(24, 51, 89, 0.65)',
-};
-
-export const focusButtonStyle: React.CSSProperties = {
-  ...compactLedgerButtonStyle,
-  fontSize: 11,
-  padding: '2px 6px',
-  minWidth: 0,
 };
 
 export const focusBarStyle: React.CSSProperties = {

@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Box } from '@mui/material';
 import DragIndicatorRoundedIcon from '@mui/icons-material/DragIndicatorRounded';
 import { useCatalog } from '../app/CatalogContext';
 import { paneSeparatorSx, paneSidebarSx } from '../app/workbenchStyles';
 import {
-  MIN_PANE_WIDTHS, WORKBENCH_LAYOUT_STORAGE_KEY, parseWorkbenchPaneSizes,
+  MIN_PANE_WIDTHS, WORKBENCH_LAYOUT_STORAGE_KEY, getWorkbenchPaneHeight, parseWorkbenchPaneSizes,
   resizeWorkbenchPane, resolveWorkbenchPaneWidths,
   type WorkbenchPaneSizes, type WorkbenchPaneWidths,
 } from '../shared/workbenchLayout';
@@ -36,13 +36,23 @@ export default function ResizableWorkbenchLayout({ left, right, children }: Resi
   const dragRef = useRef<{ x: number; widths: WorkbenchPaneWidths; initial: WorkbenchPaneSizes | null; latest: WorkbenchPaneSizes | null } | null>(null);
   const widths = resolveWorkbenchPaneWidths(containerWidth, sizes);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    setContainerWidth(container.clientWidth);
-    const observer = new ResizeObserver(entries => setContainerWidth(entries[0].contentRect.width));
+    const updateGeometry = () => {
+      setContainerWidth(container.clientWidth);
+      container.style.setProperty('--workbench-pane-height', `${getWorkbenchPaneHeight(window.innerHeight, container.getBoundingClientRect().top)}px`);
+    };
+    updateGeometry();
+    const observer = new ResizeObserver(updateGeometry);
     observer.observe(container);
-    return () => observer.disconnect();
+    window.addEventListener('resize', updateGeometry);
+    window.addEventListener('scroll', updateGeometry, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateGeometry);
+      window.removeEventListener('scroll', updateGeometry);
+    };
   }, []);
 
   function reset() {

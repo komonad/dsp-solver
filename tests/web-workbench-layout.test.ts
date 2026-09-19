@@ -1,6 +1,17 @@
-import { parseWorkbenchPaneSizes, resizeWorkbenchPane, resolveWorkbenchPaneWidths } from '../src/web/shared/workbenchLayout';
+import { getWorkbenchPaneHeight, parseWorkbenchPaneSizes, resizeWorkbenchPane, resolveWorkbenchPaneWidths } from '../src/web/shared/workbenchLayout';
 
 describe('workbench pane layout', () => {
+  test.each([
+    [900, 250, 634],
+    [900, 16, 868],
+    [900, -300, 868],
+    [600, 250, 334],
+    [900, 350, 534],
+    [600, 700, 0],
+  ])('keeps the sidebar inside a %i px viewport with a %i px top offset', (viewportHeight, containerTop, expected) => {
+    expect(getWorkbenchPaneHeight(viewportHeight, containerTop)).toBe(expected);
+  });
+
   test('uses the full width and keeps the default recipe column compact on wide screens', () => {
     for (const width of [1144, 1384, 1864, 2504]) {
       const panes = resolveWorkbenchPaneWidths(width, null);

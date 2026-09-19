@@ -13,6 +13,10 @@ export const WORKBENCH_LAYOUT_STORAGE_KEY = 'dspcalc.workbench.layout.v1';
 export const PANE_SEPARATOR_WIDTH = 12;
 export const MIN_PANE_WIDTHS: WorkbenchPaneWidths = { left: 240, center: 420, right: 280 };
 
+export function getWorkbenchPaneHeight(viewportHeight: number, containerTop: number): number {
+  return Math.max(0, viewportHeight - Math.max(16, containerTop) - 16);
+}
+
 export function parseWorkbenchPaneSizes(text: string | null): WorkbenchPaneSizes | null {
   if (!text) return null;
   try {
