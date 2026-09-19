@@ -7,7 +7,7 @@ import { useWorkbenchDraft } from '../app/WorkbenchDraftContext';
 import { useCatalog } from '../app/CatalogContext';
 import { useSolve } from '../app/SolveContext';
 import WorkbenchConfigStrip from '../app/WorkbenchConfigStrip';
-import SolveSnapshotPanel from '../app/snapshot/SolveSnapshotPanel';
+import SettingsSidebar from './SettingsSidebar';
 import SolveActivityNotice from '../app/components/SolveActivityNotice';
 import CollapsibleCardHeader from '../app/components/CollapsibleCardHeader';
 import SummaryCard from '../app/results/SummaryCard';
@@ -17,6 +17,8 @@ import FocusFilterBar from '../app/results/FocusFilterBar';
 import ItemLedgerPanel from '../app/results/ItemLedgerPanel';
 import StrategyWarningSnackbar from '../app/StrategyWarningSnackbar';
 import { FlowGraphPanel } from '../app/flowGraph/FlowGraphPanel';
+import WorkbenchHeader from './WorkbenchHeader';
+import ResizableWorkbenchLayout from './ResizableWorkbenchLayout';
 import { cardStyle } from '../app/workbenchStyles';
 
 export default function WorkbenchApp() {
@@ -55,157 +57,58 @@ function WorkbenchLayout() {
   const [flowGraphOpen, setFlowGraphOpen] = useState(false);
 
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: '100vh',
-        background: '#f4f6f8',
-      }}
-    >
-      <Container
-        maxWidth={false}
-        sx={{
-          maxWidth: 1560,
-          py: { xs: 1, sm: 1.5 },
-          px: { xs: 1, sm: 1.5, md: 2.5 },
-          display: 'grid',
-          gap: { xs: 1.5, md: 2 },
-        }}
-      >
-        {/* 配置切换条 — 全宽 */}
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+      <WorkbenchHeader />
+      <Container component="main" maxWidth={false} sx={{
+        py: { xs: 2, md: 2 }, px: { xs: 1.5, sm: 2, md: 2.5 },
+        display: 'grid', gap: 2,
+      }}>
         <WorkbenchConfigStrip />
-
-        {/* 关注过滤 — 全宽 */}
-        {hasStatus ? <FocusFilterBar /> : null}
-
-        {/* 三栏主体 */}
-        <Box
-          sx={{
-            display: 'grid',
-            gap: { xs: 1.5, lg: 2 },
-            gridTemplateColumns: {
-              xs: '1fr',
-              lg: 'minmax(260px, 1fr) minmax(0, 1.8fr) minmax(280px, 1fr)',
-            },
-            alignItems: 'start',
-          }}
-        >
-          {/* ── 左栏：结果辅助 ── */}
-          <Box
-            sx={{
-              display: 'grid',
-              gap: { xs: 1.5, lg: 2 },
-              minWidth: 0,
-              order: { xs: 2, lg: 0 },
-            }}
-          >
-            {hasStatus ? (
-              <>
-                <SummaryCard />
-                <ItemLedgerPanel sticky={false} />
-                <DiagnosticsCard />
-              </>
-            ) : null}
-          </Box>
-
-          {/* ── 中栏：主舞台 ── */}
-          <Box
-            sx={{
-              display: 'grid',
-              gap: { xs: 1.5, lg: 2 },
-              minWidth: 0,
-              order: { xs: 3, lg: 0 },
-            }}
-          >
-            {/* 求解活动通知 */}
+        <ResizableWorkbenchLayout
+          left={hasStatus ? <><SummaryCard /><ItemLedgerPanel sticky={false} /><DiagnosticsCard /></> : null}
+          right={<SettingsSidebar />}>
+          <Box sx={{ display: 'grid', gap: 1.5, minWidth: 0 }}>
             {isSolveRunning || isSolveCancelled ? (
-              <article style={{ ...cardStyle, padding: 12 }}>
-                <SolveActivityNotice />
-              </article>
+              <article style={cardStyle}><SolveActivityNotice /></article>
             ) : null}
-
-            {/* 加载错误 */}
             {loadError ? (
               <article style={{ ...cardStyle, borderColor: 'rgba(180, 41, 41, 0.2)' }}>
                 <h2 style={{ marginTop: 0, color: '#8e2020' }}>{bundle.datasetSource.loadErrorTitle}</h2>
                 <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontSize: 13 }}>{loadError}</pre>
               </article>
             ) : null}
-
-            {/* 配方方案 */}
             {hasStatus ? (
-              <article style={cardStyle}>
-                <CollapsibleCardHeader
-                  title={bundle.recipePlans.title}
-                  collapsed={recipePlansCollapsed}
-                  onToggle={() => setRecipePlansCollapsed(prev => !prev)}
-                  summary={model?.recipePlans ? `${model.recipePlans.length}` : undefined}
-                  actions={model?.recipePlans.length ? (
-                    <Button
-                      size="small"
-                      onClick={() => setFlowGraphOpen(true)}
-                      startIcon={<AccountTreeOutlinedIcon sx={{ fontSize: 15 }} />}
-                      sx={{
-                        textTransform: 'none',
-                        fontSize: 12,
-                        fontWeight: 600,
-                        px: 1,
-                        py: 0,
-                        minWidth: 0,
-                        color: 'rgba(24, 88, 163, 0.7)',
-                        '&:hover': { color: '#1858a3', background: 'rgba(24, 88, 163, 0.06)' },
-                      }}
-                    >
-                      {bundle.flowGraph.title}
-                    </Button>
-                  ) : undefined}
-                />
-                {recipePlansCollapsed ? null : (
-                  <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
-                    <RecipePlanList />
-                  </div>
-                )}
-              </article>
+              <>
+                <FocusFilterBar />
+                <article style={cardStyle}>
+                  <CollapsibleCardHeader title={bundle.recipePlans.title} collapsed={recipePlansCollapsed}
+                    onToggle={() => setRecipePlansCollapsed(prev => !prev)}
+                    summary={model?.recipePlans ? `${model.recipePlans.length}` : undefined}
+                    actions={model?.recipePlans.length ? (
+                      <Button variant="outlined" size="small" onClick={() => setFlowGraphOpen(true)} startIcon={<AccountTreeOutlinedIcon />}>
+                        {bundle.flowGraph.title}
+                      </Button>
+                    ) : undefined} />
+                  {!recipePlansCollapsed ? (
+                    <div style={{ display: 'grid', gap: 12, marginTop: 16 }}><RecipePlanList /></div>
+                  ) : null}
+                </article>
+              </>
             ) : null}
-
-            {/* 占位 */}
             {!hasModel && !isSolveRunning && !isSolveCancelled && !loadError ? (
-              <article style={cardStyle}>
+              <article style={{ ...cardStyle, padding: 32 }}>
                 <h2 style={{ marginTop: 0 }}>{bundle.datasetSource.waitingTitle}</h2>
-                <p style={{ margin: 0, lineHeight: 1.7, color: 'rgba(24, 51, 89, 0.78)' }}>
-                  {bundle.datasetSource.waitingDescription}
-                </p>
+                <p style={{ margin: 0, lineHeight: 1.8, color: '#69778e' }}>{bundle.datasetSource.waitingDescription}</p>
               </article>
             ) : null}
-
             {hasModel && !hasStatus && !isSolveRunning && !isSolveCancelled ? (
-              <article style={cardStyle}>
+              <article style={{ ...cardStyle, padding: 32 }}>
                 <h2 style={{ marginTop: 0 }}>{bundle.ready.title}</h2>
-                <p style={{ margin: 0, lineHeight: 1.7, color: 'rgba(24, 51, 89, 0.78)' }}>
-                  {bundle.ready.description}
-                </p>
+                <p style={{ margin: 0, lineHeight: 1.8, color: '#69778e' }}>{bundle.ready.description}</p>
               </article>
             ) : null}
           </Box>
-
-          {/* ── 右栏：工作台 ── */}
-          <Box
-            sx={{
-              minWidth: 0,
-              order: { xs: 1, lg: 0 },
-              // 宽屏 sticky
-              position: { lg: 'sticky' },
-              top: { lg: 12 },
-              alignSelf: { lg: 'start' },
-              maxHeight: { lg: 'calc(100vh - 24px)' },
-              minHeight: { lg: 0 },
-              overflowY: { lg: 'auto' },
-            }}
-          >
-            <SolveSnapshotPanel />
-          </Box>
-        </Box>
-
+        </ResizableWorkbenchLayout>
         <ItemSliceOverlayHost
           locale={locale}
           atlasIds={iconAtlasIds}
@@ -226,6 +129,7 @@ function WorkbenchLayout() {
           onRevealRecipePlan={revealRecipePlan}
         />
         <StrategyWarningSnackbar />
+
       </Container>
       {flowGraphOpen && model?.recipePlans.length ? (
         <FlowGraphPanel

@@ -8,16 +8,8 @@ import { useCatalog } from '../CatalogContext';
 import { useSolve } from '../SolveContext';
 import { useFocusFilter } from '../useFocusFilter';
 import { formatItemRateLabel, splitByFocus } from '../workbenchHelpers';
-import { cardStyle, sectionHeadingStyle } from '../workbenchStyles';
-
-const summarySectionStyle: React.CSSProperties = {
-  border: '1px solid rgba(24, 51, 89, 0.10)',
-  borderRadius: 16,
-  padding: 14,
-  display: 'grid',
-  gap: 8,
-  alignContent: 'start',
-};
+import { cardStyle, sectionHeadingStyle, summarySectionStyle } from '../workbenchStyles';
+import SummaryMetrics from './SummaryMetrics';
 
 const summaryRateListStyle: React.CSSProperties = {
   display: 'flex',
@@ -89,7 +81,7 @@ export default function SummaryCard() {
   const focusResult = useFocusFilter();
   const theme = useTheme();
   const isCompactLayout = useMediaQuery(theme.breakpoints.down('sm'));
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   if (!model) {
     return null;
@@ -106,10 +98,6 @@ export default function SummaryCard() {
     : [];
   const surplusOutputItems = model.solvedSummary ? model.surplusOutputs : [];
   const hasNetOutputs = targetOutputItems.length > 0 || surplusOutputItems.length > 0;
-
-  const summaryText = model.solvedSummary
-    ? `${model.buildingSummary.reduce((s, b) => s + b.roundedUpCount, 0)} ${bundle.summary.buildingsLabel}  ${formatPower(model.solvedSummary.roundedPlacementPowerMW, locale)}`
-    : undefined;
 
   type RateItem = { itemId: string; itemName: string; iconKey?: string; ratePerMin: number };
   const renderSplitItemList = (items: RateItem[]) => {
@@ -139,15 +127,15 @@ export default function SummaryCard() {
         title={focusResult ? `${bundle.overview.summaryTitle} · ${bundle.focusFilter.fullLineLabel}` : bundle.overview.summaryTitle}
         collapsed={collapsed}
         onToggle={() => setCollapsed(prev => !prev)}
-        summary={summaryText}
       />
+      <SummaryMetrics />
       {collapsed ? null : <div style={{ marginTop: 8 }} />}
       {!collapsed ? (
         <div
         style={{
           display: 'grid',
           gap: isCompactLayout ? 12 : 16,
-          gridTemplateColumns: `repeat(auto-fit, minmax(${isCompactLayout ? 120 : 132}px, 1fr))`,
+          gridTemplateColumns: 'minmax(0, 1fr)',
         }}
       >
         <div style={summarySectionStyle}>
@@ -212,7 +200,7 @@ export default function SummaryCard() {
             display: 'grid',
             gap: 10,
             alignContent: 'start',
-            gridColumn: isCompactLayout ? 'auto' : 'span 2',
+            gridColumn: '1 / -1',
           }}
         >
           <div style={sectionHeadingStyle}>{bundle.summary.buildingsLabel}</div>

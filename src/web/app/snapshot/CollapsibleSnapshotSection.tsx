@@ -76,7 +76,7 @@ export default function CollapsibleSnapshotSection({
   }
 
   return (
-    <section>
+    <Box component="section" sx={{ py: 0.5, minWidth: 0 }}>
       <Box
         sx={{
           display: 'flex',
@@ -97,7 +97,8 @@ export default function CollapsibleSnapshotSection({
             gap: 1,
             flex: '1 1 auto',
             minWidth: 0,
-            p: 0,
+            py: 0.5,
+            px: 0,
             border: 0,
             background: 'transparent',
             color: 'inherit',
@@ -145,6 +146,6 @@ export default function CollapsibleSnapshotSection({
         ) : null}
       </Box>
       {resolvedExpanded ? <Box sx={snapshotSectionBodySx}>{children}</Box> : null}
-    </section>
+    </Box>
   );
 }

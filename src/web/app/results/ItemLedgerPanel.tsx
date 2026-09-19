@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Stack } from '@mui/material';
+import { Button, Stack, useMediaQuery, useTheme } from '@mui/material';
 import ItemLedgerSection from './ItemLedgerSection';
 import CollapsibleCardHeader from '../components/CollapsibleCardHeader';
 import { useCatalog } from '../CatalogContext';
@@ -21,7 +21,8 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
     scrollItemLedgerToBottom,
     scrollItemLedgerToSection,
   } = useWorkbench();
-  const [collapsed, setCollapsed] = useState(true);
+  const isWideLayout = useMediaQuery(useTheme().breakpoints.up('lg'));
+  const [collapsed, setCollapsed] = useState(!isWideLayout);
 
   if (!model) {
     return null;
@@ -33,7 +34,7 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
   const contentCardStyle: React.CSSProperties = sticky
     ? {
         ...cardStyle,
-        padding: 12,
+        padding: 14,
         height: '100%',
         maxHeight: '100%',
         minHeight: 0,
@@ -44,7 +45,7 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
       }
     : {
         ...cardStyle,
-        padding: 12,
+        padding: 14,
         display: 'grid',
         gridTemplateRows: collapsed ? 'auto' : 'auto auto auto',
         gap: 12,
@@ -54,6 +55,7 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
         display: 'grid',
         gap: 16,
         overflow: 'auto',
+        overscrollBehavior: 'contain',
         minHeight: 0,
         paddingRight: 4,
         paddingBottom: 24,
@@ -64,6 +66,7 @@ export default function ItemLedgerPanel({ sticky = true }: ItemLedgerPanelProps)
         gap: 16,
         maxHeight: 'min(65vh, 560px)',
         overflow: 'auto',
+        overscrollBehavior: 'contain',
         minHeight: 0,
         paddingRight: 4,
         paddingBottom: 16,

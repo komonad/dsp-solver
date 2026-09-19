@@ -4,9 +4,9 @@ export const workbenchTheme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#1c4e80',
-      dark: '#143758',
-      light: '#4f79a3',
+      main: '#3564d8',
+      dark: '#2449a8',
+      light: '#7795e8',
     },
     secondary: {
       main: '#d07a32',
@@ -14,8 +14,8 @@ export const workbenchTheme = createTheme({
       light: '#e0a066',
     },
     background: {
-      default: '#eef3f7',
-      paper: 'rgba(255, 255, 255, 0.84)',
+      default: '#f5f7fb',
+      paper: '#ffffff',
     },
     success: {
       main: '#2c7a68',
@@ -27,17 +27,17 @@ export const workbenchTheme = createTheme({
       main: '#a03535',
     },
     text: {
-      primary: '#163659',
-      secondary: 'rgba(22, 54, 89, 0.72)',
+      primary: '#23324b',
+      secondary: '#69778e',
     },
     divider: 'rgba(22, 54, 89, 0.12)',
   },
   shape: {
-    borderRadius: 10,
+    borderRadius: 8,
   },
   typography: {
-    // fontSize: 13,
-    fontFamily: '"IBM Plex Sans", "Noto Sans SC", "Segoe UI", sans-serif',
+    fontSize: 13,
+    fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif',
     h3: {
       fontWeight: 700,
       letterSpacing: '-0.03em',
@@ -63,38 +63,50 @@ export const workbenchTheme = createTheme({
     },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: { fontVariantNumeric: 'tabular-nums' },
+        'button, input, select, textarea': { fontFamily: 'inherit' },
+        ':focus-visible': { outline: '2px solid #3564d8', outlineOffset: 3 },
+        '*': { scrollbarWidth: 'thin', scrollbarColor: '#c5cddb transparent' },
+      },
+    },
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+      styleOverrides: { root: { borderRadius: 8, fontWeight: 600 } },
+    },
     MuiPaper: {
       defaultProps: {
         elevation: 0,
       },
       styleOverrides: {
         root: {
-          backdropFilter: 'blur(18px)',
-          border: '1px solid rgba(22, 54, 89, 0.12)',
-          boxShadow: '0 22px 64px rgba(22, 54, 89, 0.12)',
+          border: '1px solid #e3e8f0',
+          boxShadow: '0 8px 32px rgba(35, 50, 75, 0.08)',
         },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          background: 'rgba(255,255,255,0.92)',
+          background: '#ffffff',
+          fontSize: 13,
+          borderRadius: 8,
         },
       },
     },
     MuiChip: {
       styleOverrides: {
         root: {
-          fontWeight: 700,
+          fontWeight: 600,
         },
       },
     },
     MuiCard: {
       styleOverrides: {
         root: {
-          backdropFilter: 'blur(18px)',
-          border: '1px solid rgba(22, 54, 89, 0.12)',
-          boxShadow: '0 22px 64px rgba(22, 54, 89, 0.12)',
+          border: '1px solid #e3e8f0',
+          boxShadow: 'none',
         },
       },
     },

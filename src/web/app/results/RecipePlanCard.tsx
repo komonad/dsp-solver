@@ -115,11 +115,13 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
       ref={cardRef}
       data-testid="recipe-plan-card"
       sx={{
-        borderRadius: '20px',
+        borderRadius: '10px',
         border: '1px solid',
         borderColor: isRevealed ? 'warning.main' : 'divider',
         boxShadow: isRevealed ? '0 0 0 2px rgba(244, 194, 102, 0.28)' : 'none',
-        backgroundColor: isRevealed ? 'rgba(255, 246, 220, 0.92)' : 'rgba(255,255,255,0.68)',
+        backgroundColor: isRevealed ? 'rgba(255, 246, 220, 0.92)' : '#fff',
+        transition: 'border-color 140ms ease',
+        '&:hover': { borderColor: isRevealed ? 'warning.main' : '#bccce9' },
         overflow: 'hidden',
         scrollMarginTop: 24,
         contentVisibility: 'auto',
@@ -132,7 +134,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
           display: 'grid',
           gap: 1.25,
           p: 2,
-          borderRadius: '18px',
+          borderRadius: '10px',
           '&:last-child': { pb: 2 },
         }}
       >
@@ -142,18 +144,18 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
             alignItems: { xs: 'stretch', md: 'center' },
             justifyContent: 'space-between',
             gap: 1,
-            flexWrap: { xs: 'wrap', md: 'nowrap' },
+            flexWrap: 'wrap',
             minWidth: 0,
           }}
         >
           <Box
             sx={{
-              flex: '1 1 auto',
+              flex: '1 1 400px',
               minWidth: 0,
               display: 'flex',
               alignItems: { xs: 'stretch', sm: 'center' },
               gap: 0.875,
-              flexWrap: { xs: 'wrap', sm: 'nowrap' },
+              flexWrap: 'wrap',
             }}
           >
             <Typography
@@ -168,12 +170,12 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
 
             <Box
               sx={{
-                flex: '1 1 auto',
-                minWidth: 'fit-content',
+                flex: '1 1 250px',
+                minWidth: 0,
                 ml: 'auto',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
+                justifyContent: 'flex-start',
                 flexWrap: 'wrap',
                 rowGap: 0.25,
                 columnGap: 1.375,

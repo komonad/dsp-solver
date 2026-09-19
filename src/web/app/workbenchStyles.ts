@@ -3,20 +3,40 @@ import type React from 'react';
 export const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
   margin: 0,
-  background: '#f4f6f8',
+  background: '#f5f7fb',
   color: '#183359',
-  fontFamily: '"IBM Plex Sans", "Noto Sans SC", sans-serif',
+  fontFamily: '"Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif',
 };
 
 export const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.76)',
-  border: '1px solid rgba(18, 45, 77, 0.12)',
-  borderRadius: 16,
-  padding: 12,
+  background: '#ffffff',
+  border: '1px solid #e3e8f0',
+  borderRadius: 12,
+  padding: 14,
   boxSizing: 'border-box',
   minWidth: 0,
-  boxShadow: '0 4px 16px rgba(24, 51, 89, 0.06)',
+  boxShadow: '0 2px 8px rgba(35, 50, 75, 0.025)',
 };
+
+export const summarySectionStyle: React.CSSProperties = {
+  background: '#f9fafc', borderRadius: 10, padding: 16,
+  display: 'grid', gap: 10, alignContent: 'start', minWidth: 0,
+};
+
+export const paneSidebarSx = {
+  minWidth: 0, minHeight: 0, position: { lg: 'sticky' }, top: { lg: 16 },
+  maxHeight: { lg: 'calc(100dvh - 32px)' }, overflowY: { lg: 'auto' },
+  overscrollBehavior: 'contain', borderRadius: 1.5,
+} as const;
+
+export const paneSeparatorSx = {
+  display: { xs: 'none', lg: 'flex' }, alignItems: 'center', justifyContent: 'center',
+  minWidth: 0, minHeight: 0, height: 'calc(100dvh - 32px)', position: 'sticky', top: 16,
+  cursor: 'col-resize', touchAction: 'none', borderRadius: 1,
+  '&::before': { content: '""', position: 'absolute', top: 0, bottom: 0, width: '1px', backgroundColor: '#e0e6ef' },
+  '& svg': { zIndex: 1, backgroundColor: '#f5f7fb' },
+  '&:hover, &:focus-visible': { color: 'primary.main', backgroundColor: '#e8eefb' },
+} as const;
 
 export const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -460,15 +480,11 @@ export const focusButtonStyle: React.CSSProperties = {
 };
 
 export const focusBarStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  flexWrap: 'wrap',
   minWidth: 0,
-  padding: '8px 14px',
-  background: 'rgba(24, 88, 163, 0.04)',
-  borderRadius: 14,
-  border: '1px solid rgba(24, 88, 163, 0.12)',
+  padding: 14,
+  background: '#f8faff',
+  borderRadius: 10,
+  border: '1px solid #e3e9f5',
 };
 
 export const focusChipStyle: React.CSSProperties = {

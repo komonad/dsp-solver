@@ -52,7 +52,6 @@ function mapConfigStatusColor(
 export default function WorkbenchConfigStrip() {
   const { bundle } = useCatalog();
   const {
-    catalogLabel,
     workbenchConfigDisplayModels,
     activeWorkbenchConfigId,
     switchWorkbenchConfig,
@@ -107,7 +106,7 @@ export default function WorkbenchConfigStrip() {
   }
 
   return (
-    <article style={{ ...cardStyle, display: 'grid', gap: 8, padding: 10 }}>
+    <article style={{ ...cardStyle, display: 'grid', gap: 12, padding: 16 }}>
       <Box
         sx={{
           display: 'flex',
@@ -121,14 +120,7 @@ export default function WorkbenchConfigStrip() {
           <Typography variant="subtitle2" sx={{ fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
             {bundle.workbenchConfigs.title}
           </Typography>
-          {catalogLabel ? (
-            <Chip
-              label={catalogLabel}
-              size="small"
-              variant="outlined"
-              sx={{ height: 20, fontSize: 11, fontWeight: 600 }}
-            />
-          ) : null}
+          <Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{workbenchConfigDisplayModels.length}</Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Tooltip title={bundle.workbenchConfigs.createDefaultButton}>
@@ -168,6 +160,8 @@ export default function WorkbenchConfigStrip() {
           gap: 1,
           overflowX: 'auto',
           overflowY: 'hidden',
+          maxHeight: 180,
+          overscrollBehaviorX: 'contain',
           pb: 0.25,
           minHeight: 0,
           scrollSnapType: 'x proximity',
@@ -183,9 +177,11 @@ export default function WorkbenchConfigStrip() {
               key={config.id}
               component="div"
               role="button"
+              aria-pressed={isActive}
               tabIndex={0}
               onClick={() => switchWorkbenchConfig(config.id)}
               onKeyDown={event => {
+                if (event.target !== event.currentTarget) return;
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
                   switchWorkbenchConfig(config.id);
@@ -193,17 +189,17 @@ export default function WorkbenchConfigStrip() {
               }}
               sx={{
                 textAlign: 'left',
-                p: 1,
-                borderRadius: '12px',
+                p: 1.25,
+                borderRadius: '8px',
                 border: isActive
-                  ? '1px solid rgba(24, 88, 163, 0.34)'
-                  : '1px solid rgba(24, 51, 89, 0.12)',
+                  ? '1px solid #7795e8'
+                  : '1px solid #e3e8f0',
                 background: isActive
-                  ? 'linear-gradient(180deg, rgba(255,255,255,0.96), rgba(223,236,247,0.92))'
-                  : 'rgba(255,255,255,0.88)',
+                  ? '#f0f4ff'
+                  : '#ffffff',
                 boxShadow: isActive
-                  ? '0 2px 8px rgba(24, 88, 163, 0.12)'
-                  : '0 1px 4px rgba(24, 51, 89, 0.06)',
+                  ? 'inset 3px 0 0 #3564d8'
+                  : 'none',
                 minWidth: 0,
                 display: 'grid',
                 gap: 0.5,

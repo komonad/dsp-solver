@@ -1,5 +1,5 @@
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded';
-import { Box, IconButton, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import type React from 'react';
 
 export interface CollapsibleCardHeaderProps {
@@ -32,6 +32,7 @@ export default function CollapsibleCardHeader({
         component="button"
         type="button"
         onClick={onToggle}
+        aria-expanded={!collapsed}
         sx={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -50,9 +51,9 @@ export default function CollapsibleCardHeader({
           variant="subtitle2"
           sx={{
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 14,
             lineHeight: 1.2,
-            whiteSpace: 'nowrap',
+            textAlign: 'left',
           }}
         >
           {title}

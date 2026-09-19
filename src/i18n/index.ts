@@ -17,6 +17,16 @@ export interface DatasetPresetText {
 }
 
 export interface LocaleBundle {
+  workspace: {
+    gameConfig: string;
+    advancedSettings: string;
+    currentConfig: string;
+    focus: string;
+    viewInput: string;
+    resizeResults: string;
+    resizeSettings: string;
+    resizeHint: string;
+  };
   common: {
     auto: string;
     none: string;
@@ -365,6 +375,16 @@ export interface LocaleBundle {
 }
 
 const zhCN: LocaleBundle = {
+  workspace: {
+    gameConfig: '游戏配置',
+    advancedSettings: '数据管理与自定义',
+    currentConfig: '当前使用',
+    focus: '关注物品',
+    viewInput: '淡化上游',
+    resizeResults: '调整结果侧栏宽度',
+    resizeSettings: '调整设置侧栏宽度',
+    resizeHint: '拖动调整栏宽，双击恢复默认布局',
+  },
   common: {
     auto: '自动',
     none: '无',
@@ -466,7 +486,7 @@ const zhCN: LocaleBundle = {
   },
   solveRequest: {
     title: '求解请求',
-    editTargetsHint: '当前目标的需求速度请在右侧求解快照中修改。',
+    editTargetsHint: '在产线设置中修改目标的需求速度。',
     addTargetTitle: '添加目标',
     targetSearchLabel: '搜索物品',
     targetSearchPlaceholder: '按 ID、名称筛选',
@@ -527,7 +547,7 @@ const zhCN: LocaleBundle = {
     invalidAllowedRecipeSelectionMessage: '该允许配方组合会导致当前方案无解，未应用。',
   },
   workbenchConfigs: {
-    title: '配置切换',
+    title: '我的产线',
     createDefaultButton: '新建默认配置',
     createDefaultButtonShort: '新建',
     forkButton: '从当前配置分叉',
@@ -542,7 +562,7 @@ const zhCN: LocaleBundle = {
   },
   summary: {
     catalogTitle: '数据集概览',
-    solveSnapshotTitle: '求解快照',
+    solveSnapshotTitle: '产线设置',
     datasetLabel: '数据集',
     itemsLabel: '物品',
     recipesLabel: '配方',
