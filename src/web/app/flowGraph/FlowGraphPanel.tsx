@@ -22,6 +22,7 @@ import type { AppLocale } from '../../../i18n';
 import type { PresentationModel, PresentationRecipePlan } from '../../../presentation';
 import { preloadIconColors } from '../../shared/iconRegistry';
 import { useFocusFilter } from '../useFocusFilter';
+import { useWorkbenchDraft } from '../WorkbenchDraftContext';
 import { applyFlowGraphFocus, buildFlowGraphData } from './buildFlowGraphData';
 import FocusFilterBar from '../results/FocusFilterBar';
 import { focusGraphToolbarStyle } from '../workbenchStyles';
@@ -31,6 +32,7 @@ import { ExternalNode } from './ExternalNode';
 import { ItemEdge } from './ItemEdge';
 import { RecipeNode } from './RecipeNode';
 import { useFlowLayout } from './useFlowLayout';
+import FitGraphOnLayout from './FitGraphOnLayout';
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -150,6 +152,7 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
   const { bundle } = useCatalog();
   const [colorsReady, setColorsReady] = useState(false);
   const focusResult = useFocusFilter();
+  const { viewRawInputItemIds } = useWorkbenchDraft();
 
   // Preload icon colors from atlas sprite sheets
   useEffect(() => {
@@ -178,8 +181,8 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
   }, [recipePlans, model, atlasIds]);
 
   const { nodes: rawNodes, edges: rawEdges } = useMemo(
-    () => (colorsReady ? buildFlowGraphData(recipePlans, catalog, model, locale) : { nodes: [], edges: [] }),
-    [recipePlans, catalog, model, locale, colorsReady]
+    () => (colorsReady ? buildFlowGraphData(recipePlans, catalog, model, locale, undefined, viewRawInputItemIds) : { nodes: [], edges: [] }),
+    [recipePlans, catalog, model, locale, colorsReady, viewRawInputItemIds]
   );
 
   const { nodes: layoutNodes, edges, ready } = useFlowLayout(rawNodes, rawEdges);
@@ -188,8 +191,8 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
   useEffect(() => { setDisplayNodes(layoutNodes); }, [layoutNodes]);
 
   const focusedGraph = useMemo(
-    () => applyFlowGraphFocus({ nodes: displayNodes, edges }, focusResult),
-    [displayNodes, edges, focusResult],
+    () => applyFlowGraphFocus({ nodes: displayNodes, edges }, focusResult, locale, catalog?.powerItemId),
+    [displayNodes, edges, focusResult, locale, catalog?.powerItemId],
   );
 
   const onNodesChange: OnNodesChange = useCallback((changes) => {
@@ -229,6 +232,7 @@ function FlowGraphPanelImpl({ recipePlans, catalog, model, locale, title, onClos
             nodesConnectable={false}
             proOptions={{ hideAttribution: true }}
           >
+            <FitGraphOnLayout nodes={layoutNodes} />
             <Controls
               showInteractive={false}
               style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(24, 51, 89, 0.1)' }}

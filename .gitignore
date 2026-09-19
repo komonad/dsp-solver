@@ -17,3 +17,6 @@ dspcalc.sln
 .claude/
 test-results/
 playwright-report/
+.playwright-mcp/
+.playwright-cli/
+output/playwright/

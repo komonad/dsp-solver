@@ -513,3 +513,15 @@ export const focusGraphToolbarStyle: React.CSSProperties = {
   overscrollBehavior: 'contain',
   padding: 8,
 };
+
+export const viewItemSelectionStyle: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', width: '100%', minWidth: 0,
+};
+
+export const viewFilterDescriptionStyle: React.CSSProperties = {
+  width: '100%', fontSize: 12, color: 'rgba(24, 51, 89, 0.72)',
+};
+
+export const viewRawChipStyle: React.CSSProperties = {
+  ...focusChipStyle, background: 'rgba(177, 103, 24, 0.12)', color: '#795015',
+};

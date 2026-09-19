@@ -36,6 +36,8 @@ interface ItemSlicePanelProps {
     outputs: RecipeOptionIO[];
   }>;
   isFocused?: boolean;
+  isViewRawInput?: boolean;
+  onToggleViewRawInput?: (itemId: string) => void;
   onSelectItem: (itemId: string) => void;
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
@@ -60,6 +62,8 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
     preferredRecipeIds = [],
     preferredRecipeOptions,
     isFocused,
+    isViewRawInput,
+    onToggleViewRawInput,
     onSelectItem,
     onMarkRaw,
     onUnmarkRaw,
@@ -123,6 +127,11 @@ function ItemSlicePanel(props: ItemSlicePanelProps) {
       </Stack>
 
       <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
+        {onToggleViewRawInput ? (
+          <Chip label={isViewRawInput ? localeBundle.focusFilter.removeViewRawButton : localeBundle.focusFilter.addViewRawButton}
+            color={isViewRawInput ? 'warning' : 'default'} variant={isViewRawInput ? 'filled' : 'outlined'}
+            title={localeBundle.focusFilter.viewRawDescription} onClick={() => onToggleViewRawInput(slice.itemId)} />
+        ) : null}
         {slice.isRawInput ? <Chip label={localeBundle.itemLedger.rawBadge} color="primary" variant="outlined" /> : null}
         {slice.isTarget ? <Chip label={localeBundle.itemLedger.targetBadge} color="warning" variant="outlined" /> : null}
         {slice.surplusRatePerMin > 1e-8 ? <Chip label={localeBundle.itemLedger.surplusBadge} color="success" variant="outlined" /> : null}

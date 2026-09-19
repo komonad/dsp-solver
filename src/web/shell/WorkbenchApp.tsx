@@ -45,7 +45,7 @@ function WorkbenchLayout() {
     clearAllowedRecipesForItem,
     locateItemInLedger,
   } = useWorkbench();
-  const { revealRecipePlan, focusItemIds, addFocusItem, removeFocusItem } = useWorkbenchDraft();
+  const { revealRecipePlan, focusItemIds, addFocusItem, removeFocusItem, viewRawInputItemIds, addViewRawInput, removeViewRawInput } = useWorkbenchDraft();
   const isSolveRunning = autoSolveState.activity.status === 'running';
   const isSolveCancelled = autoSolveState.activity.status === 'cancelled';
 
@@ -214,6 +214,8 @@ function WorkbenchLayout() {
           allowedRecipesByItem={allowedRecipesByItem}
           allowedRecipeOptionsByItem={preferredRecipeOptionsByItem}
           focusItemIds={focusItemIds}
+          viewRawInputItemIds={viewRawInputItemIds}
+          onToggleViewRawInput={itemId => viewRawInputItemIds.includes(itemId) ? removeViewRawInput(itemId) : addViewRawInput(itemId)}
           onMarkRaw={markItemAsRawInput}
           onUnmarkRaw={unmarkItemAsRawInput}
           onAddFocus={addFocusItem}

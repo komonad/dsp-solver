@@ -53,6 +53,74 @@ function makeModel(overrides: Partial<PresentationModel> = {}): PresentationMode
 }
 
 describe('buildFlowGraphData', () => {
+  it('represents power as a view supply and only counts retained consumers', () => {
+    const catalog = { powerItemId: 'power', proliferatorLevels: [] } as unknown as ResolvedCatalogModel;
+    const plans = [
+      makeRecipePlan({ recipeId: 'fuel', inputs: [makeItemRate('ore', 'Ore', 20), makeItemRate('power', 'Power', 2)], outputs: [makeItemRate('fuel', 'Fuel', 10)] }),
+      makeRecipePlan({ recipeId: 'generate', inputs: [makeItemRate('fuel', 'Fuel', 10)], outputs: [makeItemRate('power', 'Power', 12)] }),
+      makeRecipePlan({ recipeId: 'white', inputs: [makeItemRate('ore', 'Ore', 60), makeItemRate('power', 'Power', 10)], outputs: [makeItemRate('white', 'White', 60)] }),
+    ];
+    const model = makeModel({ recipePlans: plans, targets: [{ itemId: 'white', itemName: 'White', requestedRatePerMin: 60, actualRatePerMin: 60 }] });
+    const before = JSON.stringify(model);
+    const focus = computeFocusFilter(['white'], plans, new Set(['ore']), { viewRawInputItemIds: ['power'] });
+    const graph = buildFlowGraphData(plans, catalog, model, 'zh-CN', focus);
+    expect(graph.nodes.find(node => node.id === 'recipe-1')?.data.dimmed).toBe(true);
+    expect(graph.nodes.find(node => node.id === 'recipe-2')?.data.inputItemIds).toContain('power');
+    expect(graph.nodes.find(node => node.id === 'view-input-power')?.data).toMatchObject({
+      kind: 'input', viewRawInput: true, ratePerMin: 10, rateLabel: '10.00 MW', dimmed: false,
+    });
+    expect(graph.edges.filter(edge => edge.data?.itemId === 'power' && !edge.data.dimmed)).toMatchObject([
+      { source: 'view-input-power', target: 'recipe-2', data: { ratePerMin: 10 } },
+    ]);
+    expect(JSON.stringify(model)).toBe(before);
+    const restored = buildFlowGraphData(plans, catalog, model);
+    expect(restored.nodes.some(node => node.data.viewRawInput)).toBe(false);
+    expect(restored.edges.some(edge => edge.data?.viewRawInput)).toBe(false);
+    expect(restored.nodes.every(node => !node.data.dimmed)).toBe(true);
+  });
+
+  it('does not double-count actual imports or retained co-product flows at a view boundary', () => {
+    const plans = [
+      makeRecipePlan({ recipeId: 'refine', inputs: [makeItemRate('crude', 'Crude', 60)], outputs: [makeItemRate('oil', 'Oil', 60), makeItemRate('hydrogen', 'Hydrogen', 30)] }),
+      makeRecipePlan({ recipeId: 'plastic', inputs: [makeItemRate('oil', 'Oil', 60), makeItemRate('hydrogen', 'Hydrogen', 40)], outputs: [makeItemRate('plastic', 'Plastic', 60)] }),
+    ];
+    const model = makeModel({ recipePlans: plans, externalInputs: [makeItemRate('hydrogen', 'Hydrogen', 10)] });
+    const focus = computeFocusFilter(['plastic'], plans, new Set(['crude']), { viewRawInputItemIds: ['hydrogen'] });
+    const graph = buildFlowGraphData(plans, null, model, 'zh-CN', focus);
+    expect(graph.nodes.find(node => node.id === 'recipe-0')?.data.dimmed).toBe(false);
+    expect(graph.nodes.find(node => node.id === 'input-hydrogen')?.data).toMatchObject({ ratePerMin: 10, dimmed: true });
+    expect(graph.edges.filter(edge => edge.data?.itemId === 'hydrogen' && !edge.data.dimmed)).toMatchObject([
+      { source: 'view-input-hydrogen', target: 'recipe-1', data: { ratePerMin: 40 } },
+    ]);
+  });
+
+  it('supplies a directly focused target from its view boundary', () => {
+    const plans = [makeRecipePlan({ inputs: [makeItemRate('ore', 'Ore', 60)], outputs: [makeItemRate('plate', 'Plate', 60)] })];
+    const model = makeModel({ recipePlans: plans, targets: [{ itemId: 'plate', itemName: 'Plate', requestedRatePerMin: 60, actualRatePerMin: 60 }] });
+    const focus = computeFocusFilter(['plate'], plans, new Set(), { viewRawInputItemIds: ['plate'] });
+    const graph = buildFlowGraphData(plans, null, model, 'zh-CN', focus);
+    expect(graph.edges.filter(edge => !edge.data?.dimmed)).toMatchObject([
+      { source: 'view-input-plate', target: 'output-plate', data: { ratePerMin: 60 } },
+    ]);
+    expect(graph.nodes.find(node => node.id === 'recipe-0')?.data.dimmed).toBe(true);
+  });
+
+  it('exposes a normally hidden spray input at a view boundary', () => {
+    const catalog = { proliferatorLevels: [{ level: 1, itemId: 'spray' }] } as unknown as ResolvedCatalogModel;
+    const plans = [makeRecipePlan({
+      proliferatorMode: 'speed', proliferatorLevel: 1,
+      inputs: [makeItemRate('ore', 'Ore', 60), makeItemRate('spray', 'Spray', 2)],
+      outputs: [makeItemRate('plate', 'Plate', 60)],
+    })];
+    const model = makeModel({ recipePlans: plans });
+    expect(buildFlowGraphData(plans, catalog, model).nodes[0].data.inputItemIds).not.toContain('spray');
+    const focus = computeFocusFilter(['plate'], plans, new Set(['ore']), { viewRawInputItemIds: ['spray'] });
+    const graph = buildFlowGraphData(plans, catalog, model, 'zh-CN', focus);
+    expect(graph.nodes[0].data.inputItemIds).toContain('spray');
+    expect(graph.nodes.find(node => node.id === 'view-input-spray')?.data).toMatchObject({ ratePerMin: 2, dimmed: false });
+    expect(graph.edges.find(edge => edge.source === 'view-input-spray')).toMatchObject({ targetHandle: 'in-spray' });
+  });
+
   it('dims branches sharing a focused item and restores the graph without moving nodes', () => {
     const plans = [
       makeRecipePlan({ recipeId: 'smelt', inputs: [makeItemRate('ore', 'Ore', 60)], outputs: [makeItemRate('plate', 'Plate', 60)] }),

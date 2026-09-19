@@ -10,6 +10,7 @@ import { buildRecipeFlowDisplay } from '../../shared/recipeDisplay';
 import { getIconColor } from '../../shared/iconRegistry';
 import type { Node, Edge } from '@xyflow/react';
 import { formatCompactItemRateLabel } from '../workbenchHelpers';
+import { addViewRawFlowInputs } from './viewRawFlowGraph';
 
 export interface RecipeNodeData {
   [key: string]: unknown;
@@ -32,6 +33,8 @@ export interface ExternalNodeData {
   ratePerMin: number;
   rateLabel: string;
   kind: 'input' | 'output';
+  viewRawInput?: boolean;
+  boundaryLabel?: string;
   atlasIds?: string[];
   dimmed?: boolean;
 }
@@ -45,6 +48,7 @@ export interface ItemEdgeData {
   rateLabel: string;
   width: number;
   color: string;
+  viewRawInput?: boolean;
   dimmed?: boolean;
 }
 
@@ -104,6 +108,7 @@ export function buildFlowGraphData(
   model: PresentationModel,
   locale: AppLocale = 'zh-CN',
   focusResult?: FocusFilterResult | null,
+  viewRawInputItemIds: readonly string[] = [...(focusResult?.viewRawInputItemIds ?? [])],
 ): { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] } {
   if (recipePlans.length === 0) {
     return { nodes: [], edges: [] };
@@ -111,6 +116,7 @@ export function buildFlowGraphData(
 
   const atlasIds = model.catalogSummary.iconAtlasIds;
   const powerItemId = catalog?.powerItemId;
+  const viewRawInputIds = new Set(viewRawInputItemIds);
   const nodes: FlowGraphNode[] = [];
   const rawEdges: RawEdge[] = [];
 
@@ -119,9 +125,11 @@ export function buildFlowGraphData(
   for (let i = 0; i < recipePlans.length; i++) {
     const plan = recipePlans[i];
     const flowDisplay = buildRecipeFlowDisplay(catalog, plan);
-    recipeVisibleInputs.push(flowDisplay.visibleInputs);
+    const visibleIds = new Set(flowDisplay.visibleInputs.map(input => input.itemId));
+    const visibleInputs = plan.inputs.filter(input => visibleIds.has(input.itemId) || viewRawInputIds.has(input.itemId));
+    recipeVisibleInputs.push(visibleInputs);
 
-    const inputItemIds = flowDisplay.visibleInputs
+    const inputItemIds = visibleInputs
       .filter(inp => inp.ratePerMin > EPSILON)
       .map(inp => inp.itemId);
     const outputItemIds = plan.outputs
@@ -371,13 +379,18 @@ export function buildFlowGraphData(
     };
   });
 
-  return applyFlowGraphFocus({ nodes, edges }, focusResult);
+  return applyFlowGraphFocus(
+    addViewRawFlowInputs({ nodes, edges }, recipePlans, model, viewRawInputIds, locale, powerItemId),
+    focusResult, locale, powerItemId,
+  );
 }
 
 /** Focus changes preserve layout positions, handles and flow quantities. */
 export function applyFlowGraphFocus(
   graph: { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] },
   focusResult?: FocusFilterResult | null,
+  locale: AppLocale = 'zh-CN',
+  powerItemId?: string | null,
 ): { nodes: FlowGraphNode[]; edges: FlowGraphEdge[] } {
   const nodes = graph.nodes.map(node => ({
     ...node,
@@ -385,7 +398,9 @@ export function applyFlowGraphFocus(
       ...node.data,
       dimmed: !!focusResult && (node.type === 'recipe'
         ? !focusResult.focusedRecipeIndices.has(Number(node.id.slice('recipe-'.length)))
-        : !focusResult.focusedItemIds.has(node.data.itemId)),
+        : !focusResult.focusedItemIds.has(node.data.itemId) || (
+            node.data.kind === 'input' && !node.data.viewRawInput && focusResult.viewRawInputItemIds.has(node.data.itemId)
+          )),
     },
   })) as FlowGraphNode[];
   const dimmedNodeIds = new Set(nodes.filter(node => node.data.dimmed).map(node => node.id));
@@ -395,9 +410,17 @@ export function applyFlowGraphFocus(
       ...edge.data!,
       dimmed: !!focusResult && (
         !focusResult.focusedItemIds.has(edge.data!.itemId) ||
+        (focusResult.viewRawInputItemIds.has(edge.data!.itemId) && !edge.data!.viewRawInput) ||
         dimmedNodeIds.has(edge.source) || dimmedNodeIds.has(edge.target)
       ),
     },
   }));
+  for (const node of nodes) {
+    if (node.type !== 'external' || !node.data.viewRawInput) continue;
+    const rate = edges.reduce((sum, edge) => sum + (edge.source === node.id && !edge.data.dimmed ? edge.data.ratePerMin : 0), 0);
+    node.data.ratePerMin = rate;
+    node.data.rateLabel = formatCompactItemRateLabel(node.data.itemId, rate, locale, powerItemId);
+    node.data.dimmed = rate < EPSILON;
+  }
   return { nodes, edges };
 }

@@ -33,6 +33,8 @@ interface ItemSliceOverlayHostProps {
   allowedRecipesByItem: Record<string, string[]>;
   allowedRecipeOptionsByItem: Record<string, WorkbenchRecipeOption[]>;
   focusItemIds?: string[];
+  viewRawInputItemIds?: string[];
+  onToggleViewRawInput?: (itemId: string) => void;
   onMarkRaw: (itemId: string) => void;
   onUnmarkRaw: (itemId: string) => void;
   onAddFocus?: (itemId: string) => void;
@@ -52,6 +54,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
     allowedRecipesByItem,
     allowedRecipeOptionsByItem,
     focusItemIds,
+    viewRawInputItemIds,
+    onToggleViewRawInput,
     onMarkRaw,
     onUnmarkRaw,
     onAddFocus,
@@ -217,6 +221,8 @@ export default function ItemSliceOverlayHost(props: ItemSliceOverlayHostProps) {
             preferredRecipeIds={allowedRecipesByItem[selectedItemSlice.itemId] ?? []}
             preferredRecipeOptions={allowedRecipeOptions}
             isFocused={focusItemIds?.includes(selectedItemSlice.itemId)}
+            isViewRawInput={viewRawInputItemIds?.includes(selectedItemSlice.itemId)}
+            onToggleViewRawInput={onToggleViewRawInput}
             onSelectItem={openItemSliceOverlay}
             onMarkRaw={onMarkRaw}
             onUnmarkRaw={onUnmarkRaw}

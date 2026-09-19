@@ -15,11 +15,12 @@ const hiddenHandle: React.CSSProperties = {
 };
 
 function ExternalNodeImpl({ data }: NodeProps) {
-  const { itemName, iconKey, rateLabel, kind, atlasIds, dimmed } = data as unknown as ExternalNodeData;
+  const { itemName, iconKey, rateLabel, kind, atlasIds, dimmed, boundaryLabel } = data as unknown as ExternalNodeData;
   const isInput = kind === 'input';
 
   return (
-    <div style={{ width: 120, height: 48, position: 'relative', opacity: dimmed ? 0.25 : 1, transition: 'opacity 0.15s' }}>
+    <div title={boundaryLabel ? `${boundaryLabel} · ${itemName}: ${rateLabel}` : undefined}
+      style={{ width: 120, height: 48, position: 'relative', opacity: dimmed ? 0.25 : 1, transition: 'opacity 0.15s' }}>
       {!isInput && (
         <Handle type="target" position={Position.Left} style={hiddenHandle} />
       )}
@@ -49,6 +50,7 @@ function ExternalNodeImpl({ data }: NodeProps) {
           size={22}
         />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+          {boundaryLabel ? <span style={{ fontSize: 9, color: '#795015' }}>{boundaryLabel}</span> : null}
           <span
             style={{
               fontSize: 11,

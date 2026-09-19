@@ -355,6 +355,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(clearFocusItems, [activeWorkbenchConfigId, loadedSource, clearFocusItems]);
 
+  const [viewRawInputItemIds, setViewRawInputItemIds] = useState<string[]>([]);
+  const addViewRawInput = useCallback((itemId: string) => {
+    setViewRawInputItemIds(prev => prev.includes(itemId) ? prev : [...prev, itemId]);
+  }, []);
+  const removeViewRawInput = useCallback((itemId: string) => {
+    setViewRawInputItemIds(prev => prev.filter(id => id !== itemId));
+  }, []);
+  const clearViewRawInputs = useCallback(() => setViewRawInputItemIds([]), []);
+  useEffect(clearViewRawInputs, [activeWorkbenchConfigId, loadedSource, clearViewRawInputs]);
+
   // -------------------------------------------------------------------------
   // Refs
   // -------------------------------------------------------------------------
@@ -1176,14 +1186,18 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     [focusItemIds, model],
   );
   const focusResult = useMemo(
-    () => model && activeFocusItemIds.length > 0
+    () => model && (activeFocusItemIds.length > 0 || viewRawInputItemIds.length > 0)
       ? computeFocusFilter(
           activeFocusItemIds,
           model.recipePlans,
           new Set(model.requestSummary?.resolvedRawInputs.map(item => item.itemId) ?? []),
+          {
+            viewRawInputItemIds: viewRawInputItemIds.filter(itemId => !!model.itemSlicesById[itemId]),
+            targetItemIds: model.targets.map(target => target.itemId),
+          },
         )
       : null,
-    [activeFocusItemIds, model],
+    [activeFocusItemIds, viewRawInputItemIds, model],
   );
 
   useEffect(() => {
@@ -1191,6 +1205,14 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       setFocusItemIds(activeFocusItemIds);
     }
   }, [activeFocusItemIds, focusItemIds.length, model]);
+
+  useEffect(() => {
+    if (!model?.status) return;
+    setViewRawInputItemIds(prev => {
+      const next = prev.filter(itemId => !!model.itemSlicesById[itemId]);
+      return next.length === prev.length ? prev : next;
+    });
+  }, [model]);
 
   const iconAtlasIds =
     model?.catalogSummary.iconAtlasIds ?? catalog?.iconAtlasIds ?? ['Vanilla'];
@@ -2330,6 +2352,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addFocusItem,
       removeFocusItem,
       clearFocusItems,
+      viewRawInputItemIds,
+      addViewRawInput,
+      removeViewRawInput,
+      clearViewRawInputs,
     }),
     [
       targetDraftItemId,
@@ -2345,6 +2371,10 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       addFocusItem,
       removeFocusItem,
       clearFocusItems,
+      viewRawInputItemIds,
+      addViewRawInput,
+      removeViewRawInput,
+      clearViewRawInputs,
     ]
   );
 

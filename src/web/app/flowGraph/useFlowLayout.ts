@@ -41,7 +41,7 @@ export function useFlowLayout(
       const layoutOptions: Record<string, string> = {};
 
       // Pin external input nodes to first layer, output nodes to last layer
-      if (node.id.startsWith('input-')) {
+      if (node.id.startsWith('input-') || node.id.startsWith('view-input-')) {
         layoutOptions['org.eclipse.elk.layered.layering.layerConstraint'] = 'FIRST';
       } else if (node.id.startsWith('output-')) {
         layoutOptions['org.eclipse.elk.layered.layering.layerConstraint'] = 'LAST';

@@ -354,6 +354,13 @@ export interface LocaleBundle {
     unfocusedSectionTitle: string;
     addFocusButton: string;
     removeFocusButton: string;
+    viewRawPlaceholder: string;
+    viewRawDescription: string;
+    viewRawBadge: string;
+    addViewRawButton: string;
+    removeViewRawButton: string;
+    clearViewRawButton: string;
+    remainingSectionTitle: string;
   };
 }
 
@@ -767,6 +774,13 @@ const zhCN: LocaleBundle = {
     unfocusedSectionTitle: '范围外',
     addFocusButton: '关注',
     removeFocusButton: '取消关注',
+    viewRawPlaceholder: '淡化上游…',
+    viewRawDescription: '将物品视作外供，淡化专用上游；其他需求共用的配方仍保留。仅改变视图，不修改原矿或重新求解。',
+    viewRawBadge: '视图外供',
+    addViewRawButton: '淡化上游',
+    removeViewRawButton: '恢复上游',
+    clearViewRawButton: '恢复全部上游',
+    remainingSectionTitle: '视图范围',
   },
 };
 

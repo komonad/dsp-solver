@@ -31,6 +31,10 @@ export interface WorkbenchDraftContextValue {
   addFocusItem: (itemId: string) => void;
   removeFocusItem: (itemId: string) => void;
   clearFocusItems: () => void;
+  viewRawInputItemIds: string[];
+  addViewRawInput: (itemId: string) => void;
+  removeViewRawInput: (itemId: string) => void;
+  clearViewRawInputs: () => void;
 }
 
 // ---------------------------------------------------------------------------
