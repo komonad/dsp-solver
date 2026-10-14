@@ -232,6 +232,8 @@ export interface CatalogRecipeRuleSpec {
   ID: number;
   /** Optional authoritative building list override for this recipe. */
   AllowedBuildingIds?: number[];
+  /** Keep the base building list without expansion groups or universal buildings. */
+  DisableBuildingExpansion?: boolean;
   /** Optional effective modifier code override for this recipe. */
   ModifierCodeOverride?: number;
   /**
@@ -1075,6 +1077,9 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         `${path}.ModifierCodeOverride`,
         'ModifierCodeOverride must be a non-negative finite number when present.'
       );
+    }
+    if (rule.DisableBuildingExpansion !== undefined && typeof rule.DisableBuildingExpansion !== 'boolean') {
+      pushIssue(errors, `${path}.DisableBuildingExpansion`, 'DisableBuildingExpansion must be a boolean when present.');
     }
     if (rule.FractionationProbability !== undefined && (!isFiniteNumber(rule.FractionationProbability) || rule.FractionationProbability <= 0 || rule.FractionationProbability > 1)) pushIssue(errors, `${path}.FractionationProbability`, 'FractionationProbability must be a finite number in the range (0, 1].');
 

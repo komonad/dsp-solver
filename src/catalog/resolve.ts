@@ -576,12 +576,15 @@ export function resolveCatalogModel(
       modifierKind === 'proliferator'
         ? (modifier?.MinLevel ?? 1)
         : 1;
-    const allowedBuildingIds = expandAllowedBuildingIds(
-      recipeRule?.AllowedBuildingIds ?? recipe.Factories,
-      recipeBuildingExpansionGroups,
-      recipeBuildingUniversalIds,
-      recipeBuildingUniversalExclusionRules
-    );
+    const baseBuildingIds = recipeRule?.AllowedBuildingIds ?? recipe.Factories;
+    const allowedBuildingIds = recipeRule?.DisableBuildingExpansion
+      ? [...baseBuildingIds]
+      : expandAllowedBuildingIds(
+          baseBuildingIds,
+          recipeBuildingExpansionGroups,
+          recipeBuildingUniversalIds,
+          recipeBuildingUniversalExclusionRules
+        );
     const { isSynthetic, tags } = buildRecipeTags({
       recipeName: recipe.Name,
       recipeType: recipe.Type,

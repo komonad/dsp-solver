@@ -1049,6 +1049,11 @@
       "ModifierCodeOverride": 3
     },
     {
+      "ID": 162,
+      "DisableBuildingExpansion": true,
+      "ModifierCodeOverride": 3
+    },
+    {
       "ID": 352,
       "ModifierCodeOverride": 3
     },

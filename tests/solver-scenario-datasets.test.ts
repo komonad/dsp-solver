@@ -180,15 +180,15 @@ test('orbitalring auto-promotes an infeasible constrained proliferator intermedi
     objective: 'min_external_input',
     balancePolicy: 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
-    disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
+    disabledRecipeIds: [...catalog.recommendedDisabledRecipeIds, '717'],
     allowedRecipesByItem: {
       '1143': ['715'],
-      '6522': ['510'],
+      '6522': ['717'],
     },
   });
 
   expect(result.status).toBe('optimal');
-  expect(getPlan(result, '510')).toBeUndefined();
+  expect(getPlan(result, '717')).toBeUndefined();
   expect(getExternalRate(result, '6522')).toBeGreaterThan(0);
   expect(
     result.diagnostics.infoMessages.some(message => message.includes('6522'))

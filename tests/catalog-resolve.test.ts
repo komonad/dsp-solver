@@ -267,7 +267,7 @@ test.each([
   {
     datasetPath: './data/OrbitalRing.json',
     defaultsPath: './data/OrbitalRing.defaults.json',
-    expectedRecipeCount: 374,
+    expectedRecipeCount: 376,
     expectedBuildingCount: 29,
     expectedIconAtlasIds: ['OrbitalRing'],
     expectedRecommendedSolve: {
@@ -294,6 +294,32 @@ test.each([
     expect(resolved.recommendedSolve).toEqual(expectedRecommendedSolve);
   }
 );
+
+test('OrbitalRing exclusive dark fog lens recipe retains its runtime factory restriction', async () => {
+  const resolved = await loadResolvedCatalogFromFiles(
+    './data/OrbitalRing.json',
+    './data/OrbitalRing.defaults.json'
+  );
+
+  expect(resolved.recipeMap.get('162')).toMatchObject({
+    allowedBuildingIds: ['2318'],
+    cycleTimeSec: 6,
+    inputs: [{ itemId: '1209', amount: 1 }, { itemId: '5201', amount: 12 }],
+    outputs: [{ itemId: '1211', amount: 1 }],
+  });
+  expect(resolved.recipeMap.get('29')?.cycleTimeSec).toBe(4);
+  expect(resolved.recipeMap.get('718')?.cycleTimeSec).toBe(1);
+  expect(resolved.recipeMap.get('789')?.cycleTimeSec).toBe(20);
+});
+
+test('recipe building expansion flag rejects non-boolean values', () => {
+  const validation = validateCatalogDefaultConfigSpec({
+    recipeRules: [{ ID: 162, DisableBuildingExpansion: 'true' }],
+  });
+  expect(validation.errors).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: '$.recipeRules[0].DisableBuildingExpansion' }),
+  ]));
+});
 
 test('OrbitalRing defaults assign intrinsic productivity bonuses to special chemical plants', async () => {
   const resolved = await loadResolvedCatalogFromFiles(

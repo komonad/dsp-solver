@@ -436,7 +436,7 @@ const zhCN: LocaleBundle = {
     },
     orbitalring: {
       label: '星环组合',
-      description: '星环 0.9.39 + 更多巨构 + 深空来敌的运行时导出数据快照。',
+      description: '星环 1.0.20 + 更多巨构 2.0.1 + 深空来敌 3.4.24 的运行时导出数据快照。',
     },
     custom: {
       label: '自定义路径',

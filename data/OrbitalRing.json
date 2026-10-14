@@ -481,6 +481,14 @@
       "WorkEnergyPerTick": 0.0
     },
     {
+      "ID": 1211,
+      "Type": 3,
+      "Name": "黑雾引力透镜",
+      "IconName": "darkfog-lens",
+      "GridIndex": 6809,
+      "WorkEnergyPerTick": 0.0
+    },
+    {
       "ID": 1301,
       "Type": 3,
       "Name": "电路板",
@@ -1504,7 +1512,7 @@
     },
     {
       "ID": 6216,
-      "Type": 12,
+      "Type": 10,
       "Name": "未知射线遗留样本",
       "IconName": "I终末螺旋",
       "GridIndex": 1704,
@@ -1584,7 +1592,7 @@
     },
     {
       "ID": 6227,
-      "Type": 10,
+      "Type": 3,
       "Name": "曲率引擎",
       "IconName": "I曲率引擎",
       "GridIndex": 1511,
@@ -1738,11 +1746,11 @@
     },
     {
       "ID": 6258,
-      "Type": 6,
+      "Type": 5,
       "Name": "太空电梯",
       "IconName": "I太空电梯",
       "GridIndex": 2701,
-      "WorkEnergyPerTick": 200000.0
+      "WorkEnergyPerTick": 500000.0
     },
     {
       "ID": 6259,
@@ -1750,7 +1758,7 @@
       "Name": "天枢座",
       "IconName": "I天枢座",
       "GridIndex": 2708,
-      "WorkEnergyPerTick": 1000000.0
+      "WorkEnergyPerTick": 1000.0
     },
     {
       "ID": 6260,
@@ -1808,7 +1816,7 @@
       "Name": "深空物流港",
       "IconName": "I深空物流港",
       "GridIndex": 2705,
-      "WorkEnergyPerTick": 1000000.0
+      "WorkEnergyPerTick": 500000.0
     },
     {
       "ID": 6271,
@@ -1820,15 +1828,15 @@
     },
     {
       "ID": 6273,
-      "Type": 5,
+      "Type": 9,
       "Name": "轨道观测站",
       "IconName": "I轨道观测站",
       "GridIndex": 2706,
-      "WorkEnergyPerTick": 1000000.0
+      "WorkEnergyPerTick": 500000.0
     },
     {
       "ID": 6277,
-      "Type": 2,
+      "Type": 3,
       "Name": "离子推进器",
       "IconName": "ion-thruster",
       "GridIndex": 1112,
@@ -1852,7 +1860,7 @@
     },
     {
       "ID": 6280,
-      "Type": 9,
+      "Type": 4,
       "Name": "勘探船",
       "IconName": "I勘探船2",
       "GridIndex": 1611,
@@ -1868,7 +1876,7 @@
     },
     {
       "ID": 6501,
-      "Type": 5,
+      "Type": 6,
       "Name": "轨道熔炼站",
       "IconName": "I轨道熔炼站",
       "GridIndex": 2703,
@@ -1877,7 +1885,7 @@
     },
     {
       "ID": 6502,
-      "Type": 10,
+      "Type": 4,
       "Name": "数学率引擎-深蓝之井-运载火箭",
       "IconName": "I二阶火箭",
       "GridIndex": 1712,
@@ -1885,7 +1893,7 @@
     },
     {
       "ID": 6503,
-      "Type": 10,
+      "Type": 3,
       "Name": "数学率引擎-起振焦点组件",
       "IconName": "I起振焦点",
       "GridIndex": 1713,
@@ -1893,7 +1901,7 @@
     },
     {
       "ID": 6504,
-      "Type": 10,
+      "Type": 4,
       "Name": "数学率引擎-起振焦点-运载火箭",
       "IconName": "I三阶火箭",
       "GridIndex": 1714,
@@ -1905,7 +1913,7 @@
       "Name": "轨道反物质堆基座",
       "IconName": "I反物质堆基座",
       "GridIndex": 2711,
-      "WorkEnergyPerTick": 1000000.0
+      "WorkEnergyPerTick": 500000.0
     },
     {
       "ID": 6507,
@@ -1933,7 +1941,7 @@
     },
     {
       "ID": 6511,
-      "Type": 7,
+      "Type": 5,
       "Name": "超空间中继器核心",
       "IconName": "I反物质堆核心",
       "GridIndex": 2614,
@@ -1965,7 +1973,7 @@
     },
     {
       "ID": 6515,
-      "Type": 7,
+      "Type": 3,
       "Name": "轨道连接组件",
       "IconName": "I轨道连接组件",
       "GridIndex": 2707,
@@ -1973,7 +1981,7 @@
     },
     {
       "ID": 6516,
-      "Type": 7,
+      "Type": 3,
       "Name": "粒子加速轨道",
       "IconName": "I粒子加速轨道",
       "GridIndex": 2609,
@@ -1981,7 +1989,7 @@
     },
     {
       "ID": 6517,
-      "Type": 7,
+      "Type": 3,
       "Name": "星环电网环路",
       "IconName": "I星环电网组件",
       "GridIndex": 2710,
@@ -1989,7 +1997,7 @@
     },
     {
       "ID": 6518,
-      "Type": 7,
+      "Type": 3,
       "Name": "星环护盾组件",
       "IconName": "I星环护盾",
       "GridIndex": 2608,
@@ -2005,7 +2013,7 @@
     },
     {
       "ID": 6520,
-      "Type": 7,
+      "Type": 2,
       "Name": "富勒烯",
       "IconName": "I富勒烯2",
       "GridIndex": 5207,
@@ -2013,7 +2021,7 @@
     },
     {
       "ID": 6521,
-      "Type": 7,
+      "Type": 2,
       "Name": "富勒醇",
       "IconName": "I富勒醇",
       "GridIndex": 5307,
@@ -2021,7 +2029,7 @@
     },
     {
       "ID": 6522,
-      "Type": 1,
+      "Type": 2,
       "Name": "富勒烯内嵌银",
       "IconName": "I富勒银",
       "GridIndex": 5407,
@@ -2029,7 +2037,7 @@
     },
     {
       "ID": 6523,
-      "Type": 1,
+      "Type": 2,
       "Name": "有机磁胶",
       "IconName": "I有机磁胶",
       "GridIndex": 1708,
@@ -2109,7 +2117,7 @@
     },
     {
       "ID": 6533,
-      "Type": 3,
+      "Type": 9,
       "Name": "欺骗型广播塔",
       "IconName": "I欺骗型广播塔",
       "GridIndex": 6808,
@@ -2181,7 +2189,7 @@
     },
     {
       "ID": 7019,
-      "Type": 1,
+      "Type": 3,
       "Name": "高速连接器",
       "IconName": "I高速连接器",
       "GridIndex": 1206,
@@ -2303,7 +2311,7 @@
       "ID": 7616,
       "Type": 3,
       "Name": "超高效过滤器",
-      "IconName": "基础机械组件",
+      "IconName": "超高效过滤器3",
       "GridIndex": 2801,
       "WorkEnergyPerTick": 0.0
     },
@@ -2311,7 +2319,7 @@
       "ID": 7617,
       "Type": 3,
       "Name": "预加工伺服器",
-      "IconName": "先进机械组件_新",
+      "IconName": "预加工伺服器",
       "GridIndex": 2802,
       "WorkEnergyPerTick": 0.0
     },
@@ -2319,7 +2327,7 @@
       "ID": 7618,
       "Type": 3,
       "Name": "智能伺服器",
-      "IconName": "尖端机械组件_新",
+      "IconName": "智能伺服器",
       "GridIndex": 2804,
       "WorkEnergyPerTick": 0.0
     },
@@ -2843,6 +2851,22 @@
       "IconName": "interstellar-logistic-station",
       "GridIndex": 3409,
       "WorkEnergyPerTick": 500000.0
+    },
+    {
+      "ID": 9513,
+      "Type": 7,
+      "Name": "星河卫士勋章",
+      "IconName": "rank10",
+      "GridIndex": 9998,
+      "WorkEnergyPerTick": 0.0
+    },
+    {
+      "ID": 9514,
+      "Type": 2,
+      "Name": "水滴额外伤害",
+      "IconName": "r0-10",
+      "GridIndex": 9999,
+      "WorkEnergyPerTick": 0.0
     }
   ],
   "recipes": [
@@ -3604,7 +3628,7 @@
       "ResultCounts": [
         1.0
       ],
-      "TimeSpend": 480.0,
+      "TimeSpend": 240.0,
       "Proliferator": 0,
       "IconName": "R光量子"
     },
@@ -6096,14 +6120,14 @@
       ],
       "Name": "物流配送器",
       "Items": [
-        1101,
-        1301,
+        1103,
+        7501,
         1202
       ],
       "ItemCounts": [
-        8.0,
+        3.0,
         1.0,
-        1.0
+        2.0
       ],
       "Results": [
         2107
@@ -6124,13 +6148,13 @@
       ],
       "Name": "配送运输机",
       "Items": [
-        1101,
+        1103,
         1407,
         1301
       ],
       "ItemCounts": [
         1.0,
-        1.0,
+        3.0,
         1.0
       ],
       "Results": [
@@ -6187,10 +6211,10 @@
         1202
       ],
       "ItemCounts": [
-        12.0,
+        8.0,
         2.0,
-        4.0,
-        12.0
+        2.0,
+        6.0
       ],
       "Results": [
         3001
@@ -6759,7 +6783,7 @@
       "ResultCounts": [
         1.0
       ],
-      "TimeSpend": 120.0,
+      "TimeSpend": 240.0,
       "Proliferator": 0,
       "IconName": ""
     },
@@ -7223,6 +7247,31 @@
       "IconName": "lighthouse"
     },
     {
+      "ID": 162,
+      "Type": 12,
+      "Factories": [
+        2318
+      ],
+      "Name": "黑雾引力透镜",
+      "Items": [
+        1209,
+        5201
+      ],
+      "ItemCounts": [
+        1.0,
+        12.0
+      ],
+      "Results": [
+        1211
+      ],
+      "ResultCounts": [
+        1.0
+      ],
+      "TimeSpend": 360.0,
+      "Proliferator": 0,
+      "IconName": "darkfog-lens"
+    },
+    {
       "ID": 352,
       "Type": 4,
       "Factories": [
@@ -7365,6 +7414,30 @@
       "TimeSpend": 6.0,
       "Proliferator": 0,
       "IconName": "Rpump"
+    },
+    {
+      "ID": 382,
+      "Type": 1,
+      "Factories": [
+        2302,
+        6501
+      ],
+      "Name": "星河卫士奖章Recipe",
+      "Items": [
+        1104
+      ],
+      "ItemCounts": [
+        2.0
+      ],
+      "Results": [
+        9513
+      ],
+      "ResultCounts": [
+        1.0
+      ],
+      "TimeSpend": 60.0,
+      "Proliferator": 0,
+      "IconName": "rank10"
     },
     {
       "ID": 401,
@@ -8389,20 +8462,14 @@
         1.0
       ],
       "Results": [
-        6520,
-        6205,
-        6521,
-        6522
+        7712
       ],
       "ResultCounts": [
-        12.0,
-        1.0,
-        1.0,
         1.0
       ],
-      "TimeSpend": 360.0,
+      "TimeSpend": 900.0,
       "Proliferator": 0,
-      "IconName": "R气云超精炼"
+      "IconName": ""
     },
     {
       "ID": 512,
@@ -10584,7 +10651,7 @@
       "ResultCounts": [
         3.0
       ],
-      "TimeSpend": 360.0,
+      "TimeSpend": 60.0,
       "Proliferator": 0,
       "IconName": ""
     },
@@ -10898,7 +10965,7 @@
       ],
       "TimeSpend": 5760.0,
       "Proliferator": 0,
-      "IconName": "R速生林扩张"
+      "IconName": ""
     },
     {
       "ID": 777,
@@ -11197,7 +11264,7 @@
       "ResultCounts": [
         1.0
       ],
-      "TimeSpend": 120.0,
+      "TimeSpend": 1200.0,
       "Proliferator": 0,
       "IconName": ""
     },
@@ -11252,7 +11319,7 @@
       ],
       "TimeSpend": 60.0,
       "Proliferator": 0,
-      "IconName": "R黄铁炼铁"
+      "IconName": "iron-plate"
     },
     {
       "ID": 793,
@@ -12352,13 +12419,11 @@
       "Name": "预加工伺服器",
       "Items": [
         7501,
-        1303,
         1203,
         1101
       ],
       "ItemCounts": [
-        2.0,
-        1.0,
+        3.0,
         1.0,
         4.0
       ],
@@ -12430,7 +12495,7 @@
       ],
       "TimeSpend": 1200.0,
       "Proliferator": 0,
-      "IconName": "R水冷伺服器"
+      "IconName": "R水冷伺服器2"
     },
     {
       "ID": 837,
