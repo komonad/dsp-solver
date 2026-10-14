@@ -40,6 +40,24 @@ test('Vanilla.defaults.json is internally valid', async () => {
   expect(defaultConfig.recommendedRawItemTypeIds).toEqual([1]);
 });
 
+test.each(['Vanilla', 'VanillaMkIV'])('%s includes current vanilla recipes and icons', async name => {
+  const resolved = await loadResolvedCatalogFromFiles(`./data/${name}.json`, `./data/${name}.defaults.json`);
+  expect(resolved.itemMap.get('2401')).toMatchObject({ name: '全息信标', icon: 'lighthouse' });
+  expect(resolved.recipeMap.get('161')).toMatchObject({
+    cycleTimeSec: 4,
+    allowedBuildingIds: ['2303', '2304', '2305', '2318'],
+    outputs: [{ itemId: '2401', amount: 1 }],
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+  });
+  expect(resolved.recipeMap.get('162')).toMatchObject({
+    cycleTimeSec: 6,
+    allowedBuildingIds: ['2303', '2304', '2305', '2318'],
+    inputs: [{ itemId: '1209', amount: 1 }, { itemId: '5201', amount: 12 }],
+    outputs: [{ itemId: '1211', amount: 1 }],
+    supportsProliferatorModes: ['none', 'speed', 'productivity'],
+  });
+});
+
 test('proliferator level config does not require ItemID for calculation-only usage', () => {
   const validation = validateCatalogDefaultConfigSpec({
     proliferatorLevels: [
@@ -63,8 +81,8 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
   const resolved = resolveCatalogModel(dataset, defaultConfig);
 
   expect(resolved.version).toBe('vanilla-compatible@1');
-  expect(resolved.items).toHaveLength(175);
-  expect(resolved.recipes).toHaveLength(245);
+  expect(resolved.items).toHaveLength(178);
+  expect(resolved.recipes).toHaveLength(247);
   expect(resolved.buildings).toHaveLength(30);
   expect(resolved.powerItemId).toBe('-9001');
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3]);
@@ -89,7 +107,7 @@ test('resolveCatalogModel compiles Vanilla.json into the internal catalog model'
     powerMultiplier: 2.5,
   });
   expect(resolved.recommendedDisabledBuildingIds).toEqual(['1']);
-  expect(resolved.rawItemIds).toHaveLength(16);
+  expect(resolved.rawItemIds).toHaveLength(17);
   expect(resolved.syntheticRecipeIds).toHaveLength(78);
 
   const assembler4 = resolved.buildingMap.get('2318');
@@ -191,8 +209,8 @@ test('VanillaMkIV profile adds a fourth proliferator level and recipe', async ()
 
   const resolved = resolveCatalogModel(dataset, defaultConfig);
 
-  expect(resolved.items).toHaveLength(176);
-  expect(resolved.recipes).toHaveLength(246);
+  expect(resolved.items).toHaveLength(179);
+  expect(resolved.recipes).toHaveLength(248);
   expect(resolved.proliferatorLevels.map(level => level.level)).toEqual([0, 1, 2, 3, 4]);
   expect(resolved.proliferatorLevelMap.get(4)).toMatchObject({
     itemId: '9441',

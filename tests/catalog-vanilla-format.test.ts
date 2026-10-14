@@ -16,9 +16,9 @@ test('Vanilla.json matches inferred vanilla-compatible dataset spec', () => {
   const summary = summarizeVanillaDatasetSpec(raw as VanillaDatasetSpec);
 
   expect(summary.topLevelKeys).toEqual(['items', 'recipes']);
-  expect(summary.itemCount).toBe(174);
-  expect(summary.recipeCount).toBe(238);
-  expect(summary.itemTypes).toEqual([-1, 1, 2, 3, 4, 5, 6, 8, 9, 10, 11]);
+  expect(summary.itemCount).toBe(177);
+  expect(summary.recipeCount).toBe(240);
+  expect(summary.itemTypes).toEqual([-1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   expect(summary.recipeTypes).toEqual([-1, 1, 2, 3, 4, 5, 8, 15]);
   expect(summary.proliferatorCodes).toEqual([0, 1, 3, 4]);
   expect(summary.factoryIds).toEqual([
@@ -50,27 +50,27 @@ test('Vanilla.json matches inferred vanilla-compatible dataset spec', () => {
     'Type',
   ]);
   expect(summary.itemKeyCounts).toMatchObject({
-    GridIndex: 174,
-    ID: 174,
-    IconName: 174,
+    GridIndex: 177,
+    ID: 177,
+    IconName: 177,
     MultipleOutput: 2,
-    Name: 174,
+    Name: 177,
     Space: 25,
     Speed: 25,
-    Type: 174,
-    WorkEnergyPerTick: 25,
+    Type: 177,
+    WorkEnergyPerTick: 26,
   });
   expect(summary.recipeKeyCounts).toMatchObject({
-    Factories: 238,
-    ID: 238,
-    IconName: 238,
-    ItemCounts: 238,
-    Items: 238,
-    Name: 238,
-    Proliferator: 238,
-    ResultCounts: 238,
-    Results: 238,
-    TimeSpend: 238,
-    Type: 238,
+    Factories: 240,
+    ID: 240,
+    IconName: 240,
+    ItemCounts: 240,
+    Items: 240,
+    Name: 240,
+    Proliferator: 240,
+    ResultCounts: 240,
+    Results: 240,
+    TimeSpend: 240,
+    Type: 240,
   });
 });

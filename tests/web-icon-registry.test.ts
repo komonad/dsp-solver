@@ -6,6 +6,11 @@ import {
   getIconSprite,
 } from '../src/web/shared/iconRegistry';
 
+test.each(['darkfog-lens', 'lighthouse'])('vanilla atlas includes %s', icon => {
+  expect(getResolvedIconSprite(icon, ['Vanilla'])?.atlasId).toBe('Vanilla');
+  expect(getIconSprite(icon)).toMatchObject({ y: 1120, width: 80, height: 80 });
+});
+
 test('vanilla icon atlas resolves known icon keys', () => {
   expect(getIconSprite('iron-plate')).toEqual({
     x: expect.any(Number),
@@ -13,7 +18,7 @@ test('vanilla icon atlas resolves known icon keys', () => {
     width: 80,
     height: 80,
     total_width: 1120,
-    total_height: 1120,
+    total_height: 1200,
   });
   expect(getIconAtlasSrc('iron-plate')).toBe('./icons/Vanilla.png');
 });
