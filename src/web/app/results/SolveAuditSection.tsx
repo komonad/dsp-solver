@@ -54,6 +54,7 @@ function formatAttemptContext(
   attempt: SolveAudit['attempts'][number],
   index: number
 ): string {
+  if (attempt.phase === 'recipe_count_milp') return '产线种类优化 · MILP';
   if (attempt.phase === 'reweighted_lp') {
     return bundle.diagnostics.audit.reweightedAttemptTitle(index + 1);
   }

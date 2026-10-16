@@ -28,7 +28,9 @@ export async function solveCatalogRequestWithWorker(
     context.onProgress?.({
       stage: context.attempt === 'relaxed' ? 'solving_relaxed' : 'solving_primary',
     });
-    return solveCatalogRequestAsync(catalog, request);
+    return solveCatalogRequestAsync(catalog, request, {
+      onIntermediateResult: result => context.onProgress?.({ stage: 'optimizing_recipe_count', activeRequest: request, result }),
+    });
   }
 
   return getSolveWorkerClient().solve(catalog, request, context);

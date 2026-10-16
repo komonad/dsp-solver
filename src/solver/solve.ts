@@ -7,10 +7,13 @@ import type {
   SolveAudit,
   SolveAuditAttempt,
   SolveResult,
+  RecipeCountOptimization,
 } from './result';
 import type { Model, Options as SolverOptions, Solution, SolverImplementation } from './implementation';
 import { yalpsSolverImplementation } from './yalpsImplementation';
 import { recordSolverPerf } from './perf';
+import { getInputUnitCost, normalizeObjectiveRequest, buildWeightedObjectiveCost } from './objectiveCosts';
+import { optimizeRecipeCount } from './recipeCountOptimization';
 import {
   EPSILON,
   type CompiledOptionContext,
@@ -30,6 +33,8 @@ import {
 import {
   OBJECTIVE_EPSILON,
   buildObjectiveCoefficient,
+  buildPrimaryObjectiveOptionCoefficient,
+  buildPrimaryObjectiveExternalInputCoefficient,
   buildExternalInputObjectiveCoefficient,
   computePrimaryObjectiveUpperBound,
   addPrimaryObjectiveUpperBoundConstraint,
@@ -236,7 +241,7 @@ function buildSurplusTypeMilpModel(params: {
   for (const itemId of externalItemIds) {
     variables[`ext:${itemId}`] = {
       [itemId]: 1,
-      __objective__: buildExternalInputObjectiveCoefficient(request),
+      __objective__: buildExternalInputObjectiveCoefficient(request, itemId),
     };
   }
 
@@ -395,9 +400,7 @@ function buildPrimaryObjectiveValue(
     }
 
     if (variableName.startsWith('ext:')) {
-      if (request.objective === 'min_external_input') {
-        total += value;
-      }
+      total += buildPrimaryObjectiveExternalInputCoefficient(request, variableName.slice(4)) * value;
       continue;
     }
 
@@ -406,11 +409,7 @@ function buildPrimaryObjectiveValue(
       continue;
     }
 
-    if (request.objective === 'min_buildings') {
-      total += option.buildingCostPerRunPerMin * value;
-    } else if (request.objective === 'min_power') {
-      total += option.powerCostMWPerRunPerMin * value;
-    }
+    total += buildPrimaryObjectiveOptionCoefficient(request, option) * value;
   }
 
   return total;
@@ -888,7 +887,8 @@ function collectFixedSurplusMilpOptions(params: {
 function solveCatalogRequestValidated(
   catalog: ResolvedCatalogModel,
   request: SolveRequest,
-  implementation: SolverImplementation
+  implementation: SolverImplementation,
+  onIntermediateResult?: (result: SolveResult) => void
 ): SolveResult {
   const solveStartedAt = currentTimeMs();
   const targetRateMap = aggregateTargetRates(request);
@@ -930,6 +930,8 @@ function solveCatalogRequestValidated(
   let modelDurationMs = 0;
   let lpDurationMs = 0;
   let surplusReweightTermination: SolveAudit['surplusReweightTermination'];
+  let recipeCountOptimization: RecipeCountOptimization | undefined;
+  const useRecipePenalty = request.objective === 'min_weighted' && ((request.recipeWeight ?? 0) > 0 || (request.recipeCountPenalty?.weight ?? 0) > 0);
   const buildSolveAudit = (resultDurationMs: number, totalDurationMs: number): SolveAudit => ({
     prunedItemCount: compiledGraph.itemIds.length,
     prunedRecipeCount: compiledGraph.recipes.length,
@@ -1139,9 +1141,10 @@ function solveCatalogRequestValidated(
       })
     );
 
-    if (request.balancePolicy === 'allow_surplus' && solution.status === 'optimal') {
+    if (request.balancePolicy === 'allow_surplus' && solution.status === 'optimal' && !useRecipePenalty) {
       const primaryObjectiveUpperBound = computePrimaryObjectiveUpperBound(
-        buildPrimaryObjectiveValue(request, activeOptions, solution.variables)
+        buildPrimaryObjectiveValue(request, activeOptions, solution.variables),
+        request.objective === 'min_weighted' || request.inputWeights !== undefined
       );
       let bestCandidate = buildLinearSolveCandidate({
         request,
@@ -1481,6 +1484,30 @@ function solveCatalogRequestValidated(
       solution = bestCandidate.solution;
     }
   }
+  if (useRecipePenalty && solution.status === 'optimal') {
+    const refined = optimizeRecipeCount(request, model, solution, activeOptions, implementation, onIntermediateResult ? (candidate, summary) => {
+      const partial = buildResultFromSolution({ request, targetRateMap, compiledOptions: activeOptions,
+        solutionVariables: new Map(candidate.variables), resolvedRawInputItemIds: Array.from(resolvedRawInputItemIds) });
+      onIntermediateResult({ ...partial, status: 'feasible', recipeCountOptimization: summary,
+        objectiveCost: buildWeightedObjectiveCost(request, partial, activeOptions, candidate.variables),
+        solveAudit: buildSolveAudit(0, currentTimeMs() - solveStartedAt) });
+    } : undefined);
+    solution = refined.solution;
+    recipeCountOptimization = refined.summary;
+    lpDurationMs += refined.summary.durationMs;
+    if (refined.model) {
+      auditAttempts.push(buildSolveAuditAttempt({
+        phase: 'recipe_count_milp', modelKind: 'milp',
+        itemCount: compiledGraph.itemIds.length, recipeCount: refined.summary.binaryCount,
+        optionCount: activeOptions.length, binaryCount: refined.summary.binaryCount,
+        constraintCount: Object.keys(refined.model.constraints).length,
+        variableCount: Object.keys(refined.model.variables).length, buildDurationMs: 0,
+        solveDurationMs: refined.summary.durationMs,
+        status: refined.summary.status === 'converged' ? 'optimal' : 'timedout',
+        ...collectSolvedUsageCounts(activeOptions, solution.variables),
+      }));
+    }
+  }
   const solveFinishedAt = currentTimeMs();
   recordSolverPerf({
     phase: 'model',
@@ -1549,6 +1576,14 @@ function solveCatalogRequestValidated(
 
   return {
     ...result,
+    ...(recipeCountOptimization ? {
+      recipeCountOptimization,
+      status: recipeCountOptimization.status === 'converged' && recipeCountOptimization.relativeGap === 0
+        ? 'optimal' as const : 'feasible' as const,
+    } : {}),
+    ...(request.objective === 'min_weighted' ? {
+      objectiveCost: buildWeightedObjectiveCost(request, result, activeOptions, solution.variables),
+    } : {}),
     diagnostics: {
       messages: diagnostics,
       infoMessages: compiledGraph.infoMessages,
@@ -1561,14 +1596,15 @@ function solveCatalogRequestValidated(
 function solveCatalogRequestValidatedCached(
   catalog: ResolvedCatalogModel,
   request: SolveRequest,
-  implementation: SolverImplementation
+  implementation: SolverImplementation,
+  onIntermediateResult?: (result: SolveResult) => void
 ): SolveResult {
   const cached = getCachedSolvedRequestResult(catalog, request, implementation);
   if (cached) {
     return cached;
   }
 
-  const result = solveCatalogRequestValidated(catalog, request, implementation);
+  const result = solveCatalogRequestValidated(catalog, request, implementation, onIntermediateResult);
   setCachedSolvedRequestResult(catalog, request, implementation, result);
   return result;
 }
@@ -1576,10 +1612,20 @@ function solveCatalogRequestValidatedCached(
 
 export interface SolveCatalogRequestOptions {
   implementation?: SolverImplementation;
+  /** Publishes a feasible baseline and improving MIP incumbents before completion. */
+  onIntermediateResult?: (result: SolveResult) => void;
 }
 
 export interface SolveCatalogRequestAsyncOptions extends SolveCatalogRequestOptions {
   implementationPromise?: Promise<SolverImplementation>;
+}
+
+let defaultAsyncImplementation: Promise<SolverImplementation> | undefined;
+
+function getDefaultAsyncImplementation(): Promise<SolverImplementation> {
+  return defaultAsyncImplementation ??= import('./highsImplementation')
+    .then(module => module.loadHighsSolverImplementation())
+    .catch(error => { defaultAsyncImplementation = undefined; throw error; });
 }
 
 export function solveCatalogRequest(
@@ -1593,7 +1639,10 @@ export function solveCatalogRequest(
     return buildInvalidInputSolveResult(validation.messages);
   }
 
-  return solveCatalogRequestValidatedCached(catalog, request, implementation);
+  const normalized = normalizeObjectiveRequest(request);
+  const effectiveValidation = validateSolveRequest(catalog, normalized);
+  if (!effectiveValidation.valid) return buildInvalidInputSolveResult(effectiveValidation.messages);
+  return solveCatalogRequestValidatedCached(catalog, normalized, implementation, options.onIntermediateResult);
 }
 
 export async function solveCatalogRequestAsync(
@@ -1601,15 +1650,17 @@ export async function solveCatalogRequestAsync(
   request: SolveRequest,
   options: SolveCatalogRequestAsyncOptions = {}
 ): Promise<SolveResult> {
-  const implementation =
-    options.implementation ??
-    (options.implementationPromise
-      ? await options.implementationPromise
-      : yalpsSolverImplementation);
   const validation = validateSolveRequest(catalog, request);
   if (!validation.valid) {
     return buildInvalidInputSolveResult(validation.messages);
   }
-
-  return solveCatalogRequestValidatedCached(catalog, request, implementation);
+  const implementation =
+    options.implementation ??
+    (options.implementationPromise
+      ? await options.implementationPromise
+      : await getDefaultAsyncImplementation());
+  const normalized = normalizeObjectiveRequest(request);
+  const effectiveValidation = validateSolveRequest(catalog, normalized);
+  if (!effectiveValidation.valid) return buildInvalidInputSolveResult(effectiveValidation.messages);
+  return solveCatalogRequestValidatedCached(catalog, normalized, implementation, options.onIntermediateResult);
 }

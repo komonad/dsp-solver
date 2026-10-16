@@ -325,50 +325,59 @@ export const snapshotEntryActionSegmentSx = {
 } as const;
 
 export const snapshotTargetFieldSx = {
-    width: 92,
-    height: 24,
-    minWidth: 0,
-    display: 'inline-flex',
-    alignItems: 'center',
-    alignSelf: 'center',
+  width: 70,
+  height: 22,
+  minWidth: 0,
+  flex: '0 0 auto',
+  display: 'inline-flex',
+  alignItems: 'center',
+  alignSelf: 'center',
   boxSizing: 'border-box',
   overflow: 'hidden',
-    borderRadius: '8px',
-    border: '1px solid rgba(24, 51, 89, 0.18)',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    '&:focus-within': {
-      borderColor: 'rgba(25, 118, 210, 0.55)',
-      backgroundColor: 'rgba(255, 255, 255, 0.96)',
+  borderRadius: '6px',
+  border: '1px solid rgba(24, 51, 89, 0.18)',
+  backgroundColor: 'rgba(255, 255, 255, 0.92)',
+  '&:focus-within': {
+    borderColor: 'rgba(25, 118, 210, 0.55)',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
   },
 } as const;
 
 export const snapshotTargetInputSx = {
-    width: 0,
-    height: '100%',
-    flex: '1 1 auto',
-    minWidth: 0,
-    display: 'block',
-    px: 0.5,
-    py: 0,
-    m: 0,
-    border: 0,
+  width: 0,
+  height: '100%',
+  flex: '1 1 auto',
+  minWidth: 0,
+  display: 'block',
+  px: 0.5,
+  py: 0,
+  m: 0,
+  border: 0,
   outline: 0,
   background: 'transparent',
-    color: '#183359',
-    fontFamily: 'inherit',
-    fontSize: 12,
-    fontWeight: 500,
-    lineHeight: '22px',
-    textAlign: 'right',
-    boxSizing: 'border-box',
-    appearance: 'textfield',
-  } as const;
+  color: '#183359',
+  fontFamily: 'inherit',
+  fontSize: 12,
+  fontWeight: 500,
+  lineHeight: '20px',
+  textAlign: 'right',
+  boxSizing: 'border-box',
+  appearance: 'textfield',
+} as const;
 
 export const snapshotTargetEntrySx = {
   ...snapshotEntryGroupSx,
   alignItems: 'center',
   gap: 0.375,
-  py: 0.25,
+  py: 0.375,
+  px: 0.625,
+  borderRadius: '8px',
+  fontSize: 12,
+  lineHeight: 1.3,
+} as const;
+
+export const snapshotSummarySx = {
+  fontSize: 12, lineHeight: 1.5, color: 'text.secondary', overflowWrap: 'anywhere',
 } as const;
 
 export const snapshotSectionToggleSx = {
@@ -533,4 +542,14 @@ export const viewFilterDescriptionStyle: React.CSSProperties = {
 
 export const viewRawChipStyle: React.CSSProperties = {
   ...focusChipStyle, background: 'rgba(177, 103, 24, 0.12)', color: '#795015',
+};
+export const recipeOptimizerCardSx = {
+  display: 'grid', gap: 1.25, minWidth: 0, p: 1.5, borderRadius: 2,
+  border: '1px solid rgba(60, 110, 175, 0.2)',
+  background: 'linear-gradient(135deg, rgba(235, 244, 255, 0.9), rgba(247, 250, 255, 0.8))',
+};
+
+export const recipeOptimizerMetricsSx = {
+  display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1,
+  '& > div': { minWidth: 0, p: 0.75, borderRadius: 1, backgroundColor: 'rgba(255, 255, 255, 0.7)' },
 };

@@ -210,6 +210,12 @@ node tools\dsp-runtime-exporter\scripts\validate-atlas.mjs "C:\Path\To\CurrentGa
 
 ## 输出格式
 
+### 资源抽样
+
+在导出器配置的 `[General]` 中设置 `ResourceSamplingSeeds = 70289409,42481286,44102993`，并启用自动导出，可在主菜单使用当前加载的模组生成 64 星、1 倍资源的样本。留空可关闭抽样。
+
+样本写入 `<文件名>.resources.json`，包括每个种子的固体矿物总量、非气态行星数及可再生资源 ID。原油与气体流速不计入矿石储量。生成过程不写入游戏存档，完成后恢复运行时的游戏描述；抽样数据与配方数据集分别保存。
+
 导出的 JSON 使用当前标准的原始数据集结构：
 
 - 顶层 `items` 和 `recipes`

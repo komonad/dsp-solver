@@ -3,3 +3,5 @@ export * from './result';
 export * from './implementation';
 export * from './yalpsImplementation';
 export * from './solve';
+export * from './highsImplementation';
+export * from './resourceScarcity';

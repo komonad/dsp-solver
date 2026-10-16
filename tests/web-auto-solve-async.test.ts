@@ -131,6 +131,25 @@ test('computeWorkbenchSolveAsync preserves the allow_surplus fallback behavior',
   expect(result.result?.surplusOutputs).toEqual([{ itemId: '1201', ratePerMin: 60 }]);
 });
 
+test('a feasible MILP incumbent does not trigger another relaxed solve', async () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDefaults());
+  let calls = 0;
+  const state = await computeWorkbenchSolveAsync({
+    catalog, targets: [{ itemId: '1101', ratePerMin: 60 }], objective: 'min_weighted',
+    balancePolicy: 'force_balance', proliferatorPolicy: 'none',
+    autoPromoteUnavailableItemsToRawInputs: false, rawInputItemIds: [], disabledRecipeIds: [],
+    disabledBuildingIds: [], allowedRecipesByItem: {}, recipePreferences: [],
+    recipeStrategyOverrides: [], preferredBuildings: [], advancedOverridesText: '',
+  }, async (catalog, request) => {
+    calls += 1;
+    return { ...solveCatalogRequest(catalog, request), status: 'feasible' };
+  });
+  expect(calls).toBe(1);
+  expect(state.result?.status).toBe('feasible');
+  expect(state.request?.balancePolicy).toBe('force_balance');
+  expect(restoreWorkbenchSolveState(persistWorkbenchSolveState(state)).result?.status).toBe('feasible');
+});
+
 test('computeWorkbenchSolveAsync keeps the strict infeasible result when the relaxed retry throws', async () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDefaults());
 

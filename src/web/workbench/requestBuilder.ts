@@ -299,7 +299,33 @@ export function parseAdvancedSolveOverrides(
 
   const source = parsed as Record<string, unknown>;
   const errors: string[] = [];
+  let objectiveWeights: SolveRequest['objectiveWeights'];
+  if (source.objectiveWeights !== undefined) {
+    const w = source.objectiveWeights;
+    if (!isRecord(w) || !['resources', 'footprint', 'power', 'recipes'].every(key => typeof w[key] === 'number' && Number.isFinite(w[key]) && w[key] >= 0)) {
+      errors.push('目标函数权重须为非负有限数值。');
+    } else objectiveWeights = w as unknown as SolveRequest['objectiveWeights'];
+  }
+  let milpTimeLimitMs: number | null | undefined;
+  if (source.milpTimeLimitMs === null) milpTimeLimitMs = null;
+  else milpTimeLimitMs = readOptionalNumber(source, 'milpTimeLimitMs', errors, locale);
+  let recipeCountPenalty: SolveRequest['recipeCountPenalty'];
+  if (source.recipeCountPenalty !== undefined) {
+    const config = source.recipeCountPenalty;
+    if (!isRecord(config) || typeof config.weight !== 'number' || !Number.isFinite(config.weight) || config.weight < 0 ||
+        (config.timeLimitMs !== undefined && (typeof config.timeLimitMs !== 'number' || !Number.isFinite(config.timeLimitMs) || config.timeLimitMs < 100 || config.timeLimitMs > 10000))) {
+      errors.push('产线惩罚权重须为非负数，MILP 时间上限须为 100–10000 毫秒。');
+    } else recipeCountPenalty = { weight: config.weight, timeLimitMs: config.timeLimitMs as number | undefined };
+  }
   const value: AdvancedSolveOverrides = {
+    objectiveWeights, milpTimeLimitMs,
+    powerWeight: readOptionalNumber(source, 'powerWeight', errors, locale),
+    recipeWeight: readOptionalNumber(source, 'recipeWeight', errors, locale),
+    milpRelativeGap: readOptionalNumber(source, 'milpRelativeGap', errors, locale),
+    recipeCountPenalty,
+    resourceWeight: readOptionalNumber(source, 'resourceWeight', errors, locale),
+    inputWeights: readOptionalNumberRecord(source, 'inputWeights', errors, locale),
+    footprintWeight: readOptionalNumber(source, 'footprintWeight', errors, locale),
     disabledRecipeIds: readOptionalStringArray(source, 'disabledRecipeIds', errors, locale),
     disabledBuildingIds: readOptionalStringArray(source, 'disabledBuildingIds', errors, locale),
     allowedRecipesByItem: readOptionalStringArrayRecord(source, 'allowedRecipesByItem', errors, locale),
@@ -522,6 +548,18 @@ export function mergeAdvancedSolveOverrides(
   override: AdvancedSolveOverrides = {}
 ): AdvancedSolveOverrides {
   const merged: AdvancedSolveOverrides = {};
+  for (const key of ['objectiveWeights', 'milpTimeLimitMs', 'powerWeight', 'recipeWeight', 'milpRelativeGap'] as const) {
+    const value = override[key] !== undefined ? override[key] : base[key];
+    if (value !== undefined) Object.assign(merged, { [key]: value });
+  }
+  const recipeCountPenalty = override.recipeCountPenalty ?? base.recipeCountPenalty;
+  if (recipeCountPenalty) merged.recipeCountPenalty = recipeCountPenalty;
+  const resourceWeight = override.resourceWeight ?? base.resourceWeight;
+  if (resourceWeight !== undefined) merged.resourceWeight = resourceWeight;
+  const inputWeights = mergeRecord(base.inputWeights, override.inputWeights);
+  if (inputWeights) merged.inputWeights = inputWeights;
+  const footprintWeight = override.footprintWeight ?? base.footprintWeight;
+  if (footprintWeight !== undefined) merged.footprintWeight = footprintWeight;
 
   const disabledRecipeIds = mergeUniqueStringArrays(
     base.disabledRecipeIds,

@@ -20,6 +20,7 @@ type PendingRequest =
 
 export class SolveWorkerClient {
   private activeSolve = false;
+  private solveSequence = 0;
   private currentCatalog: ResolvedCatalogModel | null = null;
   private currentCatalogVersion: string | null = null;
   private nextCatalogVersion = 1;
@@ -35,6 +36,7 @@ export class SolveWorkerClient {
     request: SolveRequest,
     context: AsyncWorkbenchSolveContext
   ): Promise<SolveResult> {
+    const sequence = ++this.solveSequence;
     if (this.activeSolve) {
       this.resetWorker('Solve superseded by a newer request.');
     }
@@ -42,18 +44,18 @@ export class SolveWorkerClient {
     this.activeSolve = true;
     try {
       const catalogVersion = await this.ensureCatalog(catalog, context);
+      if (sequence !== this.solveSequence) {
+        throw new Error('Solve cancelled or superseded before dispatch.');
+      }
       return await this.sendSolveRequest(catalogVersion, request, context);
     } finally {
-      this.activeSolve = false;
+      if (sequence === this.solveSequence) this.activeSolve = false;
     }
   }
 
   cancelActiveSolve(reason = 'Solve cancelled by user.'): void {
-    if (!this.activeSolve) {
-      return;
-    }
-
     this.activeSolve = false;
+    this.solveSequence += 1;
     this.resetWorker(reason);
   }
 
@@ -100,6 +102,10 @@ export class SolveWorkerClient {
           stage: message.stage,
         });
       }
+      return;
+    }
+    if (message.type === 'incumbent') {
+      if (pending.type === 'solve') pending.onProgress?.({ stage: 'optimizing_recipe_count', result: message.result });
       return;
     }
 

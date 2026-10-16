@@ -2,6 +2,7 @@ import type { ResolvedCatalogModel } from '../../catalog';
 import { DEFAULT_APP_LOCALE, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective, SolveRequest, SolveResult } from '../../solver';
 import { solveCatalogRequest, solveCatalogRequestAsync } from '../../solver/solve';
+import { isSuccessfulSolveStatus } from '../../solver/result';
 import {
   buildForcedRecipeStrategyOverrides,
   buildGlobalProliferatorOverrides,
@@ -97,7 +98,8 @@ export type WorkbenchSolveStage =
   | 'syncing_catalog'
   | 'loading_solver'
   | 'solving_primary'
-  | 'solving_relaxed';
+  | 'solving_relaxed'
+  | 'optimizing_recipe_count';
 
 export interface WorkbenchSolveActivity {
   status: 'idle' | 'running' | 'settled' | 'cancelled';
@@ -108,6 +110,7 @@ export interface WorkbenchSolveActivity {
 }
 
 export interface WorkbenchSolveProgressUpdate {
+  result?: SolveResult;
   stage: WorkbenchSolveStage;
   activeRequest?: SolveRequest;
 }
@@ -179,7 +182,7 @@ export function buildRunningWorkbenchSolveState(
     activity: {
       status: 'running',
       startedAtEpochMs,
-      staleResult: Boolean(previousState.result),
+      staleResult: previousState.activity.status === 'running' ? previousState.activity.staleResult : Boolean(previousState.result),
       stage:
         options.stage ??
         (previousState.activity.status === 'running'
@@ -200,10 +203,17 @@ export function buildCancelledWorkbenchSolveState(
       status: 'cancelled',
       startedAtEpochMs: previousState.activity.startedAtEpochMs,
       finishedAtEpochMs: currentEpochMs(),
-      staleResult: Boolean(previousState.result),
+      staleResult: previousState.activity.staleResult,
       stage: previousState.activity.stage,
     },
   };
+}
+
+/** Publish a current feasible result without ending the active background search. */
+export function applyWorkbenchSolveProgress(state: WorkbenchSolveState, progress: WorkbenchSolveProgressUpdate): WorkbenchSolveState {
+  const running = buildRunningWorkbenchSolveState(state, progress);
+  return progress.result ? { ...running, request: progress.activeRequest ?? running.activeRequest,
+    result: progress.result, error: '', fallback: undefined, activity: { ...running.activity, staleResult: false } } : running;
 }
 
 function normalizePersistedWorkbenchSolveActivityStatus(
@@ -227,9 +237,12 @@ export function persistWorkbenchSolveState(
   } = {}
 ): PersistedWorkbenchSolveState {
   const activityStatus = normalizePersistedWorkbenchSolveActivityStatus(state);
+  const optimization = state.result?.recipeCountOptimization;
+  const result = state.result && optimization?.status === 'optimizing'
+    ? { ...state.result, recipeCountOptimization: { ...optimization, status: 'paused' as const } } : state.result;
   return {
     request: state.request,
-    result: state.result,
+    result,
     error: state.error,
     fallback: state.fallback,
     activityStatus,
@@ -297,6 +310,7 @@ export function buildWorkbenchSolveInputKey(
   params: WorkbenchSolveInputKeyParams
 ): string {
   return JSON.stringify({
+    solverRevision: 'highs-throughput-objectives-v4',
     catalogSignature: params.catalogSignature,
     targets: params.targets,
     objective: params.objective,
@@ -565,14 +579,14 @@ function runWorkbenchSolve(
   let effectiveRequest = request;
   let effectiveResult = strictResult;
 
-  if (strictResult.status !== 'optimal') {
+  if (!isSuccessfulSolveStatus(strictResult.status)) {
     const relaxedRequest: SolveRequest = {
       ...request,
       balancePolicy: 'allow_surplus',
     };
     try {
       const relaxedResult = solveCatalogRequest(catalog, relaxedRequest);
-      if (relaxedResult.status === 'optimal') {
+      if (isSuccessfulSolveStatus(relaxedResult.status)) {
         effectiveRequest = relaxedRequest;
         effectiveResult = relaxedResult;
       }
@@ -606,12 +620,12 @@ async function runWorkbenchSolveAsync(
 ): Promise<WorkbenchSolveState> {
   const strictResult = await executeSolve(catalog, request, {
     attempt: 'primary',
-    onProgress,
+    onProgress: progress => onProgress?.({ ...progress, activeRequest: request }),
   });
   let effectiveRequest = request;
   let effectiveResult = strictResult;
 
-  if (strictResult.status !== 'optimal') {
+  if (!isSuccessfulSolveStatus(strictResult.status)) {
     const relaxedRequest: SolveRequest = {
       ...request,
       balancePolicy: 'allow_surplus',
@@ -619,9 +633,9 @@ async function runWorkbenchSolveAsync(
     try {
       const relaxedResult = await executeSolve(catalog, relaxedRequest, {
         attempt: 'relaxed',
-        onProgress,
+        onProgress: progress => onProgress?.({ ...progress, activeRequest: relaxedRequest }),
       });
-      if (relaxedResult.status === 'optimal') {
+      if (isSuccessfulSolveStatus(relaxedResult.status)) {
         effectiveRequest = relaxedRequest;
         effectiveResult = relaxedResult;
       }
@@ -694,8 +708,9 @@ export function computeWorkbenchSolve(
 
 export async function computeWorkbenchSolveAsync(
   params: ComputeWorkbenchSolveParams,
-  executeSolve: AsyncWorkbenchSolveExecutor = (catalog, request) =>
-    solveCatalogRequestAsync(catalog, request),
+  executeSolve: AsyncWorkbenchSolveExecutor = (catalog, request, context) =>
+    solveCatalogRequestAsync(catalog, request, { onIntermediateResult: result =>
+      context.onProgress?.({ stage: 'optimizing_recipe_count', activeRequest: request, result }) }),
   onProgress?: (progress: WorkbenchSolveProgressUpdate) => void
 ): Promise<WorkbenchSolveState> {
   const prepared = prepareWorkbenchSolve(params);

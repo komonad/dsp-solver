@@ -19,6 +19,8 @@ function resolveStageCopy(
   stage: WorkbenchSolveStage | undefined
 ): Pick<SolveActivityViewModel, 'stageLabel' | 'stageDescription'> {
   switch (stage) {
+    case 'optimizing_recipe_count':
+      return { stageLabel: '产线种类优化 · MILP', stageDescription: '先显示可行方案，后台继续搜索，达到目标差距后结束；可随时停止并保留方案。' };
     case 'syncing_catalog':
       return {
         stageLabel: bundle.solveActivity.syncingCatalogLabel,
@@ -81,26 +83,27 @@ export function buildSolveActivityViewModel(params: {
   const staleResult = solveState.activity.staleResult;
   const stageCopy = resolveStageCopy(bundle, solveState.activity.stage);
   const cancelled = solveState.activity.status === 'cancelled';
+  const hasCurrentSolution = Boolean(solveState.result) && !staleResult;
 
   return {
     title: cancelled
       ? staleResult
         ? bundle.solveActivity.cancelledRefreshingTitle
         : bundle.solveActivity.cancelledInitialTitle
-      : staleResult
+      : hasCurrentSolution ? '当前方案可用 · 后台优化中' : staleResult
         ? bundle.solveActivity.refreshingTitle
         : bundle.solveActivity.initialSolveTitle,
     description: cancelled
       ? staleResult
         ? bundle.solveActivity.cancelledRefreshingDescription
         : bundle.solveActivity.cancelledInitialDescription
-      : staleResult
+      : hasCurrentSolution ? '当前方案满足约束；后台持续搜索改进方案，可随时停止并保留结果。' : staleResult
         ? bundle.solveActivity.refreshingDescription
         : bundle.solveActivity.initialSolveDescription,
     elapsedLabel: bundle.solveActivity.elapsedLabel(
       formatElapsedDuration(elapsedMs, locale)
     ),
-    engineLabel: bundle.solveActivity.engineLabel,
+    engineLabel: solveState.activity.stage === 'optimizing_recipe_count' ? 'HiGHS · 后台 MILP' : bundle.solveActivity.engineLabel,
     chipLabel: cancelled
       ? bundle.solveActivity.cancelledChipLabel
       : bundle.solveActivity.runningChipLabel,
@@ -108,7 +111,7 @@ export function buildSolveActivityViewModel(params: {
     stageDescription: cancelled
       ? bundle.solveActivity.cancelledStageDescription(stageCopy.stageLabel)
       : stageCopy.stageDescription,
-    resultBadgeLabel: staleResult
+    resultBadgeLabel: hasCurrentSolution ? '当前最佳可行方案' : staleResult
       ? bundle.solveActivity.staleResultBadge
       : bundle.solveActivity.pendingResultBadge,
     staleResult,

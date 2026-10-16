@@ -20,6 +20,8 @@ interface CollapsibleSnapshotSectionProps {
   onExpandedChange?: (expanded: boolean) => void;
   count?: number;
   description?: React.ReactNode;
+  collapsedContent?: React.ReactNode;
+  headerAction?: React.ReactNode;
   /** Callback for the [+] add button. If omitted, the button is not rendered. */
   onAdd?: () => void;
   addLabel?: string;
@@ -36,6 +38,8 @@ export default function CollapsibleSnapshotSection({
   onExpandedChange,
   count = 0,
   description,
+  collapsedContent,
+  headerAction,
   onAdd,
   addLabel,
   addDisabled,
@@ -90,6 +94,7 @@ export default function CollapsibleSnapshotSection({
           type="button"
           onClick={handleToggle}
           aria-expanded={resolvedExpanded}
+          aria-label={title}
           sx={{
             display: 'flex',
             alignItems: 'center',
@@ -121,6 +126,7 @@ export default function CollapsibleSnapshotSection({
             }}
           />
         </Box>
+        {headerAction}
         {onAdd ? (
           <IconButton
             size="small"
@@ -145,7 +151,8 @@ export default function CollapsibleSnapshotSection({
           </IconButton>
         ) : null}
       </Box>
-      {resolvedExpanded ? <Box sx={snapshotSectionBodySx}>{children}</Box> : null}
+      {resolvedExpanded ? <Box sx={snapshotSectionBodySx}>{children}</Box>
+        : collapsedContent ? <Box sx={snapshotSectionBodySx}>{collapsedContent}</Box> : null}
     </Box>
   );
 }

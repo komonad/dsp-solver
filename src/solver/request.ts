@@ -19,11 +19,13 @@ export interface BuildingParameterOverride {
  *   recipe types, and building types, then break ties by power
  * - `min_power`: minimize working power
  * - `min_external_input`: minimize external/raw input usage
+ * - `min_weighted`: minimize weighted external inputs plus continuous placement area
  */
 export type SolveObjective =
   | 'min_buildings'
   | 'min_complexity'
   | 'min_power'
+  | 'min_weighted'
   | 'min_external_input';
 
 /**
@@ -47,20 +49,73 @@ export interface SolveTarget {
   ratePerMin: number;
 }
 
+/** Independent cost coefficients evaluated at the reference throughput. */
+export interface ObjectiveWeights {
+  /** Multiplies item-specific input costs at the reference throughput. */
+  resources: number;
+  /** Multiplies continuous placement area at the reference throughput, including stacks. */
+  footprint: number;
+  /** Multiplies working MW at the reference throughput. */
+  power: number;
+  /** Cost per distinct recipe, independent of target throughput and other coefficients. */
+  recipes: number;
+}
+
 /**
  * Complete solver input for one planning request.
  *
  * All IDs use normalized string IDs from the resolved catalog.
  * Unless otherwise noted, `forced*` fields are hard constraints.
- *
  * `allowedRecipesByItem` is a hard per-item recipe whitelist. Other
  * `preferred*` fields are soft preferences used for tie-breaking.
  */
 export interface SolveRequest {
+  /**
+   * Explicit coefficients override the objective preset. All are finite and
+   * non-negative; at least one continuous cost is positive to bound recipe flows.
+   * With s = sum(target rates) / 60, the objective is
+   * (resources * weighted inputs + footprint * area + power * MW) / s
+   * + recipes * distinct recipe count. Zero total throughput uses s = 1.
+   * Uniformly scaling all positive targets preserves the cost/count tradeoff;
+   * multiple outputs retain their requested proportions. Physical result rates,
+   * areas and MW reflect the full requested throughput.
+   */
+  objectiveWeights?: ObjectiveWeights;
+  /** Null permits background search until convergence or cancellation. */
+  milpTimeLimitMs?: number | null;
+  /** Relative gap target, default 0.01. Zero requests proof of exact optimality. */
+  milpRelativeGap?: number;
+  /** Absolute cost per distinct recipe in min_weighted, default zero. */
+  recipeWeight?: number;
+  /** Cost per MW of working power in min_weighted, default zero. */
+  powerWeight?: number;
+  /**
+   * Optional recipe-type penalty for min_weighted. The objective is
+   * cost / baselineCost + weight * distinctRecipeCount. Building and
+   * proliferator variants of one recipe share one indicator. A zero weight
+   * disables refinement. timeLimitMs covers model bounding and MILP search,
+   * must be between 100 and 10000, and defaults to 3000.
+   */
+  recipeCountPenalty?: { weight: number; timeLimitMs?: number };
   /** One or more requested output targets. */
   targets: SolveTarget[];
-  /** Primary optimization objective. */
+  /** Objective preset used when objectiveWeights is absent. */
   objective: SolveObjective;
+  /**
+   * Cost per externally supplied item/min, keyed by item ID. Missing entries
+   * cost 1; zero marks an input as free. Costs must be finite and non-negative.
+   * Applies to min_external_input and min_weighted, including spray consumables.
+   */
+  inputWeights?: Record<string, number>;
+  /** Multiplier for weighted input costs in min_weighted (default 1). */
+  resourceWeight?: number;
+  /**
+   * Cost per unit of continuous placement area for min_weighted (default 1).
+   * Continuous cost also includes weighted external inputs and working power.
+   * Zero minimizes weighted inputs alone. Area includes configured stack layers;
+   * it excludes belts, sorters, clearance and rounding to whole buildings.
+   */
+  footprintWeight?: number;
   /** Material-balance policy applied to non-target items. */
   balancePolicy: BalancePolicy;
   /**

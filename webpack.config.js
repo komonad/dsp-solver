@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
@@ -29,6 +30,7 @@ module.exports = {
       crypto: false,
       fs: false,
       path: false,
+      module: false,
     },
   },
   output: {
@@ -38,11 +40,13 @@ module.exports = {
     clean: true,
   },
   plugins: [
+    new webpack.NormalModuleReplacementPlugin(/^node:module$/, 'module'),
     new HtmlWebpackPlugin({
       template: './src/web/index.html',
     }),
     new CopyWebpackPlugin({
       patterns: [
+        { from: path.join(path.dirname(require.resolve('highs')), 'highs.wasm'), to: 'highs.wasm' },
         {
           from: 'data',
           to: '.',

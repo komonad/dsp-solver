@@ -56,7 +56,7 @@ export default function SolveSnapshotSummaryChips({
         'status',
         `${bundle.summary.statusLabel}: ${formatSolveStatus(status, locale)}`,
         metricDescriptions,
-        status === 'optimal' ? 'success' : 'default'
+        status === 'optimal' ? 'success' : status === 'feasible' ? 'warning' : 'default'
       )}
       {activityLabel
         ? renderMetricChip(

@@ -7,6 +7,7 @@ const DEFAULT_HOST = process.env.HOST || '0.0.0.0';
 const DEFAULT_PORT = Number(process.env.PORT || '8081');
 
 const MIME_TYPES = {
+  '.wasm': 'application/wasm',
   '.css': 'text/css; charset=utf-8',
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',

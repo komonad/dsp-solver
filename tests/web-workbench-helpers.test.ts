@@ -5,6 +5,7 @@ import {
 } from '../src/catalog';
 import {
   buildDefaultWorkbenchEditorState,
+  buildObjectiveEditorViewModel,
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipePlanCardDisplayModel,
   buildRecipeItemOptions,
@@ -19,6 +20,14 @@ import {
   formatRecipePlanBuildingCount,
   shouldOmitItemAmount,
 } from '../src/web/app/workbenchHelpers';
+
+test('objective summaries retain all independent coefficients and their throughput basis', () => {
+  const view = buildObjectiveEditorViewModel({ resources: 1, footprint: 0.5, power: 0, recipes: 100 }, 1000 / 60);
+  expect(view.summary).toBe('原料 1 · 占地 0.5 · 功耗 0 · 复杂度 100');
+  expect(view.description).toContain('60/分钟');
+  expect(view.description).toContain('16.6667');
+  expect(view.description).toContain('100 × 配方种类数');
+});
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;

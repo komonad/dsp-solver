@@ -678,6 +678,7 @@ function DefaultsEditor(props: {
           <option value="min_buildings">min_buildings</option>
           <option value="min_power">min_power</option>
           <option value="min_external_input">min_external_input</option>
+          <option value="min_weighted">min_weighted</option>
         </select>
       </DetailField>
       <DetailField label="recommendedSolve.balancePolicy">

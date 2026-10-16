@@ -1,5 +1,4 @@
 import React, {
-  startTransition,
   createContext,
   useCallback,
   useContext,
@@ -34,6 +33,7 @@ import {
   buildRunningWorkbenchSolveState,
   computeWorkbenchSolve,
   computeWorkbenchSolveAsync,
+  applyWorkbenchSolveProgress,
   persistWorkbenchSolveState,
   restoreWorkbenchSolveState,
   type WorkbenchSolveState,
@@ -120,6 +120,7 @@ import { buildWorkbenchSnapshotSolveRequest } from './workbenchSnapshotRequest';
 // ---------------------------------------------------------------------------
 
 export interface WorkbenchContextValue {
+  isHydratingConfig: boolean;
   // Dataset source state
   presetId: DatasetPresetId;
   setPresetId: React.Dispatch<React.SetStateAction<DatasetPresetId>>;
@@ -827,7 +828,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   const [restoredSolveInputKey, setRestoredSolveInputKey] = useState<string | null>(null);
   const restoredSolveInputKeyAwaitingMatchRef = useRef(false);
   const activeSolveInputKeyRef = useRef<string | null>(null);
-  const activeSolveCancellerRef = useRef<(() => void) | null>(null);
   const catalogSolveSignature = useMemo(
     () =>
       loadedSource
@@ -925,35 +925,25 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const cancelSolve = useCallback(() => {
-    if (autoSolveState.activity.status !== 'running') {
-      return;
-    }
-
     autoSolveSequenceRef.current += 1;
-    activeSolveCancellerRef.current?.();
-    activeSolveCancellerRef.current = null;
+    cancelSolveWorker();
     setBlockedSolveInputKey(activeSolveInputKeyRef.current ?? deferredSolveInputKey);
     activeSolveInputKeyRef.current = null;
-    startTransition(() => {
-      setAutoSolveState(current => buildCancelledWorkbenchSolveState(current));
-    });
-  }, [autoSolveState.activity.status, deferredSolveInputKey]);
+    setAutoSolveState(current => buildCancelledWorkbenchSolveState(current));
+  }, [deferredSolveInputKey]);
 
   useEffect(() => {
     if (!deferredSolveInputs.catalog || deferredSolveInputs.isLoading) {
-      activeSolveCancellerRef.current = null;
       activeSolveInputKeyRef.current = null;
-      startTransition(() => {
-        setAutoSolveState(current => {
-          const shouldPreserveRestoredSolveState =
-            (Boolean(restoredSolveInputKey) ||
-              hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) &&
-            (current.activity.status === 'settled' || current.activity.status === 'cancelled');
+      setAutoSolveState(current => {
+        const shouldPreserveRestoredSolveState =
+          (Boolean(restoredSolveInputKey) ||
+            hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId) &&
+          (current.activity.status === 'settled' || current.activity.status === 'cancelled');
 
-          return shouldPreserveRestoredSolveState
-            ? current
-            : buildIdleWorkbenchSolveState();
-        });
+        return shouldPreserveRestoredSolveState
+          ? current
+          : buildIdleWorkbenchSolveState();
       });
       return;
     }
@@ -974,7 +964,6 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     autoSolveSequenceRef.current = sequence;
     let disposed = false;
     activeSolveInputKeyRef.current = deferredSolveInputKey;
-    activeSolveCancellerRef.current = cancelSolveWorker;
 
     setAutoSolveState(current =>
       buildRunningWorkbenchSolveState(current, {
@@ -1011,15 +1000,16 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         },
         solveCatalogRequestWithWorker,
         progress => {
+          recordWorkbenchPerf({ phase: 'solve_progress', durationMs: 0, recordedAt: Date.now(), sequence,
+            currentSequence: autoSolveSequenceRef.current,
+            status: disposed ? 'disposed' : autoSolveSequenceRef.current !== sequence ? 'superseded' : progress.result ? 'incumbent' : progress.stage });
           if (disposed || autoSolveSequenceRef.current !== sequence) {
             return;
           }
 
           setAutoSolveState(current =>
-            buildRunningWorkbenchSolveState(current, {
-              stage: progress.stage,
-              activeRequest: progress.activeRequest,
-            })
+            disposed || autoSolveSequenceRef.current !== sequence
+              ? current : applyWorkbenchSolveProgress(current, progress)
           );
         }
       );
@@ -1027,20 +1017,19 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      startTransition(() => {
-        setAutoSolveState(nextState);
-      });
+      setAutoSolveState(current =>
+        disposed || autoSolveSequenceRef.current !== sequence ? current : nextState
+      );
       if (autoSolveSequenceRef.current === sequence) {
         activeSolveInputKeyRef.current = null;
-        activeSolveCancellerRef.current = null;
       }
     })();
 
     return () => {
       disposed = true;
       if (autoSolveSequenceRef.current === sequence) {
+        cancelSolveWorker();
         activeSolveInputKeyRef.current = null;
-        activeSolveCancellerRef.current = null;
       }
     };
   }, [
@@ -2018,7 +2007,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       if (
         nextSolveState.error ||
         !nextSolveState.result ||
-        nextSolveState.result.status !== 'optimal'
+        !['optimal', 'feasible'].includes(nextSolveState.result.status)
       ) {
         const message =
           nextSolveState.error ||
@@ -2160,6 +2149,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
 
   const contextValue = useMemo<WorkbenchContextValue>(
     () => ({
+      isHydratingConfig: hydratingWorkbenchConfig?.configId === activeWorkbenchConfigId,
       // Dataset source state
       presetId,
       setPresetId,
@@ -2274,6 +2264,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     // ensure React re-creates the context object only when something changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
+      hydratingWorkbenchConfig,
       presetId,
       datasetPath,
       defaultConfigPath,

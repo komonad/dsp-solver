@@ -165,7 +165,7 @@ export function tryApplyRecipeStrategyOverride(
     };
   }
 
-  if (!nextSolveState.result || nextSolveState.result.status !== 'optimal') {
+  if (!nextSolveState.result || !['optimal', 'feasible'].includes(nextSolveState.result.status)) {
     const diagnosticMessage =
       nextSolveState.result?.diagnostics.messages[0] ??
       nextSolveState.result?.diagnostics.unmetPreferences[0] ??

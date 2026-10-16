@@ -1,5 +1,5 @@
 import type { ResolvedCatalogModel } from '../../catalog';
-import { solveCatalogRequest } from '../../solver';
+import { solveCatalogRequestAsync, loadHighsSolverImplementation } from '../../solver';
 import type { SolveWorkerRequest, SolveWorkerResponse } from './solveWorkerProtocol';
 
 type SolveWorkerScope = {
@@ -11,6 +11,9 @@ const workerContext = globalThis as unknown as SolveWorkerScope;
 
 let currentCatalog: ResolvedCatalogModel | null = null;
 let currentCatalogVersion: string | null = null;
+const implementationPromise = loadHighsSolverImplementation({
+  locateFile: file => new URL(file, globalThis.location.href).href,
+});
 
 function postResponse(response: SolveWorkerResponse): void {
   workerContext.postMessage(response);
@@ -35,9 +38,12 @@ async function handleWorkerRequest(message: SolveWorkerRequest): Promise<void> {
   postResponse({
     type: 'progress',
     requestId: message.requestId,
-    stage: message.attempt === 'relaxed' ? 'solving_relaxed' : 'solving_primary',
+    stage: (message.request.objectiveWeights?.recipes ?? message.request.recipeWeight ?? message.request.recipeCountPenalty?.weight ?? 0) > 0
+      ? 'optimizing_recipe_count' : message.attempt === 'relaxed' ? 'solving_relaxed' : 'solving_primary',
   });
-  const result = solveCatalogRequest(currentCatalog, message.request);
+  const result = await solveCatalogRequestAsync(currentCatalog, message.request, { implementationPromise,
+    onIntermediateResult: result => postResponse({ type: 'incumbent', requestId: message.requestId, result }),
+  });
   postResponse({
     type: 'solve_result',
     requestId: message.requestId,

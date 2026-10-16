@@ -142,3 +142,87 @@ test('stale worker errors do not abort a newer solve session', async () => {
     status: 'optimal',
   });
 }, 10_000);
+
+test('incumbents stream without settling the request until its final result', async () => {
+  const client = new SolveWorkerClient(() => new FakeWorker() as never);
+  const updates: SolveResult[] = [];
+  let settled = false;
+  const pending = client.solve({} as ResolvedCatalogModel, buildRequest(), {
+    attempt: 'primary', onProgress: progress => { if (progress.result) updates.push(progress.result); },
+  });
+  void pending.then(() => { settled = true; });
+  const worker = FakeWorker.instances[0];
+  const catalogMessage = worker.postedMessages[0] as { requestId: number; catalogVersion: string };
+  worker.onmessage?.({ data: { ...catalogMessage, type: 'set_catalog_result' } });
+  await flushMicrotasks();
+  const solveMessage = worker.postedMessages[1] as { requestId: number };
+  for (let i = 0; i < 2; i++) {
+    const result = { ...buildResult(), status: 'feasible' as const };
+    worker.onmessage?.({ data: { type: 'incumbent', requestId: solveMessage.requestId, result } });
+  }
+  await flushMicrotasks();
+  expect(updates).toHaveLength(2);
+  expect(settled).toBe(false);
+  worker.onmessage?.({ data: { type: 'solve_result', requestId: solveMessage.requestId, result: buildResult() } });
+  await expect(pending).resolves.toMatchObject({ status: 'optimal' });
+});
+
+test('finishing a superseded promise cannot disable cancellation of its replacement', async () => {
+  const client = new SolveWorkerClient(() => new FakeWorker() as never);
+  const first = client.solve({} as ResolvedCatalogModel, buildRequest(), { attempt: 'primary' }).catch(error => error);
+  const second = client.solve({} as ResolvedCatalogModel, buildRequest(), { attempt: 'primary' }).catch(error => error);
+  await flushMicrotasks();
+  client.cancelActiveSolve();
+  expect(FakeWorker.instances[1].terminated).toBe(true);
+  await first;
+  await expect(second).resolves.toBeInstanceOf(Error);
+});
+
+test('cancelling after catalog acknowledgement prevents dispatch and worker recreation', async () => {
+  const client = new SolveWorkerClient(() => new FakeWorker() as never);
+  const pending = client.solve({} as ResolvedCatalogModel, buildRequest(), { attempt: 'primary' });
+  const worker = FakeWorker.instances[0];
+  const catalogMessage = worker.postedMessages[0] as { requestId: number; catalogVersion: string };
+  worker.onmessage?.({ data: { ...catalogMessage, type: 'set_catalog_result' } });
+  client.cancelActiveSolve();
+  await expect(pending).rejects.toThrow('cancelled');
+  expect(worker.terminated).toBe(true);
+  expect(worker.postedMessages).toHaveLength(1);
+  expect(FakeWorker.instances).toHaveLength(1);
+});
+
+test('a superseded catalog acknowledgement cannot dispatch into its replacement worker', async () => {
+  const client = new SolveWorkerClient(() => new FakeWorker() as never);
+  const catalog = {} as ResolvedCatalogModel;
+  const first = client.solve(catalog, buildRequest(), { attempt: 'primary' });
+  const firstWorker = FakeWorker.instances[0];
+  const message = firstWorker.postedMessages[0] as { requestId: number; catalogVersion: string };
+  firstWorker.onmessage?.({ data: { ...message, type: 'set_catalog_result' } });
+  const second = client.solve(catalog, buildRequest(), { attempt: 'primary' });
+  await expect(first).rejects.toThrow('superseded');
+  expect(FakeWorker.instances[1].postedMessages).toHaveLength(1);
+  client.cancelActiveSolve();
+  await expect(second).rejects.toThrow('cancelled');
+});
+
+test('stopping a streaming solve terminates native work and ignores queued messages', async () => {
+  const client = new SolveWorkerClient(() => new FakeWorker() as never);
+  const progress = jest.fn();
+  const pending = client.solve({} as ResolvedCatalogModel, buildRequest(), { attempt: 'primary', onProgress: progress });
+  const worker = FakeWorker.instances[0];
+  const catalogMessage = worker.postedMessages[0] as { requestId: number; catalogVersion: string };
+  worker.onmessage?.({ data: { ...catalogMessage, type: 'set_catalog_result' } });
+  await flushMicrotasks();
+  const solveMessage = worker.postedMessages[1] as { requestId: number };
+  const incumbent = { type: 'incumbent', requestId: solveMessage.requestId, result: buildResult() };
+  const deliver = worker.onmessage!;
+  deliver({ data: incumbent });
+  expect(progress).toHaveBeenLastCalledWith(expect.objectContaining({ result: incumbent.result }));
+  const count = progress.mock.calls.length;
+  client.cancelActiveSolve();
+  expect(worker.terminated).toBe(true);
+  deliver({ data: incumbent });
+  deliver({ data: { ...incumbent, type: 'solve_result' } });
+  expect(progress).toHaveBeenCalledTimes(count);
+  await expect(pending).rejects.toThrow('cancelled');
+});

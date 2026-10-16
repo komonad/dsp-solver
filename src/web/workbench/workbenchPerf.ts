@@ -1,5 +1,7 @@
 export interface WorkbenchPerfEntry {
-  phase: 'solve' | 'presentation';
+  phase: 'solve' | 'presentation' | 'solve_progress';
+  sequence?: number;
+  currentSequence?: number;
   status?: string;
   durationMs: number;
   requestBuildMs?: number;

@@ -33,7 +33,13 @@ export interface SolveWorkerSolveResponse {
 export interface SolveWorkerProgressResponse {
   type: 'progress';
   requestId: number;
-  stage: 'loading_solver' | 'solving_primary' | 'solving_relaxed';
+  stage: 'loading_solver' | 'solving_primary' | 'solving_relaxed' | 'optimizing_recipe_count';
+}
+
+export interface SolveWorkerIncumbentResponse {
+  type: 'incumbent';
+  requestId: number;
+  result: SolveResult;
 }
 
 export interface SolveWorkerErrorResponse {
@@ -45,5 +51,6 @@ export interface SolveWorkerErrorResponse {
 export type SolveWorkerResponse =
   | SolveWorkerSetCatalogResponse
   | SolveWorkerProgressResponse
+  | SolveWorkerIncumbentResponse
   | SolveWorkerSolveResponse
   | SolveWorkerErrorResponse;

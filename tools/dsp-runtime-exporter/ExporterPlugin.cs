@@ -22,6 +22,7 @@ public sealed class ExporterPlugin : BaseUnityPlugin
     private ConfigEntry<string>? outputFileStem;
     private ConfigEntry<bool>? autoExportOnStartup;
     private ConfigEntry<bool>? autoQuitAfterExport;
+    private ConfigEntry<string>? resourceSamplingSeeds;
     private ConfigEntry<string>? datasetName;
     private ConfigEntry<string>? datasetDescription;
     private ConfigEntry<string>? sourceProfile;
@@ -78,6 +79,8 @@ public sealed class ExporterPlugin : BaseUnityPlugin
             "Additional notes written into the sidecar metadata file.");
 
         string shortcutLabel = exportShortcut?.Value.ToString() ?? "unset";
+        resourceSamplingSeeds = Config.Bind("General", "ResourceSamplingSeeds", string.Empty,
+            "Comma-separated seeds for 64-star, 1x solid-resource sampling before automatic export. Empty disables sampling.");
         string configuredDirectory = outputDirectory?.Value ?? Path.Combine(Paths.ConfigPath, "dspcalc-exporter");
         string configuredStem = outputFileStem?.Value ?? "CurrentGame";
         Logger.LogInfo(
@@ -159,6 +162,12 @@ public sealed class ExporterPlugin : BaseUnityPlugin
                 $"Auto-export: proto counts stable at {lastItemCount} items, {lastRecipeCount} recipes. Exporting.");
 
             autoExportTriggered = true;
+            if (!string.IsNullOrWhiteSpace(resourceSamplingSeeds?.Value))
+            {
+                int[] seeds = resourceSamplingSeeds!.Value.Split(',').Select(value => int.Parse(value.Trim())).ToArray();
+                string samplePath = Path.Combine(outputDirectory!.Value, $"{outputFileStem!.Value}.resources.json");
+                yield return ResourceSampler.Sample(seeds, samplePath, Logger);
+            }
             TryExport("startup");
 
             if (autoQuitAfterExport?.Value == true)

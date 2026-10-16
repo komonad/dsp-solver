@@ -53,7 +53,7 @@
     "@types/react-dom": "^19.2.3",
     "@xyflow/react": "^12.10.2",
     "elkjs": "^0.11.1",
-    "highs": "^1.8.0",
+    "highs": "1.15.3",
     "html-to-image": "^1.11.13",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

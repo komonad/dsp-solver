@@ -124,6 +124,7 @@ function isSolveObjective(value: unknown): value is SolveObjective {
     value === 'min_buildings' ||
     value === 'min_complexity' ||
     value === 'min_power' ||
+    value === 'min_weighted' ||
     value === 'min_external_input'
   );
 }

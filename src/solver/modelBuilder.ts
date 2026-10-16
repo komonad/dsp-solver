@@ -10,6 +10,7 @@ import type {
 } from './result';
 import type { Model } from './implementation';
 import { recordSolverPerf } from './perf';
+import { getInputUnitCost, getObjectiveProductionScale } from './objectiveCosts';
 import {
   EPSILON,
   type CompiledOptionContext,
@@ -33,6 +34,11 @@ export function buildObjectiveCoefficient(
   option: CompiledOption
 ): number {
   const preferencePenalty = getPreferredOptionPenalty(request, recipe, option);
+
+  if (request.objective === 'min_weighted') {
+    const scale = request.objectiveWeights ? getObjectiveProductionScale(request) : 1;
+    return buildPrimaryObjectiveOptionCoefficient(request, option) + preferencePenalty * SECONDARY_EPSILON / scale;
+  }
 
   if (request.objective === 'min_buildings') {
     return (
@@ -62,6 +68,10 @@ export function buildPrimaryObjectiveOptionCoefficient(
   request: SolveRequest,
   option: CompiledOption
 ): number {
+  if (request.objective === 'min_weighted') {
+    return (request.footprintWeight ?? 1) * option.buildingCostPerRunPerMin +
+      (request.powerWeight ?? 0) * option.powerCostMWPerRunPerMin;
+  }
   if (request.objective === 'min_buildings') {
     return option.buildingCostPerRunPerMin;
   }
@@ -73,16 +83,18 @@ export function buildPrimaryObjectiveOptionCoefficient(
   return 0;
 }
 
-export function buildExternalInputObjectiveCoefficient(request: SolveRequest): number {
+export function buildExternalInputObjectiveCoefficient(request: SolveRequest, itemId: string): number {
+  if (request.objective === 'min_weighted') return getInputUnitCost(request, itemId) * (request.resourceWeight ?? 1);
   if (request.objective !== 'min_external_input') {
     return 0;
   }
 
-  return request.balancePolicy === 'allow_surplus' ? OBJECTIVE_EPSILON : 1;
+  return getInputUnitCost(request, itemId) * (request.balancePolicy === 'allow_surplus' ? OBJECTIVE_EPSILON : 1);
 }
 
-function buildPrimaryObjectiveExternalInputCoefficient(request: SolveRequest): number {
-  return request.objective === 'min_external_input' ? 1 : 0;
+export function buildPrimaryObjectiveExternalInputCoefficient(request: SolveRequest, itemId: string): number {
+  return request.objective === 'min_external_input' || request.objective === 'min_weighted'
+    ? getInputUnitCost(request, itemId) * (request.objective === 'min_weighted' ? request.resourceWeight ?? 1 : 1) : 0;
 }
 
 function buildPrimaryFirstObjectiveCoefficient(
@@ -95,20 +107,21 @@ function buildPrimaryFirstObjectiveCoefficient(
     return buildObjectiveCoefficient(request, recipe, option);
   }
 
+  const scale = request.objectiveWeights ? getObjectiveProductionScale(request) : 1;
   return (
     primaryObjectiveCoefficient +
-    getPreferredOptionPenalty(request, recipe, option) * SECONDARY_EPSILON +
+    (getPreferredOptionPenalty(request, recipe, option) * SECONDARY_EPSILON +
     option.buildingCostPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON +
-    option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON * SECONDARY_EPSILON
+    option.powerCostMWPerRunPerMin * SECONDARY_EPSILON * SECONDARY_EPSILON * SECONDARY_EPSILON) / scale
   );
 }
 
-export function computePrimaryObjectiveUpperBound(primaryObjectiveValue: number): number {
+export function computePrimaryObjectiveUpperBound(primaryObjectiveValue: number, strict = false): number {
   return (
     primaryObjectiveValue +
     Math.max(
       PRIMARY_OBJECTIVE_BOUND_ABSOLUTE_EPSILON,
-      Math.abs(primaryObjectiveValue) * PRIMARY_OBJECTIVE_BOUND_RELATIVE_EPSILON
+      Math.abs(primaryObjectiveValue) * (strict ? 1e-7 : PRIMARY_OBJECTIVE_BOUND_RELATIVE_EPSILON)
     )
   );
 }
@@ -143,12 +156,9 @@ export function addPrimaryObjectiveUpperBoundConstraint(params: {
     }
   }
 
-  const externalInputCoefficient = buildPrimaryObjectiveExternalInputCoefficient(request);
-  if (externalInputCoefficient <= 0) {
-    return;
-  }
-
   for (const itemId of externalItemIds) {
+    const externalInputCoefficient = buildPrimaryObjectiveExternalInputCoefficient(request, itemId);
+    if (externalInputCoefficient <= 0) continue;
     addVariableCoefficient(variables, `ext:${itemId}`, constraintName, externalInputCoefficient);
   }
 }
@@ -416,8 +426,8 @@ export function buildLinearModel(
     variables[`ext:${itemId}`] = {
       [itemId]: 1,
       __objective__: optimizePrimaryObjectiveFirst
-        ? buildPrimaryObjectiveExternalInputCoefficient(request)
-        : buildExternalInputObjectiveCoefficient(request),
+        ? buildPrimaryObjectiveExternalInputCoefficient(request, itemId)
+        : buildExternalInputObjectiveCoefficient(request, itemId),
     };
   }
 

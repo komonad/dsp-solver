@@ -46,6 +46,7 @@ function mapConfigStatusColor(
   if (status === 'optimal') {
     return 'success';
   }
+  if (status === 'feasible') return 'warning';
   return 'default';
 }
 

@@ -402,6 +402,7 @@ const zhCN: LocaleBundle = {
       min_buildings: '最少占地',
       min_complexity: '复杂度优先',
       min_power: '最低功耗',
+      min_weighted: '资源与占地加权',
       min_external_input: '最少外部输入',
     },
     balancePolicy: {
@@ -410,6 +411,7 @@ const zhCN: LocaleBundle = {
     },
     solveStatus: {
       optimal: '最优',
+      feasible: '可行方案',
       infeasible: '无可行解',
       invalid_input: '输入无效',
     },
@@ -498,6 +500,7 @@ const zhCN: LocaleBundle = {
       min_buildings: '最少占地',
       min_complexity: '复杂度优先',
       min_power: '最低功耗',
+      min_weighted: '资源与占地加权',
       min_external_input: '最少外部输入',
     },
     balancePolicyOptions: {

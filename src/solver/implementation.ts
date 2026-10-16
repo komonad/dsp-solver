@@ -16,11 +16,17 @@ export interface Model<
 }
 
 export interface Options {
+  /** Detached feasible MIP snapshots; handlers execute synchronously inside the solver. */
+  onIncumbent?: (solution: Solution) => void;
+  /** Feasible primal values used as a MIP start by supporting implementations. */
+  initialSolution?: ReadonlyMap<string, number>;
   timeout?: number;
   tolerance?: number;
 }
 
 export interface Solution<VariableName extends string = string> {
+  mipGap?: number;
+  bestBound?: number;
   status: string;
   result: number;
   variables: Map<VariableName, number>;

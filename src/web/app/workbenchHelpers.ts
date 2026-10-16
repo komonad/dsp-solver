@@ -7,7 +7,7 @@ import {
   type LocaleBundle,
 } from '../../i18n';
 import type { PresentationItemRate, PresentationRecipePlan } from '../../presentation';
-import type { SolveResult } from '../../solver';
+import type { ObjectiveWeights, RecipeCountOptimization, SolveResult } from '../../solver';
 import type { ItemPickerOption } from '../shared/itemPickerModel';
 import { buildRecipeFlowDisplay } from '../shared/recipeDisplay';
 import type {
@@ -556,5 +556,37 @@ export function buildWorkbenchConfigDisplayModel(
     powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, live?.locale ?? 'zh-CN') : null,
     datasetLabel: extra?.datasetLabel ?? config.datasetLabel ?? '',
     sourceKey: extra?.sourceKey ?? '',
+  };
+}
+
+export function buildRecipeOptimizationViewModel(summary: RecipeCountOptimization) {
+  const change = summary.baselineCost > 0 ? (summary.finalCost / summary.baselineCost - 1) * 100 : 0;
+  const reasons = {
+    unsupported: '当前求解器不支持此优化，保留基线方案。',
+    unbounded: '当前成本设置无法建立有限的产线边界，保留基线方案。可提高占地权重后重试。',
+    invalid_candidate: '候选方案未通过物料平衡检查，保留当前最佳可行方案。',
+    solver_error: 'MILP 求解未完成，保留当前最佳可行方案。',
+    zero_cost: '基线成本为零或超出数值范围，无法换算产线惩罚，保留基线方案。',
+  };
+  return {
+    title: summary.status === 'paused' ? '已暂停 · 保留可行方案' : summary.status === 'optimizing' ? '当前可行方案 · 后台优化中' : summary.status === 'converged' ? '优化已收敛' : summary.status === 'time_limit' ? '已达时限 · 保留最佳可行方案' : '保留可行方案',
+    tone: summary.status === 'converged' ? 'success' as const : 'warning' as const,
+    recipeLabel: `${summary.baselineRecipeCount} → ${summary.finalRecipeCount}`,
+    reduction: summary.baselineRecipeCount - summary.finalRecipeCount,
+    costChangeLabel: `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`,
+    gapLabel: summary.relativeGap === undefined || !Number.isFinite(summary.relativeGap) ? '未取得界限' : `${(summary.relativeGap * 100).toFixed(1)}%`,
+    durationLabel: `${(summary.durationMs / 1000).toFixed(2)} 秒`,
+    reason: summary.reason ? reasons[summary.reason] : '',
+    finalCostLabel: summary.finalCost.toFixed(2),
+    penaltyCostLabel: ((summary.penaltyPerRecipe ?? summary.baselineCost * summary.weight) * summary.finalRecipeCount).toFixed(2),
+    totalCostLabel: (summary.finalCost + (summary.penaltyPerRecipe ?? summary.baselineCost * summary.weight) * summary.finalRecipeCount).toFixed(2),
+  };
+}
+
+export function buildObjectiveEditorViewModel(weights: ObjectiveWeights, productionScale: number) {
+  const format = (value: number) => new Intl.NumberFormat('zh-CN', { maximumSignificantDigits: 6 }).format(value);
+  return {
+    summary: `原料 ${format(weights.resources)} · 占地 ${format(weights.footprint)} · 功耗 ${format(weights.power)} · 复杂度 ${format(weights.recipes)}`,
+    description: `最小化：(${weights.resources} × 加权原料输入/分钟 + ${weights.footprint} × 连续占地 + ${weights.power} × 功耗(MW)) ÷ 产能倍率 + ${weights.recipes} × 配方种类数。连续成本按总目标产量 60/分钟归一化，当前产能倍率 ${format(productionScale)}。所有目标等比例扩产时，复杂度惩罚的相对作用保持一致；实际用料、占地和功耗按完整产能显示。各项独立设置，0 表示不计入目标，至少保留一项连续成本。同一配方的建筑和增产变体只计一种。占地考虑堆叠，不含物流与布局空隙。推荐预设填入一组权重，各项可独立调整。原料单位成本未设置时为 1，0 表示免费。`,
   };
 }

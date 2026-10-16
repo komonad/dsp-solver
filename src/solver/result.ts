@@ -3,7 +3,31 @@ import type { ProliferatorMode } from '../catalog';
 /**
  * High-level result status for one solve attempt.
  */
-export type SolveStatus = 'optimal' | 'infeasible' | 'invalid_input';
+export type SolveStatus = 'optimal' | 'feasible' | 'infeasible' | 'invalid_input';
+
+/** A feasible result can be displayed even when the integer optimum is unproven. */
+export function isSuccessfulSolveStatus(status: SolveStatus): boolean {
+  return status === 'optimal' || status === 'feasible';
+}
+
+export interface RecipeCountOptimization {
+  status: 'optimizing' | 'paused' | 'converged' | 'time_limit' | 'baseline';
+  /** Failure or fallback reason; an incumbent is retained for every fallback. */
+  reason?: 'unsupported' | 'unbounded' | 'invalid_candidate' | 'solver_error' | 'zero_cost';
+  timeLimitMs: number | null;
+  /** Absolute coefficient multiplying the active recipe count. */
+  penaltyPerRecipe?: number;
+  durationMs: number;
+  /** Relative penalty; each active recipe adds baselineCost * weight cost units. */
+  weight: number;
+  baselineCost: number;
+  finalCost: number;
+  baselineRecipeCount: number;
+  finalRecipeCount: number;
+  /** Gap for the complete normalized cost-plus-count objective, not count alone. */
+  relativeGap?: number;
+  binaryCount: number;
+}
 
 /**
  * Human-readable diagnostics collected during validation, compilation, or solve.
@@ -29,7 +53,8 @@ export interface SolveAuditAttempt {
     | 'surplus_type_milp'
     | 'surplus_complexity_milp'
     | 'complexity_seed_lp'
-    | 'complexity_milp';
+    | 'complexity_milp'
+    | 'recipe_count_milp';
   /** Zero-based round index within the phase family when applicable. */
   round?: number;
   /** Model family used for this attempt. */
@@ -207,6 +232,20 @@ export interface ItemBalanceEntry {
  * without re-deriving hidden business formulas.
  */
 export interface SolveResult {
+  recipeCountOptimization?: RecipeCountOptimization;
+  /** Cost decomposition for min_weighted, in the request's configured cost units. */
+  objectiveCost?: {
+    /** Actual input rate multiplied by item-specific costs, before throughput normalization. */
+    weightedInputCost: number;
+    resourceCost: number;
+    /** Continuous placement area, including stack-layer adjustments. */
+    placementArea: number;
+    footprintCost: number;
+    powerCost?: number;
+    /** Divisor for explicit objective costs: total target rate / 60, or 1 at zero throughput. */
+    productionScale?: number;
+    total: number;
+  };
   /** Final solve status. */
   status: SolveStatus;
   /** Warnings, validation issues, and unmet soft preferences. */

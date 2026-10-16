@@ -1,4 +1,7 @@
 import SnapshotPreferences from './SnapshotPreferences';
+import ObjectiveWeightsEditor from './ObjectiveWeightsEditor';
+import RecipeCountOptimizer from './RecipeCountOptimizer';
+import ObjectivePresetSelect from './ObjectivePresetSelect';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -178,18 +181,7 @@ export default function SolveSnapshotPanel() {
       </Box>
 
       <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 0.75, rowGap: 1.5, pt: 0.5 }}>
-        <TextField
-          select
-          size="small"
-          sx={{ ...snapshotSelectFieldSx, flex: '1 1 96px', minWidth: 96 }}
-          label={bundle.summary.objectiveLabel}
-          value={objective}
-          onChange={event => setObjective(event.target.value as SolveObjective)}
-        >
-          <MenuItem value="min_buildings">{bundle.solveRequest.objectiveOptions.min_buildings}</MenuItem>
-          <MenuItem value="min_power">{bundle.solveRequest.objectiveOptions.min_power}</MenuItem>
-          <MenuItem value="min_external_input">{bundle.solveRequest.objectiveOptions.min_external_input}</MenuItem>
-        </TextField>
+        <ObjectivePresetSelect />
         <TextField
           select
           size="small"
@@ -236,6 +228,8 @@ export default function SolveSnapshotPanel() {
           </TextField>
         ) : null}
       </Box>
+      <ObjectiveWeightsEditor />
+      <RecipeCountOptimizer />
       {solveError && hasTargets ? <Alert severity="error">{solveError}</Alert> : null}
       {requestSummary ? (
         <>
@@ -274,7 +268,7 @@ export default function SolveSnapshotPanel() {
                       itemId={target.itemId}
                       itemName={target.itemName}
                       iconKey={target.iconKey}
-                      iconSize={22}
+                      iconSize={18}
                       atlasIds={iconAtlasIds}
                     />
                   </Box>

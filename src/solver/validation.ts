@@ -78,6 +78,52 @@ function validateModeRecordMap(
 
 export function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveRequest): ValidateResult {
   const messages: string[] = [];
+  if (request.objectiveWeights !== undefined) {
+    const w = request.objectiveWeights;
+    if (!w || typeof w !== 'object' || !['resources', 'footprint', 'power', 'recipes'].every(key => {
+      const value = w[key as keyof typeof w];
+      return Number.isFinite(value) && value >= 0;
+    }) || !(w.resources > 0 || w.footprint > 0 || w.power > 0)) {
+      messages.push('objectiveWeights requires non-negative coefficients and a positive continuous cost.');
+    }
+  }
+  for (const key of ['powerWeight', 'recipeWeight', 'milpRelativeGap'] as const) {
+    const value = request[key];
+    if (value !== undefined && (!Number.isFinite(value) || value < 0)) messages.push(`${key} must be finite and non-negative.`);
+  }
+  if (request.milpTimeLimitMs !== undefined && request.milpTimeLimitMs !== null &&
+      (!Number.isFinite(request.milpTimeLimitMs) || request.milpTimeLimitMs < 100)) messages.push('milpTimeLimitMs must be null or at least 100.');
+  if (request.recipeCountPenalty !== undefined) {
+    const config = request.recipeCountPenalty;
+    if (!config || typeof config !== 'object' || !Number.isFinite(config.weight) || config.weight < 0) {
+      messages.push('recipeCountPenalty.weight must be finite and non-negative.');
+    }
+    const limit = config?.timeLimitMs ?? 3000;
+    if (!Number.isFinite(limit) || limit < 100 || limit > 10000) {
+      messages.push('recipeCountPenalty.timeLimitMs must be between 100 and 10000.');
+    }
+  }
+  if (request.resourceWeight !== undefined && (!Number.isFinite(request.resourceWeight) || request.resourceWeight < 0)) {
+    messages.push('resourceWeight must be finite and non-negative.');
+  }
+  if (!request.objectiveWeights && request.objective === 'min_weighted' && (request.resourceWeight ?? 1) === 0 && (request.footprintWeight ?? 1) === 0 && (request.powerWeight ?? 0) === 0) {
+    messages.push('At least one objective weight must be positive.');
+  }
+  if (request.footprintWeight !== undefined && (!Number.isFinite(request.footprintWeight) || request.footprintWeight < 0)) {
+    messages.push('footprintWeight must be finite and non-negative.');
+  }
+  if (request.inputWeights !== undefined) {
+    if (!request.inputWeights || typeof request.inputWeights !== 'object' || Array.isArray(request.inputWeights)) {
+      messages.push('inputWeights must be an item-to-cost record.');
+    } else {
+      for (const [itemId, cost] of Object.entries(request.inputWeights)) {
+        if (!catalog.itemMap.has(itemId) || !Number.isFinite(cost) || cost < 0 ||
+            !Number.isFinite(cost * (request.resourceWeight ?? 1))) {
+          messages.push(`Invalid input weight: ${itemId}.`);
+        }
+      }
+    }
+  }
 
   if (request.targets.length === 0) {
     messages.push('SolveRequest.targets must not be empty.');
@@ -91,6 +137,10 @@ export function validateSolveRequest(catalog: ResolvedCatalogModel, request: Sol
     if (!catalog.itemMap.has(target.itemId)) {
       messages.push(`Unknown target item: ${target.itemId}.`);
     }
+  }
+
+  if (!Number.isFinite(request.targets.reduce((sum, target) => sum + target.ratePerMin, 0))) {
+    messages.push('Total target rate must be finite.');
   }
 
   for (const itemId of request.rawInputItemIds ?? []) {
