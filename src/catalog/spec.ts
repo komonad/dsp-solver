@@ -273,15 +273,17 @@ export interface CatalogRecipeModifierPolicySpec {
 }
 
 /**
- * Symmetric building-expansion group for recipe compatibility.
+ * Building-expansion group for recipe compatibility.
  *
- * If a recipe is explicitly allowed on any building in the group, the
- * interpretation layer expands its allowed-building set to include every
- * building in the same group.
+ * Without a selector, any matching building expands to every building in
+ * the group. A selector makes expansion directional and matches only the
+ * authoritative base list, independently of other expansion groups.
  */
 export interface CatalogRecipeBuildingExpansionGroupSpec {
-  /** Concrete building IDs that should be treated as interchangeable here. */
+  /** Concrete building IDs appended when the group matches. */
   BuildingIds: number[];
+  /** Optional non-empty selector of base building IDs, before any expansion. */
+  MatchBaseBuildingIds?: number[];
 }
 
 /**
@@ -341,7 +343,7 @@ export interface CatalogDefaultConfigSpec {
   recipeRules?: CatalogRecipeRuleSpec[];
   /** Optional policies used to reinterpret raw recipe modifier codes. */
   recipeModifierPolicy?: CatalogRecipeModifierPolicySpec;
-  /** Optional symmetric expansion groups for recipe allowed-building inference. */
+  /** Optional expansion groups for recipe allowed-building inference. */
   recipeBuildingExpansionGroups?: CatalogRecipeBuildingExpansionGroupSpec[];
   /**
    * Optional building IDs appended to every recipe as globally available
@@ -1131,6 +1133,14 @@ export function validateCatalogDefaultConfigSpec(value: unknown): CatalogDefault
         errors,
         `${path}.BuildingIds`,
         'BuildingIds must be a non-empty number array.'
+      );
+    }
+    if (group.MatchBaseBuildingIds !== undefined &&
+        (!isNumberArray(group.MatchBaseBuildingIds) || group.MatchBaseBuildingIds.length === 0)) {
+      pushIssue(
+        errors,
+        `${path}.MatchBaseBuildingIds`,
+        'MatchBaseBuildingIds must be a non-empty number array when present.'
       );
     }
   });

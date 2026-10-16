@@ -1878,6 +1878,9 @@
   },
   "recipeBuildingExpansionGroups": [
     {
+      "MatchBaseBuildingIds": [
+        2302
+      ],
       "BuildingIds": [
         2302,
         2315,
@@ -1885,6 +1888,10 @@
       ]
     },
     {
+      "MatchBaseBuildingIds": [
+        2303,
+        2304
+      ],
       "BuildingIds": [
         2303,
         2304,
@@ -1893,22 +1900,37 @@
       ]
     },
     {
+      "MatchBaseBuildingIds": [
+        2305
+      ],
+      "BuildingIds": [
+        2318
+      ]
+    },
+    {
+      "MatchBaseBuildingIds": [
+        2309
+      ],
       "BuildingIds": [
         2309,
         7823,
         2317
       ]
-    }
-  ],
-  "recipeBuildingUniversalIds": [
-    6215
-  ],
-  "recipeBuildingUniversalExclusionRules": [
+    },
     {
       "MatchBaseBuildingIds": [
-        6257
+        2302,
+        2303,
+        2304,
+        2305,
+        2308,
+        2309,
+        2310,
+        2315,
+        2319,
+        6265
       ],
-      "UniversalBuildingIds": [
+      "BuildingIds": [
         6215
       ]
     }

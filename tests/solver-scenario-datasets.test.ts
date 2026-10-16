@@ -1,5 +1,6 @@
 import { loadResolvedCatalogFromFiles } from '../src/catalog';
 import { solveCatalogRequest, type SolveResult } from '../src/solver';
+import { loadHighsSolverImplementation } from '../src/solver/experimental';
 
 const refineryBalanceDatasetPath = './tests/fixtures/scenarios/RefineryBalance.json';
 const refineryBalanceDefaultsPath = './tests/fixtures/scenarios/RefineryBalance.defaults.json';
@@ -144,13 +145,14 @@ test('orbitalring fullersilver-embedded recipe chain is feasible when dataset de
     orbitalRingDatasetPath,
     orbitalRingDefaultsPath
   );
+  const implementation = await loadHighsSolverImplementation();
   const result = solveCatalogRequest(catalog, {
     targets: [{ itemId: '6522', ratePerMin: 60 }],
     objective: 'min_external_input',
     balancePolicy: 'force_balance',
     autoPromoteUnavailableItemsToRawInputs: true,
     disabledRecipeIds: catalog.recommendedDisabledRecipeIds,
-  });
+  }, { implementation });
 
   expect(result.status).toBe('optimal');
   expect(getPlan(result, '510')).toBeUndefined();

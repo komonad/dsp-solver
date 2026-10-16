@@ -143,7 +143,7 @@ test('fractionation recipes reject forced productivity because they are speed-on
   expect(result.recipePlans).toEqual([]);
 });
 
-test('OrbitalRing heavy-water fractionation uses the configured probability and ignores universal buildings without throughput config', async () => {
+test('OrbitalRing heavy-water fractionation uses the configured probability and its dedicated factory', async () => {
   const catalog = await loadResolvedCatalogFromFiles(
     './data/OrbitalRing.json',
     './data/OrbitalRing.defaults.json'
@@ -170,9 +170,8 @@ test('OrbitalRing heavy-water fractionation uses the configured probability and 
   expect(result.recipePlans[0].exactBuildingCount).toBeCloseTo(0.5, 6);
   expect(result.recipePlans[0].inputs.find(i => i.itemId === '1000')).toEqual({ itemId: '1000', ratePerMin: 72 });
   expect(result.recipePlans[0].outputs[0]).toEqual({ itemId: '7018', ratePerMin: 72 });
-  expect(result.diagnostics.messages).toContain(
-    'Fractionation recipe 106 skips building 6215 because it lacks FractionatorBeltSpeedItemsPerMin or FractionatorMaxItemStack.'
-  );
+  expect(catalog.recipeMap.get('106')?.allowedBuildingIds).toEqual(['2314']);
+  expect(result.diagnostics.messages).toEqual([]);
 });
 
 test('disabled buildings suppress unrelated fractionation skip diagnostics', async () => {

@@ -339,6 +339,62 @@ test('recipe building expansion flag rejects non-boolean values', () => {
   ]));
 });
 
+test('OrbitalRing building compatibility preserves recipe tiers across all families', async () => {
+  const resolved = await loadResolvedCatalogFromFiles('./data/OrbitalRing.json', './data/OrbitalRing.defaults.json');
+  const expectedByType = new Map([
+    [0, ['2901', '2902']],
+    [1, ['2302', '6501', '2315', '2319', '6215']],
+    [2, ['2309', '7823', '2317', '6215']],
+    [3, ['2308', '6215']],
+    [4, ['2303', '2304', '2305', '2318', '6215']],
+    [5, ['2310', '6265', '6215']],
+    [8, ['2314']],
+    [9, ['6257']],
+    [10, ['2305', '2318', '6215']],
+    [11, ['2315', '2319', '6215']],
+    [12, ['2318']],
+    [14, ['6254', '6264']],
+    [15, ['2901', '2902']],
+    [16, ['2317', '7823']],
+    [18, ['6215']],
+  ]);
+  for (const recipe of resolved.recipes.filter(entry => Number(entry.recipeId) > 0)) {
+    expect({ id: recipe.recipeId, buildings: [...recipe.allowedBuildingIds].sort() }).toEqual({
+      id: recipe.recipeId,
+      buildings: [...(expectedByType.get(recipe.typeId) ?? [])].sort(),
+    });
+  }
+});
+
+test.each([false, true])('directional expansion checks base buildings independently of group order (reversed=%s)', reversed => {
+  const groups = [
+    { MatchBaseBuildingIds: [2303], BuildingIds: [2305] },
+    { MatchBaseBuildingIds: [2305], BuildingIds: [2318] },
+  ];
+  const resolved = resolveCatalogModel(loadVanillaDataset(), {
+    recipeRules: [{ ID: 2, AllowedBuildingIds: [2303] }],
+    recipeBuildingExpansionGroups: reversed ? groups.reverse() : groups,
+  });
+  expect(resolved.recipeMap.get('2')?.allowedBuildingIds).toEqual(['2303', '2305']);
+});
+
+test('building expansion without a selector preserves symmetric compatibility', () => {
+  const resolved = resolveCatalogModel(loadVanillaDataset(), {
+    recipeRules: [{ ID: 2, AllowedBuildingIds: [2305] }],
+    recipeBuildingExpansionGroups: [{ BuildingIds: [2303, 2305] }],
+  });
+  expect(resolved.recipeMap.get('2')?.allowedBuildingIds).toEqual(['2305', '2303']);
+});
+
+test.each([[], '2303', ['2303']])('building expansion rejects an invalid base selector: %j', selector => {
+  const validation = validateCatalogDefaultConfigSpec({
+    recipeBuildingExpansionGroups: [{ BuildingIds: [2305], MatchBaseBuildingIds: selector }],
+  });
+  expect(validation.errors).toEqual(expect.arrayContaining([
+    expect.objectContaining({ path: '$.recipeBuildingExpansionGroups[0].MatchBaseBuildingIds' }),
+  ]));
+});
+
 test('OrbitalRing defaults assign intrinsic productivity bonuses to special chemical plants', async () => {
   const resolved = await loadResolvedCatalogFromFiles(
     './data/OrbitalRing.json',
@@ -439,7 +495,7 @@ test('OrbitalRing defaults assign intrinsic productivity bonuses to special chem
   });
   expect(resolved.recipeMap.get('816')).toMatchObject({
     recipeId: '816',
-    allowedBuildingIds: ['2305', '2303', '2304', '2318', '6215'],
+    allowedBuildingIds: ['2305', '2318', '6215'],
   });
   expect(resolved.recipeMap.get('82')).toMatchObject({
     recipeId: '82',

@@ -59,8 +59,22 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
           speedOnlyRecipeIds: defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds
             ? [...defaultConfig.recipeModifierPolicy.speedOnlyRecipeIds]
             : undefined,
+          factorySpecificModifierCodes: defaultConfig.recipeModifierPolicy.factorySpecificModifierCodes?.map(
+            entry => ({ factoryIds: [...entry.factoryIds], code: entry.code })
+          ),
         }
       : undefined,
+    recipeBuildingExpansionGroups: defaultConfig.recipeBuildingExpansionGroups?.map(group => ({
+      BuildingIds: [...group.BuildingIds],
+      MatchBaseBuildingIds: group.MatchBaseBuildingIds ? [...group.MatchBaseBuildingIds] : undefined,
+    })),
+    recipeBuildingUniversalIds: defaultConfig.recipeBuildingUniversalIds
+      ? [...defaultConfig.recipeBuildingUniversalIds]
+      : undefined,
+    recipeBuildingUniversalExclusionRules: defaultConfig.recipeBuildingUniversalExclusionRules?.map(rule => ({
+      MatchBaseBuildingIds: [...rule.MatchBaseBuildingIds],
+      UniversalBuildingIds: [...rule.UniversalBuildingIds],
+    })),
     recipeModifierRules: defaultConfig.recipeModifierRules?.map(rule => ({
       ...rule,
       SupportedModes: rule.SupportedModes ? [...rule.SupportedModes] : undefined,

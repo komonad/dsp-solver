@@ -1,10 +1,34 @@
 import {
+  loadResolvedCatalogFromFiles,
   resolveCatalogModel,
   type CatalogDefaultConfigSpec,
   type VanillaDatasetSpec,
 } from '../src/catalog';
 import { solveCatalogRequest } from '../src/solver';
 import { parseAdvancedSolveOverrides } from '../src/web/workbench/requestBuilder';
+
+test.each([
+  ['2303', 'infeasible'],
+  ['2304', 'infeasible'],
+  ['2305', 'optimal'],
+  ['2318', 'optimal'],
+])('OrbitalRing gravity lens respects forced factory %s (%s)', async (buildingId, status) => {
+  const catalog = await loadResolvedCatalogFromFiles('./data/OrbitalRing.json', './data/OrbitalRing.defaults.json');
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1209', ratePerMin: 60 }],
+    objective: 'min_buildings',
+    balancePolicy: 'force_balance',
+    rawInputItemIds: ['1112', '1127', '-9001'],
+    allowedRecipesByItem: { '1209': ['101'] },
+    forcedBuildingByRecipe: { '101': buildingId },
+    globalForcedProliferatorMode: 'none',
+    globalForcedProliferatorLevel: 0,
+  });
+  expect(result.status).toBe(status);
+  if (status === 'optimal') {
+    expect(result.recipePlans).toEqual([expect.objectContaining({ recipeId: '101', buildingId })]);
+  }
+});
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;

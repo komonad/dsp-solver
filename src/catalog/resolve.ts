@@ -53,6 +53,7 @@ function cloneDefaultConfig(defaultConfig: CatalogDefaultConfigSpec): CatalogDef
       : undefined,
     recipeBuildingExpansionGroups: defaultConfig.recipeBuildingExpansionGroups?.map(group => ({
       BuildingIds: [...group.BuildingIds],
+      MatchBaseBuildingIds: group.MatchBaseBuildingIds ? [...group.MatchBaseBuildingIds] : undefined,
     })),
     recipeBuildingUniversalIds: defaultConfig.recipeBuildingUniversalIds
       ? [...defaultConfig.recipeBuildingUniversalIds]
@@ -314,7 +315,9 @@ function expandAllowedBuildingIds(
   const excludedUniversalBuildingIds = new Set<number>();
 
   for (const group of expansionGroups) {
-    if (!group.BuildingIds.some(buildingId => expandedSet.has(buildingId))) {
+    const matchingBuildingIds = group.MatchBaseBuildingIds ?? group.BuildingIds;
+    const matchingSet = group.MatchBaseBuildingIds ? baseBuildingIdSet : expandedSet;
+    if (!matchingBuildingIds.some(buildingId => matchingSet.has(buildingId))) {
       continue;
     }
 

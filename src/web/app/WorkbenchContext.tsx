@@ -756,7 +756,12 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
   }, [activeWorkbenchConfigId, browserStorage, isLoading, loadedSource, workbenchConfigs]);
 
   useEffect(() => {
-    if (!browserStorage || !loadedSource) {
+    if (!browserStorage || !loadedSource || isLoading) {
+      return;
+    }
+
+    if (datasetEditorText === loadedDatasetText && defaultConfigEditorText === loadedDefaultConfigText) {
+      clearWorkbenchDatasetDraft(browserStorage, loadedSource);
       return;
     }
 
@@ -764,7 +769,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
       datasetText: datasetEditorText,
       defaultConfigText: defaultConfigEditorText,
     });
-  }, [browserStorage, datasetEditorText, defaultConfigEditorText, loadedSource]);
+  }, [browserStorage, datasetEditorText, defaultConfigEditorText, isLoading, loadedDatasetText, loadedDefaultConfigText, loadedSource]);
 
   // -------------------------------------------------------------------------
   // Derived: parsedOverrides, solveInputs, autoSolveState

@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import {
   buildEditableBuildingEntries,
   createEditableBuildingRule,
@@ -9,6 +10,17 @@ import {
   upsertEditableItem,
   upsertEditableRecipe,
 } from '../src/web/catalog/editor/catalogEditor';
+
+test('editing an OrbitalRing item preserves factory compatibility and modifier policies', () => {
+  const source = parseEditableCatalogSource(
+    readFileSync('./data/OrbitalRing.json', 'utf8'),
+    readFileSync('./data/OrbitalRing.defaults.json', 'utf8')
+  );
+  const edited = upsertEditableItem(source, { ...source.dataset.items[0], Name: 'Edited item' });
+  const serialized = stringifyEditableCatalogSource(edited);
+  expect(JSON.parse(serialized.defaultConfigText)).toEqual(source.defaultConfig);
+  expect(edited.defaultConfig.recipeBuildingExpansionGroups).not.toBe(source.defaultConfig.recipeBuildingExpansionGroups);
+});
 
 test('catalog editor can parse and round-trip dataset/default config text', () => {
   const source = parseEditableCatalogSource(
