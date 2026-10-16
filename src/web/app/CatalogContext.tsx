@@ -7,6 +7,7 @@ import {
   buildRecipeItemOptions,
   buildRecipeOptionsByOutputItem,
   buildTargetItemOptions,
+  getRecipeProliferatorLevelOptions,
   sortModeOptions,
   type WorkbenchRecipeOption,
 } from './workbenchHelpers';
@@ -131,16 +132,7 @@ export function CatalogProvider({
   );
 
   const getRecipeLevelOptions = useMemo(
-    () => (recipeId: string): number[] => {
-      const recipe = catalog?.recipeMap.get(recipeId);
-      if (!catalog || !recipe || recipe.maxProliferatorLevel <= 0) {
-        return [];
-      }
-      return catalog.proliferatorLevels
-        .map(level => level.level)
-        .filter(level => level > 0 && level <= recipe.maxProliferatorLevel)
-        .sort((left, right) => left - right);
-    },
+    () => (recipeId: string) => getRecipeProliferatorLevelOptions(catalog, recipeId),
     [catalog]
   );
 

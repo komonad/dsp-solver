@@ -66,6 +66,7 @@ function normalizeStrategyOverride(
     typeof override.forcedProliferatorLevel === 'number' &&
     Number.isFinite(override.forcedProliferatorLevel) &&
     override.forcedProliferatorLevel > 0 &&
+    override.forcedProliferatorLevel >= recipe.minProliferatorLevel &&
     override.forcedProliferatorLevel <= recipe.maxProliferatorLevel
   ) {
     forcedProliferatorLevel = override.forcedProliferatorLevel;

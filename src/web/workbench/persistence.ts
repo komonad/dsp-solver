@@ -666,6 +666,7 @@ export function sanitizeWorkbenchEditorState(
             typeof preference.preferredProliferatorLevel === 'number' &&
             Number.isFinite(preference.preferredProliferatorLevel) &&
             preference.preferredProliferatorLevel >= 0 &&
+            (preference.preferredProliferatorLevel === 0 || preference.preferredProliferatorLevel >= recipe.minProliferatorLevel) &&
             preference.preferredProliferatorLevel <= recipe.maxProliferatorLevel
               ? preference.preferredProliferatorLevel
               : '';
@@ -711,6 +712,7 @@ export function sanitizeWorkbenchEditorState(
             typeof override.forcedProliferatorLevel === 'number' &&
             Number.isFinite(override.forcedProliferatorLevel) &&
             override.forcedProliferatorLevel > 0 &&
+            override.forcedProliferatorLevel >= recipe.minProliferatorLevel &&
             override.forcedProliferatorLevel <= recipe.maxProliferatorLevel
           ) {
             forcedProliferatorLevel = override.forcedProliferatorLevel;

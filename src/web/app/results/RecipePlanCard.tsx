@@ -232,7 +232,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
               </RecipePlanToggleGroup>
               )}
 
-              {modeChoices.length > 0 && !levelSelectDisabled && (
+              {modeChoices.length > 0 && levelChoices.length > 1 && !levelSelectDisabled && (
               <RecipePlanToggleGroup
                 ariaLabel={`${plan.recipeName} ${PROLIFERATOR_LEVEL_CONTROL_LABEL}`}
                 value={selectedLevel}

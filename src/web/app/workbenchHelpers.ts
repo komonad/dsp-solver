@@ -212,6 +212,14 @@ export function buildRecipeProliferatorLevelChoices(catalog: ResolvedCatalogMode
   });
 }
 
+export function getRecipeProliferatorLevelOptions(catalog: ResolvedCatalogModel | null, recipeId: string): number[] {
+  const recipe = catalog?.recipeMap.get(recipeId);
+  if (!catalog || !recipe) return [];
+  return catalog.proliferatorLevels.map(entry => entry.level)
+    .filter(level => level > 0 && level >= recipe.minProliferatorLevel && level <= recipe.maxProliferatorLevel)
+    .sort((left, right) => left - right);
+}
+
 export function filterRecipeBuildingChoices(buildings: ResolvedCatalogModel['buildings'], disabledIds: readonly string[], advancedDisabledIds: readonly string[] = []) {
   const disabled = new Set([...disabledIds, ...advancedDisabledIds]);
   return buildings.filter(building => !disabled.has(building.buildingId));

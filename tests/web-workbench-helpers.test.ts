@@ -1,3 +1,4 @@
+import { readFileSync } from 'fs';
 import {
   resolveCatalogModel,
   type CatalogDefaultConfigSpec,
@@ -21,6 +22,7 @@ import {
   formatItemRateLabel,
   formatRecipePlanBuildingCount,
   formatWorkbenchSolveElapsedSeconds,
+  getRecipeProliferatorLevelOptions,
   shouldOmitItemAmount,
 } from '../src/web/app/workbenchHelpers';
 
@@ -187,6 +189,16 @@ test('building choices combine editor and advanced exclusions without changing c
   expect(filterRecipeBuildingChoices(choices, ['5002'], ['5003']).map(entry => entry.buildingId)).toEqual([building.buildingId]);
   expect(filterRecipeBuildingChoices(choices, []).length).toBe(3);
   expect(choices.length).toBe(3);
+});
+
+test('orbitalring level controls honor recipe lower bounds while preserving assembler choices', () => {
+  const catalog = resolveCatalogModel(JSON.parse(readFileSync('./data/OrbitalRing.json', 'utf8')),
+    JSON.parse(readFileSync('./data/OrbitalRing.defaults.json', 'utf8')));
+  for (const recipeId of ['32', '509', '716', '717']) {
+    expect(getRecipeProliferatorLevelOptions(catalog, recipeId)).toEqual([3]);
+  }
+  expect(getRecipeProliferatorLevelOptions(catalog, '2')).toEqual([1, 2, 3]);
+  expect(getRecipeProliferatorLevelOptions(catalog, 'missing')).toEqual([]);
 });
 
 test('buildRecipeOptionsByOutputItem groups recipe details by produced item and sorts by recipe name', () => {
