@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Autocomplete, Box, Button, IconButton, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, FormControlLabel, IconButton, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import RestartAltRoundedIcon from '@mui/icons-material/RestartAltRounded';
 import { useWorkbench } from '../WorkbenchContext';
 import { useCatalog } from '../CatalogContext';
@@ -85,7 +85,7 @@ export default function ObjectiveWeightsEditor() {
   const options = (catalog?.items ?? []).filter(item => weights[item.itemId] === undefined);
   return <CollapsibleSnapshotSection title="求解目标函数" description={view.description}
     expanded={expanded} onExpandedChange={setExpanded}
-    collapsedContent={<Typography sx={snapshotSummarySx}>{view.summary}</Typography>}
+    collapsedContent={<Typography sx={snapshotSummarySx}>{view.summary}{parsedOverrides.value.singleRecipeVariant ? ' · 单配方单一方案' : ''}</Typography>}
     headerAction={sampleName ? <Tooltip slotProps={snapshotFormalTooltipSlotProps}
       title="恢复默认原料权重：按 3 个随机种子、64 星、1 倍资源抽样，铁矿成本 = 1。气体和海洋资源成本为 0，未覆盖资源默认成本为 1。重置会覆盖当前原料单位成本，各项可继续手动调整。">
       <span><IconButton size="small" aria-label="恢复默认原料权重"
@@ -99,6 +99,12 @@ export default function ObjectiveWeightsEditor() {
       <CostField label="功耗权重" value={coefficients.power} onCommit={value => updateCoefficient('power', value)} />
       <CostField label="产线复杂度权重" value={coefficients.recipes} onCommit={value => updateCoefficient('recipes', value)} />
     </Box>
+    <Tooltip title="同一配方只允许一种建筑、增产模式和等级组合；机器台数不受此限制。开启后需要离散搜索。">
+      <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" checked={parsedOverrides.value.singleRecipeVariant ?? false}
+        onChange={(_, checked) => setAdvancedOverridesText(current => updateObjectiveWeightsText(current, {
+          singleRecipeVariant: checked, objectiveWeights: coefficients, milpTimeLimitMs: null,
+        }))} />} label={<Typography variant="caption">禁止同配方多种生产方案</Typography>} />
+    </Tooltip>
     {sampleError && <Alert severity="warning">{sampleError}，仍可手动设置权重。</Alert>}
     {!autoSolveState.activity.staleResult && autoSolveState.result?.objectiveCost &&
       <Alert severity="info">

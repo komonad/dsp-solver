@@ -81,6 +81,13 @@ export interface SolveRequest {
    * areas and MW reflect the full requested throughput.
    */
   objectiveWeights?: ObjectiveWeights;
+  /**
+   * At most one building/mode/level variant may carry positive flow per recipe.
+   * Machine counts and recipe throughput remain continuous and unrestricted.
+   * Requires discrete refinement even when the recipe-count penalty is zero.
+   * Legacy min_complexity requests need explicit objectiveWeights.
+   */
+  singleRecipeVariant?: boolean;
   /** Null permits background search until convergence or cancellation. */
   milpTimeLimitMs?: number | null;
   /** Relative gap target, default 0.01. Zero requests proof of exact optimality. */

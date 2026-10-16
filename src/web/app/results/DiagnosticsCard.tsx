@@ -97,7 +97,7 @@ export default function DiagnosticsCard() {
           locale={locale}
           solveAudit={result?.solveAudit}
           objective={lastRequest?.objective}
-          solvedRecipeCount={result?.recipePlans.length}
+          solvedRecipeCount={model.solvedSummary?.recipeTypeCount}
         />
         {fallbackModel && fallbackSolve?.reason === 'force_balance_infeasible' ? (
           <Alert

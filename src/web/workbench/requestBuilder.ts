@@ -299,6 +299,8 @@ export function parseAdvancedSolveOverrides(
 
   const source = parsed as Record<string, unknown>;
   const errors: string[] = [];
+  const singleRecipeVariant = typeof source.singleRecipeVariant === 'boolean' ? source.singleRecipeVariant : undefined;
+  if (source.singleRecipeVariant !== undefined && singleRecipeVariant === undefined) errors.push('单配方生产方案限制须为布尔值。');
   let objectiveWeights: SolveRequest['objectiveWeights'];
   if (source.objectiveWeights !== undefined) {
     const w = source.objectiveWeights;
@@ -318,7 +320,7 @@ export function parseAdvancedSolveOverrides(
     } else recipeCountPenalty = { weight: config.weight, timeLimitMs: config.timeLimitMs as number | undefined };
   }
   const value: AdvancedSolveOverrides = {
-    objectiveWeights, milpTimeLimitMs,
+    objectiveWeights, milpTimeLimitMs, singleRecipeVariant,
     powerWeight: readOptionalNumber(source, 'powerWeight', errors, locale),
     recipeWeight: readOptionalNumber(source, 'recipeWeight', errors, locale),
     milpRelativeGap: readOptionalNumber(source, 'milpRelativeGap', errors, locale),
@@ -548,7 +550,7 @@ export function mergeAdvancedSolveOverrides(
   override: AdvancedSolveOverrides = {}
 ): AdvancedSolveOverrides {
   const merged: AdvancedSolveOverrides = {};
-  for (const key of ['objectiveWeights', 'milpTimeLimitMs', 'powerWeight', 'recipeWeight', 'milpRelativeGap'] as const) {
+  for (const key of ['objectiveWeights', 'milpTimeLimitMs', 'powerWeight', 'recipeWeight', 'milpRelativeGap', 'singleRecipeVariant'] as const) {
     const value = override[key] !== undefined ? override[key] : base[key];
     if (value !== undefined) Object.assign(merged, { [key]: value });
   }

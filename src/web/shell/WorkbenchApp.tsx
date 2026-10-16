@@ -19,6 +19,7 @@ import { FlowGraphPanel } from '../app/flowGraph/FlowGraphPanel';
 import WorkbenchHeader from './WorkbenchHeader';
 import ResizableWorkbenchLayout from './ResizableWorkbenchLayout';
 import { cardStyle } from '../app/workbenchStyles';
+import { formatRecipePlanListSummary } from '../app/workbenchHelpers';
 
 export default function WorkbenchApp() {
   return (
@@ -79,7 +80,7 @@ function WorkbenchLayout() {
                 <article style={cardStyle}>
                   <CollapsibleCardHeader title={bundle.recipePlans.title} collapsed={recipePlansCollapsed}
                     onToggle={() => setRecipePlansCollapsed(prev => !prev)}
-                    summary={model?.recipePlans ? `${model.recipePlans.length}` : undefined}
+                    summary={model ? formatRecipePlanListSummary(model.recipePlans, locale) : undefined}
                     actions={model?.recipePlans.length ? (
                       <Button variant="outlined" size="small" onClick={() => setFlowGraphOpen(true)} startIcon={<AccountTreeOutlinedIcon />}>
                         {bundle.flowGraph.title}

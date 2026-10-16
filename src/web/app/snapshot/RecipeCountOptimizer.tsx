@@ -23,7 +23,7 @@ export default function RecipeCountOptimizer() {
     return () => window.clearInterval(timer);
   }, [running, startedAtEpochMs]);
   const coefficients = resolveObjectiveWeights(objective, parsedOverrides.value, autoSolveState.result?.recipeCountOptimization?.baselineCost);
-  if (coefficients.recipes <= 0 || parsedOverrides.error) return null;
+  if ((coefficients.recipes <= 0 && !parsedOverrides.value.singleRecipeVariant) || parsedOverrides.error) return null;
   const summary = !autoSolveState.activity.staleResult ? autoSolveState.result?.recipeCountOptimization : undefined;
   const view = summary ? buildRecipeOptimizationViewModel(summary) : undefined;
   const stopped = autoSolveState.activity.status === 'cancelled' || summary?.status === 'paused';

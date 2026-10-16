@@ -43,6 +43,34 @@ export function splitByFocus<T>(
   return { focused, unfocused };
 }
 
+export function countRecipePlanTypes(plans: readonly { recipeId: string }[]): number {
+  return new Set(plans.map(plan => plan.recipeId)).size;
+}
+
+export function formatRecipePlanListSummary(plans: readonly { recipeId: string }[], locale: AppLocale): string {
+  return `${countRecipePlanTypes(plans).toLocaleString(locale)} 种配方 · ${plans.length.toLocaleString(locale)} 条产线`;
+}
+
+export function buildRecipePlanListEntries<T extends { recipeId: string }>(plans: readonly T[]) {
+  const recipes = new Map<string, { number: number; count: number; seen: number }>();
+  for (const plan of plans) {
+    const recipe = recipes.get(plan.recipeId) ?? { number: recipes.size + 1, count: 0, seen: 0 };
+    recipe.count += 1;
+    recipes.set(plan.recipeId, recipe);
+  }
+  return plans.map(plan => {
+    const recipe = recipes.get(plan.recipeId)!;
+    const lineNumber = ++recipe.seen;
+    return {
+      plan,
+      lineNumber,
+      lineCount: recipe.count,
+      numberLabel: `#${recipe.number}${recipe.count > 1 ? ` · ${lineNumber}/${recipe.count}` : ''}`,
+      numberTitle: `第 ${recipe.number} 种配方${recipe.count > 1 ? ` · 同配方第 ${lineNumber}/${recipe.count} 条产线` : ''}`,
+    };
+  });
+}
+
 export function buildFocusItemOptions(
   items: ItemPickerOption[],
   currentItemIds: ReadonlySet<string>,
@@ -92,7 +120,7 @@ export interface WorkbenchConfigDisplayModel {
   objective: WorkbenchEditorState['objective'];
   balancePolicy: WorkbenchEditorState['balancePolicy'];
   status: WorkbenchConfigDisplayStatus;
-  recipePlanCount: number | null;
+  recipeTypeCount: number | null;
   roundedBuildingCount: number | null;
   powerLabel: string | null;
   datasetLabel: string;
@@ -571,7 +599,7 @@ export function buildWorkbenchConfigDisplayModel(
     objective: config.editorState.objective,
     balancePolicy: config.editorState.balancePolicy,
     status: pickWorkbenchConfigStatus(solveState),
-    recipePlanCount: result?.recipePlans.length ?? null,
+    recipeTypeCount: result ? countRecipePlanTypes(result.recipePlans) : null,
     roundedBuildingCount:
       result?.buildingSummary.reduce((sum, entry) => sum + entry.roundedUpCount, 0) ?? null,
     powerLabel: result ? formatPower(result.powerSummary.roundedPlacementPowerMW, live?.locale ?? 'zh-CN') : null,

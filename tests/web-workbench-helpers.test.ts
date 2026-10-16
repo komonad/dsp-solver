@@ -10,6 +10,7 @@ import {
   buildRecipeProliferatorLevelChoices,
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipePlanCardDisplayModel,
+  buildRecipePlanListEntries,
   buildRecipeItemOptions,
   buildRecipeOptionsByOutputItem,
   buildRecipeProliferatorPreferenceDisplayEntries,
@@ -21,10 +22,34 @@ import {
   formatItemAmountLabel,
   formatItemRateLabel,
   formatRecipePlanBuildingCount,
+  formatRecipePlanListSummary,
+  countRecipePlanTypes,
   formatWorkbenchSolveElapsedSeconds,
   getRecipeProliferatorLevelOptions,
   shouldOmitItemAmount,
 } from '../src/web/app/workbenchHelpers';
+
+test('recipe list counts distinguish 59 recipe types from 60 production lines', () => {
+  const plans = Array.from({ length: 59 }, (_, index) => ({ recipeId: String(index + 1), buildingId: '2309' }));
+  plans.push({ recipeId: '23', buildingId: '2317' });
+  expect(countRecipePlanTypes(plans)).toBe(59);
+  expect(formatRecipePlanListSummary(plans, 'zh-CN')).toBe('59 种配方 · 60 条产线');
+  expect(formatRecipePlanListSummary([], 'zh-CN')).toBe('0 种配方 · 0 条产线');
+});
+
+test('recipe list numbering shares a recipe number across its production variants', () => {
+  const plans = [
+    { recipeId: '23', buildingId: '2309' },
+    { recipeId: '54', buildingId: '2318' },
+    { recipeId: '23', buildingId: '2317' },
+    { recipeId: '-900101', buildingId: '2204' },
+  ];
+  const entries = buildRecipePlanListEntries(plans);
+  expect(entries.map(entry => entry.numberLabel)).toEqual(['#1 · 1/2', '#2', '#1 · 2/2', '#3']);
+  expect(entries[2].numberTitle).toBe('第 1 种配方 · 同配方第 2/2 条产线');
+  expect(entries.filter(entry => entry.lineCount > 1 && entry.lineNumber === 1).map(entry => entry.plan.recipeId)).toEqual(['23']);
+  expect(entries[2].plan).toBe(plans[2]);
+});
 
 test('objective summaries retain all independent coefficients and their throughput basis', () => {
   const view = buildObjectiveEditorViewModel({ resources: 1, footprint: 0.5, power: 0, recipes: 100 }, 1000 / 60);

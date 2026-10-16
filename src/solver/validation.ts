@@ -78,6 +78,12 @@ function validateModeRecordMap(
 
 export function validateSolveRequest(catalog: ResolvedCatalogModel, request: SolveRequest): ValidateResult {
   const messages: string[] = [];
+  if (request.singleRecipeVariant !== undefined && typeof request.singleRecipeVariant !== 'boolean') {
+    messages.push('singleRecipeVariant must be a boolean.');
+  }
+  if (request.singleRecipeVariant && request.objective === 'min_complexity' && !request.objectiveWeights) {
+    messages.push('singleRecipeVariant requires explicit objectiveWeights with min_complexity.');
+  }
   if (request.objectiveWeights !== undefined) {
     const w = request.objectiveWeights;
     if (!w || typeof w !== 'object' || !['resources', 'footprint', 'power', 'recipes'].every(key => {

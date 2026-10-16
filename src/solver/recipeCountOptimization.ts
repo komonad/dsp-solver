@@ -17,7 +17,7 @@ export function optimizeRecipeCount(
   const start = currentTimeMs();
   const config = request.recipeCountPenalty ?? { weight: 0 };
   const timeLimitMs = request.milpTimeLimitMs !== undefined ? request.milpTimeLimitMs
-    : config.timeLimitMs ?? (request.recipeWeight !== undefined ? null : 3000);
+    : config.timeLimitMs ?? (request.recipeWeight !== undefined || request.singleRecipeVariant ? null : 3000);
   const deadline = timeLimitMs === null ? Infinity : start + timeLimitMs;
   const recipes = new Map<string, string[]>();
   for (const { option, recipe } of options) {
@@ -91,11 +91,27 @@ export function optimizeRecipeCount(
       (model.binaries as Set<string>).add(indicator);
       for (const id of ids) model.variables[id][row] = costBounded ? model.variables[id][model.objective] : 1;
       seed.set(indicator, ids.some(id => (seed.get(id) ?? 0) > EPSILON) ? 1 : 0);
+      if (request.singleRecipeVariant && ids.length > 1) {
+        const choiceRow = `single-variant:${recipe}`;
+        model.constraints[choiceRow] = { max: 1 };
+        for (const id of ids) {
+          const use = `__variant_use:${id}`;
+          const link = `variant-link:${id}`;
+          model.constraints[link] = { max: 0 };
+          model.variables[use] = { [model.objective]: 0, [choiceRow]: 1, [link]: -bound };
+          model.variables[id][link] = costBounded ? model.variables[id][model.objective] : 1;
+          (model.binaries as Set<string>).add(use);
+          seed.set(use, (seed.get(id) ?? 0) > EPSILON ? 1 : 0);
+        }
+      }
     }
+    summary.binaryCount = model.binaries.size;
     if (!isFeasibleAssignment(model, seed)) { summary.reason = 'invalid_candidate'; return finish(); }
     const remaining = deadline - currentTimeMs();
     if (remaining <= 0) { summary.status = 'time_limit'; return finish(); }
     const accept = (candidate: Solution) => {
+      if (request.singleRecipeVariant && [...recipes.values()].some(ids =>
+        ids.filter(id => (candidate.variables.get(id) ?? 0) > EPSILON).length > 1)) return false;
       const candidateCost = cost(candidate.variables);
       const candidateCount = count(candidate.variables);
       const score = candidateCost / baselineCost + normalizedPenalty * candidateCount;

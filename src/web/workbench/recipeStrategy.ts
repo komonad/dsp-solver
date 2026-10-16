@@ -140,9 +140,9 @@ export function tryApplyRecipeStrategyOverride(
   );
 
   const parsed = parseAdvancedSolveOverrides(advancedOverridesText, locale);
-  // Strategy validation checks feasibility; recipe-count search belongs to the worker.
+  // Discrete feasibility and optimization run in the worker to keep editing responsive.
   const validationOverridesText = parsed.error ? advancedOverridesText : updateObjectiveWeightsText(advancedOverridesText, {
-    recipeWeight: 0, recipeCountPenalty: undefined,
+    recipeWeight: 0, recipeCountPenalty: undefined, singleRecipeVariant: false,
     objectiveWeights: parsed.value.objectiveWeights ? { ...parsed.value.objectiveWeights, recipes: 0 } : undefined,
   });
   const nextSolveState = computeWorkbenchSolve({

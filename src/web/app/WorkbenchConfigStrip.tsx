@@ -373,9 +373,9 @@ export default function WorkbenchConfigStrip() {
                       {`${bundle.summary.buildingsLabel} ${config.roundedBuildingCount}`}
                     </Typography>
                   ) : null}
-                  {config.recipePlanCount !== null ? (
+                  {config.recipeTypeCount !== null ? (
                     <Typography component="span" sx={{ fontSize: 11, color: 'rgba(24, 51, 89, 0.68)' }}>
-                      {`${bundle.summary.recipesLabel} ${config.recipePlanCount}`}
+                      {`${bundle.summary.recipesLabel} ${config.recipeTypeCount}`}
                     </Typography>
                   ) : null}
                   {config.powerLabel ? (

@@ -256,7 +256,10 @@ export interface SolveResult {
   resolvedRawInputItemIds: string[];
   /** Echo of requested targets and achieved rates. */
   targets: SolvedTarget[];
-  /** Detailed selected recipe/building/proliferator variants. */
+  /**
+   * Detailed selected recipe/building/proliferator variants. One recipe ID
+   * may appear in multiple entries; distinct recipe counts deduplicate IDs.
+   */
   recipePlans: RecipePlan[];
   /** Aggregated building usage by building type. */
   buildingSummary: BuildingSummary[];

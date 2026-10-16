@@ -18,6 +18,23 @@ export const cardStyle: React.CSSProperties = {
   boxShadow: '0 2px 8px rgba(35, 50, 75, 0.025)',
 };
 
+export const recipePlanNumberSx = {
+  fontSize: 11,
+  fontWeight: 650,
+  color: 'text.secondary',
+  fontVariantNumeric: 'tabular-nums',
+  whiteSpace: 'nowrap',
+  flexShrink: 0,
+} as const;
+
+export const recipePlanSplitLinksSx = {
+  display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5,
+} as const;
+
+export const recipePlanSplitLinkSx = {
+  minWidth: 0, px: 0.5, py: 0, fontSize: 12,
+} as const;
+
 export const summarySectionStyle: React.CSSProperties = {
   background: '#f9fafc', borderRadius: 10, padding: 16,
   display: 'grid', gap: 10, alignContent: 'start', minWidth: 0,

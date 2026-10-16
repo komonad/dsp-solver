@@ -38,7 +38,7 @@ async function handleWorkerRequest(message: SolveWorkerRequest): Promise<void> {
   postResponse({
     type: 'progress',
     requestId: message.requestId,
-    stage: (message.request.objectiveWeights?.recipes ?? message.request.recipeWeight ?? message.request.recipeCountPenalty?.weight ?? 0) > 0
+    stage: message.request.singleRecipeVariant || (message.request.objectiveWeights?.recipes ?? message.request.recipeWeight ?? message.request.recipeCountPenalty?.weight ?? 0) > 0
       ? 'optimizing_recipe_count' : message.attempt === 'relaxed' ? 'solving_relaxed' : 'solving_primary',
   });
   const result = await solveCatalogRequestAsync(currentCatalog, message.request, { implementationPromise,

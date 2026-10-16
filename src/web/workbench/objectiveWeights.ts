@@ -26,7 +26,7 @@ export function matchObjectivePreset(weights: ObjectiveWeights): SolveObjective 
 
 export function updateObjectiveWeightsText(
   text: string,
-  patch: Pick<SolveRequest, 'inputWeights' | 'footprintWeight' | 'resourceWeight' | 'recipeCountPenalty' | 'objectiveWeights' | 'powerWeight' | 'recipeWeight' | 'milpTimeLimitMs' | 'milpRelativeGap'>
+  patch: Pick<SolveRequest, 'inputWeights' | 'footprintWeight' | 'resourceWeight' | 'recipeCountPenalty' | 'objectiveWeights' | 'powerWeight' | 'recipeWeight' | 'milpTimeLimitMs' | 'milpRelativeGap' | 'singleRecipeVariant'>
 ): string {
   const value: unknown = text.trim() ? JSON.parse(text) : {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) {

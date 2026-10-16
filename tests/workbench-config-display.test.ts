@@ -2,6 +2,8 @@ import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDataset
 import { getLocaleBundle } from '../src/i18n';
 import { buildWorkbenchConfigDisplayModel } from '../src/web/app/workbenchHelpers';
 import type { WorkbenchPersistedConfig } from '../src/web/workbench/persistence';
+import { solveCatalogRequest } from '../src/solver';
+import { buildDefaultWorkbenchEditorState } from '../src/web/app/workbenchHelpers';
 
 const bundle = getLocaleBundle('zh-CN');
 
@@ -49,6 +51,22 @@ function buildDemoDefaults(): CatalogDefaultConfigSpec {
     recommendedRawItemTypeIds: [1],
   };
 }
+
+test('saved config summaries count recipe types across multiple production variants', () => {
+  const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
+  const result = solveCatalogRequest(catalog, {
+    targets: [{ itemId: '1101', ratePerMin: 60 }], objective: 'min_power', balancePolicy: 'force_balance',
+  });
+  expect(result.status).toBe('optimal');
+  result.recipePlans.push({ ...result.recipePlans[0], proliferatorMode: 'speed', proliferatorLevel: 3 });
+  const display = buildWorkbenchConfigDisplayModel(
+    { id: 'split', editorState: buildDefaultWorkbenchEditorState(catalog) },
+    { result, error: '', activityStatus: 'settled' },
+    {},
+    { catalog, locale: 'zh-CN', bundle }
+  );
+  expect(display.recipeTypeCount).toBe(1);
+});
 
 test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solved results', () => {
   const catalog = resolveCatalogModel(buildDemoDataset(), buildDemoDefaults());
@@ -130,7 +148,7 @@ test('buildWorkbenchConfigDisplayModel prefers custom names and summarizes solve
     objective: 'min_power',
     balancePolicy: 'allow_surplus',
     status: 'optimal',
-    recipePlanCount: 1,
+    recipeTypeCount: 1,
     roundedBuildingCount: 1,
   });
   expect(display.powerLabel).toBe('1.00 MW');
@@ -177,7 +195,7 @@ test('buildWorkbenchConfigDisplayModel falls back to target summary and running 
   expect(display.title).toBe(`Plate 90/\u5206`);
   expect(display.targetSummary).toBe(`Plate 90/\u5206`);
   expect(display.status).toBe('running');
-  expect(display.recipePlanCount).toBeNull();
+  expect(display.recipeTypeCount).toBeNull();
   expect(display.roundedBuildingCount).toBeNull();
   expect(display.powerLabel).toBeNull();
 });

@@ -17,9 +17,12 @@ import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import { useWorkbenchDraft } from '../WorkbenchDraftContext';
 import { buildRecipePlanCardDisplayModel, buildRecipeProliferatorLevelChoices, filterRecipeBuildingChoices } from '../workbenchHelpers';
+import { recipePlanNumberSx } from '../workbenchStyles';
 
 export interface RecipePlanCardProps {
   plan: PresentationModel['recipePlans'][number];
+  numberLabel: string;
+  numberTitle: string;
 }
 
 const BUILDING_CONTROL_LABEL = '\u5efa\u7b51\u9009\u62e9';
@@ -27,7 +30,7 @@ const PROLIFERATOR_MODE_CONTROL_LABEL = '\u589e\u4ea7\u7b56\u7565';
 const PROLIFERATOR_LEVEL_CONTROL_LABEL = '\u589e\u4ea7\u7b49\u7ea7';
 const NONE_OPTION_LABEL = '\u2205';
 
-const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCardProps) {
+const RecipePlanCard = React.memo(function RecipePlanCard({ plan, numberLabel, numberTitle }: RecipePlanCardProps) {
   const {
     bundle,
     locale,
@@ -141,6 +144,9 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
               flexWrap: 'wrap',
             }}
           >
+            <Typography component="span" title={numberTitle} sx={recipePlanNumberSx}>
+              {numberLabel}
+            </Typography>
             <Typography
               variant="subtitle1"
               fontWeight={700}

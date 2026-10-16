@@ -14,6 +14,7 @@ import { yalpsSolverImplementation } from './yalpsImplementation';
 import { recordSolverPerf } from './perf';
 import { getInputUnitCost, normalizeObjectiveRequest, buildWeightedObjectiveCost } from './objectiveCosts';
 import { optimizeRecipeCount } from './recipeCountOptimization';
+import { findSingleRecipeVariantSeed } from './singleRecipeVariant';
 import {
   EPSILON,
   type CompiledOptionContext,
@@ -931,7 +932,7 @@ function solveCatalogRequestValidated(
   let lpDurationMs = 0;
   let surplusReweightTermination: SolveAudit['surplusReweightTermination'];
   let recipeCountOptimization: RecipeCountOptimization | undefined;
-  const useRecipePenalty = request.objective === 'min_weighted' && ((request.recipeWeight ?? 0) > 0 || (request.recipeCountPenalty?.weight ?? 0) > 0);
+  const useRecipePenalty = request.singleRecipeVariant || (request.objective === 'min_weighted' && ((request.recipeWeight ?? 0) > 0 || (request.recipeCountPenalty?.weight ?? 0) > 0));
   const buildSolveAudit = (resultDurationMs: number, totalDurationMs: number): SolveAudit => ({
     prunedItemCount: compiledGraph.itemIds.length,
     prunedRecipeCount: compiledGraph.recipes.length,
@@ -1113,6 +1114,11 @@ function solveCatalogRequestValidated(
     activeOptions = linearBuild.activeOptions;
     const initialSolve = solveModel(model);
     solution = initialSolve.solution;
+    if (request.singleRecipeVariant && solution.status === 'optimal') {
+      const seedStartedAt = currentTimeMs();
+      solution = findSingleRecipeVariantSeed(model, solution, activeOptions, implementation);
+      lpDurationMs += currentTimeMs() - seedStartedAt;
+    }
     auditAttempts.push(
       buildSolveAuditAttempt({
         phase: 'initial_lp',
@@ -1498,7 +1504,7 @@ function solveCatalogRequestValidated(
     if (refined.model) {
       auditAttempts.push(buildSolveAuditAttempt({
         phase: 'recipe_count_milp', modelKind: 'milp',
-        itemCount: compiledGraph.itemIds.length, recipeCount: refined.summary.binaryCount,
+        itemCount: compiledGraph.itemIds.length, recipeCount: countActiveRecipeIds(activeOptions),
         optionCount: activeOptions.length, binaryCount: refined.summary.binaryCount,
         constraintCount: Object.keys(refined.model.constraints).length,
         variableCount: Object.keys(refined.model.variables).length, buildDurationMs: 0,
