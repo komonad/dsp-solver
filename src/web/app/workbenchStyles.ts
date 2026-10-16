@@ -128,7 +128,7 @@ export const recipePlanToggleGroupSx = {
   overflowX: 'auto',
   overflowY: 'hidden',
   flex: '0 0 auto',
-  borderRadius: '7px',
+  borderRadius: '6px',
   border: '1px solid rgba(24, 51, 89, 0.14)',
   backgroundColor: 'rgba(255, 255, 255, 0.78)',
   scrollbarWidth: 'thin',
@@ -148,15 +148,15 @@ export const recipePlanToggleButtonSx = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 0.125,
-  minWidth: 28,
-  height: 26,
+  minWidth: 24,
+  height: 22,
   px: 0.5,
   py: 0,
   borderRadius: 0,
   border: 0,
   backgroundColor: 'transparent',
   color: '#183359',
-  fontSize: 11,
+  fontSize: 10,
   fontWeight: 700,
   lineHeight: 1,
   textTransform: 'none',
@@ -180,8 +180,8 @@ export const recipePlanToggleButtonSx = {
 
 export const recipePlanIconToggleButtonSx = {
   ...recipePlanToggleButtonSx,
-  width: 28,
-  minWidth: 28,
+  width: 24,
+  minWidth: 24,
   px: 0,
 } as const;
 

@@ -142,9 +142,7 @@ export function RecipePlanToggleGroup({
       data-testid={testId}
       value={value}
       onChange={(_event, nextValue) => {
-        if (nextValue !== null) {
-          onChange(String(nextValue));
-        }
+        onChange(nextValue === null ? '' : String(nextValue));
       }}
       sx={recipePlanToggleGroupSx}
     >

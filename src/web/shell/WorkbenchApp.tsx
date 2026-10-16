@@ -8,7 +8,6 @@ import { useCatalog } from '../app/CatalogContext';
 import { useSolve } from '../app/SolveContext';
 import WorkbenchConfigStrip from '../app/WorkbenchConfigStrip';
 import SettingsSidebar from './SettingsSidebar';
-import SolveActivityNotice from '../app/components/SolveActivityNotice';
 import CollapsibleCardHeader from '../app/components/CollapsibleCardHeader';
 import SummaryCard from '../app/results/SummaryCard';
 import DiagnosticsCard from '../app/results/DiagnosticsCard';
@@ -68,9 +67,6 @@ function WorkbenchLayout() {
           left={hasStatus ? <><SummaryCard /><ItemLedgerPanel sticky={false} /><DiagnosticsCard /></> : null}
           right={<SettingsSidebar />}>
           <Box sx={{ display: 'grid', gap: 1.5, minWidth: 0 }}>
-            {isSolveRunning || isSolveCancelled ? (
-              <article style={cardStyle}><SolveActivityNotice /></article>
-            ) : null}
             {loadError ? (
               <article style={{ ...cardStyle, borderColor: 'rgba(180, 41, 41, 0.2)' }}>
                 <h2 style={{ marginTop: 0, color: '#8e2020' }}>{bundle.datasetSource.loadErrorTitle}</h2>

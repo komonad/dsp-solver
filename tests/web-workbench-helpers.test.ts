@@ -6,6 +6,7 @@ import {
 import {
   buildDefaultWorkbenchEditorState,
   buildObjectiveEditorViewModel,
+  buildRecipeProliferatorLevelChoices,
   buildGlobalProliferatorPreferenceDisplayEntry,
   buildRecipePlanCardDisplayModel,
   buildRecipeItemOptions,
@@ -14,10 +15,12 @@ import {
   buildTargetItemOptions,
   filterItemOptionsByRecipeAvailability,
   filterRecipeOptionsByExclusion,
+  filterRecipeBuildingChoices,
   formatCompactItemRateLabel,
   formatItemAmountLabel,
   formatItemRateLabel,
   formatRecipePlanBuildingCount,
+  formatWorkbenchSolveElapsedSeconds,
   shouldOmitItemAmount,
 } from '../src/web/app/workbenchHelpers';
 
@@ -27,6 +30,13 @@ test('objective summaries retain all independent coefficients and their throughp
   expect(view.description).toContain('60/分钟');
   expect(view.description).toContain('16.6667');
   expect(view.description).toContain('100 × 配方种类数');
+});
+
+test('solve elapsed labels start from the current attempt and freeze after cancellation', () => {
+  const running = { status: 'running' as const, staleResult: false, startedAtEpochMs: 20_000 };
+  expect(formatWorkbenchSolveElapsedSeconds(running, 19_950)).toBe('0.0 秒');
+  expect(formatWorkbenchSolveElapsedSeconds(running, 20_400)).toBe('0.4 秒');
+  expect(formatWorkbenchSolveElapsedSeconds({ ...running, status: 'cancelled', finishedAtEpochMs: 20_400 }, 90_000)).toBe('0.4 秒');
 });
 
 function workEnergyForMW(megawatts: number): number {
@@ -160,6 +170,24 @@ function buildRecipePlanDisplayCatalog() {
 
   return resolveCatalogModel(dataset, defaults);
 }
+
+test('proliferator level choices resolve catalog icons and retain numeric fallbacks for missing metadata', () => {
+  expect(buildRecipeProliferatorLevelChoices(buildRecipePlanDisplayCatalog(), [1, 4], '等级')).toEqual([
+    { level: 1, iconKey: 'spray', label: '等级 1 · Spray' },
+    { level: 4, iconKey: undefined, label: '等级 4' },
+  ]);
+  expect(buildRecipeProliferatorLevelChoices(null, [3], 'Level')).toEqual([
+    { level: 3, iconKey: undefined, label: 'Level 3' },
+  ]);
+});
+
+test('building choices combine editor and advanced exclusions without changing catalog options', () => {
+  const building = buildRecipePlanDisplayCatalog().buildings[0];
+  const choices = [building, { ...building, buildingId: '5002' }, { ...building, buildingId: '5003' }];
+  expect(filterRecipeBuildingChoices(choices, ['5002'], ['5003']).map(entry => entry.buildingId)).toEqual([building.buildingId]);
+  expect(filterRecipeBuildingChoices(choices, []).length).toBe(3);
+  expect(choices.length).toBe(3);
+});
 
 test('buildRecipeOptionsByOutputItem groups recipe details by produced item and sorts by recipe name', () => {
   const catalog = buildRecipeOptionCatalog();

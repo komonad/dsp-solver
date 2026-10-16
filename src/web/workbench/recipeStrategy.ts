@@ -2,6 +2,8 @@ import type { ResolvedCatalogModel } from '../../catalog';
 import { DEFAULT_APP_LOCALE, getLocaleBundle, type AppLocale } from '../../i18n';
 import type { BalancePolicy, SolveObjective } from '../../solver';
 import { computeWorkbenchSolve } from './autoSolve';
+import { parseAdvancedSolveOverrides } from './requestBuilder';
+import { updateObjectiveWeightsText } from './objectiveWeights';
 import type {
   EditablePreferredBuilding,
   EditableRecipePreference,
@@ -64,8 +66,7 @@ function normalizeStrategyOverride(
     typeof override.forcedProliferatorLevel === 'number' &&
     Number.isFinite(override.forcedProliferatorLevel) &&
     override.forcedProliferatorLevel > 0 &&
-    override.forcedProliferatorLevel <= recipe.maxProliferatorLevel &&
-    forcedProliferatorMode
+    override.forcedProliferatorLevel <= recipe.maxProliferatorLevel
   ) {
     forcedProliferatorLevel = override.forcedProliferatorLevel;
   }
@@ -137,10 +138,16 @@ export function tryApplyRecipeStrategyOverride(
     patch
   );
 
+  const parsed = parseAdvancedSolveOverrides(advancedOverridesText, locale);
+  // Strategy validation checks feasibility; recipe-count search belongs to the worker.
+  const validationOverridesText = parsed.error ? advancedOverridesText : updateObjectiveWeightsText(advancedOverridesText, {
+    recipeWeight: 0, recipeCountPenalty: undefined,
+    objectiveWeights: parsed.value.objectiveWeights ? { ...parsed.value.objectiveWeights, recipes: 0 } : undefined,
+  });
   const nextSolveState = computeWorkbenchSolve({
     catalog,
     targets,
-    objective,
+    objective: objective === 'min_complexity' ? 'min_buildings' : objective,
     balancePolicy,
     proliferatorPolicy,
     globalProliferatorLevel,
@@ -153,7 +160,7 @@ export function tryApplyRecipeStrategyOverride(
     preferredBuildings,
     recipePreferences,
     recipeStrategyOverrides: nextOverrides,
-    advancedOverridesText,
+    advancedOverridesText: validationOverridesText,
     locale,
   });
 

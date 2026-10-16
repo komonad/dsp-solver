@@ -3,6 +3,8 @@ import {
   buildCancelledWorkbenchSolveState,
   buildIdleWorkbenchSolveState,
   buildRunningWorkbenchSolveState,
+  buildStartedWorkbenchSolveState,
+  applyWorkbenchSolveProgress,
   type WorkbenchSolveState,
 } from '../src/web/workbench/autoSolve';
 import { buildSolveActivityViewModel } from '../src/web/workbench/solveActivity';
@@ -54,6 +56,23 @@ test('buildRunningWorkbenchSolveState marks whether the current result becomes s
   expect(nextState.activity.staleResult).toBe(true);
   expect(nextState.activity.stage).toBe('solving_primary');
   expect(nextState.error).toBe('');
+});
+
+test('restarting an active solve resets its clock while progress preserves the new start time', () => {
+  const previous = buildSettledStateWithResult();
+  const first = applyWorkbenchSolveProgress(buildStartedWorkbenchSolveState(previous, 1_000), {
+    stage: 'optimizing_recipe_count', activeRequest: previous.request, result: previous.result!,
+  });
+  expect(first.activity.staleResult).toBe(false);
+  const restarted = buildStartedWorkbenchSolveState(first, 20_000);
+  expect(restarted.activity).toMatchObject({ startedAtEpochMs: 20_000, stage: 'preparing_request', staleResult: true });
+  expect(restarted.result).toBe(first.result);
+  expect(restarted.activeRequest).toBeUndefined();
+  const synced = applyWorkbenchSolveProgress(restarted, { stage: 'syncing_catalog', activeRequest: previous.request });
+  const current = applyWorkbenchSolveProgress(synced, { stage: 'optimizing_recipe_count', result: previous.result! });
+  expect(current.activity).toMatchObject({ startedAtEpochMs: 20_000, staleResult: false });
+  expect(buildSolveActivityViewModel({ bundle: getLocaleBundle(), locale: 'zh-CN', solveState: current,
+    nowEpochMs: 20_250 })?.elapsedLabel).toContain('250 ms');
 });
 
 test('buildSolveActivityViewModel describes refreshing an older completed result', () => {

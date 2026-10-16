@@ -710,9 +710,8 @@ export function sanitizeWorkbenchEditorState(
           } else if (
             typeof override.forcedProliferatorLevel === 'number' &&
             Number.isFinite(override.forcedProliferatorLevel) &&
-            override.forcedProliferatorLevel >= 0 &&
-            override.forcedProliferatorLevel <= recipe.maxProliferatorLevel &&
-            forcedProliferatorMode
+            override.forcedProliferatorLevel > 0 &&
+            override.forcedProliferatorLevel <= recipe.maxProliferatorLevel
           ) {
             forcedProliferatorLevel = override.forcedProliferatorLevel;
           }

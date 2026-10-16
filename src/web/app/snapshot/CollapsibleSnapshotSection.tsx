@@ -22,6 +22,7 @@ interface CollapsibleSnapshotSectionProps {
   description?: React.ReactNode;
   collapsedContent?: React.ReactNode;
   headerAction?: React.ReactNode;
+  titleAdornment?: React.ReactNode;
   /** Callback for the [+] add button. If omitted, the button is not rendered. */
   onAdd?: () => void;
   addLabel?: string;
@@ -40,6 +41,7 @@ export default function CollapsibleSnapshotSection({
   description,
   collapsedContent,
   headerAction,
+  titleAdornment,
   onAdd,
   addLabel,
   addDisabled,
@@ -53,10 +55,11 @@ export default function CollapsibleSnapshotSection({
         <Typography color="text.secondary" sx={snapshotSectionTitleSx}>
           {title}
         </Typography>
+        {titleAdornment}
         {count > 0 ? <Box component="span" sx={snapshotSectionCountSx}>{count}</Box> : null}
       </Box>
     ),
-    [count, title]
+    [count, title, titleAdornment]
   );
 
   function handleToggle() {

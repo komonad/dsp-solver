@@ -20,9 +20,7 @@ export function upsertRecipePreferenceEntry(
     recipeId,
   };
 
-  if (nextPreference.preferredProliferatorMode === '') {
-    nextPreference.preferredProliferatorLevel = '';
-  } else if (nextPreference.preferredProliferatorMode === 'none') {
+  if (nextPreference.preferredProliferatorMode === 'none') {
     nextPreference.preferredProliferatorLevel = 0;
   } else if (nextPreference.preferredProliferatorLevel === 0) {
     nextPreference.preferredProliferatorLevel = '';
@@ -61,9 +59,7 @@ export function patchRecipeStrategyOverrideEntry(
     recipeId,
   };
 
-  if (nextOverride.forcedProliferatorMode === '') {
-    nextOverride.forcedProliferatorLevel = '';
-  } else if (nextOverride.forcedProliferatorMode === 'none') {
+  if (nextOverride.forcedProliferatorMode === 'none') {
     nextOverride.forcedProliferatorLevel = 0;
   } else if (nextOverride.forcedProliferatorLevel === 0) {
     nextOverride.forcedProliferatorLevel = '';

@@ -161,6 +161,24 @@ export function buildIdleWorkbenchSolveState(): WorkbenchSolveState {
   };
 }
 
+/** Each independent solve starts a new clock and treats retained results as stale. */
+export function buildStartedWorkbenchSolveState(
+  previousState: WorkbenchSolveState,
+  startedAtEpochMs = currentEpochMs()
+): WorkbenchSolveState {
+  return {
+    ...previousState,
+    activeRequest: undefined,
+    error: '',
+    activity: {
+      status: 'running',
+      startedAtEpochMs,
+      staleResult: Boolean(previousState.result),
+      stage: 'preparing_request',
+    },
+  };
+}
+
 export function buildRunningWorkbenchSolveState(
   previousState: WorkbenchSolveState,
   options: {

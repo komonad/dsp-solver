@@ -204,6 +204,19 @@ export function buildRecipePlanCardDisplayModel(
   };
 }
 
+export function buildRecipeProliferatorLevelChoices(catalog: ResolvedCatalogModel | null, levels: number[], levelPrefix: string) {
+  return levels.map(level => {
+    const itemId = catalog?.proliferatorLevels.find(entry => entry.level === level)?.itemId;
+    const item = itemId ? catalog?.itemMap.get(itemId) : undefined;
+    return { level, iconKey: item?.icon, label: `${levelPrefix} ${level}${item ? ` · ${item.name}` : ''}` };
+  });
+}
+
+export function filterRecipeBuildingChoices(buildings: ResolvedCatalogModel['buildings'], disabledIds: readonly string[], advancedDisabledIds: readonly string[] = []) {
+  const disabled = new Set([...disabledIds, ...advancedDisabledIds]);
+  return buildings.filter(building => !disabled.has(building.buildingId));
+}
+
 export function buildRecipeProliferatorPreferenceDisplayEntries(
   catalog: ResolvedCatalogModel,
   recipePreferences: EditableRecipePreference[],
@@ -581,6 +594,12 @@ export function buildRecipeOptimizationViewModel(summary: RecipeCountOptimizatio
     penaltyCostLabel: ((summary.penaltyPerRecipe ?? summary.baselineCost * summary.weight) * summary.finalRecipeCount).toFixed(2),
     totalCostLabel: (summary.finalCost + (summary.penaltyPerRecipe ?? summary.baselineCost * summary.weight) * summary.finalRecipeCount).toFixed(2),
   };
+}
+
+export function formatWorkbenchSolveElapsedSeconds(activity: WorkbenchSolveState['activity'], nowEpochMs: number): string {
+  const elapsed = activity.startedAtEpochMs === undefined ? 0
+    : Math.max(0, (activity.finishedAtEpochMs ?? nowEpochMs) - activity.startedAtEpochMs);
+  return `${(elapsed / 1000).toFixed(1)} 秒`;
 }
 
 export function buildObjectiveEditorViewModel(weights: ObjectiveWeights, productionScale: number) {

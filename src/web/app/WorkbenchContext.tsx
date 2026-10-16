@@ -30,7 +30,7 @@ import {
   buildWorkbenchSolveInputKey,
   buildCancelledWorkbenchSolveState,
   buildIdleWorkbenchSolveState,
-  buildRunningWorkbenchSolveState,
+  buildStartedWorkbenchSolveState,
   computeWorkbenchSolve,
   computeWorkbenchSolveAsync,
   applyWorkbenchSolveProgress,
@@ -965,11 +965,7 @@ export function WorkbenchProvider({ children }: { children: React.ReactNode }) {
     let disposed = false;
     activeSolveInputKeyRef.current = deferredSolveInputKey;
 
-    setAutoSolveState(current =>
-      buildRunningWorkbenchSolveState(current, {
-        stage: 'preparing_request',
-      })
-    );
+    setAutoSolveState(current => buildStartedWorkbenchSolveState(current));
 
     void (async () => {
       await waitForNextPaint();

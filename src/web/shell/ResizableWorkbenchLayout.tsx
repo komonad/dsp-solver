@@ -39,19 +39,29 @@ export default function ResizableWorkbenchLayout({ left, right, children }: Resi
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    let geometryFrame = 0;
     const updateGeometry = () => {
       setContainerWidth(container.clientWidth);
-      container.style.setProperty('--workbench-pane-height', `${getWorkbenchPaneHeight(window.innerHeight, container.getBoundingClientRect().top)}px`);
+      const height = `${getWorkbenchPaneHeight(window.innerHeight, container.getBoundingClientRect().top)}px`;
+      if (container.style.getPropertyValue('--workbench-pane-height') !== height) {
+        container.style.setProperty('--workbench-pane-height', height);
+      }
+    };
+    // Defer layout writes beyond the observer's current delivery cycle.
+    const scheduleGeometry = () => {
+      if (geometryFrame) return;
+      geometryFrame = window.requestAnimationFrame(() => { geometryFrame = 0; updateGeometry(); });
     };
     updateGeometry();
-    const observer = new ResizeObserver(updateGeometry);
+    const observer = new ResizeObserver(scheduleGeometry);
     observer.observe(container);
-    window.addEventListener('resize', updateGeometry);
-    window.addEventListener('scroll', updateGeometry, { passive: true });
+    window.addEventListener('resize', scheduleGeometry);
+    window.addEventListener('scroll', scheduleGeometry, { passive: true });
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', updateGeometry);
-      window.removeEventListener('scroll', updateGeometry);
+      window.cancelAnimationFrame(geometryFrame);
+      window.removeEventListener('resize', scheduleGeometry);
+      window.removeEventListener('scroll', scheduleGeometry);
     };
   }, []);
 

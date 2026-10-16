@@ -16,7 +16,7 @@ import {
 import { useCatalog } from '../CatalogContext';
 import { useWorkbench } from '../WorkbenchContext';
 import { useWorkbenchDraft } from '../WorkbenchDraftContext';
-import { buildRecipePlanCardDisplayModel } from '../workbenchHelpers';
+import { buildRecipePlanCardDisplayModel, buildRecipeProliferatorLevelChoices, filterRecipeBuildingChoices } from '../workbenchHelpers';
 
 export interface RecipePlanCardProps {
   plan: PresentationModel['recipePlans'][number];
@@ -26,26 +26,6 @@ const BUILDING_CONTROL_LABEL = '\u5efa\u7b51\u9009\u62e9';
 const PROLIFERATOR_MODE_CONTROL_LABEL = '\u589e\u4ea7\u7b56\u7565';
 const PROLIFERATOR_LEVEL_CONTROL_LABEL = '\u589e\u4ea7\u7b49\u7ea7';
 const NONE_OPTION_LABEL = '\u2205';
-
-function AutoOptionGlyph() {
-  return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        height: '100%',
-        fontSize: 15,
-        lineHeight: 1,
-        transform: 'translateY(0.5px)',
-      }}
-    >
-      *
-    </Box>
-  );
-}
 
 const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCardProps) {
   const {
@@ -61,6 +41,8 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
     recipePreferences,
     recipeStrategyOverrides,
     preferredBuildings,
+    disabledBuildingIds,
+    parsedOverrides,
     applyRecipeStrategyPatch,
     setRecipePreferredBuilding,
     setRecipePreferredProliferator,
@@ -74,9 +56,10 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
   const recipePlanRevealKey = buildRecipePlanRevealKey(plan);
   const isRevealed = recipePlanRevealKey === revealedRecipePlanKey;
   const cardRef = React.useRef<HTMLDivElement | null>(null);
-  const buildingChoices = getRecipeBuildingOptions(plan.recipeId);
+  const buildingChoices = filterRecipeBuildingChoices(getRecipeBuildingOptions(plan.recipeId),
+    disabledBuildingIds, parsedOverrides.value.disabledBuildingIds);
   const modeChoices = getRecipeModeOptions(plan.recipeId);
-  const levelChoices = getRecipeLevelOptions(plan.recipeId);
+  const levelChoices = buildRecipeProliferatorLevelChoices(catalog, getRecipeLevelOptions(plan.recipeId), bundle.solveRequest.levelPrefix);
   const preference = recipePreferences.find(entry => entry.recipeId === plan.recipeId);
   const override = recipeStrategyOverrides.find(entry => entry.recipeId === plan.recipeId);
   const preferredBuilding = preferredBuildings.find(entry => entry.recipeId === plan.recipeId);
@@ -170,7 +153,7 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
 
             <Box
               sx={{
-                flex: '1 1 250px',
+                flex: '1 1 200px',
                 minWidth: 0,
                 ml: 'auto',
                 display: 'flex',
@@ -178,10 +161,10 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                 justifyContent: 'flex-start',
                 flexWrap: 'wrap',
                 rowGap: 0.25,
-                columnGap: 1.375,
+                columnGap: 0.625,
               }}
             >
-              <RecipePlanToggleGroup
+              {buildingChoices.length > 1 && <RecipePlanToggleGroup
                 ariaLabel={`${plan.recipeName} ${BUILDING_CONTROL_LABEL}`}
                 value={selectedBuildingId}
                 testId="recipe-plan-building-toggle-group"
@@ -194,20 +177,12 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   }
                 }}
               >
-                <RecipePlanToggleButton
-                  value=""
-                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
-                  title={bundle.common.auto}
-                  testId="recipe-plan-building-toggle-auto"
-                >
-                  <AutoOptionGlyph />
-                </RecipePlanToggleButton>
                 {buildingChoices.map(building => (
                   <RecipePlanToggleButton
                     key={building.buildingId}
                     value={building.buildingId}
                     ariaLabel={`${plan.recipeName} ${building.name}`}
-                    title={building.name}
+                    title={`${building.name} · 再次点击取消指定`}
                     iconOnly
                     testId={`recipe-plan-building-toggle-${building.buildingId}`}
                   >
@@ -215,11 +190,11 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                       label={building.name}
                       iconKey={building.icon}
                       atlasIds={iconAtlasIds}
-                      size={22}
+                      size={18}
                     />
                   </RecipePlanToggleButton>
                 ))}
-              </RecipePlanToggleGroup>
+              </RecipePlanToggleGroup>}
 
               {modeChoices.length > 0 && (
               <RecipePlanToggleGroup
@@ -231,10 +206,8 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   const nextLevel =
                     nextMode === 'none'
                       ? 0
-                      : nextMode
-                        ? typeof selectedLevelValue === 'number' && selectedLevelValue > 0
-                          ? selectedLevelValue
-                          : ''
+                      : typeof selectedLevelValue === 'number' && selectedLevelValue > 0
+                        ? selectedLevelValue
                         : '';
                   const accepted = applyRecipeStrategyPatch(plan.recipeId, {
                     forcedProliferatorMode: nextMode,
@@ -245,20 +218,12 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   }
                 }}
               >
-                <RecipePlanToggleButton
-                  value=""
-                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
-                  title={bundle.common.auto}
-                  testId="recipe-plan-mode-toggle-auto"
-                >
-                  <AutoOptionGlyph />
-                </RecipePlanToggleButton>
                 {modeChoices.map(mode => (
                   <RecipePlanToggleButton
                     key={mode}
                     value={mode}
                     ariaLabel={`${plan.recipeName} ${formatProliferatorMode(mode, locale)}`}
-                    title={formatProliferatorMode(mode, locale)}
+                    title={`${formatProliferatorMode(mode, locale)} · 再次点击取消指定`}
                     testId={`recipe-plan-mode-toggle-${mode}`}
                   >
                     {mode === 'none' ? NONE_OPTION_LABEL : formatProliferatorMode(mode, locale)}
@@ -282,23 +247,16 @@ const RecipePlanCard = React.memo(function RecipePlanCard({ plan }: RecipePlanCa
                   }
                 }}
               >
-                <RecipePlanToggleButton
-                  value=""
-                  ariaLabel={`${plan.recipeName} ${bundle.common.auto}`}
-                  title={bundle.common.auto}
-                  testId="recipe-plan-level-toggle-auto"
-                >
-                  <AutoOptionGlyph />
-                </RecipePlanToggleButton>
                 {levelChoices.map(level => (
                   <RecipePlanToggleButton
-                    key={level}
-                    value={String(level)}
-                    ariaLabel={`${plan.recipeName} ${bundle.solveRequest.levelPrefix} ${level}`}
-                    title={`${bundle.solveRequest.levelPrefix} ${level}`}
-                    testId={`recipe-plan-level-toggle-${level}`}
+                    key={level.level}
+                    value={String(level.level)}
+                    ariaLabel={`${plan.recipeName} ${bundle.solveRequest.levelPrefix} ${level.level}`}
+                    title={`${level.label} · 再次点击取消指定`}
+                    iconOnly
+                    testId={`recipe-plan-level-toggle-${level.level}`}
                   >
-                    {level}
+                    {level.iconKey ? <EntityIcon label={level.label} iconKey={level.iconKey} atlasIds={iconAtlasIds} size={18} /> : level.level}
                   </RecipePlanToggleButton>
                 ))}
               </RecipePlanToggleGroup>

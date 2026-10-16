@@ -1,6 +1,10 @@
 import type { EditableRecipeStrategyOverride } from '../src/web/workbench/requestBuilder';
 import { resolveCatalogModel, type CatalogDefaultConfigSpec, type VanillaDatasetSpec } from '../src/catalog';
 import { tryApplyRecipeStrategyOverride } from '../src/web/workbench/recipeStrategy';
+import { yalpsSolverImplementation } from '../src/solver/yalpsImplementation';
+import { patchRecipeStrategyOverrideEntry, upsertRecipePreferenceEntry } from '../src/web/workbench/editorStateHelpers';
+import { sanitizeWorkbenchEditorState } from '../src/web/workbench/persistence';
+import { buildDefaultWorkbenchEditorState } from '../src/web/app/workbenchHelpers';
 
 function workEnergyForMW(megawatts: number): number {
   return (megawatts * 1_000_000) / 60;
@@ -191,6 +195,39 @@ test('tryApplyRecipeStrategyOverride does not carry level 0 from none into speed
       forcedProliferatorLevel: '',
     },
   ]);
+});
+
+test('a level can be selected without a mode, restored, and independently cleared', () => {
+  const catalog = buildStrategyDemoCatalog();
+  const base = buildDefaultWorkbenchEditorState(catalog);
+  const result = tryApplyRecipeStrategyOverride({ ...base, catalog,
+    targets: [{ itemId: '1101', ratePerMin: 60 }], disabledBuildingIds: [],
+    recipeId: '1', patch: { forcedProliferatorLevel: 1 } });
+  expect(result.accepted).toBe(true);
+  expect(result.nextOverrides).toEqual([{ recipeId: '1', forcedBuildingId: '', forcedProliferatorMode: '', forcedProliferatorLevel: 1 }]);
+  const restored = sanitizeWorkbenchEditorState(catalog, { ...base, recipeStrategyOverrides: result.nextOverrides });
+  expect(restored.recipeStrategyOverrides).toEqual(result.nextOverrides);
+  expect(patchRecipeStrategyOverrideEntry(result.nextOverrides, '1', { forcedProliferatorLevel: '' })).toEqual([]);
+  const preferences = upsertRecipePreferenceEntry([], '1', { preferredProliferatorLevel: 1 });
+  expect(preferences[0].preferredProliferatorMode).toBe('');
+  expect(preferences[0].preferredProliferatorLevel).toBe(1);
+  expect(upsertRecipePreferenceEntry(preferences, '1', { preferredProliferatorLevel: '' })).toEqual([]);
+});
+
+test('strategy validation skips recipe-count MILP while preserving infeasibility checks', () => {
+  const catalog = buildStrategyDemoCatalog();
+  const base = buildDefaultWorkbenchEditorState(catalog);
+  const solve = jest.spyOn(yalpsSolverImplementation, 'solve');
+  try {
+    const input = { ...base, catalog, targets: [{ itemId: '1101', ratePerMin: 60 }],
+      autoPromoteUnavailableItemsToRawInputs: false,
+      disabledBuildingIds: ['5002'], recipeId: '1',
+      advancedOverridesText: '{"objectiveWeights":{"resources":1,"footprint":1,"power":0,"recipes":100},"milpTimeLimitMs":null}' };
+    expect(tryApplyRecipeStrategyOverride({ ...input, patch: { forcedBuildingId: '5001' } }).accepted).toBe(true);
+    expect(tryApplyRecipeStrategyOverride({ ...input, patch: { forcedBuildingId: '5002' } }).accepted).toBe(false);
+    expect(solve.mock.calls.length).toBeGreaterThan(0);
+    expect(solve.mock.calls.every(([model]) => !model.binaries?.size)).toBe(true);
+  } finally { solve.mockRestore(); }
 });
 
 
